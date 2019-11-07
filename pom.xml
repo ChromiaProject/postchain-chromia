@@ -17,6 +17,7 @@
         <kotlin.version>1.3.41</kotlin.version>
         <junit.version>4.12</junit.version>
 
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
@@ -28,6 +29,20 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
+        </dependency>
+
+        <!-- Postchain -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-base</artifactId>
+            <version>3.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Cli -->
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.72</version>
         </dependency>
 
         <!-- testing -->
