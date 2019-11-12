@@ -37,7 +37,7 @@ class CliExecution {
     /**
      *
      */
-    fun addBlockchainConfigurtion(configFile: String, brid: String, height: Long, blockchainConfigFile: String, signer: Pair<ByteArray, ByteArray>) {
+    fun addBlockchainConfiguration(configFile: String, brid: String, height: Long, blockchainConfigFile: String, signer: Pair<ByteArray, ByteArray>) {
         val data = getEncodedGtxValueFromFile(blockchainConfigFile)
         val client = getPostchainClient(configFile)
         val tx = client.makeTransaction()
@@ -48,6 +48,22 @@ class CliExecution {
             throw CliError.Companion.CliException("Cannot add blockchain configuration at $height ")
         }.success {
             println("blockchain configuration at $height was added successfully!")
+        }
+    }
+
+    /**
+     *
+     */
+    fun addPeer(configFile: String, host: String, port: Long, key: String, signer: Pair<ByteArray, ByteArray>) {
+        val client = getPostchainClient(configFile)
+        val tx = client.makeTransaction()
+        tx.addOperation("add_peer",
+                arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray())))
+        tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+        tx.post(ConfirmationLevel.VERIFIED).fail {
+            throw CliError.Companion.CliException("Cannot add peer")
+        }.success {
+            println("Peer has been added")
         }
     }
 }

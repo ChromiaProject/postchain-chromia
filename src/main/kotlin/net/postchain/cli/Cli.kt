@@ -10,6 +10,7 @@ class Cli {
     private val jCommander: JCommander
     private val commands: Map<String, Command> = listOf(
             CommandKeygen(),
+            CommandAddPeer(),
             CommandDeploy()
     ).map { it.key() to it }.toMap()
 
