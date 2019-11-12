@@ -12,7 +12,8 @@ class Cli {
             CommandKeygen(),
             CommandAddPeer(),
             CommandRemovePeer(),
-            CommandDeploy()
+            CommandDeploy(),
+            CommandAddSystemPeer()
     ).map { it.key() to it }.toMap()
 
     init {

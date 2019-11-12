@@ -82,4 +82,20 @@ class CliExecution {
             println("Peer has been removed")
         }
     }
+
+    /**
+     *
+     */
+    fun addSystemPeer(configFile: String, key: String, signer: Pair<ByteArray, ByteArray>) {
+        val client = getPostchainClient(configFile)
+        val tx = client.makeTransaction()
+        tx.addOperation("add_system_peer",
+                arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
+        tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+        tx.post(ConfirmationLevel.VERIFIED).fail {
+            throw CliError.Companion.CliException("Cannot add system peer")
+        }.success {
+            println("System peer has been added")
+        }
+    }
 }
