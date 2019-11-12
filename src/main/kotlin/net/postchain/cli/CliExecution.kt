@@ -66,4 +66,20 @@ class CliExecution {
             println("Peer has been added")
         }
     }
+
+    /**
+     *
+     */
+    fun removePeer(configFile: String, key: String, signer: Pair<ByteArray, ByteArray>) {
+        val client = getPostchainClient(configFile)
+        val tx = client.makeTransaction()
+        tx.addOperation("remove_peer",
+                arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
+        tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+        tx.post(ConfirmationLevel.VERIFIED).fail {
+            throw CliError.Companion.CliException("Cannot remove peer")
+        }.success {
+            println("Peer has been removed")
+        }
+    }
 }

@@ -11,6 +11,7 @@ class Cli {
     private val commands: Map<String, Command> = listOf(
             CommandKeygen(),
             CommandAddPeer(),
+            CommandRemovePeer(),
             CommandDeploy()
     ).map { it.key() to it }.toMap()
 
