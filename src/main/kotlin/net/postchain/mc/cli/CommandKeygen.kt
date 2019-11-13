@@ -1,4 +1,4 @@
-package net.postchain.cli
+package net.postchain.mc.cli
 
 import com.beust.jcommander.Parameters
 import net.postchain.base.SECP256K1CryptoSystem

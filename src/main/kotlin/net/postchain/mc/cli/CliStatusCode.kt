@@ -1,4 +1,4 @@
-package net.postchain.cli
+package net.postchain.mc.cli
 
 import java.sql.SQLException
 

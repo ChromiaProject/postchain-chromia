@@ -1,8 +1,8 @@
-package net.postchain
+package net.postchain.mc
 
-import net.postchain.cli.Cli
-import net.postchain.cli.CliError
-import net.postchain.cli.Ok
+import net.postchain.mc.cli.Cli
+import net.postchain.mc.cli.CliError
+import net.postchain.mc.cli.Ok
 import java.io.File
 import java.lang.management.ManagementFactory
 import kotlin.system.exitProcess

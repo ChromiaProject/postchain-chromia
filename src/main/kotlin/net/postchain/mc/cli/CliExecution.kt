@@ -1,4 +1,4 @@
-package net.postchain.cli
+package net.postchain.mc.cli
 
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.ConfirmationLevel
@@ -6,7 +6,7 @@ import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
-import net.postchain.config.app.AppConfig
+import net.postchain.mc.config.app.AppConfig
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
