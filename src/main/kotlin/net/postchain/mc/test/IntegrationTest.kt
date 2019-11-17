@@ -67,7 +67,6 @@ open class IntegrationTest {
     companion object : KLogging() {
         const val BASE_PORT = 9870
         const val DEFAULT_CONFIG_FILE = "config.properties"
-        const val DEFAULT_BLOCKCHAIN_CONFIG_FILE = "blockchain_config.xml"
     }
 
     @After

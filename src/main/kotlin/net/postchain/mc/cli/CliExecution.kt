@@ -7,7 +7,6 @@ import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.config.app.AppConfig
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -15,18 +14,15 @@ import java.io.File
 
 class CliExecution {
 
-    private val pubKey0 = KeyPairHelper.pubKey(0)
-    private val privKey0 = KeyPairHelper.privKey(0)
     private val cryptoSystem = SECP256K1CryptoSystem()
-    private val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
-    private val defaultSigner = DefaultSigner(sigMaker0, pubKey0)
     private val postchainClientFactory = PostchainClientFactory()
 
     private fun getPostchainClient(configFile: String): PostchainClient {
         val config = AppConfig.fromPropertiesFile(configFile)
 
         val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
-        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), defaultSigner)
+        val sigMaker = cryptoSystem.buildSigMaker(config.adminPubKey.hexStringToByteArray(), config.adminPrivKey.hexStringToByteArray())
+        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.adminPubKey.hexStringToByteArray()))
     }
 
     private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {

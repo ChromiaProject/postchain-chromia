@@ -1,5 +1,6 @@
 package net.postchain.mc.config.app
 
+import net.postchain.common.hexStringToByteArray
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -28,4 +29,10 @@ class AppConfig(private val config: Configuration) {
 
     val brid: String
         get() = config.getString("brid", "")
+
+    val adminPrivKey: String
+        get() = config.getString("admin.privkey", "")
+
+    val adminPubKey: String
+        get() = config.getString("admin.pubkey", "")
 }

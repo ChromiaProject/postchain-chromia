@@ -1,36 +1,25 @@
 package net.postchain.mc.test
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.hexStringToByteArray
-import net.postchain.devtools.KeyPairHelper
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.mc.cli.CliExecution
 import org.junit.Test
 
-val testBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3".hexStringToByteArray()
-val newBlockchainRID = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9".hexStringToByteArray()
-val myCS = SECP256K1CryptoSystem()
+val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
+val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
+val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
 
 class ManagedNodeTest : IntegrationTest() {
 
-    private fun makeTx(ownerIdx:Int, host: String, port: Long, brid: ByteArray): ByteArray {
-        val owner = KeyPairHelper.pubKey(ownerIdx)
-        return GTXDataBuilder(testBlockchainRID, arrayOf(owner), myCS).run {
-            addOperation("add_peer", arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(brid), GtvFactory.gtv(100L)))
-            finish()
-            sign(myCS.buildSigMaker(owner, KeyPairHelper.privKey(ownerIdx)))
-            serialize()
-        }
+    private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
+        return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
     }
 
     @Test
     fun testBuildBlock() {
         configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("api.port", -1L)
         val node = createNode(0, "/net/postchain/mc/test/config/blockchain_config.xml")
-
-        enqueueTx(node, makeTx(0, "127.0.0.1", 9090L, newBlockchainRID), 0)
+        CliExecution().addPeer("app.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
         buildBlockAndCommit(node)
-
-        verifyBlockchainTransactions(node)
     }
 }
