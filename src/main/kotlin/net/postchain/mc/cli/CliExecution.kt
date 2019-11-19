@@ -58,8 +58,8 @@ class CliExecution {
         tx.addOperation("add_peer",
                 arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(Instant.now().toEpochMilli())))
         tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        val res = tx.postSync(ConfirmationLevel.UNVERIFIED)
-        if (res.status == TransactionStatus.CONFIRMED) {
+        val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+        if (txResult.status == TransactionStatus.CONFIRMED) {
             println("peer had been added successfully")
         } else {
             throw CliError.Companion.CliException("Cannot add peer")
@@ -75,10 +75,11 @@ class CliExecution {
         tx.addOperation("remove_peer",
                 arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
         tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        tx.post(ConfirmationLevel.VERIFIED).fail {
-            throw CliError.Companion.CliException("Cannot remove peer")
-        }.success {
+        val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+        if (txResult.status == TransactionStatus.CONFIRMED) {
             println("Peer has been removed")
+        } else {
+            throw CliError.Companion.CliException("Cannot remove peer")
         }
     }
 
