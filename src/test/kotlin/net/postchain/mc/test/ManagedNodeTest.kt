@@ -9,6 +9,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -49,6 +50,7 @@ class ManagedNodeTest : IntegrationTest() {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
+            assertTrue(Arrays.equals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray()))
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
@@ -64,6 +66,7 @@ class ManagedNodeTest : IntegrationTest() {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
+            assertTrue(Arrays.equals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray()))
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
