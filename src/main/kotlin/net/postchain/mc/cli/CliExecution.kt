@@ -6,11 +6,13 @@ import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.TransactionStatus
 import net.postchain.mc.config.app.AppConfig
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
+import java.time.Instant
 
 class CliExecution {
 
@@ -54,12 +56,13 @@ class CliExecution {
         val client = getPostchainClient(configFile)
         val tx = client.makeTransaction()
         tx.addOperation("add_peer",
-                arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray())))
+                arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(Instant.now().toEpochMilli())))
         tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        tx.post(ConfirmationLevel.VERIFIED).fail {
+        val res = tx.postSync(ConfirmationLevel.UNVERIFIED)
+        if (res.status == TransactionStatus.CONFIRMED) {
+            println("peer had been added successfully")
+        } else {
             throw CliError.Companion.CliException("Cannot add peer")
-        }.success {
-            println("Peer has been added")
         }
     }
 
