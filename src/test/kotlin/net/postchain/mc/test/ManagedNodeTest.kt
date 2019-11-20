@@ -9,10 +9,10 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Test
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import java.nio.file.Paths
-import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -52,7 +52,7 @@ class ManagedNodeTest : IntegrationTest() {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
-            assertTrue(Arrays.equals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray()))
+            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
@@ -68,7 +68,7 @@ class ManagedNodeTest : IntegrationTest() {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
-            assertTrue(Arrays.equals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray()))
+            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
