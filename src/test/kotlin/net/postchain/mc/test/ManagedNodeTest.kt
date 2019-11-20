@@ -36,10 +36,10 @@ class ManagedNodeTest : IntegrationTest() {
         return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.adminPubKey.hexStringToByteArray()))
     }
 
-    private fun createPostchainTestNodes(nodesCount: Int, configFileName: String) {
+    private fun createPostchainTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
         configOverrides.setProperty("api.port", 7740L)
-        createNodes(nodesCount, configFileName)
+        return createNodes(nodesCount, configFileName)
     }
 
     @Test
