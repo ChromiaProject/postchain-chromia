@@ -42,10 +42,11 @@ class CliExecution {
         tx.addOperation("add_blockchain_configuration",
                 arrayOf(GtvFactory.gtv(brid.hexStringToByteArray()), GtvFactory.gtv(height), GtvFactory.gtv(data)))
         tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        tx.post(ConfirmationLevel.VERIFIED).fail {
-            throw CliError.Companion.CliException("Cannot add blockchain configuration at $height ")
-        }.success {
+        val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+        if (txResult.status == TransactionStatus.CONFIRMED) {
             println("blockchain configuration at $height was added successfully!")
+        } else {
+            throw CliError.Companion.CliException("Cannot add blockchain configuration at $height ")
         }
     }
 
