@@ -56,6 +56,11 @@ class ManagedNodeTest : IntegrationTest() {
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
+
+        // check peer list version also
+        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+            assertEquals(1L, it.asInteger())
+        }
     }
 
     @Test
@@ -73,11 +78,21 @@ class ManagedNodeTest : IntegrationTest() {
             fail("fail to call nm_get_peer_infos")
         }
 
+        // check peer list version also
+        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+            assertEquals(1L, it.asInteger())
+        }
+
         CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
         client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
             assertTrue(it.asArray().isEmpty())
         }.fail {
             fail("fail to call nm_get_peer_infos")
+        }
+
+        // check peer list version also
+        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+            assertEquals(2L, it.asInteger())
         }
     }
 
