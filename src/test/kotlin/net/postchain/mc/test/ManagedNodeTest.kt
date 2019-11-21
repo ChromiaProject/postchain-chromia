@@ -82,7 +82,7 @@ class ManagedNodeTest : IntegrationTest() {
     }
 
     @Test
-    fun testAddBlockchainConiguration() {
+    fun testAddBlockchainConfiguration() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
         CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 0L,
                 Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
@@ -93,6 +93,37 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(0L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_get_peer_infos")
+        }
+    }
+
+    @Test
+    fun testUpdateBlockchainConfiguration() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 0L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        client.query("nm_get_blockchain_configuration",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(0L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_get_peer_infos")
+        }
+
+        CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 10L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+
+        client.query("nm_get_blockchain_configuration",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(10L))).success {
             assertTrue(!it.isNull())
         }.fail {
             fail("fail to call nm_get_peer_infos")
