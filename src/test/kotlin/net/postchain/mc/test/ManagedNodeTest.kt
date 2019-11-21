@@ -112,6 +112,15 @@ class ManagedNodeTest : IntegrationTest() {
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
+
+        client.query("nm_find_next_configuration_height",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(-1L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_find_next_configuration_height")
+        }
     }
 
     @Test
@@ -135,13 +144,22 @@ class ManagedNodeTest : IntegrationTest() {
                 Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
                 getAdminSigner())
 
-        client.query("nm_get_blockchain_configuration",
+        client.query("nm_find_next_configuration_height",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(8L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_find_next_configuration_height")
+        }
+
+        client.query("nm_find_next_configuration_height",
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(10L))).success {
-            assertTrue(!it.isNull())
+            assertTrue(it.isNull())
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            fail("fail to call nm_find_next_configuration_height")
         }
     }
 }
