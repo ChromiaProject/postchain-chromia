@@ -117,7 +117,7 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(-1L))).success {
-            assertTrue(!it.isNull())
+            assertEquals(0L, it.asInteger())
         }.fail {
             fail("fail to call nm_find_next_configuration_height")
         }
@@ -148,7 +148,7 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(8L))).success {
-            assertTrue(!it.isNull())
+            assertEquals(10L, it.asInteger())
         }.fail {
             fail("fail to call nm_find_next_configuration_height")
         }
