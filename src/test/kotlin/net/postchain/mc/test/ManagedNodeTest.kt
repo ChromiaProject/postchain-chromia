@@ -214,6 +214,30 @@ class ManagedNodeTest : IntegrationTest() {
         }
     }
 
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddBlockchainConfiguration_ConfigNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addBlockchainConfiguration("app_2.properties", newBlockchainRID, 0L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddBlockchainConfiguration_EmptyConfigFile() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addBlockchainConfiguration("app_empty.properties", newBlockchainRID, 0L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddBlockchainConfiguration_ConfigFileMissingKeys() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addBlockchainConfiguration("app_missing.properties", newBlockchainRID, 0L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+    }
+
     @Test
     fun testUpdateBlockchainConfiguration() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
