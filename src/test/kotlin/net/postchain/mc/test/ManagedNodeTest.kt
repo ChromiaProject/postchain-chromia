@@ -140,6 +140,10 @@ class ManagedNodeTest : IntegrationTest() {
         }.fail {
             fail("fail to call nm_find_next_configuration_height")
         }
+
+        client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
+            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+        }
     }
 
     @Test
@@ -179,6 +183,10 @@ class ManagedNodeTest : IntegrationTest() {
             assertTrue(it.isNull())
         }.fail {
             fail("fail to call nm_find_next_configuration_height")
+        }
+
+        client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
+            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
         }
     }
 }
