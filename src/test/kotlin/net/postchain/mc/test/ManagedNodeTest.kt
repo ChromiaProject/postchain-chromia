@@ -6,6 +6,7 @@ import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvFactory
+import net.postchain.mc.cli.CliError
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Test
@@ -17,6 +18,8 @@ import java.nio.file.Paths
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
 const val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
+const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b44170d"
+const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
 const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
 const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
 
@@ -26,6 +29,10 @@ class ManagedNodeTest : IntegrationTest() {
 
     private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
         return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
+    }
+
+    private fun getSigner(): Pair<ByteArray, ByteArray> {
+        return Pair(pubkey.hexStringToByteArray(), privkey.hexStringToByteArray())
     }
 
     private fun getPostchainClient(configFile: String): PostchainClient {
@@ -63,6 +70,12 @@ class ManagedNodeTest : IntegrationTest() {
         }
     }
 
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer1() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getSigner())
+    }
+
     @Test
     fun testRemovePeer() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
@@ -94,6 +107,12 @@ class ManagedNodeTest : IntegrationTest() {
         client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
             assertEquals(2L, it.asInteger())
         }
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer1() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getSigner())
     }
 
     @Test
