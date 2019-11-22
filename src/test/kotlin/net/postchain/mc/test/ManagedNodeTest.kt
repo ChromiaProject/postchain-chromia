@@ -71,9 +71,39 @@ class ManagedNodeTest : IntegrationTest() {
     }
 
     @Test(expected = CliError.Companion.CliException::class)
-    fun testAddPeer1() {
+    fun testAddPeer_SignerIsNotAdmin() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
         CliExecution().addPeer("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer_SignerNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer_SignerNotFound2() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer_ConfigNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_2.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer_EmptyConfigFile() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_empty.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddPeer_ConfigFileMissingKeys() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer("app_missing.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
     }
 
     @Test
@@ -110,9 +140,47 @@ class ManagedNodeTest : IntegrationTest() {
     }
 
     @Test(expected = CliError.Companion.CliException::class)
-    fun testRemovePeer1() {
+    fun testRemovePeer1_SignerIsNotAdmin() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-        CliExecution().addPeer("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getSigner())
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+
+        CliExecution().removePeer("app_1.properties", newPeerPubKey, getSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer_SignerNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+
+        CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer_SignerNotFound2() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+
+        CliExecution().removePeer("app_1.properties", newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer_ConfigNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+
+        CliExecution().removePeer("app_2.properties", newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer_EmptyConfigFile() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().removePeer("app_empty.properties", newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testRemovePeer_ConfigFileMissingKeys() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().removePeer("app_missing.properties", newPeerPubKey, getAdminSigner())
     }
 
     @Test

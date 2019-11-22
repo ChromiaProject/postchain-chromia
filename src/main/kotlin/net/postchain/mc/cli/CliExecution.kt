@@ -1,5 +1,6 @@
 package net.postchain.mc.cli
 
+import mu.KLogging
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.ConfirmationLevel
 import net.postchain.client.DefaultSigner
@@ -7,14 +8,18 @@ import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
+import net.postchain.core.UserMistake
 import net.postchain.mc.config.app.AppConfig
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
+import org.apache.commons.configuration2.ex.ConfigurationException
 import java.io.File
 import java.time.Instant
 
 class CliExecution {
+
+    companion object : KLogging()
 
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val postchainClientFactory = PostchainClientFactory()
@@ -54,16 +59,27 @@ class CliExecution {
      *
      */
     fun addPeer(configFile: String, host: String, port: Long, key: String, signer: Pair<ByteArray, ByteArray>) {
-        val client = getPostchainClient(configFile)
-        val tx = client.makeTransaction()
-        tx.addOperation("add_peer",
-                arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(Instant.now().toEpochMilli())))
-        tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
-        if (txResult.status == TransactionStatus.CONFIRMED) {
-            println("peer had been added successfully")
-        } else {
-            throw CliError.Companion.CliException("Cannot add peer")
+        try {
+            val client = getPostchainClient(configFile)
+            val tx = client.makeTransaction()
+            tx.addOperation("add_peer",
+                    arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(Instant.now().toEpochMilli())))
+            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("peer had been added successfully")
+            } else {
+                throw CliError.Companion.CliException("Cannot add peer")
+            }
+        } catch (e: ConfigurationException) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("Config file not found $configFile")
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
 
@@ -71,16 +87,27 @@ class CliExecution {
      *
      */
     fun removePeer(configFile: String, key: String, signer: Pair<ByteArray, ByteArray>) {
-        val client = getPostchainClient(configFile)
-        val tx = client.makeTransaction()
-        tx.addOperation("remove_peer",
-                arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
-        tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-        val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
-        if (txResult.status == TransactionStatus.CONFIRMED) {
-            println("Peer has been removed")
-        } else {
-            throw CliError.Companion.CliException("Cannot remove peer")
+        try {
+            val client = getPostchainClient(configFile)
+            val tx = client.makeTransaction()
+            tx.addOperation("remove_peer",
+                    arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
+            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Peer has been removed")
+            } else {
+                throw CliError.Companion.CliException("Cannot remove peer")
+            }
+        } catch (e: ConfigurationException) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("Config file not found $configFile")
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
 
