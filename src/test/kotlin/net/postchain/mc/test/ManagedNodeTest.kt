@@ -5,6 +5,7 @@ import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.CliError
 import net.postchain.mc.cli.CliExecution
@@ -56,7 +57,7 @@ class ManagedNodeTest : IntegrationTest() {
         CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
+        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
@@ -66,7 +67,7 @@ class ManagedNodeTest : IntegrationTest() {
         }
 
         // check peer list version also
-        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
             assertEquals(1L, it.asInteger())
         }
     }
@@ -113,7 +114,7 @@ class ManagedNodeTest : IntegrationTest() {
         CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
+        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
@@ -123,19 +124,19 @@ class ManagedNodeTest : IntegrationTest() {
         }
 
         // check peer list version also
-        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
             assertEquals(1L, it.asInteger())
         }
 
         CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
-        client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
+        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
             assertTrue(it.asArray().isEmpty())
         }.fail {
             fail("fail to call nm_get_peer_infos")
         }
 
         // check peer list version also
-        client.query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).success {
+        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
             assertEquals(2L, it.asInteger())
         }
     }
@@ -198,7 +199,7 @@ class ManagedNodeTest : IntegrationTest() {
                         "height" to GtvFactory.gtv(0L))).success {
             assertTrue(!it.isNull())
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            fail("fail to call nm_get_blockchain_configuration")
         }
 
         client.query("nm_find_next_configuration_height",
@@ -253,7 +254,7 @@ class ManagedNodeTest : IntegrationTest() {
                         "height" to GtvFactory.gtv(0L))).success {
             assertTrue(!it.isNull())
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            fail("fail to call nm_get_blockchain_configuration")
         }
 
         CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 10L,
@@ -298,12 +299,12 @@ class ManagedNodeTest : IntegrationTest() {
                         "height" to GtvFactory.gtv(0L))).success {
             assertTrue(!it.isNull())
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            fail("fail to call nm_get_blockchain_configuration")
         }
 
         // Add peer info
         CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-        client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
+        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
             val resp = it.asArray()[0].asDict()
             assertEquals("127.0.0.1", resp["host"]?.asString())
             assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
