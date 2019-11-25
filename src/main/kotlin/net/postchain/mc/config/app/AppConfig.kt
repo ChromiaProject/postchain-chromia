@@ -1,6 +1,5 @@
 package net.postchain.mc.config.app
 
-import net.postchain.common.hexStringToByteArray
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
