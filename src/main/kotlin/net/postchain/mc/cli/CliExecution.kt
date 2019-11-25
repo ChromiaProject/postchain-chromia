@@ -135,10 +135,11 @@ class CliExecution {
             tx.addOperation("add_system_peer",
                     arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
             tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
-            tx.post(ConfirmationLevel.VERIFIED).fail {
-                throw CliError.Companion.CliException("Cannot add system peer")
-            }.success {
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
                 println("System peer has been added")
+            } else {
+                throw CliError.Companion.CliException("Cannot add system peer")
             }
         } catch (e: ConfigurationException) {
             logger.error(e.message)

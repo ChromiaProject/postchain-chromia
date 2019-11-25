@@ -22,6 +22,7 @@ const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b
 const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
 const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
 const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
+const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
 
 class ManagedNodeTest : IntegrationTest() {
 
@@ -279,6 +280,50 @@ class ManagedNodeTest : IntegrationTest() {
 
         client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
             assertArrayEquals(newBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+        }
+    }
+
+    @Test
+    fun testSystemPeer() {
+        // Add blockchain configuration
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, systemBlockchainRID, 0L,
+                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
+                getAdminSigner())
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        client.query("nm_get_blockchain_configuration",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(0L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_get_peer_infos")
+        }
+
+        // Add peer info
+        CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+        client.query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))).success {
+            val resp = it.asArray()[0].asDict()
+            assertEquals("127.0.0.1", resp["host"]?.asString())
+            assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
+            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
+        }.fail {
+            fail("fail to call nm_get_peer_infos")
+        }
+
+        // Add system peer, a.k.a update blockchain's signer
+        CliExecution().addSystemPeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
+        client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()))).success {
+            assertArrayEquals(systemBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+        }
+        client.query("nm_find_next_configuration_height",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(4L))).success {
+            assertTrue(!it.isNull())
+        }.fail {
+            fail("fail to call nm_find_next_configuration_height")
         }
     }
 }
