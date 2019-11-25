@@ -1,19 +1,22 @@
 package net.postchain.mc.test
 
-import assertk.fail
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.*
 import net.postchain.mc.cli.CliError
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
+import org.awaitility.Awaitility
+import org.awaitility.Duration
+import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import java.nio.file.Paths
 
 const val DEFAULT_APP_CONFIG = "app.properties"
@@ -28,6 +31,20 @@ const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba
 class ManagedNodeTest : IntegrationTest() {
 
     private val postchainClientFactory = PostchainClientFactory()
+
+    private var data: Map<String, Gtv> = mapOf()
+
+    private var peers: Array<out Gtv> = arrayOf()
+
+    private var exception: Exception? = null
+
+    private var version: Long? = null
+
+    private var blockchain: Gtv? = null
+
+    private var height: Long? = null
+
+    private var blockchainRID: ByteArray? = null
 
     private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
         return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
@@ -51,6 +68,17 @@ class ManagedNodeTest : IntegrationTest() {
         return createNodes(nodesCount, configFileName)
     }
 
+    @Before
+    fun setup() {
+        data = mapOf()
+        peers = arrayOf()
+        exception = null
+        version = null
+        blockchain = null
+        height = null
+        blockchainRID = null
+    }
+
     @Test
     fun testAddPeer() {
         createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
@@ -58,17 +86,24 @@ class ManagedNodeTest : IntegrationTest() {
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
         client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-            val resp = it.asArray()[0].asDict()
-            assertEquals("127.0.0.1", resp["host"]?.asString())
-            assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
-            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
+            data = it.asArray()[0].asDict()
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            exception = it
+        }
+
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(data["host"]?.asString()).isEqualTo("127.0.0.1")
+            assertk.assert(data["port"]?.asBigInteger()?.toLong()).isEqualTo(9090L)
+            assertArrayEquals(data["pubkey"]?.asByteArray(), newPeerPubKey.hexStringToByteArray())
+            assertk.assert(exception).isNull()
         }
 
         // check peer list version also
         client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-            assertEquals(1L, it.asInteger())
+            version = it.asInteger()
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(version).isEqualTo(1L)
         }
     }
 
@@ -115,29 +150,44 @@ class ManagedNodeTest : IntegrationTest() {
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
         client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-            val resp = it.asArray()[0].asDict()
-            assertEquals("127.0.0.1", resp["host"]?.asString())
-            assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
-            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
+            data = it.asArray()[0].asDict()
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            exception = it
+        }
+
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(data["host"]?.asString()).isEqualTo("127.0.0.1")
+            assertk.assert(data["port"]?.asBigInteger()?.toLong()).isEqualTo(9090L)
+            assertArrayEquals(data["pubkey"]?.asByteArray(), newPeerPubKey.hexStringToByteArray())
+            assertk.assert(exception).isNull()
         }
 
         // check peer list version also
         client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-            assertEquals(1L, it.asInteger())
+            version = it.asInteger()
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(version).isEqualTo(1L)
         }
 
         CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
         client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-            assertTrue(it.asArray().isEmpty())
+            peers = it.asArray()
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            exception = it
+        }
+
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(peers.isEmpty()).isTrue()
+            assertk.assert(exception).isNull()
         }
 
         // check peer list version also
         client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-            assertEquals(2L, it.asInteger())
+            version = it.asInteger()
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(version).isEqualTo(2L)
         }
     }
 
@@ -197,22 +247,35 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(0L))).success {
-            assertTrue(!it.isNull())
+            blockchain = it
         }.fail {
-            fail("fail to call nm_get_blockchain_configuration")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(blockchain).isNotNull()
+            val modules = GtvFactory.decodeGtv(blockchain?.asByteArray()!!).asDict()["gtx"]?.get("modules")
+            assertk.assert(modules?.get(0)?.asString()).isEqualTo("net.postchain.configurations.GTXTestModule")
+            assertk.assert(exception).isNull()
         }
 
         client.query("nm_find_next_configuration_height",
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(-1L))).success {
-            assertEquals(0L, it.asInteger())
+            height = it.asInteger()
         }.fail {
-            fail("fail to call nm_find_next_configuration_height")
+            exception = it
+        }
+
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(height).isEqualTo(0L)
         }
 
         client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
-            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+            blockchainRID = it.asArray()[0].asByteArray()
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), blockchainRID)
         }
     }
 
@@ -252,9 +315,15 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(0L))).success {
-            assertTrue(!it.isNull())
+            blockchain = it
         }.fail {
-            fail("fail to call nm_get_blockchain_configuration")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(blockchain).isNotNull()
+            val modules = GtvFactory.decodeGtv(blockchain?.asByteArray()!!).asDict()["gtx"]?.get("modules")
+            assertk.assert(modules?.get(0)?.asString()).isEqualTo("net.postchain.configurations.GTXTestModule")
+            assertk.assert(exception).isNull()
         }
 
         CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 10L,
@@ -265,22 +334,33 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(8L))).success {
-            assertEquals(10L, it.asInteger())
+            height = it.asInteger()
         }.fail {
-            fail("fail to call nm_find_next_configuration_height")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(height).isEqualTo(10L)
+            assertk.assert(exception).isNull()
         }
 
         client.query("nm_find_next_configuration_height",
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(10L))).success {
-            assertTrue(it.isNull())
+            blockchain = it
         }.fail {
-            fail("fail to call nm_find_next_configuration_height")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(blockchain).isEqualTo(GtvNull)
+            assertk.assert(exception).isNull()
         }
 
         client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
-            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+            blockchainRID = it.asArray()[0].asByteArray()
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), blockchainRID)
         }
     }
 
@@ -297,34 +377,52 @@ class ManagedNodeTest : IntegrationTest() {
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(0L))).success {
-            assertTrue(!it.isNull())
+            blockchain = it
         }.fail {
-            fail("fail to call nm_get_blockchain_configuration")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(blockchain).isNotNull()
+            val modules = GtvFactory.decodeGtv(blockchain?.asByteArray()!!).asDict()["gtx"]?.get("modules")
+            assertk.assert(modules?.get(0)?.asString()).isEqualTo("net.postchain.configurations.GTXTestModule")
+            assertk.assert(exception).isNull()
         }
 
         // Add peer info
         CliExecution().addPeer(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
         client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-            val resp = it.asArray()[0].asDict()
-            assertEquals("127.0.0.1", resp["host"]?.asString())
-            assertEquals(9090L, resp["port"]?.asBigInteger()?.toLong())
-            assertArrayEquals(newPeerPubKey.hexStringToByteArray(), resp["pubkey"]?.asByteArray())
+            data = it.asArray()[0].asDict()
         }.fail {
-            fail("fail to call nm_get_peer_infos")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(data["host"]?.asString()).isEqualTo("127.0.0.1")
+            assertk.assert(data["port"]?.asBigInteger()?.toLong()).isEqualTo(9090L)
+            assertArrayEquals(data["pubkey"]?.asByteArray(), newPeerPubKey.hexStringToByteArray())
+            assertk.assert(exception).isNull()
         }
 
         // Add system peer, a.k.a update blockchain's signer
         CliExecution().addSystemPeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
         client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()))).success {
-            assertArrayEquals(systemBlockchainRID.hexStringToByteArray(), it.asArray()[0].asByteArray())
+            blockchainRID = it.asArray()[0].asByteArray()
         }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertArrayEquals(systemBlockchainRID.hexStringToByteArray(), blockchainRID)
+        }
+
+        // check next configuration height for update one
         client.query("nm_find_next_configuration_height",
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(systemBlockchainRID.hexStringToByteArray()),
                         "height" to GtvFactory.gtv(4L))).success {
-            assertTrue(!it.isNull())
+            height = it.asInteger()
         }.fail {
-            fail("fail to call nm_find_next_configuration_height")
+            exception = it
+        }
+        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
+            assertk.assert(height!! > 5L).isTrue()
+            assertk.assert(exception).isNull()
         }
     }
 }
