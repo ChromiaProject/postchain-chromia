@@ -425,4 +425,28 @@ class ManagedNodeTest : IntegrationTest() {
             assertk.assert(exception).isNull()
         }
     }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddSystemPeer_SignerIsNotAdmin() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addSystemPeer("app_1.properties", newPeerPubKey, getSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddSystemPeer_ConfigNotFound() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addSystemPeer("app_2.properties", newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddSystemPeer_EmptyConfigFile() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addSystemPeer("app_empty.properties", newPeerPubKey, getAdminSigner())
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddSystemPeer_ConfigFileMissingKeys() {
+        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
+        CliExecution().addSystemPeer("app_missing.properties", newPeerPubKey, getAdminSigner())
+    }
 }
