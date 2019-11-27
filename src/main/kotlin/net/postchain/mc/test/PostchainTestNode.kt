@@ -11,10 +11,8 @@ import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.core.BlockchainProcess
-import net.postchain.core.NODE_ID_TODO
-import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder.encodeGtv
 
 class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDatabase: Boolean = false) : PostchainNode(nodeConfigProvider) {
 

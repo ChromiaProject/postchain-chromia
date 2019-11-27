@@ -26,7 +26,7 @@ class AppConfig(private val config: Configuration) {
     val apiURL: String
         get() = config.getString("api.url", "")
 
-    val brid: String
+    var brid: String = ""
         get() = config.getString("brid", "")
 
     val privKey: String

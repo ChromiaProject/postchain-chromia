@@ -16,7 +16,7 @@ class CommandRegisterProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().registerProvider(config, key)
+            CliExecution().registerProvider(loadAppConfig(), key)
             Ok("Provider has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

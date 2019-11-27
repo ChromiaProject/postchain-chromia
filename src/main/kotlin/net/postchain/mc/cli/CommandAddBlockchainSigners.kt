@@ -7,10 +7,10 @@ import com.beust.jcommander.Parameters
 class CommandAddBlockchainSigners: CommandBase() {
 
     @Parameter(
-            names = ["-brid", "--blockchain-rid"],
+            names = ["-bc", "--blockchain"],
             description = "Blockchain RID",
             required = true)
-    private var brid = ""
+    private var blockchain = ""
 
     @Parameter(
             names = ["-s", "--signers"],
@@ -22,7 +22,7 @@ class CommandAddBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().addBlockchainSigners(config, brid, signers)
+            CliExecution().addBlockchainSigners(loadAppConfig(), blockchain, signers)
             Ok("Blockchain's signers have been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
