@@ -16,25 +16,26 @@ import net.postchain.core.NODE_ID_TODO
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.Gtv
 
-class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDatabase: Boolean) : PostchainNode(nodeConfigProvider) {
+class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDatabase: Boolean = false) : PostchainNode(nodeConfigProvider) {
 
-    private val storage: Storage
+    private val testStorage: Storage
     val pubKey: String
     private var isInitialized = false
 
     init {
         val nodeConfig = nodeConfigProvider.getConfiguration()
-        storage = StorageBuilder.buildStorage(nodeConfig, NODE_ID_TODO, preWipeDatabase)
+        testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
     }
 
     companion object : KLogging() {
-        const val DEFAULT_CHAIN_IID = 0L
+        const val SYSTEM_CHAIN_IID = 0L
+        const val DEFAULT_CHAIN_IID = 1L
     }
 
     private fun initDb(chainId: Long, blockchainRid: ByteArray) {
         // TODO: [et]: Is it necessary here after StorageBuilder.buildStorage() redesign?
-        withWriteConnection(storage, chainId) { eContext ->
+        withWriteConnection(testStorage, chainId) { eContext ->
             with(DatabaseAccess.of(eContext)) {
                 initialize(eContext.conn, expectedDbVersion = 1)
                 checkBlockchainRID(eContext, blockchainRid)
@@ -50,11 +51,10 @@ class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDa
         addConfiguration(chainId, 0, blockchainConfig)
     }
 
-
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv) {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        withWriteConnection(storage, chainId) { eContext ->
+        withWriteConnection(testStorage, chainId) { eContext ->
             BaseConfigurationDataStore.addConfigurationData(
                     eContext, height, encodeGtv(blockchainConfig))
             true
@@ -67,7 +67,7 @@ class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDa
 
     override fun shutdown() {
         super.shutdown()
-        storage.close()
+        testStorage.close()
     }
 
     fun getRestApiModel(): Model {

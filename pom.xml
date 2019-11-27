@@ -52,6 +52,12 @@
             <version>${postchain.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-devtools</artifactId>
+            <version>${postchain.version}</version>
+        </dependency>
+
         <!-- Cli -->
         <dependency>
             <groupId>com.beust</groupId>

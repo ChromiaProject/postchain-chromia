@@ -9,13 +9,13 @@ import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.mc.config.app.AppConfig
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
 import org.apache.commons.configuration2.ex.ConfigurationException
 import java.io.File
-import java.time.Instant
 
 class CliExecution {
 
@@ -24,15 +24,13 @@ class CliExecution {
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val postchainClientFactory = PostchainClientFactory()
 
-    private fun getPostchainClient(configFile: String): PostchainClient {
-        val config = AppConfig.fromPropertiesFile(configFile)
-
-        if (config.adminPrivKey.isEmpty() || config.brid.isEmpty() || config.adminPubKey.isEmpty() || config.adminPrivKey.isEmpty()) {
+    private fun getPostchainClient(config: AppConfig): PostchainClient {
+        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
             throw UserMistake("missing required parameters")
         }
         val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
-        val sigMaker = cryptoSystem.buildSigMaker(config.adminPubKey.hexStringToByteArray(), config.adminPrivKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.adminPubKey.hexStringToByteArray()))
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
+        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
     }
 
     private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {
@@ -43,19 +41,21 @@ class CliExecution {
     /**
      *
      */
-    fun addBlockchainConfiguration(configFile: String, brid: String, height: Long, blockchainConfigFile: String, signer: Pair<ByteArray, ByteArray>) {
+    fun addBlockchain(configFile: String, blockchainConfigFile: String, nodes: String) {
         try {
+            val config = AppConfig.fromPropertiesFile(configFile)
+            val client = getPostchainClient(config)
             val data = getEncodedGtxValueFromFile(blockchainConfigFile)
-            val client = getPostchainClient(configFile)
+            val nodeList = nodes.split(",").map { client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
             val tx = client.makeTransaction()
-            tx.addOperation("add_blockchain_configuration",
-                    arrayOf(GtvFactory.gtv(brid.hexStringToByteArray()), GtvFactory.gtv(height), GtvFactory.gtv(data)))
-            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            tx.addOperation("add_blockchain",
+                    arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("blockchain configuration at $height was added successfully!")
+                println("blockchain was added successfully!")
             } else {
-                throw CliError.Companion.CliException("Cannot add blockchain configuration at $height ")
+                throw CliError.Companion.CliException("Cannot add blockchain")
             }
         } catch (e: ConfigurationException) {
             logger.error(e.message)
@@ -72,18 +72,21 @@ class CliExecution {
     /**
      *
      */
-    fun addPeer(configFile: String, host: String, port: Long, key: String, signer: Pair<ByteArray, ByteArray>) {
+    fun addNode(configFile: String, key: String, host: String, port: Long) {
         try {
-            val client = getPostchainClient(configFile)
+            val config = AppConfig.fromPropertiesFile(configFile)
+            val client = getPostchainClient(config)
+            val provider = client.query("get_provider", GtvFactory.gtv(
+                        "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = client.makeTransaction()
-            tx.addOperation("add_peer",
-                    arrayOf(GtvFactory.gtv(host), GtvFactory.gtv(port), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(Instant.now().toEpochMilli())))
-            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            tx.addOperation("add_node",
+                    arrayOf(GtvFactory.gtv(provider.asByteArray()), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("peer had been added successfully")
+                println("node had been added successfully")
             } else {
-                throw CliError.Companion.CliException("Cannot add peer")
+                throw CliError.Companion.CliException("Cannot add node")
             }
         } catch (e: ConfigurationException) {
             logger.error(e.message)
@@ -100,18 +103,51 @@ class CliExecution {
     /**
      *
      */
-    fun removePeer(configFile: String, key: String, signer: Pair<ByteArray, ByteArray>) {
+    fun addBlockchainSigners(configFile: String, brid: String, signers: String) {
         try {
-            val client = getPostchainClient(configFile)
+            val config = AppConfig.fromPropertiesFile(configFile)
+            val client = getPostchainClient(config)
+            val nodeList = signers.split(",").map {
+                client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
+            }
+            val blockchain = client.query("get_blockchain", GtvFactory.gtv("rid" to GtvFactory.gtv(brid.hexStringToByteArray()))).get()
             val tx = client.makeTransaction()
-            tx.addOperation("remove_peer",
+            tx.addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Blockchain's signers have been added")
+            } else {
+                throw CliError.Companion.CliException("Cannot add blockchain's signers")
+            }
+        } catch (e: ConfigurationException) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("Config file not found $configFile")
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
+    fun registerProvider(configFile: String, key: String) {
+        try {
+            val config = AppConfig.fromPropertiesFile(configFile)
+            val client = getPostchainClient(config)
+            val tx = client.makeTransaction()
+            tx.addOperation("register_provider",
                     arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
-            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("Peer has been removed")
+                println("Provider has been added")
             } else {
-                throw CliError.Companion.CliException("Cannot remove peer")
+                throw CliError.Companion.CliException("Cannot add provider")
             }
         } catch (e: ConfigurationException) {
             logger.error(e.message)
@@ -128,18 +164,20 @@ class CliExecution {
     /**
      *
      */
-    fun addSystemPeer(configFile: String, key: String, signer: Pair<ByteArray, ByteArray>) {
+    fun enableProvider(configFile: String, key: String) {
         try {
-            val client = getPostchainClient(configFile)
+            val config = AppConfig.fromPropertiesFile(configFile)
+            val client = getPostchainClient(config)
+            val provider = client.query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             val tx = client.makeTransaction()
-            tx.addOperation("add_system_peer",
-                    arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
-            tx.sign(cryptoSystem.buildSigMaker(signer.first, signer.second))
+            tx.addOperation("enable_provider", arrayOf(provider))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("System peer has been added")
+                println("Provider has been enable")
             } else {
-                throw CliError.Companion.CliException("Cannot add system peer")
+                throw CliError.Companion.CliException("Cannot enable provider")
             }
         } catch (e: ConfigurationException) {
             logger.error(e.message)

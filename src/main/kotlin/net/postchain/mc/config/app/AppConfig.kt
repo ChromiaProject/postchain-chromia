@@ -29,9 +29,9 @@ class AppConfig(private val config: Configuration) {
     val brid: String
         get() = config.getString("brid", "")
 
-    val adminPrivKey: String
-        get() = config.getString("admin.privkey", "")
+    val privKey: String
+        get() = config.getString("privkey", "")
 
-    val adminPubKey: String
-        get() = config.getString("admin.pubkey", "")
+    val pubKey: String
+        get() = config.getString("pubkey", "")
 }

@@ -1,19 +1,20 @@
 // Copyright (c) 2017 ChromaWay Inc. See README for license information.
-
 package net.postchain.mc.test
 
 import mu.KLogging
+import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.*
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.privKeyHex
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.KeyPairHelper.pubKeyHex
+import net.postchain.devtools.utils.configuration.NodeNameWithBlockchains
 import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -54,9 +55,6 @@ open class IntegrationTest {
     val configOverrides = MapConfiguration(mutableMapOf<String, String>())
     val cryptoSystem = SECP256K1CryptoSystem()
     var gtxConfig: Gtv? = null
-    protected val blockchainRids = mapOf(
-            0L to "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
-    )
 
     // PeerInfos must be shared between all nodes because
     // a listening node will update the PeerInfo port after
@@ -67,6 +65,15 @@ open class IntegrationTest {
     companion object : KLogging() {
         const val BASE_PORT = 9870
         const val DEFAULT_CONFIG_FILE = "config.properties"
+        const val DEFAULT_BLOCKCHAIN_CONFIG_FILE = "blockchain_config.xml"
+
+        val BLOCKCHAIN_RIDS = mapOf(
+                0L to "0000000000000000000000000000000000000000000000000000000000000000",
+                1L to "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB1577A3",
+                2L to "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB1577A4",
+                100L to "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB000100",
+                101L to "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB000101"
+        )
     }
 
     @After
@@ -142,28 +149,46 @@ open class IntegrationTest {
     protected fun createSingleNode(
             nodeIndex: Int,
             totalNodesCount: Int,
-            nodeConfig: String,
+            nodeConfigFilename: String,
             blockchainConfigFilename: String,
-            preWipeDatabase: Boolean = true
+            preWipeDatabase: Boolean = true,
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ): PostchainTestNode {
 
-        val nodeConfigProvider = createNodeConfig(nodeIndex, totalNodesCount, nodeConfig)
+        val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
+
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
         val chainId = nodeConfig.activeChainIds.first().toLong()
-        val blockchainRid = blockchainRids[chainId]!!.hexStringToByteArray()
+        val blockchainRid = BLOCKCHAIN_RIDS[chainId]!!.hexStringToByteArray()
 
-        return PostchainTestNode(nodeConfigProvider, preWipeDatabase)
+        // Wiping of database
+        if (preWipeDatabase) {
+            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        }
+
+        // Performing setup action
+        setupAction(appConfig, nodeConfig)
+
+        return PostchainTestNode(nodeConfigProvider)
                 .apply {
                     addBlockchain(chainId, blockchainRid, blockchainConfig)
-                    startBlockchain()
+                    startBlockchain(chainId)
                 }
                 .also {
                     nodes.add(it)
                 }
     }
 
+    /**
+     * Starts [count] nodes with the same number of chains for each node
+     *
+     * @param count is the number of nodes
+     * @param nodeConfigsFilenames an array with one config file path per node
+     * @param blockchainConfigsFilenames an array with one config file path per blockchain
+     */
     protected fun createMultipleChainNodes(
             count: Int,
             nodeConfigsFilenames: Array<String>,
@@ -174,6 +199,25 @@ open class IntegrationTest {
 
         return Array(count) {
             createMultipleChainNode(it, count, nodeConfigsFilenames[it], *blockchainConfigsFilenames)
+        }
+    }
+
+    /**
+     * Starts the nodes with the number of chains different for each node
+     *
+     * @param count is the number of nodes
+     * @param nodeConfigsFilenamesAndBlockchainConfigsFilenames an array with pairs, mapping the node to the actual blockchain file paths to run on this node.
+     */
+    protected fun createMultipleChainNodesWithVariableNumberOfChains(
+            count: Int,
+            nodeNameWithBlockchainsArr: Array<NodeNameWithBlockchains>
+    ): Array<PostchainTestNode> {
+
+        require(count == nodeNameWithBlockchainsArr.size) { "Must have as many nodes in the array as specified" }
+
+        return Array(count) {
+            val bcFilenames: List<String> = nodeNameWithBlockchainsArr[it].getFilenames()
+            createMultipleChainNode(it, count, nodeNameWithBlockchainsArr[it].nodeFileName, *(bcFilenames.toTypedArray()))
         }
     }
 
@@ -203,18 +247,25 @@ open class IntegrationTest {
             preWipeDatabase: Boolean = true
     ): PostchainTestNode {
 
-        val nodeConfigProvider = createNodeConfig(nodeIndex, nodeCount, nodeConfigFilename)
+        val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+
         //require(nodeConfigProvider.getConfiguration().activeChainIds.size == blockchainConfigFilenames.size) {
         //    "The nodes config must have the same number of active chains as the number of specified BC config files."
         //}
 
-        val node = PostchainTestNode(nodeConfigProvider, preWipeDatabase)
+        // Wiping of database
+        if (preWipeDatabase) {
+            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        }
+
+        val node = PostchainTestNode(nodeConfigProvider)
                 .also { nodes.add(it) }
 
         nodeConfigProvider.getConfiguration().activeChainIds
                 .filter(String::isNotEmpty)
                 .forEachIndexed { i, chainId ->
-                    val blockchainRid = blockchainRids[chainId.toLong()]!!.hexStringToByteArray()
+                    val blockchainRid = BLOCKCHAIN_RIDS[chainId.toLong()]!!.hexStringToByteArray()
                     val filename = blockchainConfigFilenames[i]
                     val blockchainConfig = readBlockchainConfig(filename)
                     node.addBlockchain(chainId.toLong(), blockchainRid, blockchainConfig)
@@ -229,8 +280,17 @@ open class IntegrationTest {
                 javaClass.getResource(blockchainConfigFilename).readText())
     }
 
-    protected fun createNodeConfig(nodeIndex: Int, nodeCount: Int = 1, configFile /*= DEFAULT_CONFIG_FILE*/: String)
-            : NodeConfigurationProvider {
+    protected fun createAppConfig(nodeIndex: Int, nodeCount: Int = 1, configFile /*= DEFAULT_CONFIG_FILE*/: String)
+            : AppConfig {
+
+        val file = File(configFile)
+        /*
+        if (file.isFile) {
+            throw IllegalArgumentException("Node conf file on path: $configFile cannot be found.")
+        } else {
+            logger.debug("Node conf file found: $configFile")
+        }
+         */
 
         // Read first file directly via the builder
         val params = Parameters()
@@ -238,7 +298,7 @@ open class IntegrationTest {
 //                .setLocationStrategy(ClasspathLocationStrategy())
                 .setLocationStrategy(UniversalFileLocationStrategy())
                 .setListDelimiterHandler(DefaultListDelimiterHandler(','))
-                .setFile(File(configFile))
+                .setFile(file)
 
         val baseConfig = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
                 .configure(params)
@@ -258,17 +318,17 @@ open class IntegrationTest {
                 baseConfig.setProperty("node.$i.port", port++)
                 baseConfig.setProperty("node.$i.pubkey", pubKeyHex(i))
             }
-        }
 
-        baseConfig.setProperty("messaging.privkey", privKeyHex(nodeIndex))
-        baseConfig.setProperty("messaging.pubkey", pubKeyHex(nodeIndex))
+            baseConfig.setProperty("messaging.privkey", privKeyHex(nodeIndex))
+            baseConfig.setProperty("messaging.pubkey", pubKeyHex(nodeIndex))
+        }
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)
             addConfiguration(baseConfig)
         }
 
-        return NodeConfigurationProviderFactory.createProvider(AppConfig(appConfig))
+        return AppConfig(appConfig)
     }
 
     protected fun gtxConfigSigners(nodeCount: Int = 1): Gtv {
