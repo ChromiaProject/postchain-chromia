@@ -12,6 +12,7 @@ class Cli {
             CommandKeygen(),
             CommandRegisterProvider(),
             CommandEnableProvider(),
+            CommandDisableProvider(),
             CommandAddNode(),
             CommandAddBlockchain(),
             CommandAddBlockchainSigners()

@@ -168,4 +168,27 @@ class CliExecution {
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
+
+    fun disableProvider(config: AppConfig, key: String) {
+        try {
+            val client = getPostchainClient(config)
+            val provider = client.query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            val tx = client.makeTransaction()
+            tx.addOperation("disable_provider", arrayOf(provider))
+            tx.sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Provider has been disable")
+            } else {
+                throw CliError.Companion.CliException("Cannot disable provider")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
 }
