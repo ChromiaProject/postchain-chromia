@@ -8,3 +8,7 @@ target
 */*.pid
 *.log
 *.log.lck
+postchain.pid
+
+postchain-node
+bc-target
