@@ -95,6 +95,32 @@ class CliExecution {
         }
     }
 
+    fun removeNode(config: AppConfig, key: String) {
+        try {
+            val client = getPostchainClient(config)
+            val provider = client.query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val tx = client.makeTransaction().apply {
+                addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
+                addOperation("remove_node",
+                        arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray())))
+                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("node had been removed successfully")
+            } else {
+                throw CliError.Companion.CliException("Cannot remove node")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
     /**
      *
      */
