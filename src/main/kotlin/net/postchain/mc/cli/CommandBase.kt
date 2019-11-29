@@ -11,19 +11,5 @@ abstract class CommandBase : Command {
             required = true)
     protected var config = ""
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "blockchain rid",
-            required = false)
-    private var brid = ""
-
-    protected fun loadAppConfig(): AppConfig {
-        val config = AppConfig.fromPropertiesFile(config)
-
-        if (config.brid.isEmpty()) {
-            config.brid = brid
-        }
-
-        return config
-    }
+    protected fun loadAppConfig() = AppConfig.fromPropertiesFile(config)
 }

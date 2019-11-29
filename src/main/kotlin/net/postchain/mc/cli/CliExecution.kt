@@ -77,7 +77,7 @@ class CliExecution {
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_node",
-                        arrayOf(GtvFactory.gtv(provider.asByteArray()), GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
+                        arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
                 sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
