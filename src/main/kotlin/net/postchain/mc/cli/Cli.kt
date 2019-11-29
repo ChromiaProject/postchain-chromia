@@ -15,7 +15,8 @@ class Cli {
             CommandDisableProvider(),
             CommandAddNode(),
             CommandAddBlockchain(),
-            CommandAddBlockchainSigners()
+            CommandAddBlockchainSigners(),
+            CommandRemoveBlockchainSigners()
     ).map { it.key() to it }.toMap()
 
     init {

@@ -3,8 +3,8 @@ package net.postchain.mc.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 
-@Parameters(commandDescription = "add blockchain's signers")
-class CommandAddBlockchainSigners: CommandBase() {
+@Parameters(commandDescription = "remove blockchain's signers")
+class CommandRemoveBlockchainSigners: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -18,12 +18,12 @@ class CommandAddBlockchainSigners: CommandBase() {
             required = true)
     private var signers = ""
 
-    override fun key(): String = "add-blockchain-signers"
+    override fun key(): String = "remove-blockchain-signers"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().addBlockchainSigners(loadAppConfig(), blockchainRID, signers)
-            Ok("Blockchain's signers have been added successfully")
+            CliExecution().removeBlockchainSigners(loadAppConfig(), blockchainRID, signers)
+            Ok("Blockchain's signers have been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

@@ -98,16 +98,16 @@ class CliExecution {
     /**
      *
      */
-    fun addBlockchainSigners(config: AppConfig, blockchain: String, signers: String) {
+    fun addBlockchainSigners(config: AppConfig, blockchainRID: String, signers: String) {
         try {
             val client = getPostchainClient(config)
             val nodeList = signers.split(",").map {
                 client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
             }
-            val bc = client.query("get_blockchain", GtvFactory.gtv("rid" to GtvFactory.gtv(blockchain.hexStringToByteArray()))).get()
+            val blockchain = client.query("get_blockchain", GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
-                addOperation("add_blockchain_signers", arrayOf(bc, GtvFactory.gtv(nodeList)))
+                addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
                 sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
@@ -115,6 +115,33 @@ class CliExecution {
                 println("Blockchain's signers have been added")
             } else {
                 throw CliError.Companion.CliException("Cannot add blockchain's signers")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun removeBlockchainSigners(config: AppConfig, blockchainRID: String, signers: String) {
+        try {
+            val client = getPostchainClient(config)
+            val nodeList = signers.split(",").map {
+                client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
+            }
+            val blockchain = client.query("get_blockchain", GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val tx = client.makeTransaction().apply {
+                addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
+                addOperation("remove_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
+                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Blockchain's signers have been removed")
+            } else {
+                throw CliError.Companion.CliException("Cannot remove blockchain's signers")
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
