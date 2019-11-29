@@ -69,6 +69,36 @@ class CliExecution {
     /**
      *
      */
+    fun addConfiguration(config: AppConfig, blockchainRID: String, blockchainConfigFile: String, height: Long) {
+        try {
+            val client = getPostchainClient(config)
+            val data = getEncodedGtxValueFromFile(blockchainConfigFile)
+            val blockchain = client.query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val tx = client.makeTransaction().apply {
+                addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
+                addOperation("add_configuration",
+                        arrayOf(blockchain, GtvFactory.gtv(data), GtvFactory.gtv(height)))
+                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("blockchain configuration was added successfully!")
+            } else {
+                throw CliError.Companion.CliException("Cannot add blockchain configuration")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
     fun addNode(config: AppConfig, key: String, host: String, port: Long) {
         try {
             val client = getPostchainClient(config)
@@ -95,6 +125,9 @@ class CliExecution {
         }
     }
 
+    /**
+     *
+     */
     fun removeNode(config: AppConfig, key: String) {
         try {
             val client = getPostchainClient(config)
@@ -128,9 +161,11 @@ class CliExecution {
         try {
             val client = getPostchainClient(config)
             val nodeList = signers.split(",").map {
-                client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
+                client.query("get_node",
+                        GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
             }
-            val blockchain = client.query("get_blockchain", GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val blockchain = client.query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
@@ -151,6 +186,9 @@ class CliExecution {
         }
     }
 
+    /**
+     *
+     */
     fun removeBlockchainSigners(config: AppConfig, blockchainRID: String, signers: String) {
         try {
             val client = getPostchainClient(config)
@@ -233,6 +271,9 @@ class CliExecution {
         }
     }
 
+    /**
+     *
+     */
     fun disableProvider(config: AppConfig, key: String) {
         try {
             val client = getPostchainClient(config)
