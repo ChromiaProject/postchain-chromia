@@ -28,7 +28,7 @@ class CommandAddNode: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().addNode(loadAppConfig(), key, host, port)
+            CliExecution(loadAppConfig()).addNode(key, host, port)
             Ok("Node has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

@@ -22,7 +22,7 @@ class CommandAddBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().addBlockchainSigners(loadAppConfig(), blockchainRID, signers)
+            CliExecution(loadAppConfig()).addBlockchainSigners(blockchainRID, signers)
             Ok("Blockchain's signers have been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

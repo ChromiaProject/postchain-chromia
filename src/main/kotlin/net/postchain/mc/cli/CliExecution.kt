@@ -2,6 +2,7 @@ package net.postchain.mc.cli
 
 import mu.KLogging
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.SigMaker
 import net.postchain.client.ConfirmationLevel
 import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
@@ -16,14 +17,14 @@ import net.postchain.mc.config.app.AppConfig
 import java.io.File
 import java.time.Instant
 
-class CliExecution {
+class CliExecution(val config: AppConfig) {
 
     companion object : KLogging()
 
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val postchainClientFactory = PostchainClientFactory()
 
-    private fun getPostchainClient(config: AppConfig): PostchainClient {
+    private fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
             throw UserMistake("missing required parameters")
         }
@@ -37,19 +38,23 @@ class CliExecution {
         return GtvEncoder.encodeGtv(gtv)
     }
 
+    private fun buildSigMaker(): SigMaker {
+        return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
+    }
+
     /**
      *
      */
-    fun addBlockchain(config: AppConfig, blockchainConfigFile: String, nodes: String) {
+    fun addBlockchain(blockchainConfigFile: String, nodes: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val data = getEncodedGtxValueFromFile(blockchainConfigFile)
             val nodeList = nodes.split(",").map { client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_blockchain",
                         arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -69,9 +74,9 @@ class CliExecution {
     /**
      *
      */
-    fun addConfiguration(config: AppConfig, blockchainRID: String, blockchainConfigFile: String, height: Long) {
+    fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val data = getEncodedGtxValueFromFile(blockchainConfigFile)
             val blockchain = client.query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
@@ -79,7 +84,7 @@ class CliExecution {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_configuration",
                         arrayOf(blockchain, GtvFactory.gtv(data), GtvFactory.gtv(height)))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -99,16 +104,16 @@ class CliExecution {
     /**
      *
      */
-    fun addNode(config: AppConfig, key: String, host: String, port: Long) {
+    fun addNode(key: String, host: String, port: Long) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val provider = client.query("get_provider", GtvFactory.gtv(
                         "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_node",
                         arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -128,16 +133,16 @@ class CliExecution {
     /**
      *
      */
-    fun removeNode(config: AppConfig, key: String) {
+    fun removeNode(key: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val provider = client.query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("remove_node",
                         arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray())))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -157,9 +162,9 @@ class CliExecution {
     /**
      *
      */
-    fun addBlockchainSigners(config: AppConfig, blockchainRID: String, signers: String) {
+    fun addBlockchainSigners(blockchainRID: String, signers: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val nodeList = signers.split(",").map {
                 client.query("get_node",
                         GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
@@ -169,7 +174,7 @@ class CliExecution {
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -189,9 +194,9 @@ class CliExecution {
     /**
      *
      */
-    fun removeBlockchainSigners(config: AppConfig, blockchainRID: String, signers: String) {
+    fun removeBlockchainSigners(blockchainRID: String, signers: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val nodeList = signers.split(",").map {
                 client.query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
             }
@@ -199,7 +204,7 @@ class CliExecution {
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("remove_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -219,14 +224,14 @@ class CliExecution {
     /**
      *
      */
-    fun registerProvider(config: AppConfig, key: String) {
+    fun registerProvider(key: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("register_provider",
                         arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -246,15 +251,15 @@ class CliExecution {
     /**
      *
      */
-    fun enableProvider(config: AppConfig, key: String) {
+    fun enableProvider(key: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val provider = client.query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("enable_provider", arrayOf(provider))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -274,15 +279,15 @@ class CliExecution {
     /**
      *
      */
-    fun disableProvider(config: AppConfig, key: String) {
+    fun disableProvider(key: String) {
         try {
-            val client = getPostchainClient(config)
+            val client = getPostchainClient()
             val provider = client.query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             val tx = client.makeTransaction().apply {
                 addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
                 addOperation("disable_provider", arrayOf(provider))
-                sign(cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray()))
+                sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {

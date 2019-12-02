@@ -28,7 +28,7 @@ class CommandAddConfiguration: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().addConfiguration(loadAppConfig(), blockchainRID, blockchainConfigFile, height)
+            CliExecution(loadAppConfig()).addConfiguration(blockchainRID, blockchainConfigFile, height)
             Ok("blockchain configuration has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

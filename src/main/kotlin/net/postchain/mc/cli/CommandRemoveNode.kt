@@ -16,7 +16,7 @@ class CommandRemoveNode: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().removeNode(loadAppConfig(), key)
+            CliExecution(loadAppConfig()).removeNode(key)
             Ok("Node has been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

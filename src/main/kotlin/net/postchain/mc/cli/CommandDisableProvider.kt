@@ -16,7 +16,7 @@ class CommandDisableProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().disableProvider(loadAppConfig(), key)
+            CliExecution(loadAppConfig()).disableProvider(key)
             Ok("Provider has been disabled successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

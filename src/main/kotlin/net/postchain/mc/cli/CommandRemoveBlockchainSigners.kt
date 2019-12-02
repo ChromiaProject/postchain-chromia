@@ -22,7 +22,7 @@ class CommandRemoveBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().removeBlockchainSigners(loadAppConfig(), blockchainRID, signers)
+            CliExecution(loadAppConfig()).removeBlockchainSigners(blockchainRID, signers)
             Ok("Blockchain's signers have been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

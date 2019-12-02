@@ -16,7 +16,7 @@ class CommandEnableProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution().enableProvider(loadAppConfig(), key)
+            CliExecution(loadAppConfig()).enableProvider(key)
             Ok("Provider has been enabled successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
