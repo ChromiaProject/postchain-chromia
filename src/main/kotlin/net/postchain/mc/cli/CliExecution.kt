@@ -112,7 +112,7 @@ class CliExecution {
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("node had been added successfully")
+                println("Node had been added successfully")
             } else {
                 throw CliError.Companion.CliException("Cannot add node")
             }
