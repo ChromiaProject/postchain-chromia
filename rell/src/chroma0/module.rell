@@ -117,17 +117,17 @@ operation add_replica (provider?, blockchain, node) {
 		require_admin();			
 	}
 	
-	require(empty(blockchain_signer_node @? { blockchain, node }));
-	require(empty(blockchain_replica_node @? { blockchain, node }));
+	require(not exists(blockchain_signer_node @? { blockchain, node }));
+	require(not exists(blockchain_replica_node @? { blockchain, node }));
 	create blockchain_replica_node ( blockchain, node );
 }
 
 operation remove_replica (provider?, blockchain, node) {
 	if (exists(provider)) {
 		require_provider_auth(provider);
-		require( node.provider == provider );		
+		require( node.provider == provider );
 	} else {
-		require_admin();			
+		require_admin();
 	}
 	delete blockchain_replica_node @ { blockchain, node };
 }
@@ -168,11 +168,11 @@ function get_last_height (blockchain): integer {
 
 function patch_configuration_signers(blockchain, data: byte_array): byte_array {
     val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
-	val signers = blockchain_signer_node @* { blockchain } .node.pubkey;
+	val signers = blockchain_signer_node @* { blockchain } (sort .node.pubkey);
 	require(signers.size() > 0);
 	// do not write new configuration when size is 0 since it's impossible to recover
 	// from that
-    config_dict["signers"] = signers.to_gtv();     
+    config_dict["signers"] = signers.to_gtv();
 	return config_dict.to_gtv().to_bytes();
 }
 
@@ -182,7 +182,7 @@ function update_configuration (blockchain) {
     delete blockchain_signer_node @* { blockchain, .node.active == false};
     val last_height = get_last_height(blockchain);
     val updated_config = patch_configuration_signers( blockchain, last_config.data );
-    
+
     create blockchain_configuration (
         blockchain,
         height = last_height + 5,
@@ -196,7 +196,7 @@ operation add_blockchain_signers (blockchain, add_signers: list<node>) {
 		require(signer.active);
 		create blockchain_signer_node(blockchain, signer);
 	}
-	update_configuration(blockchain);	
+	update_configuration(blockchain);
 }
 
 operation remove_blockchain_signers (blockchain, remove_signers: list<node>) {
@@ -217,8 +217,9 @@ operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) 
 	}
 	config["signers"] = signers.to_gtv();
 	val blockchain_rid = config.hash();
+	print("Added blockchain", blockchain_rid);
 	val blockchain = create blockchain ( blockchain_rid );
-	create blockchain_configuration (blockchain, 0, config_data);
+	create blockchain_configuration (blockchain, 0, config.to_gtv().to_bytes());
 	for (node in initial_nodes) {
 		create blockchain_signer_node (blockchain, node);
 	}
@@ -228,7 +229,7 @@ operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) 
 operation add_configuration (blockchain, config_data: byte_array, height: integer) {
 	require_admin();
 	require(get_last_height(blockchain) < height);
-	require(empty(blockchain_configuration @? { blockchain, .height > height } limit 1));
+	require(not exists(blockchain_configuration @? { blockchain, .height > height } limit 1));
 	create blockchain_configuration(
 		blockchain,
 		height,

@@ -28,6 +28,7 @@ case $COMMAND in
         run_cmd add-blockchain -brid "$BRID" -cid 0 -bc bc-target/blockchains/0/0.xml
         run_cmd peerinfo-add -h 127.0.0.1 -p ${NODE_PORTS[$NODE_ID]} -pk ${NODE_PUBKEYS[$NODE_ID]}
         [ "$NODE_ID" -ne 0 ] && run_cmd peerinfo-add -h 127.0.0.1 -p ${NODE_PORTS[0]} -pk ${NODE_PUBKEYS[0]}
+        true
         ;;
     run)
         run_cmd run-node -cid 0

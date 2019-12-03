@@ -3,7 +3,7 @@
         <config src="config/only_node_0.properties" add-signers="true" />
     </nodes>
     <chains>
-        <chain name="manager" iid="0" brid="0000000000000000000000000000000000000000000000000000000000000000">
+        <chain name="manager" iid="0">
             <config height="0">
                 <app module="chroma0">
                 <args module="chroma0">

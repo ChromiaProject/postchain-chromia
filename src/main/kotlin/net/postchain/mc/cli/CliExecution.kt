@@ -130,6 +130,66 @@ class CliExecution(val config: AppConfig) {
     /**
      *
      */
+    fun addReplica(blockchainRID: String, key: String) {
+        try {
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val node = getPostchainClient().query("get_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("add_replica", arrayOf(provider, blockchain, node))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Replica node had been added successfully")
+            } else {
+                throw CliError.Companion.CliException("Cannot add replica node")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
+    fun removeReplica(blockchainRID: String, key: String) {
+        try {
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val node = getPostchainClient().query("get_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("remove_replica", arrayOf(provider, blockchain, node))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Replica node had been removed successfully")
+            } else {
+                throw CliError.Companion.CliException("Cannot remove replica node")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
     fun removeNode(key: String) {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(

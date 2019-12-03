@@ -8,7 +8,11 @@ entity activity_counter {
 }
 
 operation update_activity_counter () {
-	val delta = op_context.last_block_time - activity_check.last_checked;
+	if (activity_check.last_checked == 0) {
+		activity_check.last_checked = op_context.last_block_time;
+		return;
+	}
+	val delta = (op_context.last_block_time - activity_check.last_checked) / 1000;
 	require(delta >= 86400);
 	
 	for (provider in provider_state @* { .active == true } (.provider)) {

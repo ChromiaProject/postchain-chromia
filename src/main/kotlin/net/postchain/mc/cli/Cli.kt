@@ -15,6 +15,8 @@ class Cli {
             CommandDisableProvider(),
             CommandAddNode(),
             CommandRemoveNode(),
+            CommandAddReplica(),
+            CommandRemoveReplica(),
             CommandAddBlockchain(),
             CommandAddConfiguration(),
             CommandAddBlockchainSigners(),

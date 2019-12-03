@@ -5,14 +5,19 @@ entity anchored_block {
 
 entity anchored_block_signer { key anchored_block, node; }
 
-struct block_header {
+struct base_block_header {
 	blockchain_rid: byte_array;
+	prev_block_rid: byte_array;
+	merkle_root_hash: byte_array;
+	timestamp: timestamp;
 	height: integer;
+	dependencies: gtv;
+	extra: map<text, gtv>;
 }
 
 function find_blockchain_configuration (blockchain, height: integer): blockchain_configuration {
     // find configuration height -- the latest height up to given height
-    return (blockchain_configuration @ { blockchain , .height <= height } 
+    return (blockchain_configuration @ { blockchain , .height <= height }
      (-sort .height, bc=blockchain_configuration) limit 1).bc;
 }
 
@@ -21,18 +26,21 @@ function signers_from_configuration( blockchain_configuration ): list<pubkey> {
 	return list<pubkey>.from_gtv(config_dict["signers"]);
 }
 
-operation anchor_block (header: block_header, signers: list<pubkey>, signatures: list<byte_array>) {
+operation anchor_block (header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
 	val blockchain = blockchain @ { header.blockchain_rid };
-	require(empty(anchored_block @? { blockchain, header.height }));
-	
+	val existing_ab = anchored_block @? { blockchain, header.height  };
+	require(not exists(existing_ab));
+
 	val all_signers = set(signers_from_configuration(
 		find_blockchain_configuration(blockchain, header.height)
 	));
-	
+
 	val block_rid = header.hash();
-	
+	print("block rid", block_rid);
+
 	for (i in range(0, signers.size())) {
 		require(all_signers.contains(signers[i]));
+		print("s", signers[i], signatures[i]);
 		require(verify_signature(block_rid, signers[i], signatures[i]));
 	}
 	
