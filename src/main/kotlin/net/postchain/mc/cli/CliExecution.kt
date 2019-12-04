@@ -1,6 +1,7 @@
 package net.postchain.mc.cli
 
 import mu.KLogging
+import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
 import net.postchain.client.*
@@ -27,7 +28,7 @@ class CliExecution(val config: AppConfig) {
         }
         val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
     }
 
     private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {
