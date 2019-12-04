@@ -1,88 +1,100 @@
-//package net.postchain.mc.test
-//
-//import assertk.assertions.isEqualTo
-//import assertk.assertions.isNotNull
-//import assertk.assertions.isNull
-//import assertk.assertions.isTrue
-//import net.postchain.client.DefaultSigner
-//import net.postchain.client.PostchainClient
-//import net.postchain.client.PostchainClientFactory
-//import net.postchain.common.hexStringToByteArray
-//import net.postchain.gtv.*
-//import net.postchain.mc.cli.CliError
-//import net.postchain.mc.cli.CliExecution
-//import net.postchain.mc.config.app.AppConfig
-//import org.awaitility.Awaitility
-//import org.awaitility.Duration
-//import org.junit.Assert.*
-//import org.junit.Before
-//import org.junit.Test
-//import java.nio.file.Paths
-//
-//const val DEFAULT_APP_CONFIG = "app.properties"
-//const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
-//const val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
-//const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b44170d"
-//const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
-//const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
-//const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
-//const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
-//
-//class ManagedNodeTest : IntegrationTest() {
-//
-//    private val postchainClientFactory = PostchainClientFactory()
-//
-//    private var data: Map<String, Gtv> = mapOf()
-//
-//    private var peers: Array<out Gtv> = arrayOf()
-//
-//    private var exception: Exception? = null
-//
-//    private var version: Long? = null
-//
-//    private var blockchain: Gtv? = null
-//
-//    private var height: Long? = null
-//
-//    private var blockchainRID: ByteArray? = null
-//
-//    private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
-//        return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
-//    }
-//
-//    private fun getSigner(): Pair<ByteArray, ByteArray> {
-//        return Pair(pubkey.hexStringToByteArray(), privkey.hexStringToByteArray())
-//    }
-//
-//    private fun getPostchainClient(configFile: String): PostchainClient {
-//        val config = AppConfig.fromPropertiesFile(configFile)
-//
-//        val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
-//        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-//        return postchainClientFactory.getClient(resolver, config.brid.hexStringToByteArray(), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
-//    }
-//
-//    private fun createPostchainTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
-//        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
-//        configOverrides.setProperty("api.port", 7740L)
-//        return createNodes(nodesCount, configFileName)
-//    }
-//
-//    @Before
-//    fun setup() {
-//        data = mapOf()
-//        peers = arrayOf()
-//        exception = null
-//        version = null
-//        blockchain = null
-//        height = null
-//        blockchainRID = null
-//    }
-//
+package net.postchain.mc.test
+
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
+import net.postchain.base.BlockchainRid
+import net.postchain.client.DefaultSigner
+import net.postchain.client.PostchainClient
+import net.postchain.client.PostchainClientFactory
+import net.postchain.common.hexStringToByteArray
+import net.postchain.config.SimpleDatabaseConnector
+import net.postchain.config.app.AppConfigDbLayer
+import net.postchain.gtv.*
+import net.postchain.mc.cli.CliError
+import net.postchain.mc.cli.CliExecution
+import net.postchain.mc.config.app.AppConfig
+import org.awaitility.Awaitility
+import org.awaitility.Duration
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import java.nio.file.Paths
+
+const val DEFAULT_APP_CONFIG = "app.properties"
+const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
+const val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
+const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b44170d"
+const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
+const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
+const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+
+class ManagedNodeTest : IntegrationTest() {
+
+    private val postchainClientFactory = PostchainClientFactory()
+
+    private var data: Map<String, Gtv> = mapOf()
+
+    private var peers: Array<out Gtv> = arrayOf()
+
+    private var exception: Exception? = null
+
+    private var version: Long? = null
+
+    private var blockchain: Gtv? = null
+
+    private var height: Long? = null
+
+    private var blockchainRID: ByteArray? = null
+
+    private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
+        return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
+    }
+
+    private fun getSigner(): Pair<ByteArray, ByteArray> {
+        return Pair(pubkey.hexStringToByteArray(), privkey.hexStringToByteArray())
+    }
+
+    private fun getPostchainClient(configFile: String): PostchainClient {
+        val config = AppConfig.fromPropertiesFile(configFile)
+
+        val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
+        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+    }
+
+    @Before
+    fun setup() {
+        data = mapOf()
+        peers = arrayOf()
+        exception = null
+        version = null
+        blockchain = null
+        height = null
+        blockchainRID = null
+    }
+
+    @Test
+    fun testRegisterProvider() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        CliExecution(config).registerProvider("03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0")
+    }
+
 //    @Test
 //    fun testAddPeer() {
 //        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
+//        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+//        CliExecution(config).addNode(newPeerPubKey, "127.0.0.1", 9090L)
 //
 //        val client = getPostchainClient(DEFAULT_APP_CONFIG)
 //        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
@@ -106,7 +118,7 @@
 //            assertk.assert(version).isEqualTo(1L)
 //        }
 //    }
-//
+
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddPeer_SignerIsNotAdmin() {
 //        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
@@ -449,4 +461,4 @@
 //        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
 //        CliExecution().addSystemPeer("app_missing.properties", newPeerPubKey, getAdminSigner())
 //    }
-//}
+}
