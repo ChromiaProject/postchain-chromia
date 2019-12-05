@@ -38,37 +38,12 @@ class ManagedNodeTest : IntegrationTest() {
 
     private val postchainClientFactory = PostchainClientFactory()
 
-    private var data: Map<String, Gtv> = mapOf()
-
-    private var peers: Array<out Gtv> = arrayOf()
-
-    private var exception: Exception? = null
-
-    private var version: Long? = null
-
-    private var blockchain: Gtv? = null
-
-    private var height: Long? = null
-
-    private var blockchainRID: ByteArray? = null
-
     private fun getPostchainClient(configFile: String): PostchainClient {
         val config = AppConfig.fromPropertiesFile(configFile)
 
         val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
         return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
-    }
-
-    @Before
-    fun setup() {
-        data = mapOf()
-        peers = arrayOf()
-        exception = null
-        version = null
-        blockchain = null
-        height = null
-        blockchainRID = null
     }
 
     @Test
