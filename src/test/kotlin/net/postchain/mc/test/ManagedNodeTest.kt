@@ -16,6 +16,7 @@ import net.postchain.mc.cli.CliError
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.awaitility.Awaitility
+import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.Assert.*
 import org.junit.Before
@@ -49,14 +50,6 @@ class ManagedNodeTest : IntegrationTest() {
 
     private var blockchainRID: ByteArray? = null
 
-    private fun getAdminSigner(): Pair<ByteArray, ByteArray> {
-        return Pair(adminPubKey.hexStringToByteArray(), adminPrivKey.hexStringToByteArray())
-    }
-
-    private fun getSigner(): Pair<ByteArray, ByteArray> {
-        return Pair(pubkey.hexStringToByteArray(), privkey.hexStringToByteArray())
-    }
-
     private fun getPostchainClient(configFile: String): PostchainClient {
         val config = AppConfig.fromPropertiesFile(configFile)
 
@@ -87,7 +80,33 @@ class ManagedNodeTest : IntegrationTest() {
             }
         }
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
-        CliExecution(config).registerProvider("03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0")
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        CliExecution(config).registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val provider = client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        assertk.assert(provider.asInteger()).isEqualTo(1L)
+    }
+
+    @Test
+    fun testRegisterThenEnableProvider() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        CliExecution(config).registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val provider = client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        assertk.assert(provider.asInteger()).isEqualTo(1L)
+
+        CliExecution(config).enableProvider(providerPublicKey)
     }
 
 //    @Test
