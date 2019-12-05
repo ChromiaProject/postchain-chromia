@@ -24,13 +24,15 @@ import org.junit.Test
 import java.nio.file.Paths
 
 const val DEFAULT_APP_CONFIG = "app.properties"
-const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
-const val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
-const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b44170d"
-const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
-const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
-const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
-const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+const val DEFAULT_PROV_CONFIG = "prov.properties"
+const val DEFAULT_BLOCKCHAIN_RID = "345A0C47A7A6B25B81E6C0BCB6D76712147D9EA46A1E934181DAD86C818C3E55"
+//const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
+//const val adminPubKey = "02487d53cc19d75b12296fd3873ee2f65bdb8e9459cd2ee9bdabd3fc45cb3e87a9"
+//const val pubkey = "0395f16c8024ba14c6fd99f26ec4f78137e9419e836492bea087ec782f6b44170d"
+//const val privkey = "2d439640c141d8aed2dbc97aec315b58c416fe3301ad47e0d14a5809ff922d2a"
+//const val newPeerPubKey = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+//const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
+//const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
 
 class ManagedNodeTest : IntegrationTest() {
 
@@ -98,45 +100,83 @@ class ManagedNodeTest : IntegrationTest() {
                 AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
             }
         }
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        CliExecution(config).registerProvider(providerPublicKey)
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
         val provider = client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         assertk.assert(provider.asInteger()).isEqualTo(1L)
 
-        CliExecution(config).enableProvider(providerPublicKey)
+        executor.enableProvider(providerPublicKey)
     }
 
-//    @Test
-//    fun testAddPeer() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
-//        CliExecution(config).addNode(newPeerPubKey, "127.0.0.1", 9090L)
-//
-//        val client = getPostchainClient(DEFAULT_APP_CONFIG)
-//        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-//            data = it.asArray()[0].asDict()
-//        }.fail {
-//            exception = it
-//        }
-//
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(data["host"]?.asString()).isEqualTo("127.0.0.1")
-//            assertk.assert(data["port"]?.asBigInteger()?.toLong()).isEqualTo(9090L)
-//            assertArrayEquals(data["pubkey"]?.asByteArray(), newPeerPubKey.hexStringToByteArray())
-//            assertk.assert(exception).isNull()
-//        }
-//
-//        // check peer list version also
-//        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-//            version = it.asInteger()
-//        }
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(version).isEqualTo(1L)
-//        }
-//    }
+    @Test
+    fun testAddNode() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val provider = client.query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        assertk.assert(provider.asInteger()).isEqualTo(1L)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        val node = client.query("get_node", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
+        assertk.assert(node.asInteger()).isEqualTo(7L)
+    }
+
+    @Test
+    fun testAddBlockchain() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val provider = client.query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        assertk.assert(provider.asInteger()).isEqualTo(1L)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        val node = client.query("get_node", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
+        assertk.assert(node.asInteger()).isEqualTo(7L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                        + "/src/test/resources" + configFileName, node0)
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
+        assertk.assert(blockchain.asInteger()).isEqualTo(8L)
+    }
+
 
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddPeer_SignerIsNotAdmin() {
