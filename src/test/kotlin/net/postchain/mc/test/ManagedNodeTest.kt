@@ -204,6 +204,16 @@ class ManagedNodeTest : IntegrationTest() {
 
         // Add node1 as blockchain's signer
         executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+
+        // Get next configuration height after adding new node as blockchain's signer
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(10L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
     }
 
 
