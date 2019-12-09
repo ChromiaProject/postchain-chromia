@@ -157,14 +157,6 @@ class ManagedNodeTest : IntegrationTest() {
             }
         }
 
-        // Creating node1
-        createSingleNode(1, 2, NODE1_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo1)
-            }
-        }
-
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val executor = CliExecution(config)
@@ -214,6 +206,28 @@ class ManagedNodeTest : IntegrationTest() {
         val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
         assertk.assert(bc.asByteArray()).isNotNull()
+
+        Thread.sleep(120000)
+
+        // Creating node1
+        createSingleNode(1, 2, NODE1_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo1)
+            }
+        }
+        Thread.sleep(50000)
+
+        // Try to send tnx to api end point after the blocchain was re-configuration with new block signer
+        val anotherProviderPR = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
+        executor.registerProvider(anotherProviderPR)
+
+        val justAnotherProvider = client.query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(anotherProviderPR.hexStringToByteArray()))).get()
+        assertk.assert(justAnotherProvider.asInteger()).isGreaterThan(0L)
     }
 
 
