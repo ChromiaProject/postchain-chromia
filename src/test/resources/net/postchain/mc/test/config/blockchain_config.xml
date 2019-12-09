@@ -361,6 +361,11 @@
                                     query get_provider (pubkey) = provider @ { pubkey };
                                     query get_node (pubkey) = node @ { pubkey };
                                     query get_blockchain (rid: byte_array) = blockchain @ { rid };
+                                    query get_added_blockchain_rid(tx_rid: byte_array) {
+                                    return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
+                                    }
+
+                                    query chromia_version() = "0";
                                 </string>
                             </entry>
                             <entry key="chroma0/nm_api.rell">
@@ -408,7 +413,33 @@
                                     }
 
                                     // note -- API expects array, so we need suppress naming
-                                    query nm_get_peer_infos () = node @* {} (_ = .host,_ = .port,_ = .pubkey,_ = .last_updated);</string>
+                                    query nm_get_peer_infos () = node @* {} (_ = .host,_ = .port,_ = .pubkey,_ = .last_updated);
+
+                                    query nm_api_version () = 1;
+
+                                    query nm_get_blockchain_replica_node_map(blockchain_rids: list&lt;byte_array&gt;): list&lt;list&lt;byte_array&gt;&gt; {
+                                    val res = list&lt;list&lt;byte_array&gt;&gt;();
+                                    for (brid in blockchain_rids) {
+                                    val bc = blockchain @? { brid };
+                                    if (empty(bc)) {
+                                    res.add(list&lt;byte_array&gt;());
+                                    } else {
+                                    // note: we include signers in this list because node processing old blocks might
+                                    // want to connect to _current_ signers to get blocks
+                                    val signers = set( blockchain_signer_node @* { bc!! } .node.pubkey );
+                                    signers.add_all(
+                                    blockchain_replica_node @* { bc!! } .node.pubkey
+                                    );
+                                    res.add(list(signers));
+                                    }
+                                    }
+                                    return res;
+                                    }
+
+                                    query nm_get_node_replica_map(): list&lt;list&lt;byte_array&gt;&gt; {
+                                    return list&lt;list&lt;byte_array&gt;&gt;();
+                                    }
+                                </string>
                             </entry>
                             <entry key="ft3/account/auth_basic.rell">
                                 <string>// Auth type:

@@ -240,3 +240,8 @@ operation add_configuration (blockchain, config_data: byte_array, height: intege
 query get_provider (pubkey) = provider @ { pubkey };
 query get_node (pubkey) = node @ { pubkey };
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
+query get_added_blockchain_rid(tx_rid: byte_array) {
+	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
+}
+
+query chromia_version() = "0";
