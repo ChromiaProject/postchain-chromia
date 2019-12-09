@@ -9,6 +9,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.config.SimpleDatabaseConnector
 import net.postchain.config.app.AppConfigDbLayer
 import net.postchain.gtv.*
+import net.postchain.mc.cli.CliError
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Test
@@ -220,6 +221,79 @@ class ManagedNodeTest : IntegrationTest() {
             }
         }
         Thread.sleep(50000)
+
+        // Try to send tnx to api end point after the blocchain was re-configuration with new block signer
+        val anotherProviderPR = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
+        executor.registerProvider(anotherProviderPR)
+
+        val justAnotherProvider = client.query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(anotherProviderPR.hexStringToByteArray()))).get()
+        assertk.assert(justAnotherProvider.asInteger()).isGreaterThan(0L)
+    }
+
+    @Test(expected = CliError.Companion.CliException::class)
+    fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        // Creating node0
+        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val provider = client.query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+
+        // Add node0 to managed blockchain
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        var node = client.query("get_node", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
+        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        Thread.sleep(5000)
+
+        // Add blockchain config for self-awareness
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0)
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Thread.sleep(1000)
+
+        // Add node1 to managed blockchain
+        val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+        CliExecution(providerAuth).addNode(node1, "127.0.0.1", 9871L)
+        node = client.query("get_node", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get()
+        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        Thread.sleep(5000)
+
+        // Add node1 as blockchain's signer
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+
+        // Get next configuration height after adding new node as blockchain's signer
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(10L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
+
+        Thread.sleep(120000)
 
         // Try to send tnx to api end point after the blocchain was re-configuration with new block signer
         val anotherProviderPR = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
