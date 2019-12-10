@@ -3,12 +3,9 @@ package net.postchain.mc
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.chromia0.Cli
-import java.io.File
-import java.lang.management.ManagementFactory
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    dumpPid()
     when(val cliResult = Cli().parse(args)){
         is CliError -> {
             when(cliResult) {
@@ -36,10 +33,4 @@ fun main(args: Array<String>) {
             }
         }
     }
-}
-
-fun dumpPid() {
-    val processName = ManagementFactory.getRuntimeMXBean().name
-    val pid = processName.split("@")[0]
-    File("chromia0.pid").writeText(pid)
 }

@@ -1,35 +1,18 @@
-package net.postchain.mc.cli.chromia0
+package net.postchain.mc.cli
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.MissingCommandException
 import com.beust.jcommander.ParameterException
-import net.postchain.mc.cli.base.*
-import net.postchain.mc.cli.blockchain.CommandAddBlockchain
-import net.postchain.mc.cli.blockchain.CommandAddBlockchainSigners
-import net.postchain.mc.cli.blockchain.CommandAddConfiguration
-import net.postchain.mc.cli.blockchain.CommandRemoveBlockchainSigners
-import net.postchain.mc.cli.node.CommandAddNode
-import net.postchain.mc.cli.node.CommandRemoveNode
-import net.postchain.mc.cli.provider.CommandDisableProvider
-import net.postchain.mc.cli.provider.CommandEnableProvider
-import net.postchain.mc.cli.provider.CommandRegisterProvider
-import net.postchain.mc.cli.replica.CommandAddReplica
-import net.postchain.mc.cli.replica.CommandRemoveReplica
+import net.postchain.mc.cli.account.CommandKeygen
+import net.postchain.mc.cli.base.CliBase
+import net.postchain.mc.cli.base.CliError
+import net.postchain.mc.cli.base.CliResult
+import net.postchain.mc.cli.base.Command
 import java.sql.SQLException
 
 class Cli: CliBase() {
     private val commands: Map<String, Command> = listOf(
-            CommandRegisterProvider(),
-            CommandEnableProvider(),
-            CommandDisableProvider(),
-            CommandAddNode(),
-            CommandRemoveNode(),
-            CommandAddReplica(),
-            CommandRemoveReplica(),
-            CommandAddBlockchain(),
-            CommandAddConfiguration(),
-            CommandAddBlockchainSigners(),
-            CommandRemoveBlockchainSigners()
+            CommandKeygen()
     ).map { it.key() to it }.toMap()
 
     init {

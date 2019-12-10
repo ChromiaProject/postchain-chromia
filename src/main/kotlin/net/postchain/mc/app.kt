@@ -1,5 +1,36 @@
 package net.postchain.mc
 
-fun main() {
-    println("Welcome to postchain management console! ")
+import net.postchain.mc.cli.Cli
+import net.postchain.mc.cli.base.CliError
+import net.postchain.mc.cli.base.Ok
+import kotlin.system.exitProcess
+
+fun main(args: Array<String>) {
+    when(val cliResult = Cli().parse(args)){
+        is CliError -> {
+            when(cliResult) {
+                is CliError.MissingCommand -> {
+                    println(cliResult.message + "\n")
+                    Cli().usageCommands()
+                    println("\n")
+                }
+                is CliError.ArgumentNotFound -> {
+                    println(cliResult.message + "\n")
+                    Cli().usage(cliResult.command)
+                }
+                else -> cliResult.message?.let {
+                    println("\n$it\n")
+                }
+            }
+            exitProcess(cliResult.code)
+        }
+        is Ok -> {
+            cliResult.info?.also {
+                println("\n$it\n")
+            }
+            if(!cliResult.isLongRunning){
+                exitProcess(cliResult.code)
+            }
+        }
+    }
 }
