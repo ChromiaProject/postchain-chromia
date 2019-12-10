@@ -28,7 +28,7 @@ const val NODE1_CONFIG_FILE = "node1.properties"
 //const val newBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4"
 //const val systemBlockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
 
-class ManagedNodeTest : IntegrationTest() {
+class Chromia0Test : IntegrationTest() {
 
     private val postchainClientFactory = PostchainClientFactory()
 
