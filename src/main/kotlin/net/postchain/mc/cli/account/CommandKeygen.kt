@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameters
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.secp256k1_derivePubKey
 import net.postchain.common.toHex
+import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.base.Ok
@@ -31,8 +32,11 @@ class CommandKeygen: Command {
     override fun key(): String = "keygen"
 
     override fun execute(): CliResult {
-        val keys = keygen()
-        return Ok(keys)
+        return try {
+            Ok(keygen())
+        } catch (e: Exception) {
+            CliError.CommandNotAllowed(message = e.message)
+        }
     }
 
     /**
@@ -62,6 +66,8 @@ class CommandKeygen: Command {
 
             var fileOutputStream = FileOutputStream(file)
             properties.store(fileOutputStream, "save new key pair to file")
+            fileOutputStream.flush()
+            fileOutputStream.close()
         }
 
         return """
