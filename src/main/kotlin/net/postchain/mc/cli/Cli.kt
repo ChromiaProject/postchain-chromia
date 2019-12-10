@@ -22,7 +22,7 @@ class Cli: CliBase() {
         }
     }
 
-    fun parse(args: Array<String>): CliResult {
+    override fun parse(args: Array<String>): CliResult {
         return try {
             jCommander.parse(*args)
             if (jCommander.parsedCommand == null) {
@@ -40,20 +40,20 @@ class Cli: CliBase() {
         }
     }
 
-    fun parse(input: String) {
+    override fun parse(input: String) {
         jCommander.parse(*input.split(Regex("\\s+")).toTypedArray())
         commands[jCommander.parsedCommand]?.execute()
     }
 
-    fun usage() {
+    override fun usage() {
         jCommander.usage()
     }
 
-    fun usage(command: String) {
+    override fun usage(command: String) {
         jCommander.usage(command)
     }
 
-    fun usageCommands() {
+    override fun usageCommands() {
         val usage = jCommander.commands.keys
                 .asSequence()
                 .sorted()

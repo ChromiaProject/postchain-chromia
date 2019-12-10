@@ -3,7 +3,10 @@ package net.postchain.mc.cli.chromia0
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.MissingCommandException
 import com.beust.jcommander.ParameterException
-import net.postchain.mc.cli.base.*
+import net.postchain.mc.cli.base.CliBase
+import net.postchain.mc.cli.base.CliError
+import net.postchain.mc.cli.base.CliResult
+import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.CommandAddBlockchain
 import net.postchain.mc.cli.blockchain.CommandAddBlockchainSigners
 import net.postchain.mc.cli.blockchain.CommandAddConfiguration
@@ -39,7 +42,7 @@ class Cli: CliBase() {
         }
     }
 
-    fun parse(args: Array<String>): CliResult {
+    override fun parse(args: Array<String>): CliResult {
         return try {
             jCommander.parse(*args)
             if (jCommander.parsedCommand == null) {
@@ -57,20 +60,20 @@ class Cli: CliBase() {
         }
     }
 
-    fun parse(input: String) {
+    override fun parse(input: String) {
         jCommander.parse(*input.split(Regex("\\s+")).toTypedArray())
         commands[jCommander.parsedCommand]?.execute()
     }
 
-    fun usage() {
+    override fun usage() {
         jCommander.usage()
     }
 
-    fun usage(command: String) {
+    override fun usage(command: String) {
         jCommander.usage(command)
     }
 
-    fun usageCommands() {
+    override fun usageCommands() {
         val usage = jCommander.commands.keys
                 .asSequence()
                 .sorted()
