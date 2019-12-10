@@ -11,6 +11,7 @@ import net.postchain.core.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
 import java.io.File
 import java.time.Instant

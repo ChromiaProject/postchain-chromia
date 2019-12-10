@@ -9,7 +9,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.config.SimpleDatabaseConnector
 import net.postchain.config.app.AppConfigDbLayer
 import net.postchain.gtv.*
-import net.postchain.mc.cli.CliError
+import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Test

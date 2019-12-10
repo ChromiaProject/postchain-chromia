@@ -1,7 +1,12 @@
-package net.postchain.mc.cli
+package net.postchain.mc.cli.provider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import net.postchain.mc.cli.CliExecution
+import net.postchain.mc.cli.base.CliError
+import net.postchain.mc.cli.base.CliResult
+import net.postchain.mc.cli.base.CommandBase
+import net.postchain.mc.cli.base.Ok
 
 @Parameters(commandDescription = "disable existing provider by specific pubkey")
 class CommandDisableProvider: CommandBase() {
