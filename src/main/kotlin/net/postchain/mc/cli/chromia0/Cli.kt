@@ -1,12 +1,9 @@
-package net.postchain.mc.cli
+package net.postchain.mc.cli.chromia0
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.MissingCommandException
 import com.beust.jcommander.ParameterException
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.Command
-import net.postchain.mc.cli.base.CommandKeygen
+import net.postchain.mc.cli.base.*
 import net.postchain.mc.cli.blockchain.CommandAddBlockchain
 import net.postchain.mc.cli.blockchain.CommandAddBlockchainSigners
 import net.postchain.mc.cli.blockchain.CommandAddConfiguration
@@ -20,9 +17,7 @@ import net.postchain.mc.cli.replica.CommandAddReplica
 import net.postchain.mc.cli.replica.CommandRemoveReplica
 import java.sql.SQLException
 
-class Cli {
-
-    private val jCommander: JCommander
+class Cli: CliBase() {
     private val commands: Map<String, Command> = listOf(
             CommandKeygen(),
             CommandRegisterProvider(),

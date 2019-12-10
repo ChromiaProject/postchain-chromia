@@ -1,4 +1,4 @@
-package net.postchain.mc.cli
+package net.postchain.mc.cli.chromia0
 
 import mu.KLogging
 import net.postchain.base.BlockchainRid

@@ -2,8 +2,6 @@ package net.postchain.mc.cli.base
 
 import com.beust.jcommander.Parameter
 import mu.KLogging
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.Command
 import net.postchain.mc.config.app.AppConfig
 
 abstract class CommandBase : Command {

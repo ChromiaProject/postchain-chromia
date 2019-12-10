@@ -2,11 +2,11 @@ package net.postchain.mc.cli.node
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.CliExecution
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
+import net.postchain.mc.cli.chromia0.CliExecution
 
 @Parameters(commandDescription = "add node")
 class CommandAddNode: CommandBase() {
