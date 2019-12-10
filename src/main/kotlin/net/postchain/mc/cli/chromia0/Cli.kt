@@ -1,11 +1,7 @@
 package net.postchain.mc.cli.chromia0
 
 import com.beust.jcommander.JCommander
-import com.beust.jcommander.MissingCommandException
-import com.beust.jcommander.ParameterException
 import net.postchain.mc.cli.base.CliBase
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.CommandAddBlockchain
 import net.postchain.mc.cli.blockchain.CommandAddBlockchainSigners
@@ -18,10 +14,9 @@ import net.postchain.mc.cli.provider.CommandEnableProvider
 import net.postchain.mc.cli.provider.CommandRegisterProvider
 import net.postchain.mc.cli.replica.CommandAddReplica
 import net.postchain.mc.cli.replica.CommandRemoveReplica
-import java.sql.SQLException
 
 class Cli: CliBase() {
-    private val commands: Map<String, Command> = listOf(
+    override val commands: Map<String, Command> = listOf(
             CommandRegisterProvider(),
             CommandEnableProvider(),
             CommandDisableProvider(),
@@ -40,50 +35,5 @@ class Cli: CliBase() {
             commands.forEach { (key, command) -> addCommand(key, command) }
             build()
         }
-    }
-
-    override fun parse(args: Array<String>): CliResult {
-        return try {
-            jCommander.parse(*args)
-            if (jCommander.parsedCommand == null) {
-                CliError.MissingCommand(message = "Expected a command, got <no-command>")
-            } else {
-                commands[jCommander.parsedCommand]?.execute()
-                        ?: CliError.ArgumentNotFound(command = jCommander.parsedCommand)
-            }
-        } catch (e: MissingCommandException) {
-            CliError.MissingCommand(e.unknownCommand)
-        } catch (e: ParameterException) {
-            CliError.ArgumentNotFound(command = jCommander.parsedCommand)
-        } catch (e: SQLException) {
-            CliError.DatabaseError(e)
-        }
-    }
-
-    override fun parse(input: String) {
-        jCommander.parse(*input.split(Regex("\\s+")).toTypedArray())
-        commands[jCommander.parsedCommand]?.execute()
-    }
-
-    override fun usage() {
-        jCommander.usage()
-    }
-
-    override fun usage(command: String) {
-        jCommander.usage(command)
-    }
-
-    override fun usageCommands() {
-        val usage = jCommander.commands.keys
-                .asSequence()
-                .sorted()
-                .map { cmd ->
-                    "${cmd.padEnd(25, ' ')}${jCommander.getCommandDescription(cmd)}"
-                }.joinToString(
-                        separator = "\n  ",
-                        prefix = "Commands:\n  "
-                )
-
-        println(usage)
     }
 }
