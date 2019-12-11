@@ -12,12 +12,13 @@ import net.postchain.gtv.*
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.AppConfig
+import org.junit.Assert
 import org.junit.Test
 import java.nio.file.Paths
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "C871DCFC554F8DAEB5B29BCD98BC425A0A416B44AE21FF7C17957A1035941982"
+const val DEFAULT_BLOCKCHAIN_RID = "0DAF477A7A2CCADF357EB1CD99714E37F055820AE8D9B9D616812CEA5C6F5F7E"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -55,8 +56,11 @@ class Chromia0Test : IntegrationTest() {
         CliExecution(config).registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        val data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
     @Test
@@ -75,10 +79,17 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
+        // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
     }
 
     @Test
@@ -97,17 +108,28 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
+        // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        val node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        val node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
     }
 
     @Test
@@ -126,24 +148,35 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
+        // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        val node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        val node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                         + "/src/test/resources" + configFileName, node0)
-        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
     }
 
     @Test
@@ -164,35 +197,50 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
         executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        var node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        var node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+
         Thread.sleep(5000)
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, node0)
-        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
         Thread.sleep(1000)
 
         // Add node1 to managed blockchain
         val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
         CliExecution(providerAuth).addNode(node1, "127.0.0.1", 9871L)
-        node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9871L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node1.hexStringToByteArray())
         Thread.sleep(5000)
 
         // Add node1 as blockchain's signer
@@ -226,9 +274,11 @@ class Chromia0Test : IntegrationTest() {
         val anotherProviderPR = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
         executor.registerProvider(anotherProviderPR)
 
-        val justAnotherProvider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(anotherProviderPR.hexStringToByteArray()))).get()
-        assertk.assert(justAnotherProvider.asInteger()).isGreaterThan(0L)
+        val justAnotherProvider = client.query("get_provider_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(anotherProviderPR.hexStringToByteArray()))).get().asDict()
+        Assert.assertArrayEquals(justAnotherProvider["pubkey"]?.asByteArray(), anotherProviderPR.hexStringToByteArray())
+        assertk.assert(justAnotherProvider["name"]?.asString()).isEqualTo("")
+        assertk.assert(justAnotherProvider["active"]?.asBoolean()).isEqualTo(false)
     }
 
     @Test(expected = CliError.Companion.CliException::class)
@@ -249,35 +299,50 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        val provider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        assertk.assert(provider.asInteger()).isGreaterThan(0L)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
         executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        var node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        var node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+
         Thread.sleep(5000)
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, node0)
-        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
         Thread.sleep(1000)
 
         // Add node1 to managed blockchain
         val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
         CliExecution(providerAuth).addNode(node1, "127.0.0.1", 9871L)
-        node = client.query("get_node", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get()
-        assertk.assert(node.asInteger()).isGreaterThan(0L)
+        node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9871L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node1.hexStringToByteArray())
         Thread.sleep(5000)
 
         // Add node1 as blockchain's signer
@@ -298,10 +363,6 @@ class Chromia0Test : IntegrationTest() {
         // Try to send tnx to api end point after the blocchain was re-configuration with new block signer
         val anotherProviderPR = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
         executor.registerProvider(anotherProviderPR)
-
-        val justAnotherProvider = client.query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(anotherProviderPR.hexStringToByteArray()))).get()
-        assertk.assert(justAnotherProvider.asInteger()).isGreaterThan(0L)
     }
 
 

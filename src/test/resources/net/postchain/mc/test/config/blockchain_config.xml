@@ -359,8 +359,37 @@
                                     }
 
                                     query get_provider (pubkey) = provider @ { pubkey };
+
+                                    query get_provider_data (pubkey) {
+                                    return provider_state @ {
+                                    provider @ { pubkey }
+                                    } (
+                                    pubkey = .provider.pubkey,
+                                    name = .name,
+                                    active = .active,
+                                    beneficiary = .beneficiary.id
+                                    );
+                                    }
+
                                     query get_node (pubkey) = node @ { pubkey };
+
+                                    query get_node_data (pubkey) {
+                                    return node @ {
+                                    pubkey
+                                    } (
+                                    provider = .provider.pubkey,
+                                    pubkey = .pubkey,
+                                    active = .active,
+                                    host = .host,
+                                    port = .port,
+                                    last_updated = .last_updated
+                                    );
+                                    }
+
                                     query get_blockchain (rid: byte_array) = blockchain @ { rid };
+
+                                    query get_blockchain_rid (rid: byte_array) = blockchain @ { rid }.rid;
+
                                     query get_added_blockchain_rid(tx_rid: byte_array) {
                                     return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
                                     }
