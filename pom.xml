@@ -49,6 +49,7 @@
             <groupId>net.postchain.rell</groupId>
             <artifactId>rellr</artifactId>
             <version>${rellr.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
