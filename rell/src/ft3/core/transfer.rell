@@ -33,7 +33,7 @@ function consume_input (i: xfer_input, idx: integer, assets: map<asset, integer>
         account,
         asset,
         .delta = i.amount,
-        .op_index = 500, //op_context ???
+        .op_index = 0, //op_context ???
         .is_input = true,
         .entry_index = idx
       );
@@ -59,7 +59,7 @@ function process_transfer_output (o: xfer_output, idx: integer, available_assets
         asset,
         .delta = o.amount,
 
-        .op_index = 500, // something from op_context,
+        .op_index = 0, // something from op_context,
         .is_input = false,
         .entry_index = idx
       );

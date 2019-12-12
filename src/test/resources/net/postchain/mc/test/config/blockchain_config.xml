@@ -86,7 +86,7 @@
                                     function find_blockchain_configuration (blockchain, height: integer): blockchain_configuration {
                                     // find configuration height -- the latest height up to given height
                                     return (blockchain_configuration @ { blockchain , .height &lt;= height }
-                                    (-sort .height, bc=blockchain_configuration) limit 1).bc;
+                                    (@sort_desc .height, bc=blockchain_configuration) limit 1).bc;
                                     }
 
                                     function signers_from_configuration( blockchain_configuration ): list&lt;pubkey&gt; {
@@ -117,6 +117,9 @@
                                     create anchored_block_signer(block, node @ { signer });
                                     }
                                     }</string>
+                            </entry>
+                            <entry key="chroma0/compensation.rell">
+                                <string></string>
                             </entry>
                             <entry key="chroma0/module.rell">
                                 <string>@mount('')
@@ -206,7 +209,7 @@
                                     }
                                     if (exists(beneficiary_account_id)) {
                                     update provider_state @ {provider} (
-                                    ft3_account.account @ { .id == beneficiary_account_id }
+                                    .beneficiary = ft3_account.account @ { .id == beneficiary_account_id }
                                     );
                                     }
                                     }
@@ -238,8 +241,8 @@
                                     require_admin();
                                     }
 
-                                    require(not exists(blockchain_signer_node @? { blockchain, node }));
-                                    require(not exists(blockchain_replica_node @? { blockchain, node }));
+                                    require(empty(blockchain_signer_node @? { blockchain, node }));
+                                    require(empty(blockchain_replica_node @? { blockchain, node }));
                                     create blockchain_replica_node ( blockchain, node );
                                     }
 
@@ -281,15 +284,15 @@
 
                                     function get_last_height (blockchain): integer {
                                     if (blockchain.rid == chain_context.blockchain_rid) {
-                                    return (block @? {} (-sort .block_height) limit 1) ?: -1;
+                                    return (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
                                     } else {
-                                    return (anchored_block @? { blockchain } (-sort .height) limit 1) ?: -1;
+                                    return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
                                     }
                                     }
 
                                     function patch_configuration_signers(blockchain, data: byte_array): byte_array {
                                     val config_dict = map&lt;text, gtv&gt;.from_gtv(gtv.from_bytes(data));
-                                    val signers = blockchain_signer_node @* { blockchain } (sort .node.pubkey);
+                                    val signers = blockchain_signer_node @* { blockchain } (@sort .node.pubkey);
                                     require(signers.size() &gt; 0);
                                     // do not write new configuration when size is 0 since it's impossible to recover
                                     // from that
@@ -299,7 +302,7 @@
 
 
                                     function update_configuration (blockchain) {
-                                    val last_config = blockchain_configuration @ { blockchain } (-sort .height, .data) limit 1;
+                                    val last_config = blockchain_configuration @ { blockchain } (@sort_desc .height, .data) limit 1;
                                     delete blockchain_signer_node @* { blockchain, .node.active == false};
                                     val last_height = get_last_height(blockchain);
                                     val updated_config = patch_configuration_signers( blockchain, last_config.data );
@@ -350,7 +353,7 @@
                                     operation add_configuration (blockchain, config_data: byte_array, height: integer) {
                                     require_admin();
                                     require(get_last_height(blockchain) &lt; height);
-                                    require(not exists(blockchain_configuration @? { blockchain, .height &gt; height } limit 1));
+                                    require(empty(blockchain_configuration @? { blockchain, .height &gt; height } limit 1));
                                     create blockchain_configuration(
                                     blockchain,
                                     height,
@@ -358,43 +361,16 @@
                                     );
                                     }
 
-                                    query get_provider (pubkey) = provider @ { pubkey };
+                                    operation stop_blockchain (blockchain, remove_replicas: boolean) {
+                                    require_admin();
 
-                                    query get_provider_data (pubkey) {
-                                    return provider_state @ {
-                                    provider @ { pubkey }
-                                    } (
-                                    pubkey = .provider.pubkey,
-                                    name = .name,
-                                    active = .active,
-                                    beneficiary = .beneficiary.id
-                                    );
+                                    // NOTE: we do not update blockchain configuration, making it possible to
+                                    // restart blockchain later. Data such as anchored blocks is not removed.
+                                    delete blockchain_signer_node @* { blockchain };
+                                    if (remove_replicas) {
+                                    delete blockchain_replica_node @* { blockchain };
                                     }
-
-                                    query get_node (pubkey) = node @ { pubkey };
-
-                                    query get_node_data (pubkey) {
-                                    return node @ {
-                                    pubkey
-                                    } (
-                                    provider = .provider.pubkey,
-                                    pubkey = .pubkey,
-                                    active = .active,
-                                    host = .host,
-                                    port = .port,
-                                    last_updated = .last_updated
-                                    );
                                     }
-
-                                    query get_blockchain (rid: byte_array) = blockchain @ { rid };
-
-                                    query get_blockchain_rid (rid: byte_array) = blockchain @ { rid }.rid;
-
-                                    query get_added_blockchain_rid(tx_rid: byte_array) {
-                                    return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
-                                    }
-
-                                    query chromia_version() = "0";
                                 </string>
                             </entry>
                             <entry key="chroma0/nm_api.rell">
@@ -450,7 +426,11 @@
                                     val res = list&lt;list&lt;byte_array&gt;&gt;();
                                     for (brid in blockchain_rids) {
                                     val bc = blockchain @? { brid };
-                                    if (empty(bc)) {
+                                    if (brid == chain_context.blockchain_rid) {
+                                    // for the chain0 include all nodes, this makes sure that replicas
+                                    // are connected
+                                    res.add( node @* { .active == true } .pubkey );
+                                    } else if (empty(bc)) {
                                     res.add(list&lt;byte_array&gt;());
                                     } else {
                                     // note: we include signers in this list because node processing old blocks might
@@ -468,6 +448,44 @@
                                     query nm_get_node_replica_map(): list&lt;list&lt;byte_array&gt;&gt; {
                                     return list&lt;list&lt;byte_array&gt;&gt;();
                                     }
+                                </string>
+                            </entry>
+                            <entry key="chroma0/queries.rell">
+                                <string>query get_provider (pubkey) = provider @ { pubkey };
+
+                                    query get_provider_data (pubkey) {
+                                    return provider_state @ {
+                                    provider @ { pubkey }
+                                    } (
+                                    pubkey = .provider.pubkey,
+                                    name = .name,
+                                    active = .active,
+                                    beneficiary = .beneficiary.id
+                                    );
+                                    }
+
+                                    query get_node (pubkey) = node @ { pubkey };
+
+                                    query get_node_data (pubkey) {
+                                    return node @ {
+                                    pubkey
+                                    } (
+                                    provider = .provider.pubkey,
+                                    pubkey = .pubkey,
+                                    active = .active,
+                                    host = .host,
+                                    port = .port,
+                                    last_updated = .last_updated
+                                    );
+                                    }
+
+                                    query get_blockchain (rid: byte_array) = blockchain @ { rid };
+
+                                    query get_added_blockchain_rid(tx_rid: byte_array) {
+                                    return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
+                                    }
+
+                                    query chromia_version() = "0.1";
                                 </string>
                             </entry>
                             <entry key="ft3/account/auth_basic.rell">
@@ -707,46 +725,6 @@
                                     }
                                 </string>
                             </entry>
-                            <entry key="ft3/core/blockchain.rell">
-                                <string>import ft3_config;
-
-                                    object blockchain {
-                                    mutable name: text = ft3_config.ft3_config.blockchain_name;
-                                    mutable website: text = ft3_config.ft3_config.blockchain_website;
-                                    mutable description: text = ft3_config.ft3_config.blockchain_description;
-                                    }
-
-                                    entity linked_chain {
-                                    key chain_rid: byte_array;
-                                    }
-
-                                    operation update_blockchain(name, website: text, description: text) {
-                                    blockchain.name = name;
-                                    blockchain.website = website;
-                                    blockchain.description = description;
-                                    }
-
-                                    query get_blockchain_info() {
-                                    return (
-                                    name = blockchain.name,
-                                    website = blockchain.website,
-                                    description = blockchain.description
-                                    );
-                                    }
-
-                                    operation link_chain(chain_rid: byte_array) {
-                                    create linked_chain(chain_rid);
-                                    }
-
-                                    query get_linked_chains() {
-                                    return linked_chain @* {} ( .chain_rid );
-                                    }
-
-                                    query is_linked_with_chain(chain_rid: byte_array) {
-                                    return linked_chain @? { chain_rid } != null;
-                                    }
-                                </string>
-                            </entry>
                             <entry key="ft3/core/history.rell">
                                 <string>import acc: ^.account;
 
@@ -819,7 +797,7 @@
                                     account,
                                     asset,
                                     .delta = i.amount,
-                                    .op_index = 500, //op_context ???
+                                    .op_index = 0, //op_context ???
                                     .is_input = true,
                                     .entry_index = idx
                                     );
@@ -845,7 +823,7 @@
                                     asset,
                                     .delta = o.amount,
 
-                                    .op_index = 500, // something from op_context,
+                                    .op_index = 0, // something from op_context,
                                     .is_input = false,
                                     .entry_index = idx
                                     );
@@ -876,16 +854,6 @@
 
                                     import ^.account;
                                     import ^.core;
-                                </string>
-                            </entry>
-                            <entry key="ft3_config.rell">
-                                <string>module;
-
-                                    object ft3_config {
-                                    blockchain_name: text = 'ChromaToken';
-                                    blockchain_website: text = 'https://forum.chroma.dev';
-                                    blockchain_description: text = 'description';
-                                    }
                                 </string>
                             </entry>
                         </dict>

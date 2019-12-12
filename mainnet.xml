@@ -1,0 +1,26 @@
+<run>
+    <nodes>
+        <config src="config/only_node_0.properties" add-signers="false" />
+    </nodes>
+    <chains>
+        <chain name="manager" iid="0">
+            <config height="0">
+                <app module="chroma0">
+                <args module="chroma0">
+                  <arg key="admin"><bytea>02DE136F6EFA3BAF888A4439B73EB75B945A07B4A6BCCF61EAA3E0B250BA76B741</bytea></arg>
+                </args>
+                </app>
+		<gtv path="signers">
+                    <array>
+                        <bytea>03C9F0934337E6ABA98DE86144141709F72038E70E2585B0B44F7BB776136DFEED</bytea>
+                    </array>
+                </gtv>
+	     </config>
+        </chain>
+        <chain name="demo" iid="100">
+            <config height="0">
+               <app module="demo" />
+            </config>
+        </chain>
+</chains>
+</run>

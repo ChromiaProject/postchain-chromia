@@ -18,7 +18,7 @@ import java.nio.file.Paths
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "0DAF477A7A2CCADF357EB1CD99714E37F055820AE8D9B9D616812CEA5C6F5F7E"
+const val DEFAULT_BLOCKCHAIN_RID = "31006D2FF39285F9AD5654507634526FA5D5D651CD00969683E6C70CDDC5D748"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -174,9 +174,9 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                         + "/src/test/resources" + configFileName, node0)
-        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
 
     @Test
@@ -212,7 +212,8 @@ class Chromia0Test : IntegrationTest() {
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        val auth = CliExecution(providerAuth)
+        auth.addNode(node0, "127.0.0.1", 9870L)
         var node = client.query("get_node_data", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
         assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
@@ -226,14 +227,14 @@ class Chromia0Test : IntegrationTest() {
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, node0)
-        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
-        Thread.sleep(1000)
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Thread.sleep(5000)
 
         // Add node1 to managed blockchain
         val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
-        CliExecution(providerAuth).addNode(node1, "127.0.0.1", 9871L)
+        auth.addNode(node1, "127.0.0.1", 9871L)
         node = client.query("get_node_data", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(node1.hexStringToByteArray()))).get().asDict()
         assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
@@ -328,10 +329,10 @@ class Chromia0Test : IntegrationTest() {
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, node0)
-        val brid = client.query("get_blockchain_rid", GtvFactory.gtv(
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
-        Assert.assertArrayEquals(brid?.asByteArray(), DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray())
-        Thread.sleep(1000)
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+        Thread.sleep(5000)
 
         // Add node1 to managed blockchain
         val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
