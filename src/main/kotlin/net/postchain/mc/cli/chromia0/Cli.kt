@@ -3,10 +3,7 @@ package net.postchain.mc.cli.chromia0
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
-import net.postchain.mc.cli.blockchain.CommandAddBlockchain
-import net.postchain.mc.cli.blockchain.CommandAddBlockchainSigners
-import net.postchain.mc.cli.blockchain.CommandAddConfiguration
-import net.postchain.mc.cli.blockchain.CommandRemoveBlockchainSigners
+import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.node.CommandAddNode
 import net.postchain.mc.cli.node.CommandRemoveNode
 import net.postchain.mc.cli.provider.CommandDisableProvider
@@ -25,6 +22,7 @@ class Cli: CliBase() {
             CommandAddReplica(),
             CommandRemoveReplica(),
             CommandAddBlockchain(),
+            CommandStopBlockchain(),
             CommandAddConfiguration(),
             CommandAddBlockchainSigners(),
             CommandRemoveBlockchainSigners()

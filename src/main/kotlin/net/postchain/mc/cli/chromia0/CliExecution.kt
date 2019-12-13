@@ -77,6 +77,31 @@ class CliExecution(val config: AppConfig) {
     /**
      *
      */
+    fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
+        try {
+            val tx = makeTransactionWithNop().apply {
+                addOperation("stop_blockchain",
+                        arrayOf(GtvFactory.gtv(blockchainRID.hexStringToByteArray()), GtvFactory.gtv(removeReplicas)))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("blockchain was stop successfully!")
+            } else {
+                throw CliError.Companion.CliException("Cannot stop blockchain")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
     fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long) {
         try {
             val data = getEncodedGtxValueFromFile(blockchainConfigFile)
