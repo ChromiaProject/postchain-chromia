@@ -6,6 +6,7 @@ import net.postchain.client.DefaultSigner
 import net.postchain.client.PostchainClient
 import net.postchain.client.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.config.SimpleDatabaseConnector
 import net.postchain.config.app.AppConfigDbLayer
 import net.postchain.gtv.*
@@ -61,6 +62,37 @@ class Chromia0Test : IntegrationTest() {
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
         assertk.assert(data["name"]?.asString()).isEqualTo("")
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+    }
+
+    @Test
+    fun testUpdateProvider() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        var config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        CliExecution(config).registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        println(data["beneficiary"]?.asByteArray()?.toHex())
+
+        config = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        CliExecution(config).updateProvider(providerPublicKey, "chromia", "")
+
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("chromia")
     }
 
     @Test

@@ -9,12 +9,14 @@ import net.postchain.mc.cli.node.CommandRemoveNode
 import net.postchain.mc.cli.provider.CommandDisableProvider
 import net.postchain.mc.cli.provider.CommandEnableProvider
 import net.postchain.mc.cli.provider.CommandRegisterProvider
+import net.postchain.mc.cli.provider.CommandUpdateProvider
 import net.postchain.mc.cli.replica.CommandAddReplica
 import net.postchain.mc.cli.replica.CommandRemoveReplica
 
 class Cli: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandRegisterProvider(),
+            CommandUpdateProvider(),
             CommandEnableProvider(),
             CommandDisableProvider(),
             CommandAddNode(),

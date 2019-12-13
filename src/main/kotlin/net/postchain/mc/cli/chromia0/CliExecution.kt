@@ -8,8 +8,10 @@ import net.postchain.client.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
@@ -314,6 +316,43 @@ class CliExecution(val config: AppConfig) {
                 println("Provider has been added")
             } else {
                 throw CliError.Companion.CliException("Cannot add provider")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     *
+     */
+    fun updateProvider(key: String, name: String, beneficiary: String) {
+        try {
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            var data: Array<Gtv> = arrayOf(provider)
+            if (name.isNotEmpty()) {
+                data = data.plus(GtvFactory.gtv(name))
+            } else {
+                data = data.plus(GtvNull)
+            }
+            if (beneficiary.isNotEmpty()) {
+                data = data.plus(GtvFactory.gtv(beneficiary))
+            } else {
+                data = data.plus(GtvNull)
+            }
+            val tx = makeTransactionWithNop().apply {
+                addOperation("update_provider_data", data)
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Provider has been updated")
+            } else {
+                throw CliError.Companion.CliException("Cannot update provider")
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
