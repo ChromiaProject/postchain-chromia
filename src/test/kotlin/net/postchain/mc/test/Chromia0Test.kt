@@ -64,7 +64,7 @@ class Chromia0Test : IntegrationTest() {
     }
 
     @Test
-    fun testRegisterThenEnableProvider() {
+    fun testRegisterThenEnableDisableProvider() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
@@ -90,6 +90,12 @@ class Chromia0Test : IntegrationTest() {
         provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         data = provider.asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
+        // provider active status should be false after calling disable
+        executor.disableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
     @Test
