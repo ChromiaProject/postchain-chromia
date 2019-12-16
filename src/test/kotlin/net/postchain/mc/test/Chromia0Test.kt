@@ -404,178 +404,65 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(anotherProviderPR)
     }
 
+    @Test
+    fun testAddConfiguration() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
 
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_SignerIsNotAdmin() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_SignerNotFound() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_SignerNotFound2() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode("app_1.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_ConfigNotFound() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode("app_2.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_EmptyConfigFile() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode("app_empty.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testAddPeer_ConfigFileMissingKeys() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode("app_missing.properties", "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test
-//    fun testRemovePeer() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//
-//        val client = getPostchainClient(DEFAULT_APP_CONFIG)
-//        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-//            data = it.asArray()[0].asDict()
-//        }.fail {
-//            exception = it
-//        }
-//
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(data["host"]?.asString()).isEqualTo("127.0.0.1")
-//            assertk.assert(data["port"]?.asBigInteger()?.toLong()).isEqualTo(9090L)
-//            assertArrayEquals(data["pubkey"]?.asByteArray(), newPeerPubKey.hexStringToByteArray())
-//            assertk.assert(exception).isNull()
-//        }
-//
-//        // check peer list version also
-//        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-//            version = it.asInteger()
-//        }
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(version).isEqualTo(1L)
-//        }
-//
-//        CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getAdminSigner())
-//        client.query("nm_get_peer_infos", GtvDictionary.build(mapOf())).success {
-//            peers = it.asArray()
-//        }.fail {
-//            exception = it
-//        }
-//
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(peers.isEmpty()).isTrue()
-//            assertk.assert(exception).isNull()
-//        }
-//
-//        // check peer list version also
-//        client.query("nm_get_peer_list_version", GtvDictionary.build(mapOf())).success {
-//            version = it.asInteger()
-//        }
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(version).isEqualTo(2L)
-//        }
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer1_SignerIsNotAdmin() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//
-//        CliExecution().removePeer("app_1.properties", newPeerPubKey, getSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer_SignerNotFound() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//
-//        CliExecution().removePeer(DEFAULT_APP_CONFIG, newPeerPubKey, getSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer_SignerNotFound2() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//
-//        CliExecution().removePeer("app_1.properties", newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer_ConfigNotFound() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addNode(DEFAULT_APP_CONFIG, "127.0.0.1", 9090L, newPeerPubKey, getAdminSigner())
-//
-//        CliExecution().removePeer("app_2.properties", newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer_EmptyConfigFile() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().removePeer("app_empty.properties", newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test(expected = CliError.Companion.CliException::class)
-//    fun testRemovePeer_ConfigFileMissingKeys() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().removePeer("app_missing.properties", newPeerPubKey, getAdminSigner())
-//    }
-//
-//    @Test
-//    fun testAddBlockchainConfiguration() {
-//        createPostchainTestNodes(1, "/net/postchain/mc/test/config/blockchain_config.xml")
-//        CliExecution().addBlockchainConfiguration(DEFAULT_APP_CONFIG, newBlockchainRID, 0L,
-//                Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml",
-//                getAdminSigner())
-//
-//        val client = getPostchainClient(DEFAULT_APP_CONFIG)
-//        client.query("nm_get_blockchain_configuration",
-//                GtvFactory.gtv(
-//                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
-//                        "height" to GtvFactory.gtv(0L))).success {
-//            blockchain = it
-//        }.fail {
-//            exception = it
-//        }
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(blockchain).isNotNull()
-//            val modules = GtvFactory.decodeGtv(blockchain?.asByteArray()!!).asDict()["gtx"]?.get("modules")
-//            assertk.assert(modules?.get(0)?.asString()).isEqualTo("net.postchain.configurations.GTXTestModule")
-//            assertk.assert(exception).isNull()
-//        }
-//
-//        client.query("nm_find_next_configuration_height",
-//                GtvFactory.gtv(
-//                        "blockchain_rid" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()),
-//                        "height" to GtvFactory.gtv(-1L))).success {
-//            height = it.asInteger()
-//        }.fail {
-//            exception = it
-//        }
-//
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertk.assert(height).isEqualTo(0L)
-//        }
-//
-//        client.query("nm_compute_blockchain_list", GtvFactory.gtv("node_id" to GtvFactory.gtv(newBlockchainRID.hexStringToByteArray()))).success {
-//            blockchainRID = it.asArray()[0].asByteArray()
-//        }
-//        Awaitility.await().atMost(Duration.TWO_SECONDS).untilAsserted {
-//            assertArrayEquals(newBlockchainRID.hexStringToByteArray(), blockchainRID)
-//        }
-//    }
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+
+        // provider active status should be true after calling enable
+        executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        val node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0)
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+
+        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L)
+
+        // Get next configuration height of new blockchain configuration
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(20L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
+    }
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
