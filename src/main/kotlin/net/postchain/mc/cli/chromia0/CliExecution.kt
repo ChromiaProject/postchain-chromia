@@ -17,6 +17,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
 import java.io.File
 import java.time.Instant
+import java.util.ArrayList
 
 class CliExecution(val config: AppConfig) {
 
@@ -413,5 +414,25 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
+    }
+
+    /**
+     * key - publicKey of node
+     */
+    fun listBlockchainsForNode(key: String) : List<ByteArray> {
+        val listBlockChain = arrayListOf<ByteArray>()
+        try {
+            val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+            listBlockChain.addAll(list.map { it -> it.asByteArray() })
+            return listBlockChain
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+        return listBlockChain
     }
 }
