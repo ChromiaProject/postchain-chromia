@@ -435,4 +435,32 @@ class CliExecution(val config: AppConfig) {
         }
         return listBlockChain
     }
+
+    fun getProvider(key: String) : Gtv {
+        try {
+            return getPostchainClient().query("get_provider",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+        return GtvNull
+    }
+
+    fun getNode(key: String) : Gtv {
+        try {
+            return getPostchainClient().query("get_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+        return GtvNull
+    }
 }

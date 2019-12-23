@@ -6,10 +6,7 @@ import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.node.CommandAddNode
 import net.postchain.mc.cli.node.CommandRemoveNode
-import net.postchain.mc.cli.provider.CommandDisableProvider
-import net.postchain.mc.cli.provider.CommandEnableProvider
-import net.postchain.mc.cli.provider.CommandRegisterProvider
-import net.postchain.mc.cli.provider.CommandUpdateProvider
+import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.CommandAddReplica
 import net.postchain.mc.cli.replica.CommandRemoveReplica
 
@@ -19,7 +16,9 @@ class Cli: CliBase() {
             CommandUpdateProvider(),
             CommandEnableProvider(),
             CommandDisableProvider(),
+            CommandGetProvider(),
             CommandAddNode(),
+            CommandGetNode(),
             CommandRemoveNode(),
             CommandAddReplica(),
             CommandRemoveReplica(),
