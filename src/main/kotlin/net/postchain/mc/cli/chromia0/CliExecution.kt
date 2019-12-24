@@ -423,7 +423,7 @@ class CliExecution(val config: AppConfig) {
         val listBlockChain = arrayListOf<ByteArray>()
         try {
             val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
-                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+                    "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
             listBlockChain.addAll(list.map { it -> it.asByteArray() })
             return listBlockChain
         } catch (e: UserMistake) {

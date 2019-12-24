@@ -2,6 +2,7 @@ package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import net.postchain.common.toHex
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
@@ -17,11 +18,14 @@ class CommandListBlockchainsForNode : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "list-blockchains-node"
+    override fun key(): String = "list-blockchains-for-node"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).listBlockchainsForNode(key)
+            val listBlockchains = CliExecution(loadAppConfig()).listBlockchainsForNode(key)
+            listBlockchains.forEach { blockchain ->
+                println(blockchain.toHex())
+            }
             Ok("List blockchains successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
