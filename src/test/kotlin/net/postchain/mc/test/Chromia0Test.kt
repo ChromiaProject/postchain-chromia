@@ -500,8 +500,7 @@ class Chromia0Test : IntegrationTest() {
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
         executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L)
 
-        val listBlockchains = client.query("nm_compute_blockchain_list", GtvFactory.gtv(
-                "node_id" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asArray()
+        val listBlockchains = executor.listBlockchainsForNode(node0)
 
         assertEquals(1, listBlockchains.size)
     }
@@ -509,7 +508,12 @@ class Chromia0Test : IntegrationTest() {
     @Test
     fun testGetNodeAndGetProvider() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-        initNodes(1, configFileName)
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -526,15 +530,6 @@ class Chromia0Test : IntegrationTest() {
         assert(provider.asInteger() > 0)
     }
 
-    private fun initNodes(nodeCount: Int, configFileName : String) {
-        // Creating node0
-        createSingleNode(0, nodeCount, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
-    }
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
