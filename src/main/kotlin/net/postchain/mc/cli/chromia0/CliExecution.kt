@@ -436,9 +436,9 @@ class CliExecution(val config: AppConfig) {
         return listBlockChain
     }
 
-    fun getProvider(key: String) : Gtv {
+    fun getProviderInfo(key: String) : Gtv {
         try {
-            return getPostchainClient().query("get_provider",
+            return getPostchainClient().query("get_provider_data",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
         } catch (e: UserMistake) {
             logger.error(e.message)
@@ -450,9 +450,9 @@ class CliExecution(val config: AppConfig) {
         return GtvNull
     }
 
-    fun getNode(key: String) : Gtv {
+    fun getNodeInfo(key: String) : Gtv {
         try {
-            return getPostchainClient().query("get_node",
+            return getPostchainClient().query("get_node_data",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
         } catch (e: UserMistake) {
             logger.error(e.message)
