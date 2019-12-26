@@ -27,7 +27,8 @@ class Cli: CliBase() {
             CommandAddConfiguration(),
             CommandAddBlockchainSigners(),
             CommandRemoveBlockchainSigners(),
-            CommandListBlockchainsForNode()
+            CommandListBlockchainsForNode(),
+            CommandGetBlockchainConfiguration()
     ).map { it.key() to it }.toMap()
 
     init {

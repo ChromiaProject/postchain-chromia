@@ -8,10 +8,7 @@ import net.postchain.client.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.*
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
@@ -462,5 +459,21 @@ class CliExecution(val config: AppConfig) {
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
         return GtvNull
+    }
+
+    fun getBlockchainConfiguration(blockchainRID: String, height: Long) : ByteArray {
+        try {
+            return getPostchainClient().query("nm_get_blockchain_configuration",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(height))).get().asByteArray()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+        return ByteArray(0)
     }
 }
