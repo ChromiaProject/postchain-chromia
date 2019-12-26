@@ -5,6 +5,7 @@ import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.node.CommandAddNode
+import net.postchain.mc.cli.node.CommandGetNodeInfo
 import net.postchain.mc.cli.node.CommandRemoveNode
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.CommandAddReplica

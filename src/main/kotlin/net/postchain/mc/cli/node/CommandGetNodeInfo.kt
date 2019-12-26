@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.blockchain
+package net.postchain.mc.cli.node
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
