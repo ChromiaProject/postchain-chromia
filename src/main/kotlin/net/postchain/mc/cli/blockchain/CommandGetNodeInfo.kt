@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.provider
+package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -21,8 +21,11 @@ class CommandGetNodeInfo : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).getNodeInfo(key)
-            Ok("Get node successfully")
+            val node = CliExecution(loadAppConfig()).getNodeInfo(key).asDict()
+            println("Status: ${node["active"]?.asBoolean()}")
+            println("Host: ${node["host"]?.asString()}")
+            println("Port: ${node["port"]?.asInteger()}")
+            Ok("Get node info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }
