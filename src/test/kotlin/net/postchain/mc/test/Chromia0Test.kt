@@ -17,6 +17,7 @@ import org.junit.Assert
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.asserter
 
 const val DEFAULT_APP_CONFIG = "app.properties"
@@ -554,6 +555,38 @@ class Chromia0Test : IntegrationTest() {
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
         assertEquals("", data["name"]?.asString())
         assertEquals(true, data["active"]?.asBoolean())
+    }
+
+    @Test
+    fun testGetBlockchainConfiguration() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        // provider active status should be true after calling enable
+        executor.enableProvider(providerPublicKey)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0)
+
+        val blockchain = executor.getBlockchainConfiguration(DEFAULT_BLOCKCHAIN_RID, 0L)
+        assert(blockchain.isNotEmpty())
+        val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
+        assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
     }
 
 //
