@@ -430,7 +430,6 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
-        return listBlockChain
     }
 
     fun getProviderInfo(key: String) : Gtv {
@@ -444,7 +443,6 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
-        return GtvNull
     }
 
     fun getNodeInfo(key: String) : Gtv {
@@ -458,7 +456,6 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
-        return GtvNull
     }
 
     fun getBlockchainConfiguration(blockchainRID: String, height: Long) : ByteArray {
@@ -474,12 +471,11 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
-        return ByteArray(0)
     }
 
-    fun getNodeListVersion() : Gtv {
+    fun getNodeListVersion() : Long {
         try {
-            return getPostchainClient().query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).get()
+            return getPostchainClient().query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).get().asInteger()
         } catch (e: UserMistake) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
@@ -487,6 +483,5 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
-        return GtvNull
     }
 }

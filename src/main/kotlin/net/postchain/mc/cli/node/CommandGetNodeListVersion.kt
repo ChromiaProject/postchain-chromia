@@ -14,7 +14,8 @@ class CommandGetNodeListVersion : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).getNodeListVersion()
+            val version = CliExecution(loadAppConfig()).getNodeListVersion()
+            println("version: ${version}")
             Ok("Get node list version successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
