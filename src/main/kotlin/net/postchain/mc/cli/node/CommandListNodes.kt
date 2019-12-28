@@ -11,7 +11,7 @@ import net.postchain.mc.cli.chromia0.CliExecution
 @Parameters(commandDescription = "list nodes")
 class CommandListNodes : CommandBase() {
 
-    override fun key(): String = "list nodes"
+    override fun key(): String = "list-nodes"
 
     override fun execute(): CliResult {
         return try {
