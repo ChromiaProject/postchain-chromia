@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.node
 
 import com.beust.jcommander.Parameters
+import net.postchain.common.toHex
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
@@ -15,11 +16,11 @@ class CommandListNodes : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val nodes = CliExecution(loadAppConfig()).listNodes()
-            nodes.map { it.asDict() }.forEach { info ->
-                println("Pubkey: ${info["pubkey"]?.asBoolean()}")
-                println("Status: ${info["active"]?.asBoolean()}")
-                println("Host: ${info["host"]?.asString()}")
-                println("Port: ${info["port"]?.asInteger()}")
+            nodes.forEach { info ->
+                println("host: ${info.get(0)?.asString()}")
+                println("port: ${info.get(1)?.asInteger()}")
+                println("pubkey: ${info[2]?.asByteArray().toHex()}")
+                println("last_update: ${info[3]?.asInteger()}")
             }
             Ok("List nodes successfully")
         } catch (e: CliError.Companion.CliException) {

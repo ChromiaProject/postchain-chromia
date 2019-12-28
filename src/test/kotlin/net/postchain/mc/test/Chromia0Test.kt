@@ -612,6 +612,60 @@ class Chromia0Test : IntegrationTest() {
         val version = executor.getNodeListVersion()
         assertTrue(version > 0)
     }
+
+    @Test
+    fun testListNodes() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        // Creating node0
+        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+
+        // Add node0 to managed blockchain
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        val auth = CliExecution(providerAuth)
+        auth.addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+
+        // Add node1 to managed blockchain
+        val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+        auth.addNode(node1, "127.0.0.1", 9871L)
+        Thread.sleep(5000)
+
+        // Creating node1
+        createSingleNode(1, 2, NODE1_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo1)
+            }
+        }
+        Thread.sleep(5000)
+
+        val nodes = executor.listNodes()
+        val n0 = nodes.get(0)
+        assertEquals("127.0.0.1", n0.get(0).asString())
+        assertEquals(9870L, n0.get(1).asInteger())
+        assertEquals(node0,  n0.get(2).asByteArray().toHex().toLowerCase())
+
+        val n1 = nodes.get(1)
+        assertEquals("127.0.0.1", n1.get(0).asString())
+        assertEquals(9871L, n1.get(1).asInteger())
+        assertEquals(node1,  n1.get(2).asByteArray().toHex().toLowerCase())
+
+    }
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
