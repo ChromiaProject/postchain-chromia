@@ -4,10 +4,7 @@ import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
-import net.postchain.mc.cli.node.CommandAddNode
-import net.postchain.mc.cli.node.CommandGetNodeInfo
-import net.postchain.mc.cli.node.CommandGetNodeListVersion
-import net.postchain.mc.cli.node.CommandRemoveNode
+import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.CommandAddReplica
 import net.postchain.mc.cli.replica.CommandRemoveReplica
@@ -31,7 +28,8 @@ class Cli: CliBase() {
             CommandRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
             CommandGetBlockchainConfiguration(),
-            CommandGetNodeListVersion()
+            CommandGetNodeListVersion(),
+            CommandListNodes()
     ).map { it.key() to it }.toMap()
 
     init {
