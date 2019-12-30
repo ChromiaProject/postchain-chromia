@@ -28,7 +28,9 @@ query get_node_data (pubkey) {
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
-query get_blockchains() = blockchain @* { } ( .rid );
+query get_all_blockchains(): list<byte_array> {
+    return blockchain @* {} .rid;
+}
 
 query get_blockchain_signers () = blockchain_signer_node @* { } ( .blockchain.rid, .node.id );
 

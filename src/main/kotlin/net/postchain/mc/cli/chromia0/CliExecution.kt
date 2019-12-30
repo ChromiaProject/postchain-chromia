@@ -500,9 +500,9 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listBlockchains(): List<ByteArray> {
+    fun listAllBlockchains(): List<ByteArray> {
         try {
-            return getPostchainClient().query("get_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_blockchains")))
+            return getPostchainClient().query("get_all_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains")))
                     .get()
                     .asArray()
                     .map { it.asByteArray() }

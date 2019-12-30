@@ -17,9 +17,7 @@ import org.junit.Assert
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
-import kotlin.test.asserter
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
@@ -695,7 +693,7 @@ class Chromia0Test : IntegrationTest() {
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, node0)
 
-        val listBlockchains = executor.listBlockchains()
+        val listBlockchains = executor.listAllBlockchains()
 
         assertEquals(1, listBlockchains.size)
     }
