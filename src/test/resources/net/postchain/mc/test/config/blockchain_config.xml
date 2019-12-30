@@ -481,6 +481,8 @@
 
                                     query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
+                                    query get_blockchains() = blockchain @* { } ( .rid );
+
                                     query get_added_blockchain_rid(tx_rid: byte_array) {
                                     return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
                                     }

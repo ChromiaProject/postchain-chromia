@@ -27,6 +27,7 @@ class Cli: CliBase() {
             CommandAddBlockchainSigners(),
             CommandRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
+            CommandListBlockchains(),
             CommandGetBlockchainConfiguration(),
             CommandGetNodeListVersion(),
             CommandListNodes()
