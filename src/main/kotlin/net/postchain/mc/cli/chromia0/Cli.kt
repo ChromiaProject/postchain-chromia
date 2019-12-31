@@ -30,6 +30,7 @@ class Cli: CliBase() {
             CommandListAllBlockchains(),
             CommandListActiveBlockchains(),
             CommandListBlockchainSigners(),
+            CommandListBlockchainReplicas(),
             CommandGetBlockchainConfiguration(),
             CommandGetNodeListVersion(),
             CommandListNodes()

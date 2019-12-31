@@ -544,4 +544,19 @@ class CliExecution(val config: AppConfig) {
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
+
+    fun listBlockchainReplicas() : List<ByteArray> {
+        try {
+            return getPostchainClient().query("get_all_blockchain_replicas", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchain_replicas")))
+                    .get()
+                    .asArray()
+                    .map { it.asByteArray() }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
 }
