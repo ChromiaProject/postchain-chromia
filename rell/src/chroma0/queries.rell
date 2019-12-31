@@ -28,6 +28,15 @@ query get_node_data (pubkey) {
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
+query get_active_blockchains (): list<byte_array> {
+    val blockchain_set = set(
+        (blockchain, blockchain_signer_node) @* {
+            blockchain_signer_node.blockchain == blockchain
+        } (.rid)
+    );
+    return list(blockchain_set);
+}
+
 query get_all_blockchains(): list<byte_array> {
     return blockchain @* {} .rid;
 }

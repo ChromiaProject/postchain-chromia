@@ -515,4 +515,19 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
+    fun listActiveBlockchains(): List<ByteArray> {
+        try {
+            return getPostchainClient().query("get_active_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_active_blockchains")))
+                    .get()
+                    .asArray()
+                    .map { it.asByteArray() }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
 }

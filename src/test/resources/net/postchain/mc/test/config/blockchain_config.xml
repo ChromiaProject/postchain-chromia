@@ -485,6 +485,15 @@
                                         return blockchain @* {} .rid;
                                     }
 
+                                    query get_active_blockchains (): list&lt;byte_array&gt; {
+                                        val blockchain_set = set(
+                                        (blockchain, blockchain_signer_node) @* {
+                                        blockchain_signer_node.blockchain == blockchain
+                                        } (.rid)
+                                        );
+                                        return list(blockchain_set);
+                                    }
+
                                     query get_added_blockchain_rid(tx_rid: byte_array) {
                                     return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
                                     }
