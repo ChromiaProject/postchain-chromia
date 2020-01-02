@@ -562,8 +562,10 @@ class CliExecution(val config: AppConfig) {
 
     fun listNodesByProvider(key: String) : List<Gtv> {
         try {
-            return return getPostchainClient().query("get_nodes_by_provider",
-                    GtvFactory.gtv("provider_pubkey" to GtvFactory.gtv(key.hexStringToByteArray())))
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_nodes_by_provider",
+                    GtvFactory.gtv("provider" to GtvFactory.gtv(provider)))
                     .get()
                     .asArray()
                     .map { it }

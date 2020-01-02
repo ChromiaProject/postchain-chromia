@@ -502,6 +502,16 @@
                                     return blockchain_replica_node @* {} .blockchain.rid;
                                     }
 
+                                    query get_nodes_by_provider(provider) {
+                                        return node @* { provider } (
+                                            .pubkey,
+                                            .active,
+                                            .host,
+                                            .port,
+                                            .last_updated
+                                        );
+                                    }
+
                                     query get_added_blockchain_rid(tx_rid: byte_array) {
                                     return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
                                     }
