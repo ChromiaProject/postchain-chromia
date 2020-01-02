@@ -559,4 +559,20 @@ class CliExecution(val config: AppConfig) {
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
+
+    fun listNodesByProvider(key: String) : List<Gtv> {
+        try {
+            return return getPostchainClient().query("get_nodes_by_provider",
+                    GtvFactory.gtv("provider_pubkey" to GtvFactory.gtv(key.hexStringToByteArray())))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
 }

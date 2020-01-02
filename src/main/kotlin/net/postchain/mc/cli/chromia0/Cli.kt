@@ -33,6 +33,7 @@ class Cli: CliBase() {
             CommandListBlockchainReplicas(),
             CommandGetBlockchainConfiguration(),
             CommandGetNodeListVersion(),
+            CommandListProviderNodes(),
             CommandListNodes()
     ).map { it.key() to it }.toMap()
 
