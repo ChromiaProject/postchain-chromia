@@ -2,9 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assertions.*
 import net.postchain.base.BlockchainRid
-import net.postchain.client.DefaultSigner
-import net.postchain.client.PostchainClient
-import net.postchain.client.PostchainClientFactory
+import net.postchain.client.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.SimpleDatabaseConnector
@@ -21,7 +19,7 @@ import kotlin.test.assertTrue
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "31006D2FF39285F9AD5654507634526FA5D5D651CD00969683E6C70CDDC5D748"
+const val DEFAULT_BLOCKCHAIN_RID = "63C8AFCB34FC297D08387F933400EDF8495F0D1D2CD8B746DE509F37C95A3821"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -697,6 +695,46 @@ class Chromia0Test : IntegrationTest() {
 
         assertEquals(1, listBlockchains.size)
     }
+
+    @Test
+    fun testListBlockchainReplicas() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        executor.enableProvider(providerPublicKey)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val auth = CliExecution(providerAuth)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        auth.addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0)
+
+        val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+        auth.addNode(node1, "127.0.0.1", 9871L)
+        Thread.sleep(5000)
+
+        // add replicas
+        auth.addReplica(DEFAULT_BLOCKCHAIN_RID, node1)
+
+        val listBlockchains = executor.listBlockchainReplicas()
+        assertEquals(1, listBlockchains.size)
+        assertEquals(DEFAULT_BLOCKCHAIN_RID, listBlockchains.get(0).toHex())
+    }
+
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {

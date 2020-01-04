@@ -37,11 +37,11 @@ class CliExecution(val config: AppConfig) {
         return GtvEncoder.encodeGtv(gtv)
     }
 
-    private fun buildSigMaker(): SigMaker {
+    fun buildSigMaker(): SigMaker {
         return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
     }
 
-    private fun makeTransactionWithNop(): GTXTransactionBuilder {
+    fun makeTransactionWithNop(): GTXTransactionBuilder {
         return getPostchainClient().makeTransaction().apply {
             addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
         }
