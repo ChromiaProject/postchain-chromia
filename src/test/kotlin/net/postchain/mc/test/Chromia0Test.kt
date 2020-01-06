@@ -730,9 +730,9 @@ class Chromia0Test : IntegrationTest() {
         // add replicas
         auth.addReplica(DEFAULT_BLOCKCHAIN_RID, node1)
 
-        val listBlockchains = executor.listBlockchainReplicas()
+        val listBlockchains = executor.listBlockchainReplicas(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(1, listBlockchains.size)
-        assertEquals(DEFAULT_BLOCKCHAIN_RID, listBlockchains.get(0).toHex())
+        //assertEquals(DEFAULT_BLOCKCHAIN_RID, listBlockchains.get(0).toHex())
     }
 
     @Test
@@ -781,7 +781,7 @@ class Chromia0Test : IntegrationTest() {
         // Add node1 as blockchain's signer
         executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
 
-        val listBlockchainSigners = executor.listBlockchainSigners()
+        val listBlockchainSigners = executor.listBlockchainSigners(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(2, listBlockchainSigners.size)
     }
 
