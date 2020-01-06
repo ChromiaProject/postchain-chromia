@@ -17,11 +17,11 @@ class CommandGetBlockchainConfiguration : CommandBase() {
             required = true)
     private var blockchainRID = ""
 
+
     @Parameter(
             names = ["-h", "--height"],
-            description = "height of blockchain",
-            required = true)
-    private var height = 0L
+            description = "height of configuration")
+    private var height = -1L
 
     override fun key(): String = "get-blockchain-configuration"
 

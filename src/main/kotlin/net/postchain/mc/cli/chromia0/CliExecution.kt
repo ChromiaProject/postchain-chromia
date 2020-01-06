@@ -530,12 +530,14 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listBlockchainSigners() : List<ByteArray> {
+    fun listBlockchainSigners(blockchainRID: String) : List<Gtv> {
         try {
-            return getPostchainClient().query("get_all_blockchain_signers", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchain_signers")))
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_all_blockchain_signers", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
                     .get()
                     .asArray()
-                    .map { it.asByteArray() }
+                    .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
@@ -545,12 +547,14 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listBlockchainReplicas() : List<ByteArray> {
+    fun listBlockchainReplicas(blockchainRID: String) : List<Gtv> {
         try {
-            return getPostchainClient().query("get_all_blockchain_replicas", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchain_replicas")))
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_all_blockchain_replicas", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
                     .get()
                     .asArray()
-                    .map { it.asByteArray() }
+                    .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")

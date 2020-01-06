@@ -51,12 +51,26 @@ query get_nodes_by_provider(provider) {
     );
 }
 
-query get_all_blockchain_signers() : list<byte_array> {
-    return blockchain_signer_node @* {} .blockchain.rid;
+query get_blockchain_signers(blockchain) {
+    return blockchain_signer_node @* { blockchain } (
+        .blockchain.rid,
+        .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    );
 }
 
-query get_all_blockchain_replicas() : list<byte_array> {
-    return blockchain_replica_node @* {} .blockchain.rid;
+query get_blockchain_replicas(blockchain) {
+    return blockchain_replica_node @* { blockchain} (
+        .blockchain.rid,
+        .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    );
 }
 
 query get_added_blockchain_rid(tx_rid: byte_array) {
