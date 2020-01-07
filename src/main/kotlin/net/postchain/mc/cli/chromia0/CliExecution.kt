@@ -534,7 +534,7 @@ class CliExecution(val config: AppConfig) {
         try {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
-            return getPostchainClient().query("get_all_blockchain_signers", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
+            return getPostchainClient().query("get_blockchain_signers", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
                     .get()
                     .asArray()
                     .map { it }
@@ -551,7 +551,7 @@ class CliExecution(val config: AppConfig) {
         try {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
-            return getPostchainClient().query("get_all_blockchain_replicas", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
+            return getPostchainClient().query("get_blockchain_replicas", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
                     .get()
                     .asArray()
                     .map { it }

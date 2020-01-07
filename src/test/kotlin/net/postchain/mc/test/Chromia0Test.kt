@@ -732,7 +732,12 @@ class Chromia0Test : IntegrationTest() {
 
         val listBlockchains = executor.listBlockchainReplicas(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(1, listBlockchains.size)
-        //assertEquals(DEFAULT_BLOCKCHAIN_RID, listBlockchains.get(0).toHex())
+        val bc = listBlockchains.get(0).asArray()
+        assertEquals(DEFAULT_BLOCKCHAIN_RID, bc.get(0)?.asByteArray().toHex())
+        assertEquals(node1.toUpperCase(), bc.get(1)?.asByteArray().toHex())
+        assertEquals("127.0.0.1", bc.get(2)?.asString())
+        assertEquals(9871L, bc.get(3)?.asInteger())
+        assertTrue(bc.get(4)?.asBoolean())
     }
 
     @Test
