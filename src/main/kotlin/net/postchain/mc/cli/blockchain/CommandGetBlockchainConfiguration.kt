@@ -2,6 +2,8 @@ package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import net.postchain.common.toHex
+import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
@@ -27,7 +29,13 @@ class CommandGetBlockchainConfiguration : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).getBlockchainConfiguration(blockchainRID, height)
+            val bc = CliExecution(loadAppConfig()).getBlockchainConfiguration(blockchainRID, height)
+            if (height >= 0L) {
+                println("Blockchain configuration at height: ${height}")
+            } else {
+                println("Blockchain configuration at current:")
+            }
+            println(GtvFactory.decodeGtv(bc).asByteArray().toHex())
             Ok("Get blockchain configuration successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
