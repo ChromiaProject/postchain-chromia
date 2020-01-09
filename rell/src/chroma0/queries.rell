@@ -54,7 +54,7 @@ query get_nodes_by_provider(provider) {
 query get_blockchain_signers(blockchain) {
     return blockchain_signer_node @* { blockchain } (
         .blockchain.rid,
-        @sort_asc .node.pubkey,
+        @sort .node.pubkey,
         .node.host,
         .node.port,
         .node.active,
