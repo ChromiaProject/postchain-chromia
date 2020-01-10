@@ -460,10 +460,18 @@ class CliExecution(val config: AppConfig) {
 
     fun getBlockchainConfiguration(blockchainRID: String, height: Long) : ByteArray {
         try {
+            // it means current height
+            var heightConfiguration = height
+            if (height == -1L) {
+                val blockchain = getPostchainClient().query("get_blockchain",
+                        GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+                heightConfiguration = getPostchainClient().query("get_blockchain_last_height",
+                        GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))).get().asInteger()
+            }
             return getPostchainClient().query("nm_get_blockchain_configuration",
                 GtvFactory.gtv(
                         "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
-                        "height" to GtvFactory.gtv(height))).get().asByteArray()
+                        "height" to GtvFactory.gtv(heightConfiguration))).get().asByteArray()
         } catch (e: UserMistake) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")

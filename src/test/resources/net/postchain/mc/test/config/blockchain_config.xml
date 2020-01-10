@@ -518,13 +518,15 @@ query get_blockchain_signers(blockchain) {
 query get_blockchain_replicas(blockchain) {
     return blockchain_replica_node @* { blockchain} (
         .blockchain.rid,
-        .node.pubkey,
+        @sort .node.pubkey,
         .node.host,
         .node.port,
         .node.active,
         .node.last_updated
     );
 }
+
+query get_blockchain_last_height(blockchain) = get_last_height(blockchain);
 
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
