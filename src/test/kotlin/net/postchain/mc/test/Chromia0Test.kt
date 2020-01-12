@@ -19,7 +19,7 @@ import java.nio.file.Paths
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "31006D2FF39285F9AD5654507634526FA5D5D651CD00969683E6C70CDDC5D748"
+const val DEFAULT_BLOCKCHAIN_RID = "3C4FF1934ED49724F10B473A96F64E08990980F489D488CF04F6966B77865135"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -212,6 +212,57 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                         + "/src/test/resources" + configFileName, node0, "xml")
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+    }
+
+    @Test
+    fun testAddBlockchainAcceptGtv() {
+        // still need that for creating node test due to IntegrateTest expect xml to create node config
+        // for testing only
+        val configFileNameXml = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        val configFileNameGtv = "/net/postchain/mc/test/config/0.gtv"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileNameXml) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        var data = provider.asDict()
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertk.assert(data["name"]?.asString()).isEqualTo("")
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+
+        // provider active status should be true after calling enable
+        executor.enableProvider(providerPublicKey)
+        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+        val node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileNameGtv, node0, "gtv")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
