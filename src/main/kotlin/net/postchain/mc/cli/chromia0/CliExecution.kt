@@ -52,12 +52,17 @@ class CliExecution(val config: AppConfig) {
     /**
      * format: Format of blockchain configuration file
      */
-    fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String = "xml") {
+    fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
         try {
+            val configFile = File(blockchainConfigFile)
+            var fmt = format
+            if (fmt == null) {
+                fmt = if (configFile.extension == "gtv") "gtv" else "xml"
+            }
             var data = ByteArray(0)
-            when (format) {
+            when (fmt) {
                 "gtv" -> {
-                    data = File(blockchainConfigFile).readBytes()
+                    data = configFile.readBytes()
                     // try to decode to ensure data is valid
                     GtvFactory.decodeGtv(data)
                 }
@@ -115,12 +120,17 @@ class CliExecution(val config: AppConfig) {
     /**
      *
      */
-    fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String = "xml") {
+    fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
         try {
+            val configFile = File(blockchainConfigFile)
+            var fmt = format
+            if (fmt == null) {
+                fmt = if (configFile.extension == "gtv") "gtv" else "xml"
+            }
             var data = ByteArray(0)
-            when (format) {
+            when (fmt) {
                 "gtv" -> {
-                    data = File(blockchainConfigFile).readBytes()
+                    data = configFile.readBytes()
                     // try to decode to ensure data is valid
                     GtvFactory.decodeGtv(data)
                 }

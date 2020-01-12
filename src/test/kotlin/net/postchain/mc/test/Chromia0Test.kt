@@ -211,7 +211,7 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                        + "/src/test/resources" + configFileName, node0)
+                        + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -264,7 +264,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -366,7 +366,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -445,13 +445,13 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
 
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L)
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L, "xml")
 
         // Get next configuration height of new blockchain configuration
         val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(

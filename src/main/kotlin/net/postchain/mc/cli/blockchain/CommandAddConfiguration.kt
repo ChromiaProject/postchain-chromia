@@ -31,9 +31,9 @@ class CommandAddConfiguration: CommandBase() {
 
     @Parameter(
             names = ["-fmt", "--format"],
-            description = "format of blockchain configuration file (gtv|xml). If format is not mentioned, default will be xml",
+            description = "format of blockchain configuration file (gtv|xml)",
             required = false)
-    private var format = "xml"
+    private var format : String? = null
 
     override fun key() = "add-configuration"
 
