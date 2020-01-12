@@ -23,11 +23,17 @@ class CommandAddBlockchain: CommandBase() {
             required = true)
     private var nodes = ""
 
+    @Parameter(
+            names = ["-fmt", "--format"],
+            description = "format of blockchain configuration file (gtv|xml). If format is not mentioned, default will be xml",
+            required = false)
+    private var format = "xml"
+
     override fun key(): String = "add-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).addBlockchain(blockchainConfigFile, nodes)
+            CliExecution(loadAppConfig()).addBlockchain(blockchainConfigFile, nodes, format)
             Ok("blockchain has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
