@@ -237,28 +237,13 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
 
         val client = getPostchainClient(DEFAULT_APP_CONFIG)
-        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        var data = provider.asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        assertk.assert(data["name"]?.asString()).isEqualTo("")
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
-        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        data = provider.asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
 
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
-        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
-        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
@@ -456,6 +441,44 @@ class Chromia0Test : IntegrationTest() {
     }
 
     @Test
+    fun testAddConfigurationAcceptGtv() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+        executor.enableProvider(providerPublicKey)
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0, "xml")
+
+        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L, "gtv")
+
+        // Get next configuration height of new blockchain configuration
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(20L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
+    }
+
+    @Test
     fun testAddConfiguration() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
@@ -514,6 +537,7 @@ class Chromia0Test : IntegrationTest() {
                 "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
         assertk.assert(bc.asByteArray()).isNotNull()
     }
+
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
