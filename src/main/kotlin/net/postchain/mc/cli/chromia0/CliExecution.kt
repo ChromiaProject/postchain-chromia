@@ -54,23 +54,7 @@ class CliExecution(val config: AppConfig) {
      */
     fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
         try {
-            val configFile = File(blockchainConfigFile)
-            var fmt = format
-            if (fmt == null) {
-                fmt = if (configFile.extension == "gtv") "gtv" else "xml"
-            }
-            var data = ByteArray(0)
-            when (fmt) {
-                "gtv" -> {
-                    data = configFile.readBytes()
-                    // try to decode to ensure data is valid
-                    GtvFactory.decodeGtv(data)
-                }
-                "xml" -> {
-                    data = getEncodedGtxValueFromFile(blockchainConfigFile)
-                } else -> {}
-
-            }
+            val data = readConfigurationFile(blockchainConfigFile, format)
             val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
             val tx = makeTransactionWithNop().apply {
                 addOperation("add_blockchain",
@@ -122,22 +106,7 @@ class CliExecution(val config: AppConfig) {
      */
     fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
         try {
-            val configFile = File(blockchainConfigFile)
-            var fmt = format
-            if (fmt == null) {
-                fmt = if (configFile.extension == "gtv") "gtv" else "xml"
-            }
-            var data = ByteArray(0)
-            when (fmt) {
-                "gtv" -> {
-                    data = configFile.readBytes()
-                    // try to decode to ensure data is valid
-                    GtvFactory.decodeGtv(data)
-                }
-                "xml" -> {
-                    data = getEncodedGtxValueFromFile(blockchainConfigFile)
-                } else -> {}
-            }
+            val data = readConfigurationFile(blockchainConfigFile, format)
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -444,5 +413,22 @@ class CliExecution(val config: AppConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
+    }
+
+    private fun readConfigurationFile(blockchainConfigFile: String, format : String?) : ByteArray {
+        val configFile = File(blockchainConfigFile)
+        var fmt = format
+        if (fmt == null) {
+            fmt = if (configFile.extension == "gtv") "gtv" else "xml"
+        }
+        var data = ByteArray(0)
+        if (fmt == "gtv") {
+            data = configFile.readBytes()
+            // try to decode to ensure data is valid
+            GtvFactory.decodeGtv(data)
+        } else  {
+            data = getEncodedGtxValueFromFile(blockchainConfigFile)
+        }
+        return data
     }
 }
