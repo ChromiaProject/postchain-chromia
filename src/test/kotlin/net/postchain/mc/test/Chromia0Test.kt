@@ -211,7 +211,43 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                        + "/src/test/resources" + configFileName, node0)
+                        + "/src/test/resources" + configFileName, node0, "xml")
+        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
+        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+    }
+
+    @Test
+    fun testAddBlockchainAcceptGtv() {
+        // still need that for creating node test due to IntegrateTest expect xml to create node config
+        // for testing only
+        val configFileNameXml = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        val configFileNameGtv = "/net/postchain/mc/test/config/0.gtv"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileNameXml) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+
+        // provider active status should be true after calling enable
+        executor.enableProvider(providerPublicKey)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileNameGtv, node0, "gtv")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -264,7 +300,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -366,7 +402,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -445,13 +481,51 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
 
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L)
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L, "xml")
+
+        // Get next configuration height of new blockchain configuration
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(20L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
+    }
+
+    @Test
+    fun testAddConfigurationAcceptGtv() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+        executor.enableProvider(providerPublicKey)
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0, "xml")
+
+        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L, "gtv")
 
         // Get next configuration height of new blockchain configuration
         val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
@@ -491,13 +565,13 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
 
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L)
+        executor.addConfiguration(DEFAULT_BLOCKCHAIN_RID, blockchainConfigFile, 20L, "xml")
 
         val listBlockchains = executor.listBlockchainsForNode(node0)
 
@@ -578,7 +652,7 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
 
         val blockchain = executor.getBlockchainConfiguration(DEFAULT_BLOCKCHAIN_RID, 0L)
         assert(blockchain.isNotEmpty())
@@ -678,8 +752,6 @@ class Chromia0Test : IntegrationTest() {
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(DEFAULT_APP_CONFIG)
-
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
@@ -689,7 +761,7 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
 
         val listBlockchains = executor.listAllBlockchains()
 
@@ -710,10 +782,7 @@ class Chromia0Test : IntegrationTest() {
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
-
-        val client = getPostchainClient(DEFAULT_APP_CONFIG)
         executor.enableProvider(providerPublicKey)
-
         val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
         val auth = CliExecution(providerAuth)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -721,7 +790,7 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
 
         val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
         auth.addNode(node1, "127.0.0.1", 9871L)
@@ -733,11 +802,11 @@ class Chromia0Test : IntegrationTest() {
         val listBlockchains = executor.listBlockchainReplicas(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(1, listBlockchains.size)
         val bc = listBlockchains.get(0).asArray()
-        assertEquals(DEFAULT_BLOCKCHAIN_RID, bc.get(0)?.asByteArray().toHex())
-        assertEquals(node1.toUpperCase(), bc.get(1)?.asByteArray().toHex())
-        assertEquals("127.0.0.1", bc.get(2)?.asString())
-        assertEquals(9871L, bc.get(3)?.asInteger())
-        assertTrue(bc.get(4)?.asBoolean())
+        assertEquals(DEFAULT_BLOCKCHAIN_RID, bc.get(0).asByteArray().toHex())
+        assertEquals(node1.toUpperCase(), bc.get(1).asByteArray().toHex())
+        assertEquals("127.0.0.1", bc.get(2).asString())
+        assertEquals(9871L, bc.get(3).asInteger())
+        assertTrue(bc.get(4).asBoolean())
     }
 
     @Test
@@ -772,7 +841,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Add blockchain config for self-awareness
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0)
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -806,8 +875,6 @@ class Chromia0Test : IntegrationTest() {
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
-
-        val client = getPostchainClient(DEFAULT_APP_CONFIG)
 
         executor.enableProvider(providerPublicKey)
 
