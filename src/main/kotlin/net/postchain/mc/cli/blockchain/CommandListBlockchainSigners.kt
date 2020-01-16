@@ -25,12 +25,12 @@ class CommandListBlockchainSigners : CommandBase() {
         return try {
             val listBlockchains = CliExecution(loadAppConfig()).listBlockchainSigners(blockchainRID)
             listBlockchains.forEach { item ->
-                println("BlockchainRID: ${item.get(0)?.asByteArray().toHex()}")
-                println("Node pubkey: ${item.get(1)?.asByteArray().toHex()}")
-                println("Node host: ${item.get(2)?.asString()}")
-                println("Node port: ${item.get(3)?.asInteger()}")
-                println("Node active: ${item.get(4)?.asBoolean()}")
-                println("Node last_update: ${item.get(5)?.asInteger()}")
+                println("BlockchainRID: ${item.get(0).asByteArray().toHex()}")
+                println("Node pubkey: ${item.get(1).asByteArray().toHex()}")
+                println("Node host: ${item.get(2).asString()}")
+                println("Node port: ${item.get(3).asInteger()}")
+                println("Node active: ${item.get(4).asBoolean()}")
+                println("Node last_update: ${item.get(5).asInteger()}")
             }
             Ok("List blockchain signers successfully")
         } catch (e: CliError.Companion.CliException) {

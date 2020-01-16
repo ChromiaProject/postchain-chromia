@@ -17,10 +17,10 @@ class CommandListNodes : CommandBase() {
         return try {
             val nodes = CliExecution(loadAppConfig()).listNodes()
             nodes.forEach { info ->
-                println("host: ${info.get(0)?.asString()}")
-                println("port: ${info.get(1)?.asInteger()}")
-                println("pubkey: ${info[2]?.asByteArray().toHex()}")
-                println("last_update: ${info[3]?.asInteger()}")
+                println("host: ${info.get(0).asString()}")
+                println("port: ${info.get(1).asInteger()}")
+                println("pubkey: ${info.get(2).asByteArray().toHex()}")
+                println("last_update: ${info.get(3).asInteger()}")
             }
             Ok("List nodes successfully")
         } catch (e: CliError.Companion.CliException) {
