@@ -28,6 +28,53 @@ query get_node_data (pubkey) {
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
+query get_active_blockchains (): list<byte_array> {
+    val blockchain_set = set(
+        (blockchain, blockchain_signer_node) @* {
+            blockchain_signer_node.blockchain == blockchain
+        } (.rid)
+    );
+    return list(blockchain_set);
+}
+
+query get_all_blockchains(): list<byte_array> {
+    return blockchain @* {} .rid;
+}
+
+query get_nodes_by_provider(provider) {
+    return node @* { provider } (
+        .pubkey,
+        .active,
+        .host,
+        .port,
+        .last_updated
+    );
+}
+
+query get_blockchain_signers(blockchain) {
+    return blockchain_signer_node @* { blockchain } (
+        .blockchain.rid,
+        @sort .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    );
+}
+
+query get_blockchain_replicas(blockchain) {
+    return blockchain_replica_node @* { blockchain} (
+        .blockchain.rid,
+        @sort .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    );
+}
+
+query get_blockchain_last_height(blockchain) = get_last_height(blockchain);
+
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }
