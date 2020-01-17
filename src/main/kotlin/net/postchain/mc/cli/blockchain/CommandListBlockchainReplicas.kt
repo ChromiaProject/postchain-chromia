@@ -24,12 +24,12 @@ class CommandListBlockchainReplicas : CommandBase() {
         return try {
             val list = CliExecution(loadAppConfig()).listBlockchainReplicas(blockchainRID)
             list.forEach { item ->
-                println("BlockchainRID: ${item.get(0)?.asByteArray().toHex()}")
-                println("Node pubkey: ${item.get(1)?.asByteArray().toHex()}")
-                println("Node host: ${item.get(2)?.asString()}")
-                println("Node port: ${item.get(3)?.asInteger()}")
-                println("Node active: ${item.get(4)?.asBoolean()}")
-                println("Node last_update: ${item.get(5)?.asInteger()}")
+                println("BlockchainRID: ${item.get(0).asByteArray().toHex()}")
+                println("Node pubkey: ${item.get(1).asByteArray().toHex()}")
+                println("Node host: ${item.get(2).asString()}")
+                println("Node port: ${item.get(3).asInteger()}")
+                println("Node active: ${item.get(4).asBoolean()}")
+                println("Node last_update: ${item.get(5).asInteger()}")
             }
             Ok("List blockchain replicas successfully")
         } catch (e: CliError.Companion.CliException) {

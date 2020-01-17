@@ -29,11 +29,17 @@ class CommandAddConfiguration: CommandBase() {
             required = true)
     private var height = 0L
 
+    @Parameter(
+            names = ["-fmt", "--format"],
+            description = "format of blockchain configuration file (gtv|xml)",
+            required = false)
+    private var format : String? = null
+
     override fun key() = "add-configuration"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).addConfiguration(blockchainRID, blockchainConfigFile, height)
+            CliExecution(loadAppConfig()).addConfiguration(blockchainRID, blockchainConfigFile, height, format)
             Ok("blockchain configuration has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
