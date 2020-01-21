@@ -16,11 +16,11 @@ class CommandListProviders : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val providers = CliExecution(loadAppConfig()).listProviders()
-            providers.forEach { info ->
-                println("pubkey: ${info.get(0).asByteArray().toHex()}")
-                println("name: ${info.get(1).asString()}")
-                println("active: ${info.get(2).asBoolean()}")
-                println("beneficiary: ${info.get(3).asInteger()}")
+            providers.forEach { provider ->
+                println("pubkey: ${provider.get(0).asByteArray().toHex()}")
+                println("name: ${provider.get(1).asString()}")
+                println("active: ${provider.get(2).asBoolean()}")
+                println("beneficiary: ${provider.get(3).asInteger()}")
             }
             Ok("List providers successfully")
         } catch (e: CliError.Companion.CliException) {
