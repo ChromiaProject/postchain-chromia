@@ -507,6 +507,21 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
+    fun listProviders() : List<Gtv> {
+        try {
+            return getPostchainClient().query("get_all_providers", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_providers")))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
     fun listAllBlockchains(): List<ByteArray> {
         try {
             return getPostchainClient().query("get_all_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains")))

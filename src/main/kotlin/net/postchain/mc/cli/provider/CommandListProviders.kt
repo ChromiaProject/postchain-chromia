@@ -1,0 +1,30 @@
+package net.postchain.mc.cli.provider
+
+import com.beust.jcommander.Parameters
+import net.postchain.common.toHex
+import net.postchain.mc.cli.base.CliError
+import net.postchain.mc.cli.base.CliResult
+import net.postchain.mc.cli.base.CommandBase
+import net.postchain.mc.cli.base.Ok
+import net.postchain.mc.cli.chromia0.CliExecution
+
+@Parameters(commandDescription = "list providers")
+class CommandListProviders : CommandBase() {
+
+    override fun key(): String = "list-providers"
+
+    override fun execute(): CliResult {
+        return try {
+            val providers = CliExecution(loadAppConfig()).listProviders()
+            providers.forEach { info ->
+                println("pubkey: ${info.get(0).asByteArray().toHex()}")
+                println("name: ${info.get(1).asString()}")
+                println("active: ${info.get(2).asBoolean()}")
+                println("beneficiary: ${info.get(3).asInteger()}")
+            }
+            Ok("List providers successfully")
+        } catch (e: CliError.Companion.CliException) {
+            CliError.CommandNotAllowed(message = e.message)
+        }
+    }
+}
