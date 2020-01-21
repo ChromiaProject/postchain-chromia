@@ -464,6 +464,15 @@ query get_provider_data (pubkey) {
     );
 }
 
+query get_all_providers() {
+    return provider_state @* {} (
+        pubkey = .provider.pubkey,
+        name = .name,
+        active = .active,
+        beneficiary = .beneficiary.id
+    );
+}
+
 query get_node (pubkey) = node @ { pubkey };
 
 query get_node_data (pubkey) {
