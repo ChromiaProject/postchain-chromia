@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "79605BCF000A7474087AAF3A94FE55E3873C6CEC54B35E8006695FFB96CD195A"
+const val DEFAULT_BLOCKCHAIN_RID = "01FB20732737BC0E7350459BE304769902CAEFEF501571FD0191D6F5F24675B9"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -734,6 +734,49 @@ class Chromia0Test : IntegrationTest() {
         assertEquals("127.0.0.1", n1.get(0).asString())
         assertEquals(9871L, n1.get(1).asInteger())
         assertEquals(node1,  n1.get(2).asByteArray().toHex().toLowerCase())
+
+    }
+
+    @Test
+    fun testListNodesWithProvider() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        // Creating node0
+        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+
+        // Add node0 to managed blockchain
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        val auth = CliExecution(providerAuth)
+        auth.addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+
+        val nodes = executor.listNodesWithProvider()
+
+        nodes.forEach {
+            val n = it.asDict()
+            println("host: ${n["host"]?.asString()}")
+            println("port: ${n["port"]?.asInteger()}")
+            println("pubkey: ${n["pubkey"]?.asByteArray()?.toHex()}")
+            println("last_update: ${n["last_updated"]?.asInteger()}")
+            println("provider pubkey: ${n["provider"]?.asByteArray()?.toHex()}")
+            println("provider name: ${n["name"]?.asString()}")
+            println("provider active: ${n["provider_active"]?.asBoolean()}")
+            println("provider beneficiary: ${n["beneficiary"]?.asByteArray()?.toHex()}")
+        }
 
     }
 

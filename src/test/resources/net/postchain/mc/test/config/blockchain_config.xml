@@ -499,6 +499,20 @@ query get_active_blockchains (): list&lt;byte_array&gt; {
     return list(blockchain_set);
 }
 
+query get_nodes_with_provider() {
+    return (node, provider_state) @* { node.provider == provider_state.provider } (
+        pubkey = .pubkey,
+        node_active = node.active,
+        host = .host,
+        port = .port,
+        last_updated = .last_updated,
+        name = .name,
+        provider_active = provider_state.active,
+        beneficiary = .beneficiary.id,
+        provider = node.provider.pubkey
+    );
+}
+
 query get_all_blockchains(): list&lt;byte_array&gt; {
     return blockchain @* {} .rid;
 }
