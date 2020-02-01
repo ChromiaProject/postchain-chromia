@@ -765,19 +765,13 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
 
         val nodes = executor.listNodesWithProvider()
+        val n = nodes[0].asDict()
+        assertEquals("127.0.0.1", n["host"]?.asString())
+        assertEquals(9870L, n["port"]?.asInteger())
+        assertEquals(node0,  n["pubkey"]?.asByteArray()?.toHex()?.toLowerCase())
 
-        nodes.forEach {
-            val n = it.asDict()
-            println("host: ${n["host"]?.asString()}")
-            println("port: ${n["port"]?.asInteger()}")
-            println("pubkey: ${n["pubkey"]?.asByteArray()?.toHex()}")
-            println("last_update: ${n["last_updated"]?.asInteger()}")
-            println("provider pubkey: ${n["provider"]?.asByteArray()?.toHex()}")
-            println("provider name: ${n["name"]?.asString()}")
-            println("provider active: ${n["provider_active"]?.asBoolean()}")
-            println("provider beneficiary: ${n["beneficiary"]?.asByteArray()?.toHex()}")
-        }
-
+        assertEquals(providerPublicKey, n["provider"]?.asByteArray()?.toHex())
+        assertEquals(true, n["provider_active"]?.asBoolean())
     }
 
     @Test
