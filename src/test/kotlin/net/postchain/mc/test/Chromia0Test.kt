@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
-const val DEFAULT_BLOCKCHAIN_RID = "B2F11720F30A78E1805650C6707BB97C3AF277D72538DC5D06A2C7535B12EF37"
+const val DEFAULT_BLOCKCHAIN_RID = "01FB20732737BC0E7350459BE304769902CAEFEF501571FD0191D6F5F24675B9"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
 //const val adminPrivKey = "9444bfc21951133b5ae782241dbb6bab8af625c7b2a041f7d0d448de0a697a39"
@@ -738,6 +738,43 @@ class Chromia0Test : IntegrationTest() {
     }
 
     @Test
+    fun testListNodesWithProvider() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        // Creating node0
+        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+
+        // Add node0 to managed blockchain
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        val auth = CliExecution(providerAuth)
+        auth.addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+
+        val nodes = executor.listNodesWithProvider()
+        val n = nodes[0].asDict()
+        assertEquals("127.0.0.1", n["host"]?.asString())
+        assertEquals(9870L, n["port"]?.asInteger())
+        assertEquals(node0,  n["pubkey"]?.asByteArray()?.toHex()?.toLowerCase())
+
+        assertEquals(providerPublicKey, n["provider"]?.asByteArray()?.toHex())
+        assertEquals(true, n["provider_active"]?.asBoolean())
+    }
+
+    @Test
     fun testListBlockchains() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
@@ -898,6 +935,58 @@ class Chromia0Test : IntegrationTest() {
         assertEquals(node1.toUpperCase(), nodes[1].asDict()["pubkey"]?.asByteArray()?.toHex())
     }
 
+    @Test
+    fun testListProviders() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+
+        // Creating node0
+        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        val client = getPostchainClient(DEFAULT_APP_CONFIG)
+
+        executor.enableProvider(providerPublicKey)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+
+        // Add node0 to managed blockchain
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        val auth = CliExecution(providerAuth)
+        auth.addNode(node0, "127.0.0.1", 9870L)
+        var node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+
+        Thread.sleep(5000)
+
+        val anotherProviderPR = "9444BFC21951133B5AE782241DBB6BAB8AF625C7B2A041F7D0D448DE0A697A39"
+        executor.registerProvider(anotherProviderPR)
+
+        val providers = executor.listProviders()
+
+        assertEquals(2, providers.size)
+
+        val provider1 = providers.get(0).asDict()
+        assertEquals(providerPublicKey, provider1["pubkey"]?.asByteArray()?.toHex())
+        assertEquals(true, provider1["active"]?.asBoolean())
+
+        val provider2 = providers.get(1).asDict()
+        assertEquals(anotherProviderPR, provider2["pubkey"]?.asByteArray()?.toHex())
+        assertEquals(false, provider2["active"]?.asBoolean())
+    }
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
