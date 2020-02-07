@@ -78,9 +78,11 @@ class CliExecution(val config: AppConfig) {
      */
     fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
         try {
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
                 addOperation("stop_blockchain",
-                        arrayOf(GtvFactory.gtv(blockchainRID.hexStringToByteArray()), GtvFactory.gtv(removeReplicas)))
+                        arrayOf(blockchain, GtvFactory.gtv(removeReplicas)))
                 sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
