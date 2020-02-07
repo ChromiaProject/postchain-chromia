@@ -2,10 +2,20 @@
 
 set -eu
 
+if [ "$#" -ne 2 ]; then
+    echo "-----------------------------"
+    echo "Usage ./run.sh NODE_ID COMMAND"
+    echo "-----------------------------"
+    echo "For example:"
+    echo "./run.sh 0 run"
+    echo "./run.sh 0 reset"
+    echo "-----------------------------"
+    exit 2
+fi
+
 [[ -z ${DEBUG+x} ]] && POSTCHAIN_SH='./postchain.sh' || POSTCHAIN_SH="./postchain-debug.sh"
 NODE_ID=$1
 COMMAND=$2
-BRID=$(cat bc-target/blockchains/0/brid.txt)
 
 NODE_PORTS=()
 NODE_PORTS[0]=9870
@@ -24,6 +34,7 @@ run_cmd () {
 
 case $COMMAND in
     reset)
+        BRID=$(cat bc-target/blockchains/0/brid.txt)
         run_cmd wipe-db
         run_cmd add-blockchain -brid "$BRID" -cid 0 -bc bc-target/blockchains/0/0.xml
         run_cmd peerinfo-add -h 127.0.0.1 -p ${NODE_PORTS[$NODE_ID]} -pk ${NODE_PUBKEYS[$NODE_ID]}
