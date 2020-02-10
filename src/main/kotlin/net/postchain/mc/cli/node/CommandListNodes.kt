@@ -29,14 +29,14 @@ class CommandListNodes : CommandBase() {
                 nodes = cliExecution.listNodesWithProvider()
                 nodes.forEach {
                     val n = it.asDict()
-                    println("host: ${n["host"]?.asString()}")
-                    println("port: ${n["port"]?.asInteger()}")
-                    println("pubkey: ${n["pubkey"]?.asByteArray()?.toHex()}")
-                    println("last_update: ${n["last_updated"]?.asInteger()}")
-                    println("provider pubkey: ${n["provider"]?.asByteArray()?.toHex()}")
-                    println("provider name: ${n["name"]?.asString()}")
-                    println("provider active: ${n["provider_active"]?.asBoolean()}")
-                    println("provider beneficiary: ${n["beneficiary"]?.asByteArray()?.toHex()}")
+                    println("host: ${n["host"]!!.asString()}")
+                    println("port: ${n["port"]!!.asInteger()}")
+                    println("pubkey: ${n["pubkey"]!!.asByteArray().toHex()}")
+                    println("last_update: ${n["last_updated"]!!.asInteger()}")
+                    println("provider pubkey: ${n["provider"]!!.asByteArray().toHex()}")
+                    println("provider name: ${n["name"]!!.asString()}")
+                    println("provider active: ${n["provider_active"]!!.asBoolean()}")
+                    println("provider beneficiary: ${n["beneficiary"]!!.asByteArray().toHex()}")
                 }
             } else {
                 nodes = cliExecution.listNodes()

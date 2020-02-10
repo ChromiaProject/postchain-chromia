@@ -600,11 +600,11 @@ class Chromia0Test : IntegrationTest() {
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
         val node = executor.getNodeInfo(node0).asDict()
-        assertEquals(true, node["active"]?.asBoolean())
-        assertEquals("127.0.0.1", node["host"]?.asString())
-        assertEquals(9870L, node["port"]?.asInteger())
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+        assertEquals(true, node["active"]!!.asBoolean())
+        assertEquals("127.0.0.1", node["host"]!!.asString())
+        assertEquals(9870L, node["port"]!!.asInteger())
+        Assert.assertArrayEquals(node["provider"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
     }
 
     @Test
@@ -984,8 +984,8 @@ class Chromia0Test : IntegrationTest() {
 
         val nodes = executor.listNodesByProvider(providerAuth.pubKey)
         assertEquals(2, nodes.size)
-        assertEquals(node0.toUpperCase(), nodes[0].asDict()["pubkey"]?.asByteArray()?.toHex())
-        assertEquals(node1.toUpperCase(), nodes[1].asDict()["pubkey"]?.asByteArray()?.toHex())
+        assertEquals(node0.toUpperCase(), nodes[0].asDict()["pubkey"]!!.asByteArray().toHex())
+        assertEquals(node1.toUpperCase(), nodes[1].asDict()["pubkey"]!!.asByteArray().toHex())
     }
 
     @Test
