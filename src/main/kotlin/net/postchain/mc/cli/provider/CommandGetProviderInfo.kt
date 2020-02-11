@@ -23,9 +23,9 @@ class CommandGetProviderInfo : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val provider = CliExecution(loadAppConfig()).getProviderInfo(key).asDict()
-            println("provider pubkey:  ${provider["pubkey"]?.asByteArray()?.toHex()}")
-            println("provider name:  ${provider["name"]?.asString()}")
-            println("provider status:  ${provider["active"]?.asBoolean()}")
+            println("provider pubkey:  ${provider["pubkey"]!!.asByteArray().toHex()}")
+            println("provider name:  ${provider["name"]!!.asString()}")
+            println("provider status:  ${provider["active"]!!.asBoolean()}")
             Ok("Get provider info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
