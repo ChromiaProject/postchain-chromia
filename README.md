@@ -7,22 +7,30 @@ Postchain MC is used to issue commands to an entire group of Chromia/Postchain n
 * "Postchain-MC" (=this project) is a command line tool which submits transactions to 
 the Chromia0 directory chain. 
 
-* "chromia0" defines code for the 'directory' blockchain which manages a group of nodes. 
-Using a 'directory' chain is convenient because it will help to synchronize 
-configuration changes between nodes (where manual synchronization would be time consuming).
+* "chromia0" defines code for the 'directory' blockchain which manages 
+settings/configuration for the nodes. Using a 'directory' chain is convenient because 
+it will help to synchronize configuration changes between nodes 
+(where manual synchronization would be time consuming).
 
 * Key concepts are:
   - "nodes" (machines running Chromia Dapps),
   - "providers" (private persons/organizations responsible for the "nodes")
-  - "blockchains" (data/Dapps hosted by the "nodes")
+  - "dapp" (a distiduted application where the back-end running on "nodes" and 
+     the front end on some client software)
+  - "blockchains" (the data the "dapps" use are stored in "blockchains" that are 
+     hosted by the "nodes". 
+     Example: The  dapp 'HorseDapp' use the blockchain 'HorseBC' to store its data, 
+     but also reads from the blockchain 'AllSpeciesRepo' that is managed by a different dapp.)
+  - "blockchain blocks" (the blocks hold the actual data of the blockchain)
+  - "blockchain configuration" (the configuration fully defines the blockchain's behavior. 
+     Both "signer" nodes and "replica" nodes need to know the configuration to create and verify blocks.)
   - "signers" (nodes responsible for verifying and creating data blocks)
-  - "replicas" (nodes who can read the blockchains but not create blocks)
-  - "blockchain configuration" (is certain critical settings for the blockchain, these might
-   change over time, and it is Chromia0's responsibility to keep these changes is synch between nodes)
+  - "replicas" (nodes that verifies data blocks, but do not create blocks)
 
-* Example: One common situation is when a provider wants to add its node to a 
-group of providers (and will then host the same blockchains andn Dapps as the other
- nodes in this group). We do this using the "./pmc-c0.sh add-node" command.
+* Example: One common situation is when a provider wants to add one node 
+to the set of allowed nodes on the Chromia network 
+(after this action, the node will be available for running dapps and blockchains).
+ We do this using the "./pmc-c0.sh add-node" command.
 
 ### How do I get set up? ###
 
