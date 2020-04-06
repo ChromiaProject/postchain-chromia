@@ -600,11 +600,11 @@ class Chromia0Test : IntegrationTest() {
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
         val node = executor.getNodeInfo(node0).asDict()
-        assertEquals(true, node["active"]?.asBoolean())
-        assertEquals("127.0.0.1", node["host"]?.asString())
-        assertEquals(9870L, node["port"]?.asInteger())
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+        assertEquals(true, node["active"]!!.asBoolean())
+        assertEquals("127.0.0.1", node["host"]!!.asString())
+        assertEquals(9870L, node["port"]!!.asInteger())
+        Assert.assertArrayEquals(node["provider"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
     }
 
     @Test
@@ -623,9 +623,9 @@ class Chromia0Test : IntegrationTest() {
         executor.registerProvider(providerPublicKey)
         executor.enableProvider(providerPublicKey)
         val data = executor.getProviderInfo(providerPublicKey).asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        assertEquals("", data["name"]?.asString())
-        assertEquals(true, data["active"]?.asBoolean())
+        Assert.assertArrayEquals(data["pubkey"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertEquals("", data["name"]!!.asString())
+        assertEquals(true, data["active"]!!.asBoolean())
     }
 
     @Test
@@ -766,12 +766,12 @@ class Chromia0Test : IntegrationTest() {
 
         val nodes = executor.listNodesWithProvider()
         val n = nodes[0].asDict()
-        assertEquals("127.0.0.1", n["host"]?.asString())
-        assertEquals(9870L, n["port"]?.asInteger())
-        assertEquals(node0,  n["pubkey"]?.asByteArray()?.toHex()?.toLowerCase())
+        assertEquals("127.0.0.1", n["host"]!!.asString())
+        assertEquals(9870L, n["port"]!!.asInteger())
+        assertEquals(node0,  n["pubkey"]!!.asByteArray().toHex().toLowerCase())
 
-        assertEquals(providerPublicKey, n["provider"]?.asByteArray()?.toHex())
-        assertEquals(true, n["provider_active"]?.asBoolean())
+        assertEquals(providerPublicKey, n["provider"]!!.asByteArray().toHex())
+        assertEquals(true, n["provider_active"]!!.asBoolean())
     }
 
     @Test
@@ -897,6 +897,59 @@ class Chromia0Test : IntegrationTest() {
     }
 
     @Test
+    fun testStopBlockchain() {
+
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+        executor.enableProvider(providerPublicKey)
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val auth = CliExecution(providerAuth)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        auth.addNode(node0, "127.0.0.1", 9870L)
+
+        Thread.sleep(5000)
+        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+                + "/src/test/resources" + configFileName, node0, "xml")
+
+        val node1 = "035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9"
+        auth.addNode(node1, "127.0.0.1", 9871L)
+        Thread.sleep(5000)
+
+        // add replicas
+        auth.addReplica(DEFAULT_BLOCKCHAIN_RID, node1)
+
+        var replicas = executor.listBlockchainReplicas(DEFAULT_BLOCKCHAIN_RID)
+        assertEquals(1, replicas.size)
+
+        // Add node1 as blockchain's signer
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+
+        var listBlockchainSigners = executor.listBlockchainSigners(DEFAULT_BLOCKCHAIN_RID)
+        assertEquals(2, listBlockchainSigners.size)
+
+        executor.stopBlockchain(DEFAULT_BLOCKCHAIN_RID, true)
+
+        // query replicas again to ensure it was deleted after stop blockchain
+        replicas = executor.listBlockchainReplicas(DEFAULT_BLOCKCHAIN_RID)
+        assertEquals(0, replicas.size)
+
+        // query signers again to ensure it was deleted after stop blockchain
+        listBlockchainSigners = executor.listBlockchainSigners(DEFAULT_BLOCKCHAIN_RID)
+        assertEquals(0, listBlockchainSigners.size)
+
+    }
+
+    @Test
     fun testListNodesByProvider() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
 
@@ -931,8 +984,8 @@ class Chromia0Test : IntegrationTest() {
 
         val nodes = executor.listNodesByProvider(providerAuth.pubKey)
         assertEquals(2, nodes.size)
-        assertEquals(node0.toUpperCase(), nodes[0].asDict()["pubkey"]?.asByteArray()?.toHex())
-        assertEquals(node1.toUpperCase(), nodes[1].asDict()["pubkey"]?.asByteArray()?.toHex())
+        assertEquals(node0.toUpperCase(), nodes[0].asDict()["pubkey"]!!.asByteArray().toHex())
+        assertEquals(node1.toUpperCase(), nodes[1].asDict()["pubkey"]!!.asByteArray().toHex())
     }
 
     @Test
@@ -964,11 +1017,11 @@ class Chromia0Test : IntegrationTest() {
         auth.addNode(node0, "127.0.0.1", 9870L)
         var node = client.query("get_node_data", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
-        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
-        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+        assertk.assert(node["active"]!!.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]!!.asString()).isEqualTo("127.0.0.1")
+        assertk.assert(node["port"]!!.asInteger()).isEqualTo(9870L)
+        Assert.assertArrayEquals(node["provider"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
 
         Thread.sleep(5000)
 
@@ -980,12 +1033,12 @@ class Chromia0Test : IntegrationTest() {
         assertEquals(2, providers.size)
 
         val provider1 = providers.get(0).asDict()
-        assertEquals(providerPublicKey, provider1["pubkey"]?.asByteArray()?.toHex())
-        assertEquals(true, provider1["active"]?.asBoolean())
+        assertEquals(providerPublicKey, provider1["pubkey"]!!.asByteArray().toHex())
+        assertEquals(true, provider1["active"]!!.asBoolean())
 
         val provider2 = providers.get(1).asDict()
-        assertEquals(anotherProviderPR, provider2["pubkey"]?.asByteArray()?.toHex())
-        assertEquals(false, provider2["active"]?.asBoolean())
+        assertEquals(anotherProviderPR, provider2["pubkey"]!!.asByteArray().toHex())
+        assertEquals(false, provider2["active"]!!.asBoolean())
     }
 //
 //    @Test(expected = CliError.Companion.CliException::class)

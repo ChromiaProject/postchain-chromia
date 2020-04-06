@@ -22,9 +22,9 @@ class CommandGetNodeInfo : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val node = CliExecution(loadAppConfig()).getNodeInfo(key).asDict()
-            println("Status: ${node["active"]?.asBoolean()}")
-            println("Host: ${node["host"]?.asString()}")
-            println("Port: ${node["port"]?.asInteger()}")
+            println("Status: ${node["active"]!!.asBoolean()}")
+            println("Host: ${node["host"]!!.asString()}")
+            println("Port: ${node["port"]!!.asInteger()}")
             Ok("Get node info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

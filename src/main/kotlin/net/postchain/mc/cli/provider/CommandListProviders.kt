@@ -18,10 +18,10 @@ class CommandListProviders : CommandBase() {
             val providers = CliExecution(loadAppConfig()).listProviders()
             providers.forEach {
                 val dict = it.asDict()
-                println("pubkey: ${dict["pubkey"]?.asByteArray()?.toHex()}")
-                println("name: ${dict["name"]?.asString()}")
-                println("active: ${dict["active"]?.asBoolean()}")
-                println("beneficiary: ${dict["beneficiary"]?.asByteArray()?.toHex()}")
+                println("pubkey: ${dict["pubkey"]!!.asByteArray().toHex()}")
+                println("name: ${dict["name"]!!.asString()}")
+                println("active: ${dict["active"]!!.asBoolean()}")
+                println("beneficiary: ${dict["beneficiary"]!!.asByteArray().toHex()}")
             }
             Ok("List providers successfully")
         } catch (e: CliError.Companion.CliException) {
