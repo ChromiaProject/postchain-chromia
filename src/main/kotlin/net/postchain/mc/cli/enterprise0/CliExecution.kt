@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.chromia0
+package net.postchain.mc.cli.enterprise0
 
 import mu.KLogging
 import net.postchain.base.BlockchainRid
@@ -8,7 +8,10 @@ import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
@@ -20,15 +23,15 @@ class CliExecution(val config: AppConfig) {
     companion object : KLogging()
 
     private val cryptoSystem = SECP256K1CryptoSystem()
-    private val postchainClientFactory = PostchainClientFactory()
 
     private fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
             throw UserMistake("missing required parameters")
         }
-        val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
+        val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+        val defaultSigner = DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray())
+        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), defaultSigner)
     }
 
     private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {
