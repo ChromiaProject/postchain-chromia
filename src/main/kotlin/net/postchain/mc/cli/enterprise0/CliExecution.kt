@@ -1,53 +1,21 @@
 package net.postchain.mc.cli.enterprise0
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.SigMaker
-import net.postchain.client.core.*
+import net.postchain.client.core.ConfirmationLevel
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
 import java.io.File
-import java.time.Instant
 
-class CliExecution(val config: AppConfig) {
+class CliExecution(config: AppConfig) : CliExecution(config) {
 
     companion object : KLogging()
-
-    private val cryptoSystem = SECP256K1CryptoSystem()
-
-    private fun getPostchainClient(): PostchainClient {
-        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
-            throw UserMistake("missing required parameters")
-        }
-        val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
-        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        val defaultSigner = DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray())
-        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), defaultSigner)
-    }
-
-    private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {
-        val gtv =  GtvMLParser.parseGtvML(File(blockchainConfigFile).readText())
-        return GtvEncoder.encodeGtv(gtv)
-    }
-
-    private fun buildSigMaker(): SigMaker {
-        return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-    }
-
-    private fun makeTransactionWithNop(): GTXTransactionBuilder {
-        return getPostchainClient().makeTransaction().apply {
-            addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
-        }
-    }
 
     /**
      * format: Format of blockchain configuration file

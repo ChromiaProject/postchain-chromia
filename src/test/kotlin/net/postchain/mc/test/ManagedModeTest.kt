@@ -4,37 +4,55 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.BlockchainRid
-import net.postchain.client.DefaultSigner
-import net.postchain.client.PostchainClient
-import net.postchain.client.PostchainClientFactory
+import net.postchain.base.data.DatabaseAccessFactory
+import net.postchain.base.runStorageCommand
+import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.config.SimpleDatabaseConnector
-import net.postchain.config.app.AppConfigDbLayer
+import net.postchain.devtools.IntegrationTest
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Assert
-import kotlin.test.assertEquals
 import java.nio.file.Paths
+import kotlin.test.assertEquals
 
 open class ManagedModeTest : IntegrationTest() {
-    private val postchainClientFactory = PostchainClientFactory()
     protected fun getPostchainClient(appConfig: AppConfig): PostchainClient {
-
-        val resolver = postchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
+        val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(appConfig.pubKey.hexStringToByteArray(), appConfig.privKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), DefaultSigner(sigMaker, appConfig.pubKey.hexStringToByteArray()))
+        val defaultSigner = DefaultSigner(sigMaker, appConfig.pubKey.hexStringToByteArray())
+        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), defaultSigner)
+    }
+
+    protected fun createNode(nodeIndex: Int, nodeCount: Int, nodeConfigFile: String, blockchainConfigXmlFile: String) {
+        createSingleNode(nodeIndex, nodeCount, nodeConfigFile, blockchainConfigXmlFile) { appConfig, n ->
+            runStorageCommand(appConfig) {
+                DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
+                        .addPeerInfo(it, TestPeerInfos.peerInfo0)
+            }
+        }
+    }
+
+    protected fun createNode(nodeIndex: Int, nodeCount: Int, configFileName: String) {
+        createNode(nodeIndex, nodeCount, DEFAULT_CONFIG_FILE, configFileName)
+    }
+
+    protected fun createNode(configFileName: String, nodeCount: Int) {
+        val nodeIndex = 0
+        createNode(nodeIndex, nodeCount, configFileName)
+    }
+
+    protected fun createNode(configFileName: String) {
+        createNode(configFileName, 1)
     }
 
     protected fun testRegisterProviderInternal(configFileName: String, config: AppConfig) {
         // Creating node0
-        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
+        createNode(configFileName)
+
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         CliExecution(config).registerProvider(providerPublicKey)
 
@@ -46,15 +64,9 @@ open class ManagedModeTest : IntegrationTest() {
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
-
     protected fun testAddConfigurationInternal(configFileName: String, config: AppConfig, appConfigProv: AppConfig) {
         // Creating node0
-        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
+        createNode(configFileName)
 //        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val providerPublicKey = appConfigProv.pubKey
         val executor = CliExecution(config)
@@ -107,12 +119,7 @@ open class ManagedModeTest : IntegrationTest() {
 
     protected fun testListNodesWithProviderInternal(configFileName: String) {
         // Creating node0
-        createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
+        createNode(configFileName, 2)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -141,12 +148,7 @@ open class ManagedModeTest : IntegrationTest() {
 
     protected fun testAddNodeInternal(configFileName: String) {
         // Creating node0
-        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
+        createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val executor = CliExecution(config)
