@@ -7,21 +7,17 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecution
-import net.postchain.mc.config.app.AppConfig
+import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.config.app.ClientConfig
 import org.junit.Assert
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
-const val DEFAULT_APP_CONFIG = "app.properties"
-const val DEFAULT_PROV_CONFIG = "prov.properties"
 const val DEFAULT_BLOCKCHAIN_RID = "01FB20732737BC0E7350459BE304769902CAEFEF501571FD0191D6F5F24675B9"
 const val NODE0_CONFIG_FILE = "node0.properties"
 const val NODE1_CONFIG_FILE = "node1.properties"
@@ -38,8 +34,7 @@ class Chromia0Test : ManagedModeTest() {
     @Test
     fun testRegisterProvider() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-        var config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
-        testRegisterProviderInternal(configFileName, config)
+        testRegisterProviderInternal(configFileName, cliConf(clientConfigMap))
     }
 
     @Test
@@ -47,11 +42,12 @@ class Chromia0Test : ManagedModeTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createNode(configFileName)
-        var config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        
+        var config = cliConf(clientConfigMap)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         CliExecution(config).registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(config)
         var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         var data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
@@ -59,7 +55,7 @@ class Chromia0Test : ManagedModeTest() {
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
         println(data["beneficiary"]?.asByteArray()?.toHex())
 
-        config = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        config = cliConf(provConfigMap)
         CliExecution(config).updateProvider(providerPublicKey, "chromia", "")
 
         provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
@@ -74,11 +70,11 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
         var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         var data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
@@ -110,11 +106,11 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
         var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         var data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
@@ -127,7 +123,7 @@ class Chromia0Test : ManagedModeTest() {
         data = provider.asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
         val node = client.query("get_node_data", GtvFactory.gtv(
@@ -156,16 +152,16 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileNameXml)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -185,11 +181,11 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
         var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         var data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
@@ -201,7 +197,7 @@ class Chromia0Test : ManagedModeTest() {
         data = provider.asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -282,11 +278,11 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
         var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
         var data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
@@ -298,7 +294,7 @@ class Chromia0Test : ManagedModeTest() {
         data = provider.asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -356,7 +352,7 @@ class Chromia0Test : ManagedModeTest() {
     @Test
     fun testAddConfiguration() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-        testAddConfigurationInternal(configFileName, AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG), AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG))
+        testAddConfigurationInternal(configFileName, cliConf(clientConfigMap), cliConf(provConfigMap))
     }
 
     @Test
@@ -365,12 +361,12 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
         executor.enableProvider(providerPublicKey)
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val client = getPostchainClient(cliConf(clientConfigMap))
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -399,16 +395,16 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -433,14 +429,14 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
         val node = executor.getNodeInfo(node0).asDict()
@@ -457,7 +453,7 @@ class Chromia0Test : ManagedModeTest() {
         createNode(configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
         executor.enableProvider(providerPublicKey)
@@ -473,14 +469,14 @@ class Chromia0Test : ManagedModeTest() {
         createNode(configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -500,11 +496,11 @@ class Chromia0Test : ManagedModeTest() {
         createNode(configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -520,12 +516,12 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
         executor.enableProvider(providerPublicKey)
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -574,14 +570,14 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
 
@@ -600,11 +596,11 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
         executor.enableProvider(providerPublicKey)
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val auth = CliExecution(providerAuth)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         auth.addNode(node0, "127.0.0.1", 9870L)
@@ -638,15 +634,15 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
 
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -682,11 +678,11 @@ class Chromia0Test : ManagedModeTest() {
         // Creating node0
         createNode(configFileName)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
         executor.enableProvider(providerPublicKey)
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
         val auth = CliExecution(providerAuth)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         auth.addNode(node0, "127.0.0.1", 9870L)
@@ -731,13 +727,13 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -765,15 +761,15 @@ class Chromia0Test : ManagedModeTest() {
         createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val config = cliConf(clientConfigMap)
         val executor = CliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG))
+        val client = getPostchainClient(cliConf(clientConfigMap))
 
         executor.enableProvider(providerPublicKey)
 
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val providerAuth = cliConf(provConfigMap)
 
         // Add node0 to managed blockchain
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -805,63 +801,9 @@ class Chromia0Test : ManagedModeTest() {
         assertEquals(false, provider2["active"]!!.asBoolean())
     }
 
-    @Test
-    fun testGetProviderInfoErrorReporting() {
-        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
-
-        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
-        val executor = CliExecution(config)
-        executor.registerProvider(providerPublicKey)
-        executor.enableProvider(providerPublicKey)
-
-        try {
-            val data = executor.getProviderInfo(wrongProviderPublicKey).asDict()
-            fail("Fail test for get provider error reporting")
-        } catch (e: CliError.Companion.CliException) {
-            assertEquals("Can not make query_gtx api call", e.message.trim())
-        }
+    override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
+        return net.postchain.mc.cli.enterprise0.CliExecution(cliConfig)
     }
-
-    @Test
-    fun testGetNodeInfoErrorReporting() {
-        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-        // Creating node0
-        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-        }
-        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
-        val executor = CliExecution(config)
-        executor.registerProvider(providerPublicKey)
-
-        // provider active status should be true after calling enable
-        executor.enableProvider(providerPublicKey)
-
-        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
-        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-        val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
-        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-
-        try {
-            executor.getNodeInfo(wrongNode).asDict()
-            fail("Fail test for get node info error reporting")
-        } catch (e: CliError.Companion.CliException) {
-            assertEquals("Can not make query_gtx api call", e.message.trim())
-        }
-
-    }
-
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {

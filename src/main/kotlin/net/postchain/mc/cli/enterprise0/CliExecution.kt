@@ -10,17 +10,17 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.config.app.AppConfig
+import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 
-class CliExecution(config: AppConfig) : CliExecution(config) {
+class CliExecution(config: ClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
     /**
      * format: Format of blockchain configuration file
      */
-    fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
+    override fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
         try {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
@@ -74,7 +74,7 @@ class CliExecution(config: AppConfig) : CliExecution(config) {
     /**
      *
      */
-    fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
+    override fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
         try {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val blockchain = getPostchainClient().query("get_blockchain",
@@ -102,7 +102,7 @@ class CliExecution(config: AppConfig) : CliExecution(config) {
     /**
      *
      */
-    fun addNode(key: String, host: String, port: Long) {
+    override fun addNode(key: String, host: String, port: Long) {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                         "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
@@ -274,7 +274,7 @@ class CliExecution(config: AppConfig) : CliExecution(config) {
     /**
      *
      */
-    fun registerProvider(key: String) {
+    override fun registerProvider(key: String) {
         try {
             val tx = makeTransactionWithNop().apply {
                 addOperation("register_provider",
@@ -350,7 +350,7 @@ class CliExecution(config: AppConfig) : CliExecution(config) {
     /**
      *
      */
-    fun enableProvider(key: String) {
+    override fun enableProvider(key: String) {
         doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
@@ -509,7 +509,7 @@ class CliExecution(config: AppConfig) : CliExecution(config) {
         }
     }
 
-    fun listNodesWithProvider() : List<Gtv> {
+    override fun listNodesWithProvider() : List<Gtv> {
         try {
             return getPostchainClient().query("get_nodes_with_provider", GtvFactory.gtv("type" to GtvFactory.gtv("get_nodes_with_provider")))
                     .get()

@@ -9,14 +9,15 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.mc.config.app.AppConfig
+import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 import java.time.Instant
 
-open class CliExecution(val config: AppConfig) {
+abstract class CliExecution(val config: ClientConfig) {
     protected val cryptoSystem = SECP256K1CryptoSystem()
     protected fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
@@ -42,4 +43,12 @@ open class CliExecution(val config: AppConfig) {
             addOperation("nop", arrayOf(GtvFactory.gtv(Instant.now().toEpochMilli())))
         }
     }
+
+    abstract fun registerProvider(providerPublicKey: String)
+
+    abstract fun enableProvider(key: String)
+    abstract fun addNode(nodeKey: String, host: String, port: Long)
+    abstract fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?)
+    abstract fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?)
+    abstract fun listNodesWithProvider(): List<Gtv>
 }

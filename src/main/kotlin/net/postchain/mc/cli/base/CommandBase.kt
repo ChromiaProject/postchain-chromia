@@ -2,7 +2,8 @@ package net.postchain.mc.cli.base
 
 import com.beust.jcommander.Parameter
 import mu.KLogging
-import net.postchain.mc.config.app.AppConfig
+import net.postchain.mc.config.app.ClientConfig
+import net.postchain.mc.config.app.BaseClientConfig
 
 abstract class CommandBase : Command {
 
@@ -14,9 +15,9 @@ abstract class CommandBase : Command {
             required = true)
     protected var config = ""
 
-    protected fun loadAppConfig(): AppConfig {
+    protected fun loadAppConfig(): ClientConfig {
         try {
-            return AppConfig.fromPropertiesFile(config)
+            return BaseClientConfig.fromPropertiesFile(config)
         } catch (e: Exception) {
             logger.error(e.message)
             throw CliError.Companion.CliException("Cannot read config file or not found")

@@ -1,17 +1,26 @@
 package net.postchain.mc.config.app
 
 import org.apache.commons.configuration2.Configuration
-import org.apache.commons.configuration2.MapConfiguration
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 
-class AppConfig(private val config: Configuration) {
+
+interface ClientConfig {
+    open val apiURL: String
+    val brid: String
+    val privKey: String
+    val pubKey: String
+}
+
+open class DelegatingClientConfig(private val delegate: ClientConfig) : ClientConfig by delegate
+
+open class BaseClientConfig(private val config: Configuration) : ClientConfig {
 
     companion object {
 
-        fun fromPropertiesFile(configFile: String): AppConfig {
+        fun fromPropertiesFile(configFile: String): ClientConfig {
             val params = Parameters().properties()
                     .setFileName(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
@@ -20,19 +29,19 @@ class AppConfig(private val config: Configuration) {
                     .configure(params)
                     .configuration
 
-            return AppConfig(configuration)
+            return BaseClientConfig(configuration)
         }
     }
 
-    val apiURL: String
+    override val apiURL: String
         get() = config.getString("api.url", "")
 
-    val brid: String
+    override val brid: String
         get() = config.getString("brid", "")
 
-    val privKey: String
+    override val privKey: String
         get() = config.getString("privkey", "")
 
-    val pubKey: String
+    override val pubKey: String
         get() = config.getString("pubkey", "")
 }
