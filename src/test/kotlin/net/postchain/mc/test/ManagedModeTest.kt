@@ -84,26 +84,43 @@ abstract class ManagedModeTest : IntegrationTest() {
     abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
 
 
-    protected fun testRegisterProviderInternal(configFileName: String, config: ClientConfig) {
+    protected fun testRegisterProviderInternal(configFileName: String, config: ClientConfig, provPubkey: String = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0") {
         // Creating node0
         createNode(configFileName)
 
-        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        cliExecution(config).registerProvider(providerPublicKey)
+        cliExecution(config).registerProvider(provPubkey)
 
         val client = getPostchainClient(config)
-        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(provPubkey.hexStringToByteArray()))).get()
         val data = provider.asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
         assertk.assert(data["name"]?.asString()).isEqualTo("")
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
-    protected fun testAddConfigurationInternal(configFileName: String, config: ClientConfig, appConfigProv: ClientConfig) {
+    protected fun testAddConfigurationInternal(configFileName: String, config: ClientConfig, configProv: ClientConfig) {
+        val (executor, client) = addNodeAndBlockchain(configFileName, config, configProv)
+
+        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
+        executor.addConfiguration(config.brid, blockchainConfigFile, 20L, "xml")
+
+        // Get next configuration height of new blockchain configuration
+        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L))).get()
+        assertk.assert(height.asInteger()).isEqualTo(20L)
+
+        // Get next configuration
+        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height)).get()
+        assertk.assert(bc.asByteArray()).isNotNull()
+    }
+
+//    Help function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes aware of itself. So that it can be managed.
+    protected fun addNodeAndBlockchain(configFileName: String, config: ClientConfig, configProv: ClientConfig): Pair<CliExecution, PostchainClient> {
         // Creating node0
         createNode(configFileName)
-//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-        val providerPublicKey = appConfigProv.pubKey
+
+        val providerPublicKey = configProv.pubKey
         val executor = cliExecution(config)
         executor.registerProvider(providerPublicKey)
 
@@ -120,36 +137,23 @@ abstract class ManagedModeTest : IntegrationTest() {
         data = provider.asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
 
-        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-        cliExecution(appConfigProv).addNode(node0, "127.0.0.1", 9870L)
+        cliExecution(configProv).addNode(nodes[0].pubKey, "127.0.0.1", 9870L)
         val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
+                "pubkey" to GtvFactory.gtv(nodes[0].pubKey.hexStringToByteArray()))).get().asDict()
         assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
         assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
         assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
         Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodes[0].pubKey.hexStringToByteArray())
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, node0, "xml")
+                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
 
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
-
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        executor.addConfiguration(config.brid, blockchainConfigFile, 20L, "xml")
-
-        // Get next configuration height of new blockchain configuration
-        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L))).get()
-        assertk.assert(height.asInteger()).isEqualTo(20L)
-
-        // Get next configuration
-        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height)).get()
-        assertk.assert(bc.asByteArray()).isNotNull()
+        return Pair(executor, client)
     }
 
     protected fun testListNodesWithProviderInternal(configFileName: String) {

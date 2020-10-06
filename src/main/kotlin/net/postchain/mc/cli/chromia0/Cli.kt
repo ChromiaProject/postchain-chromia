@@ -6,8 +6,7 @@ import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
-import net.postchain.mc.cli.replica.CommandAddReplica
-import net.postchain.mc.cli.replica.CommandRemoveReplica
+import net.postchain.mc.cli.replica.*
 
 class Cli: CliBase() {
     override val commands: Map<String, Command> = listOf(

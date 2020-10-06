@@ -10,7 +10,6 @@ import net.postchain.common.toHex
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecution
-import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.Assert
 import org.junit.Test

@@ -17,6 +17,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
+
     /**
      * format: Format of blockchain configuration file
      */
@@ -44,6 +45,57 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
         }
     }
 
+    fun proposeConfiguration(blockchainRID: String, pubkey: String, blockchainConfigFile: String, height: Long, format: String?) {
+        try {
+            val data = readConfigurationFile(blockchainConfigFile, format)
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("propose_configuration",
+                        arrayOf(blockchain, GtvFactory.gtv(pubkey), GtvFactory.gtv(data), GtvFactory.gtv(height)))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("proposed configuration was added successfully!")
+            } else {
+                throw CliError.Companion.CliException("Cannot add proposed configuration")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     * Instead of an admin node, configuration changes are made via propositions and voting. This is how a block signing node can vote for a pending configuration.
+     */
+    fun vote(blockchainRID: String, pubkey: String, height: Long, yes: Boolean) {
+        try {
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("make_vote",
+                        arrayOf(blockchain, GtvFactory.gtv(pubkey), GtvFactory.gtv(height), GtvFactory.gtv((yes))))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("vote added successfully.")
+            } else {
+                throw CliError.Companion.CliException("Cannot add vote")
+            }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
     /**
      *
      */

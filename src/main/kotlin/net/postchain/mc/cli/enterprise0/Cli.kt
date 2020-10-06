@@ -4,10 +4,10 @@ import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
+import net.postchain.mc.cli.consensusupdates.CommandProposeConfiguration
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
-import net.postchain.mc.cli.replica.CommandAddReplica
-import net.postchain.mc.cli.replica.CommandRemoveReplica
+import net.postchain.mc.cli.replica.*
 
 class Cli: CliBase() {
     override val commands: Map<String, Command> = listOf(
@@ -23,7 +23,7 @@ class Cli: CliBase() {
             CommandRemoveReplica(),
             CommandAddBlockchain(),
             CommandStopBlockchain(),
-            CommandAddConfiguration(),
+            CommandProposeConfiguration(),
             CommandAddBlockchainSigners(),
             CommandRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
