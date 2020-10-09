@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.chromia0
 
 import mu.KLogging
+import net.postchain.base.validateMerklePath
 import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
@@ -13,13 +14,13 @@ import java.io.File
 
 class CliExecution(config: ClientConfig): CliExecution(config) {
 
-    companion object : KLogging()
+//    companion object : KLogging()
 
     /**
      * format: Format of blockchain configuration file
      */
     override fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
-        try {
+        doInTryBlock {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
             val tx = makeTransactionWithNop().apply {
@@ -27,26 +28,21 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
                         arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
                 sign(buildSigMaker())
             }
+
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
             if (txResult.status == TransactionStatus.CONFIRMED) {
                 println("blockchain was added successfully!")
             } else {
                 throw CliError.Companion.CliException("Cannot add blockchain")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
-        try {
+        doInTryBlock {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -60,20 +56,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot stop blockchain")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     override fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
-        try {
+        doInTryBlock {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
@@ -88,20 +78,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add blockchain configuration")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     override fun addNode(key: String, host: String, port: Long) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                         "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -115,20 +99,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add node")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun addReplica(blockchainRID: String, key: String) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val blockchain = getPostchainClient().query("get_blockchain",
@@ -145,20 +123,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add replica node")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun removeReplica(blockchainRID: String, key: String) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val blockchain = getPostchainClient().query("get_blockchain",
@@ -175,20 +147,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot remove replica node")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun removeNode(key: String) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -202,20 +168,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot remove node")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun addBlockchainSigners(blockchainRID: String, signers: String) {
-        try {
+        doInTryBlock {
             val nodeList = signers.split(",").map {
                 getPostchainClient().query("get_node",
                         GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
@@ -232,20 +192,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add blockchain's signers")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun removeBlockchainSigners(blockchainRID: String, signers: String) {
-        try {
+        doInTryBlock {
             val nodeList = signers.split(",").map {
                 getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
             }
@@ -260,20 +214,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot remove blockchain's signers")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     override fun registerProvider(key: String) {
-        try {
+        doInTryBlock {
             val tx = makeTransactionWithNop().apply {
                 addOperation("register_provider",
                         arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
@@ -285,20 +233,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add provider")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
      *
      */
     fun updateProvider(key: String, name: String, beneficiary: String) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             var data: Array<Gtv> = arrayOf(provider)
@@ -322,27 +264,8 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot update provider")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
-
-    fun doInTryBlock(todo: () -> Unit) {
-        try {
-            todo()
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
-    }
-
 
 
     /**
@@ -364,7 +287,7 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             }
         }
         /*
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -377,20 +300,14 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot enable provider")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }*/
+        } */
     }
 
     /**
      *
      */
     fun disableProvider(key: String) {
-        try {
+        doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
@@ -403,13 +320,7 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot disable provider")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
+        } 
     }
 
     /**
@@ -417,18 +328,12 @@ class CliExecution(config: ClientConfig): CliExecution(config) {
      */
     fun listBlockchainsForNode(key: String) : List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
-        try {
+        doInTryBlock {
             val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
                     "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
             listBlockChain.addAll(list.map { it -> it.asByteArray() })
-            return listBlockChain
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
+        return listBlockChain
     }
 
     fun getProviderInfo(key: String) : Gtv {

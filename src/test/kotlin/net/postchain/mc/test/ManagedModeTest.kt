@@ -33,6 +33,10 @@ abstract class ManagedModeTest : IntegrationTest() {
             Pair("pubkey", "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"),
             Pair("privkey", "9EC6477E36921F519BC2F805BFA01E9D2AE9DFF2D761A1140C76EEEAFEC78453")
     )
+    val prov2ConfigMap = mapOf(
+            Pair("pubkey", "039622229BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"),
+            Pair("privkey", "9EC2227E36921F519BC2F805BFA01E9D2AE9DFF2D761A1140C76EEEAFEC78453")
+    )
 
     protected fun cliConf(basedOn: Configuration): ClientConfig {
         return cliConf(0, basedOn)
@@ -84,11 +88,7 @@ abstract class ManagedModeTest : IntegrationTest() {
     abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
 
 
-    protected fun testRegisterProviderInternal(configFileName: String, config: ClientConfig, provPubkey: String = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0") {
-        // Creating node0
-        createNode(configFileName)
-
-        cliExecution(config).registerProvider(provPubkey)
+    protected fun assertProviderRegistered(config: ClientConfig, provPubkey: String) {
 
         val client = getPostchainClient(config)
         val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(provPubkey.hexStringToByteArray()))).get()
@@ -98,13 +98,24 @@ abstract class ManagedModeTest : IntegrationTest() {
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
-    protected fun testAddConfigurationInternal(configFileName: String, config: ClientConfig, configProv: ClientConfig) {
-        val (executor, client) = addNodeAndBlockchain(configFileName, config, configProv)
+    protected fun assertProviderEnabled(config: ClientConfig, providerPublicKey: String) {
+        val client = getPostchainClient(config)
+        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        val data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+    }
 
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        executor.addConfiguration(config.brid, blockchainConfigFile, 20L, "xml")
+    protected fun assertProviderDisabled(config: ClientConfig, providerPublicKey: String) {
+        val client = getPostchainClient(config)
+        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
+        val data = provider.asDict()
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+    }
+
+    protected fun assertAddConfiguration(config: ClientConfig) {
 
         // Get next configuration height of new blockchain configuration
+        val client = getPostchainClient(config)
         val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L))).get()
         assertk.assert(height.asInteger()).isEqualTo(20L)
@@ -123,37 +134,41 @@ abstract class ManagedModeTest : IntegrationTest() {
         val providerPublicKey = configProv.pubKey
         val executor = cliExecution(config)
         executor.registerProvider(providerPublicKey)
-
-        val client = getPostchainClient(config)
-        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        var data = provider.asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        assertk.assert(data["name"]?.asString()).isEqualTo("")
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        assertProviderRegistered(config, providerPublicKey)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
-        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        data = provider.asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+        assertProviderEnabled(config, providerPublicKey)
 
         cliExecution(configProv).addNode(nodes[0].pubKey, "127.0.0.1", 9870L)
-        val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(nodes[0].pubKey.hexStringToByteArray()))).get().asDict()
-        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
-        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodes[0].pubKey.hexStringToByteArray())
+        assertAddedNode(config, providerPublicKey, host = "127.0.0.1", port = 9870L)
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
                 + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
+        assertBlockchainAdded(config)
+        val client = getPostchainClient(config)
+
+        return Pair(executor, client)
+    }
+
+    private fun assertBlockchainAdded(config: ClientConfig) {
+        val client = getPostchainClient(config)
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
 
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
-        return Pair(executor, client)
+    }
+
+    private fun assertAddedNode(config: ClientConfig, providerPublicKey: String, host: String, port: Long) {
+        val client = getPostchainClient(config)
+        val node = client.query("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(nodes[0].pubKey.hexStringToByteArray()))).get().asDict()
+        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(node["host"]?.asString()).isEqualTo(host)
+        assertk.assert(node["port"]?.asInteger()).isEqualTo(port)
+        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodes[0].pubKey.hexStringToByteArray())
     }
 
     protected fun testListNodesWithProviderInternal(configFileName: String) {
@@ -188,34 +203,22 @@ abstract class ManagedModeTest : IntegrationTest() {
     protected fun testAddNodeInternal(configFileName: String) {
         // Creating node0
         createNode(configFileName)
-        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val providerPublicKey =  provConfigMap.get("pubkey").toString()
+//        "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = cliConf(clientConfigMap)
         val executor = cliExecution(config)
         executor.registerProvider(providerPublicKey)
 
-        val client = getPostchainClient(config)
-        var provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        var data = provider.asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        assertk.assert(data["name"]?.asString()).isEqualTo("")
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        assertProviderRegistered(config, providerPublicKey)
 
         // provider active status should be true after calling enable
         executor.enableProvider(providerPublicKey)
-        provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        data = provider.asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+        assertProviderEnabled(config, providerPublicKey)
 
         val providerAuth = cliConf(provConfigMap)
         val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
         cliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-        val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(node0.hexStringToByteArray()))).get().asDict()
-        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(node["host"]?.asString()).isEqualTo("127.0.0.1")
-        assertk.assert(node["port"]?.asInteger()).isEqualTo(9870L)
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), node0.hexStringToByteArray())
+        assertAddedNode(config, providerPublicKey, host = "127.0.0.1", port = 9870L)
     }
 
 }

@@ -22,7 +22,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
      * format: Format of blockchain configuration file
      */
     override fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
-        try {
+        doInTryBlock {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
             val tx = makeTransactionWithNop().apply {
@@ -36,23 +36,20 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add blockchain")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
 
-    fun proposeConfiguration(blockchainRID: String, pubkey: String, blockchainConfigFile: String, height: Long, format: String?) {
-        try {
+//    (blockchain, provider, config_data: byte_array, height: integer)
+    fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
+    doInTryBlock {
             val data = readConfigurationFile(blockchainConfigFile, format)
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
                 addOperation("propose_configuration",
-                        arrayOf(blockchain, GtvFactory.gtv(pubkey), GtvFactory.gtv(data), GtvFactory.gtv(height)))
+                        arrayOf(blockchain, provider, GtvFactory.gtv(data), GtvFactory.gtv(height)))
                 sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
@@ -61,25 +58,39 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add proposed configuration")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun proposeProvider(key: String) {
+        doInTryBlock {
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("propose_provider",
+                        arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray())))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("proposed provider was added successfully!")
+            } else {
+                throw CliError.Companion.CliException("Cannot add proposed provider")
+            }
         }
     }
 
     /**
      * Instead of an admin node, configuration changes are made via propositions and voting. This is how a block signing node can vote for a pending configuration.
      */
-    fun vote(blockchainRID: String, pubkey: String, height: Long, yes: Boolean) {
-        try {
-            val blockchain = getPostchainClient().query("get_blockchain",
-                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+    fun vote(rowid: Long, yes: Boolean) {
+        doInTryBlock {
+            val proposal = getPostchainClient().query("get_proposal", GtvFactory.gtv(
+                    "rowid" to GtvFactory.gtv(rowid))).get()
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
                 addOperation("make_vote",
-                        arrayOf(blockchain, GtvFactory.gtv(pubkey), GtvFactory.gtv(height), GtvFactory.gtv((yes))))
+                        arrayOf(provider, proposal, GtvFactory.gtv((yes))))
                 sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
@@ -88,15 +99,52 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
             } else {
                 throw CliError.Companion.CliException("Cannot add vote")
             }
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }
     /**
+     *
+     */
+    fun proposeEnableProvider(key: String) {
+        doInTryBlock {
+            val meProvider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val providerToBeEnabled = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("propose_enable_provider", arrayOf(meProvider, providerToBeEnabled))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Provider has been enable")
+            } else {
+                throw CliError.Companion.CliException("Cannot enable provider")
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    fun proposeDisableProvider(key: String) {
+        doInTryBlock {
+            val meProvider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+            val providerToBeDisabled = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            val tx = makeTransactionWithNop().apply {
+                addOperation("propose_disable_provider", arrayOf(meProvider, providerToBeDisabled))
+                sign(buildSigMaker())
+            }
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("Provider has been disable")
+            } else {
+                throw CliError.Companion.CliException("Cannot disable provider")
+            }
+        }
+    }
+        /**
      *
      */
     fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
@@ -385,18 +433,17 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
         }
     }
 
-    fun doInTryBlock(todo: () -> Unit) {
-        try {
-            todo()
-        } catch (e: UserMistake) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
-        } catch (e: Exception) {
-            logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
-        }
-    }
-
+//    fun doInTryBlock(todo: () -> Unit) {
+//        try {
+//            todo()
+//        } catch (e: UserMistake) {
+//            logger.error(e.message)
+//            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+//        } catch (e: Exception) {
+//            logger.error(e.message)
+//            throw CliError.Companion.CliException("System Error: Something wrong happen")
+//        }
+//    }
 
 
     /**

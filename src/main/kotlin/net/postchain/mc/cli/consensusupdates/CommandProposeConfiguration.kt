@@ -45,7 +45,7 @@ class CommandProposeConfiguration: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).proposeConfiguration(blockchainRID, pubkey, blockchainConfigFile, height, format)
+            CliExecution(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format)
             Ok("Proposed configuration has been added successfully. Now waiting for consensus.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

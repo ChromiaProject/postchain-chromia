@@ -11,11 +11,6 @@ import net.postchain.mc.cli.enterprise0.CliExecution
 @Parameters(commandDescription = "Block signers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposition.")
 class CommandVote: CommandBase() {
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain RID",
-            required = true)
-    private var blockchainRID = ""
 
     @Parameter(
             names = ["-pk", "--node-pubkey"],
@@ -25,10 +20,10 @@ class CommandVote: CommandBase() {
 
 
     @Parameter(
-            names = ["-h", "--height"],
-            description = "block height at which new configuration will be applied",
+            names = ["-idx", "--voting index"],
+            description = "Unique index, used as reference to a proposed configuration update, of various type. Could be e.g. provider/node management or rell-module updates",
             required = true)
-    private var height = 0L
+    private var idx = 0L
 
     @Parameter(
             names = ["-y", "--approve"],
@@ -36,12 +31,11 @@ class CommandVote: CommandBase() {
             required = true)
     private var yes = true
 
-
     override fun key() = "vote"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).vote(blockchainRID, pubkey, height, yes)
+            CliExecution(loadAppConfig()).vote(idx, yes)
             Ok("Your vote is registrated")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

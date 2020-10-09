@@ -156,18 +156,7 @@ entity blockchain_configuration {
 	data: byte_array;
 }
 
-//Without admin, proposed configuration changes are put here while waiting for enough positive votes. 
-entity pending_conf {
-	key blockchain,	height: integer;
-	data: byte_array;
-}
 
-// todo: make it more general, so it can handle different types {config, provider, signer, add/stop blockchain}.
-// For now we only consider updates of type add_configuration.
-entity vote {
-	key pubkey, pending_conf;
-	ok: boolean; //here we see if the signer voted yes or no
-}
 
 
 entity blockchain_signer_node { key blockchain, node; }
@@ -340,46 +329,6 @@ operation add_blockchain ( config_data: byte_array, initial_nodes: list&lt;node&
 	create blockchain_added (blockchain, op_context.transaction);
 }
 
-//Pubkey used for authorization 
-operation propose_configuration (blockchain, pubkey, config_data: byte_array, height: integer) {
-	require_block_signer(pubkey);
-	require(get_last_height(blockchain) &lt; height);
-	require(empty(blockchain_configuration @? { blockchain, .height &gt;= height } limit 1));
-	require(empty(pending_conf @? { blockchain, .height &gt;= height } limit 1));
-	val pc = create pending_conf(
-		blockchain,		
-		height,
-		data = config_data
-	);
-}
-
-//Pubkey used for authorization
-operation make_vote(blockchain, pubkey, height: integer, ok: boolean) {
-	require_block_signer(pubkey);
-	val pc = pending_conf @ {blockchain, height};
-	require(empty(vote @? {pubkey, pc})); //only vote once.
-	create vote(pubkey, pc, ok);
-	val new_conf = pending_conf @ {blockchain, pc.height};
-	apply_configuration(new_conf);
-}
-
-
-function apply_configuration (pending_conf) {
-	require_consensus(pending_conf);
-	require(get_last_height(pending_conf.blockchain) &lt; pending_conf.height);
-	require(empty(blockchain_configuration @? { pending_conf.blockchain, .height &gt; pending_conf.height } limit 1));
-	create blockchain_configuration(
-		pending_conf.blockchain,
-		pending_conf.height,
-		data = patch_configuration_signers(pending_conf.blockchain, pending_conf.data)
-	);
-}
-
-function require_consensus (pc: pending_conf) {
-	val positive_votes = vote @* { .pending_conf == pc, .ok == true} ( @sum 1 );
-	val max_votes = node @* {.active == true} ( @sum 1 ) limit 1;
-	require(positive_votes[0] &gt; max_votes[0]/2);
-}
 
 
 operation old_add_configuration (blockchain, config_data: byte_array, height: integer) {
@@ -516,7 +465,186 @@ query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }
 
-query chromia_version() = "0.1";
+query enterprise_solution_version() = "0.1";
+
+
+//queries used in the voting procedure for configuration updates:
+query get_proposals_since (since: rowid) {
+  return proposal @* {  .rowid &gt; since } (.rowid, .proposal_type) limit 10;
+}
+
+query get_proposal (rowid: rowid) {
+  return proposal @{  .rowid == rowid };
+}
+</string>
+                            </entry>
+                            <entry key="bc0/voting_on_updates.rell">
+                                <string>enum proposal_type {
+   conf,
+   bc,
+   register_provider,
+   provider_state,
+   bc_signers,
+   bc_stop
+}
+
+entity proposal {
+  index timestamp, proposal_type;
+  proposed_by: provider;
+}
+
+
+entity vote {
+    key proposal, provider;
+	ok: boolean; //here we see if the signer voted yes or no
+}
+
+ 
+//Without admin, proposed configuration changes are put here while waiting for enough positive votes.
+entity pending_conf {
+    key proposal;
+    blockchain;
+	height: integer;
+    data: byte_array;
+}
+
+//Without admin, proposed providers are put here while waiting for enough positive votes. 
+entity pending_provider {
+	key proposal;
+	pubkey;
+}
+
+//Without admin, proposed enabling of providers are put here while waiting for enough positive votes. 
+entity pending_provider_state {
+	key proposal;
+	provider;
+	active: boolean;
+}
+
+//Without admin, proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
+entity pending_update_blockchain_signer {
+	key proposal;
+	blockchain;
+	signer: node;
+	add: boolean;
+}
+
+//Pubkey used for authorization 
+operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
+	require_provider_auth(provider);
+	require(get_last_height(blockchain) &lt; height);
+	require(empty(blockchain_configuration @? { blockchain, .height &gt;= height } limit 1));
+	require(empty(pending_conf @? { blockchain, .height &gt;= height } limit 1));
+	val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider);
+	create pending_conf(prop,
+		blockchain,		
+		height,
+		data = config_data
+	);
+}
+
+operation propose_provider(me: provider, pubkey) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
+	create pending_provider(prop, pubkey);
+}
+
+operation propose_enable_provider(me: provider, other_prov: provider) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	create pending_provider_state(prop, other_prov, .active = true);
+}
+
+operation propose_disable_provider(me: provider, other_prov: provider) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	create pending_provider_state(prop, other_prov, .active = false);
+}
+
+operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list&lt;node&gt;) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	for (signer in add_signers) {
+		require(signer.active);
+	create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
+	}
+}
+
+operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list&lt;node&gt;) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	for (signer in signers) {
+	create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
+	}
+}
+
+//Pubkey used for authorization
+operation make_vote(provider, prop: proposal, ok: boolean) {
+	require_provider_auth(provider);
+	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
+	create vote(prop, provider, ok);
+	apply_voting_result(prop);
+}
+
+function apply_voting_result (prop: proposal) {
+	require_consensus(prop);
+	when (prop.proposal_type) {
+ 		conf              -&gt; apply_conf(prop);
+		register_provider -&gt; apply_register_provider(prop);
+		provider_state    -&gt; {
+			val pps = pending_provider_state @ {prop}; 
+			update provider_state @ { pps.provider } ( .active = pps.active );
+			delete pending_provider_state @ { prop };
+		}
+		bc_signers        -&gt; apply_blockchain_signers(prop);
+	//else -&gt;
+}
+	val prop_id = vote @* {.proposal == prop} (.rowid);
+	delete vote @* {.proposal == prop};	
+	delete proposal @ {.rowid == prop.rowid}; 
+}
+
+
+function apply_conf(proposal) {
+	val pc = pending_conf @ {proposal};
+	require(get_last_height(pc.blockchain) &lt; pc.height);
+	require(empty(blockchain_configuration @? { pc.blockchain, .height &gt; pc.height } limit 1));
+	create blockchain_configuration(
+		pc.blockchain,
+		pc.height,
+		data = patch_configuration_signers(pc.blockchain, pc.data)
+	);
+	delete pending_conf @* { proposal };
+}
+
+function apply_register_provider(proposal) {
+	val pp = pending_provider @ { proposal };
+	val provider = create provider (pp.pubkey);
+		create provider_state (provider, name="",
+			active=false
+		);
+		create activity_counter (provider);
+		delete pending_provider @ { proposal };
+}
+
+function apply_blockchain_signers(proposal) {
+	val pubcs = pending_update_blockchain_signer @* { proposal }; //pending signer updates can be more than one.
+	for (pending in pubcs) {
+		if (pending.add == true) {
+			require(pending.signer.active);
+			create blockchain_signer_node(pending.blockchain, pending.signer);
+		} else {
+			delete blockchain_signer_node @? {pending.blockchain, pending.signer};
+		}
+		update_configuration(pending.blockchain);	
+	}
+}
+
+function require_consensus (proposal) {
+	val positive_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
+	val max_votes = node @* {.active == true} ( @sum 1 ) limit 1;
+	require(positive_votes[0] &gt; max_votes[0]/2);
+}
 </string>
                             </entry>
                         </dict>

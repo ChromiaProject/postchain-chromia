@@ -1,5 +1,7 @@
 package net.postchain.mc.cli.common0
 
+import mu.KLogging
+import mu.KotlinLogging.logger
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
@@ -13,14 +15,19 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.mc.cli.base.CliError
+//import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 import java.time.Instant
 
 abstract class CliExecution(val config: ClientConfig) {
+
+    companion object : KLogging()
+
     protected val cryptoSystem = SECP256K1CryptoSystem()
     protected fun getPostchainClient(): PostchainClient {
-        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
+        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {
             throw UserMistake("missing required parameters")
         }
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
@@ -51,4 +58,16 @@ abstract class CliExecution(val config: ClientConfig) {
     abstract fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?)
     abstract fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?)
     abstract fun listNodesWithProvider(): List<Gtv>
+
+    fun doInTryBlock(todo: () -> Unit) {
+        try {
+            todo()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
 }
