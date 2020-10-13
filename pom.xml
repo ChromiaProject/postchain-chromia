@@ -12,6 +12,10 @@
     <name>Postchain Management Console</name>
     <url>http://postchain.org</url>
 
+    <modules>
+        <module>postchain-mc-devtools</module>
+    </modules>
+
     <properties>
         <main-class>net.postchain.mc.AppKt</main-class>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -24,6 +28,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
+        <postchain-mc.version>1.0-SNAPSHOT</postchain-mc.version>
         <maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
@@ -48,7 +53,6 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rellr</artifactId>
-            <version>${rellr.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -73,10 +77,16 @@
 
         <!-- testing -->
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-mc-devtools</artifactId>
+            <version>${postchain-mc.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
-            <scope>compile</scope>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -99,6 +109,16 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rellr</artifactId>
+                <version>${rellr.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>

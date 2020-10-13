@@ -1,0 +1,107 @@
+package net.postchain.mc.test
+
+import mu.KLogging
+import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.utils.configuration.BlockchainSetup
+import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
+import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.config.app.ClientConfig
+import net.postchain.mc.config.app.DelegatingClientConfig
+import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
+import org.apache.commons.configuration2.MapConfiguration
+import java.io.File
+import java.nio.file.Paths
+
+
+abstract class RellIntegrationTest : IntegrationTestSetup() {
+
+    companion object : KLogging()
+
+    protected fun runXml(): String {
+        return """
+            <run wipe-db="true">
+                <nodes>
+                    <config add-signers="false" >
+                    #
+                    </config>
+                </nodes>
+                ${chainConfSnippet()}
+            </run>
+        """.trimIndent()
+    }
+
+    /**
+     * Override this method with a chain conf snippet. For example:
+     *
+       """
+       <chains>
+            <chain name="manager" iid="0">
+                <config height="0" add-dependencies="false">
+                    <app module="myModule">
+                        <args module="myModule">
+                            <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(7)}</bytea></arg>
+                        </args>
+                    </app>
+                    <gtv path="signers">
+                        <array>
+                            <bytea>${KeyPairHelper.pubKeyHex(7)}</bytea>
+                        </array>
+                    </gtv>
+                </config>
+            </chain>
+        </chains>
+        """
+     *
+     */
+    protected abstract fun chainConfSnippet(): String
+
+    protected fun cliConf(keyIndex: Int): ClientConfig {
+        val base = MapConfiguration(mapOf(
+                "pubkey" to KeyPairHelper.pubKeyHex(keyIndex),
+                "privkey" to KeyPairHelper.privKeyHex(keyIndex)
+        ))
+        return object : DelegatingClientConfig(BaseClientConfig(base)) {
+            override val apiURL: String
+                get() = "http://127.0.0.1:" + nodes[0].getRestApiHttpPort()
+
+            override val brid: String
+                get() = nodes[0].getBlockchainRid(0)!!.toHex()
+        }
+    }
+
+    /**
+     * Create a node running the rell source in rellSourceDir, which is
+     * relative to the folder src/main/rell
+     */
+    protected fun run(rellSourceDir: String) {
+        // Create blockchain config file
+        val resourceDirectory = Paths.get("src", "main", "rell", rellSourceDir)
+        val rellSourceDir = resourceDirectory.toFile()
+
+        val tempRunXml = File.createTempFile("run", ".xml")
+        tempRunXml.bufferedWriter().use { out -> out.write(runXml()) }
+
+        run(tempRunXml, rellSourceDir)
+    }
+
+    private fun run(runConfigFile: File, rellSourceDir: File) {
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile)
+
+        val blockchainSetups = mutableListOf<BlockchainSetup>()
+        for (chain in appConfig.config.chains) {
+
+            val bs = BlockchainSetupFactory.buildFromGtv(0, chain.configs[0]!!)
+            blockchainSetups.add(bs)
+        }
+
+        val systemSetup = SystemSetupFactory.buildSystemSetup(blockchainSetups)
+        systemSetup.nodeConfProvider = "legacy" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
+        systemSetup.confInfrastructure = "net.postchain.managed.ManagedEBFTInfrastructureFactory"
+        systemSetup.chainConfProvider = "managed"
+        systemSetup.needRestApi = true
+
+        createNodesFromSystemSetup(systemSetup, true)
+    }
+}
