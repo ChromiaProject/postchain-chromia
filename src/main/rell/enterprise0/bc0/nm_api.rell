@@ -1,0 +1,74 @@
+
+query nm_get_peer_list_version() = node_list.last_update;
+
+query nm_find_next_configuration_height(
+	blockchain_rid: byte_array,
+	height: integer
+	): integer?
+{
+		val bc = blockchain @? { blockchain_rid };
+    	if (bc == null) return null;
+    	return blockchain_configuration @? { bc, .height > height }
+        	(@sort .height) limit 1;
+		
+}
+	
+query nm_get_blockchain_configuration(
+	blockchain_rid: byte_array, 
+	height: integer
+	): byte_array?
+{
+	val bc = blockchain @ { blockchain_rid };
+    // find configuration height -- the latest height up to given height
+    val ch = blockchain_configuration @? { bc , .height <= height } (@sort_desc .height) limit 1;
+    if (ch != null) 
+        return blockchain_configuration @ { .blockchain == bc, .height == ch } .data;
+    else
+        return null;		
+}
+		
+query nm_compute_blockchain_list(node_id: pubkey): list<byte_array>
+{
+	val node = node @? { .pubkey == node_id};
+	
+	if (exists(node)) {
+		val bc_set = set(blockchain_signer_node @* { node } (.blockchain.rid));
+		bc_set.add_all(blockchain_replica_node @* { node } (.blockchain.rid));
+		bc_set.add(chain_context.blockchain_rid);
+		return list(bc_set);		
+	} else {
+		return [chain_context.blockchain_rid];
+	}
+}
+
+// note -- API expects array, so we need suppress naming
+query nm_get_peer_infos () = node @* {} (_ = .host,_ = .port,_ = .pubkey,_ = .last_updated);
+
+query nm_api_version () = 1;
+
+query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): list<list<byte_array>> {
+	val res = list<list<byte_array>>();
+	for (brid in blockchain_rids) {
+		val bc = blockchain @? { brid };
+		if (brid == chain_context.blockchain_rid) {
+			// for the chain0 include all nodes, this makes sure that replicas 
+			// are connected
+			res.add( node @* { .active == true } .pubkey );
+		} else if (empty(bc)) {
+			res.add(list<byte_array>());
+		} else {
+			// note: we include signers in this list because node processing old blocks might 
+			// want to connect to _current_ signers to get blocks 
+			val signers = set( blockchain_signer_node @* { bc } .node.pubkey );
+			signers.add_all(
+				blockchain_replica_node @* { bc } .node.pubkey
+			);
+			res.add(list(signers));
+		}
+	}
+	return res;	
+}
+
+query nm_get_node_replica_map(): list<list<byte_array>> {
+	return list<list<byte_array>>(); 
+}

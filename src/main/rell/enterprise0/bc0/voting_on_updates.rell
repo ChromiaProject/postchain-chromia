@@ -1,0 +1,241 @@
+enum proposal_type {
+   conf,
+   bc,
+   register_provider,
+   provider_state,
+   bc_signers,
+   bc_stop
+}
+
+entity proposal {
+  index timestamp, proposal_type;
+  proposed_by: provider;
+}
+
+
+entity vote {
+    key proposal, provider;
+	ok: boolean; //here we see if the signer voted yes or no
+}
+
+ 
+//Without admin, proposed configuration changes are put here while waiting for enough positive votes.
+entity pending_conf {
+    key proposal;
+    blockchain;
+	height: integer;
+    data: byte_array;
+}
+
+//Without admin, proposed stops of bcs are put here while waiting for enough positive votes.
+entity pending_stop_blockchain {
+    key proposal;
+    blockchain;
+	remove_replicas: boolean;
+    }
+
+//Without admin, proposed providers are put here while waiting for enough positive votes. 
+entity pending_provider {
+	key proposal;
+	pubkey;
+}
+
+//Without admin, proposed bc:s are put here while waiting for enough positive votes. One row per node in init list?
+entity pending_blockchain {
+	key proposal;
+	data: byte_array;
+}
+
+//Without admin, proposed enabling of providers are put here while waiting for enough positive votes. 
+entity pending_provider_state {
+	key proposal;
+	provider;
+	active: boolean;
+}
+
+//Without admin, proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
+entity pending_update_blockchain_signer {
+	key proposal;
+	blockchain;
+	signer: node;
+	add: boolean;
+}
+
+//Pubkey used for authorization 
+operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
+	require_provider_auth(provider);
+	require(get_last_height(blockchain) < height);
+	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
+	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
+	val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider);
+	create pending_conf(prop,
+		blockchain,		
+		height,
+		data = config_data
+	);
+}
+
+operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>) {
+	require_provider_auth(me);
+	print("a");
+	require(initial_nodes.size() > 0);
+	print("b");
+	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
+	print("c");
+	val signers = list<pubkey>();
+	print("d");
+	for (node in initial_nodes) {
+		print("e");
+		signers.add(node.pubkey);
+	}
+	config["signers"] = signers.to_gtv();
+		print("f");
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc, me);
+		print("g");
+	create pending_blockchain(prop, config.to_gtv().to_bytes());
+}
+
+
+operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boolean) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me);
+	create pending_stop_blockchain(prop, blockchain, remove_replicas);
+}
+
+operation propose_provider(me: provider, pubkey) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
+	create pending_provider(prop, pubkey);
+}
+
+operation propose_enable_provider(me: provider, other_prov: provider) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	create pending_provider_state(prop, other_prov, .active = true);
+}
+
+operation propose_disable_provider(me: provider, other_prov: provider) {
+	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+	create pending_provider_state(prop, other_prov, .active = false);
+}
+
+// one proposal per signer
+operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
+	require_provider_auth(me);
+	for (signer in add_signers) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		require(signer.active);
+		create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
+	}
+}
+
+// one proposal per signer to be removed
+operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
+	require_provider_auth(me);
+	for (signer in signers) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
+	}
+}
+
+//Pubkey used for authorization
+operation make_vote(provider, prop: proposal, ok: boolean) {
+	require_provider_auth(provider);
+	print("vote autorization OK");
+	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
+	create vote(prop, provider, ok);
+	print("vote added");
+	apply_voting_result(prop);
+}
+
+function apply_voting_result (prop: proposal) {
+	print("consensus?");
+	if (consensus_achieved(prop)) {
+		print("consensus achieved");
+		when (prop.proposal_type) {
+	 		conf              -> apply_conf(prop);
+	 		bc                -> apply_bc(prop);
+			register_provider -> apply_register_provider(prop);
+			provider_state    -> {
+				val pps = pending_provider_state @ {prop}; 
+				update provider_state @ { pps.provider } ( .active = pps.active );
+				delete pending_provider_state @ { prop };
+			}
+			bc_signers        -> apply_blockchain_signers_update(prop);
+			bc_stop			  -> apply_stop_blockchain(prop);
+	}
+		val prop_id = vote @* {.proposal == prop} (.rowid);
+		delete vote @* {.proposal == prop};	
+		delete proposal @ {.rowid == prop.rowid}; 
+	} else {
+		print("no, not yet");
+	}
+}
+
+function apply_conf(proposal) {
+	val pc = pending_conf @ {proposal};
+	require(get_last_height(pc.blockchain) < pc.height);
+	require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));
+	create blockchain_configuration(
+		pc.blockchain,
+		pc.height,
+		data = patch_configuration_signers(pc.blockchain, pc.data)
+	);
+	delete pending_conf @* { proposal };
+}
+
+function apply_bc(proposal) {
+	val bc = pending_blockchain @ {proposal};
+	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
+	
+	val blockchain_rid = config.hash();
+	val blockchain = create blockchain ( blockchain_rid );
+	print("Added blockchain", blockchain_rid);
+	create blockchain_configuration (blockchain, 0, bc.data);
+	val pubkeys = list<pubkey>.from_gtv(config["signers"]);
+	for (pubkey in pubkeys) {
+		create blockchain_signer_node (blockchain, node @ {pubkey});
+	}
+	create blockchain_added (blockchain, op_context.transaction);
+	delete pending_blockchain @* { proposal };
+}
+
+function apply_register_provider(proposal) {
+	val pp = pending_provider @ { proposal };
+	add_pubkey_as_provider(pp.pubkey);
+	delete pending_provider @ { proposal };
+}
+
+function apply_blockchain_signers_update(proposal) {
+	val pending = pending_update_blockchain_signer @ { proposal };
+		if (pending.add == true) {
+			require(pending.signer.active);
+			create blockchain_signer_node(pending.blockchain, pending.signer);
+		} else {
+			delete blockchain_signer_node @? {pending.blockchain, pending.signer};
+		}
+		update_configuration(pending.blockchain);	
+		delete pending_update_blockchain_signer @ { proposal };
+}
+
+function apply_stop_blockchain(proposal) {
+	// NOTE: we do not update blockchain configuration, making it possible to 
+	// restart blockchain later. Data such as anchored blocks is not removed.
+	val bc_to_stop = pending_stop_blockchain @ { proposal };
+	delete blockchain_signer_node @* { .blockchain == bc_to_stop.blockchain };
+	if (bc_to_stop.remove_replicas) {
+		delete blockchain_replica_node @* { bc_to_stop.blockchain };
+	} 	
+	delete pending_stop_blockchain @ { proposal };
+}
+
+function consensus_achieved (proposal) {
+	val positive_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
+	print("positive votes:", positive_votes);
+	val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
+	//val max_votes = provider @* {} ( @sum 1 ) limit 1;
+	print("max votes:", max_votes);
+	print("needed votes:", max_votes[0]/2+1);
+	return ((positive_votes[0] > max_votes[0]/2));
+}

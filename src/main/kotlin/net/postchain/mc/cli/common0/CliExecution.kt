@@ -16,7 +16,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
-//import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 import java.time.Instant
@@ -57,7 +56,8 @@ abstract class CliExecution(val config: ClientConfig) {
     abstract fun addNode(nodeKey: String, host: String, port: Long)
     abstract fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?)
     abstract fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?)
-    abstract fun listNodesWithProvider(): List<Gtv>
+    abstract fun addReplica(blockchainRID: String, key: String)
+    abstract fun addBlockchainSigners(blockchainRID: String, key: String)
 
     fun doInTryBlock(todo: () -> Unit) {
         try {
@@ -69,5 +69,223 @@ abstract class CliExecution(val config: ClientConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
+    }
+
+    /**
+     * key - publicKey of node
+     */
+    fun listBlockchainsForNode(key: String) : List<ByteArray> {
+        val listBlockChain = arrayListOf<ByteArray>()
+        doInTryBlock {
+            val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
+                    "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+            listBlockChain.addAll(list.map { it -> it.asByteArray() })
+        }
+        return listBlockChain
+    }
+
+    fun getProviderInfo(key: String) : Gtv {
+        try {
+            return getPostchainClient().query("get_provider_data",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun getNodeInfo(key: String) : Gtv {
+        try {
+            return getPostchainClient().query("get_node_data",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun getBlockchainConfiguration(blockchainRID: String, height: Long) : ByteArray {
+        try {
+            // it means current height
+            var heightConfiguration = height
+            if (height == -1L) {
+                val blockchain = getPostchainClient().query("get_blockchain",
+                        GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+                heightConfiguration = getPostchainClient().query("get_blockchain_last_height",
+                        GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))).get().asInteger()
+            }
+            return getPostchainClient().query("nm_get_blockchain_configuration",
+                GtvFactory.gtv(
+                        "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
+                        "height" to GtvFactory.gtv(heightConfiguration))).get().asByteArray()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun getNodeListVersion() : Long {
+        try {
+            return getPostchainClient().query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).get().asInteger()
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listNodes() : List<Gtv> {
+        try {
+            return getPostchainClient().query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos")))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listNodesWithProvider() : List<Gtv> {
+        try {
+            return getPostchainClient().query("get_nodes_with_provider", GtvFactory.gtv("type" to GtvFactory.gtv("get_nodes_with_provider")))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listProviders() : List<Gtv> {
+        try {
+            return getPostchainClient().query("get_all_providers", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_providers")))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listAllBlockchains(): List<ByteArray> {
+        try {
+            return getPostchainClient().query("get_all_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains")))
+                    .get()
+                    .asArray()
+                    .map { it.asByteArray() }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listActiveBlockchains(): List<ByteArray> {
+        try {
+            return getPostchainClient().query("get_active_blockchains", GtvFactory.gtv("type" to GtvFactory.gtv("get_active_blockchains")))
+                    .get()
+                    .asArray()
+                    .map { it.asByteArray() }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listBlockchainSigners(blockchainRID: String) : List<Gtv> {
+        try {
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_blockchain_signers", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listBlockchainReplicas(blockchainRID: String) : List<Gtv> {
+        try {
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_blockchain_replicas", GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    fun listNodesByProvider(key: String) : List<Gtv> {
+        try {
+            val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            return getPostchainClient().query("get_nodes_by_provider",
+                    GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger())))
+                    .get()
+                    .asArray()
+                    .map { it }
+        } catch (e: UserMistake) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+        } catch (e: Exception) {
+            logger.error(e.message)
+            throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    protected fun readConfigurationFile(blockchainConfigFile: String, format : String?) : ByteArray {
+        val configFile = File(blockchainConfigFile)
+        var fmt = format
+        if (fmt == null) {
+            fmt = if (configFile.extension == "gtv") "gtv" else "xml"
+        }
+        var data : ByteArray
+        if (fmt == "gtv") {
+            data = configFile.readBytes()
+            // try to decode to ensure data is valid
+            GtvFactory.decodeGtv(data)
+        } else {
+            data = getEncodedGtxValueFromFile(blockchainConfigFile)
+        }
+        return data
     }
 }
