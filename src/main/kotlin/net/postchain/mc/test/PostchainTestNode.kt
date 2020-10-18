@@ -23,6 +23,7 @@ class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDa
         val nodeConfig = nodeConfigProvider.getConfiguration()
         testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
+        isInitialized = true
     }
 
     companion object : KLogging() {
@@ -30,29 +31,26 @@ class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDa
         const val DEFAULT_CHAIN_IID = 1L
     }
 
-    private fun initDb(chainId: Long) {
-        // TODO: [et]: Is it necessary here after StorageBuilder.buildStorage() redesign?
-        withWriteConnection(testStorage, chainId) { eContext ->
-            with(DatabaseAccess.of(eContext)) {
-                initialize(eContext.conn, expectedDbVersion = 1)
-            }
-            true
-        }
-
-        isInitialized = true
-    }
-
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
-        initDb(chainId)
-        return addConfiguration(chainId, 0, blockchainConfig)
+        check(isInitialized) { "PostchainNode is not initialized" }
+
+        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}")
+            DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
+            BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
+            brid
+        }
     }
 
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
-            BaseConfigurationDataStore.addConfigurationData(
-                    eContext, height, blockchainConfig)
+            logger.debug("Adding configuration for chain: $chainId, height: $height")
+            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
+            brid
         }
     }
 
@@ -118,6 +116,6 @@ class PostchainTestNode(nodeConfigProvider: NodeConfigurationProvider, preWipeDa
 
     private fun blockchainRID(process: BlockchainProcess): String {
         return (process.getEngine().getConfiguration() as BaseBlockchainConfiguration) // TODO: [et]: Resolve type cast
-                .blockchainRID.toHex()
+                .blockchainRid.toHex()
     }
 }

@@ -341,7 +341,7 @@ open class IntegrationTest {
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
     protected fun buildBlockAndCommit(engine: BlockchainEngine) {
-        val blockBuilder = engine.buildBlock()
+        val blockBuilder = engine.buildBlock().first
         commitBlock(blockBuilder)
     }
 
@@ -349,7 +349,7 @@ open class IntegrationTest {
         commitBlock(node
                 .getBlockchainInstance()
                 .getEngine()
-                .buildBlock())
+                .buildBlock().first)
     }
 
     private fun commitBlock(blockBuilder: BlockBuilder): BlockWitness {

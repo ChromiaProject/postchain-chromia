@@ -1,17 +1,23 @@
 package net.postchain.mc.test
 
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isNotNull
 import net.postchain.base.BlockchainRid
-import net.postchain.client.*
+import net.postchain.base.PeerInfo
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.runStorageCommand
+import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.config.SimpleDatabaseConnector
-import net.postchain.config.app.AppConfigDbLayer
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.AppConfig
 import org.junit.Assert
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
@@ -32,14 +38,19 @@ const val NODE1_CONFIG_FILE = "node1.properties"
 
 class Chromia0Test : IntegrationTest() {
 
-    private val postchainClientFactory = PostchainClientFactory()
-
     private fun getPostchainClient(configFile: String): PostchainClient {
         val config = AppConfig.fromPropertiesFile(configFile)
 
-        val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
+        val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+    }
+
+    private fun addPeerInfo(appConfig: net.postchain.config.app.AppConfig, vararg peerInfo: PeerInfo) {
+        runStorageCommand(appConfig) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            peerInfo.forEach { db.addPeerInfo(ctx, it) }
+        }
     }
 
     @Test
@@ -47,10 +58,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -69,10 +77,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         var config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -100,10 +105,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -135,10 +137,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -175,10 +174,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -211,7 +207,7 @@ class Chromia0Test : IntegrationTest() {
 
         Thread.sleep(5000)
         executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                        + "/src/test/resources" + configFileName, node0, "xml")
+                + "/src/test/resources" + configFileName, node0, "xml")
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(DEFAULT_BLOCKCHAIN_RID.hexStringToByteArray()))).get()
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
@@ -226,10 +222,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileNameGtv = "/net/postchain/mc/test/config/0.gtv"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileNameXml) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -259,10 +252,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -335,13 +325,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node1
         createSingleNode(1, 2, NODE1_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo1)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0, TestPeerInfos.peerInfo1)
         }
         Thread.sleep(50000)
 
@@ -362,10 +346,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -445,10 +426,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -505,10 +483,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -544,10 +519,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -583,10 +555,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -611,10 +580,7 @@ class Chromia0Test : IntegrationTest() {
     fun testGetProviderInfo() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -632,10 +598,7 @@ class Chromia0Test : IntegrationTest() {
     fun testGetBlockchainConfiguration() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -664,10 +627,7 @@ class Chromia0Test : IntegrationTest() {
     fun testGetNodeListVersion() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -689,10 +649,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -717,10 +674,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node1
         createSingleNode(1, 2, NODE1_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo1)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo1)
         }
         Thread.sleep(5000)
 
@@ -728,12 +682,12 @@ class Chromia0Test : IntegrationTest() {
         val n0 = nodes.get(0)
         assertEquals("127.0.0.1", n0.get(0).asString())
         assertEquals(9870L, n0.get(1).asInteger())
-        assertEquals(node0,  n0.get(2).asByteArray().toHex().toLowerCase())
+        assertEquals(node0, n0.get(2).asByteArray().toHex().toLowerCase())
 
         val n1 = nodes.get(1)
         assertEquals("127.0.0.1", n1.get(0).asString())
         assertEquals(9871L, n1.get(1).asInteger())
-        assertEquals(node1,  n1.get(2).asByteArray().toHex().toLowerCase())
+        assertEquals(node1, n1.get(2).asByteArray().toHex().toLowerCase())
 
     }
 
@@ -743,10 +697,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -768,7 +719,7 @@ class Chromia0Test : IntegrationTest() {
         val n = nodes[0].asDict()
         assertEquals("127.0.0.1", n["host"]!!.asString())
         assertEquals(9870L, n["port"]!!.asInteger())
-        assertEquals(node0,  n["pubkey"]!!.asByteArray().toHex().toLowerCase())
+        assertEquals(node0, n["pubkey"]!!.asByteArray().toHex().toLowerCase())
 
         assertEquals(providerPublicKey, n["provider"]!!.asByteArray().toHex())
         assertEquals(true, n["provider_active"]!!.asBoolean())
@@ -779,10 +730,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -810,10 +758,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -852,10 +797,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -902,10 +844,7 @@ class Chromia0Test : IntegrationTest() {
         val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
         // Creating node0
         createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
         val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
@@ -955,10 +894,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
@@ -994,10 +930,7 @@ class Chromia0Test : IntegrationTest() {
 
         // Creating node0
         createSingleNode(0, 2, NODE0_CONFIG_FILE, configFileName) { appConfig, _ ->
-            val dbConnector = SimpleDatabaseConnector(appConfig)
-            dbConnector.withWriteConnection { connection ->
-                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
-            }
+            addPeerInfo(appConfig, TestPeerInfos.peerInfo0)
         }
 
         val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"

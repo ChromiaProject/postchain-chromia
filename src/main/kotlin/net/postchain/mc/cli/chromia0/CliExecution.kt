@@ -4,11 +4,14 @@ import mu.KLogging
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
-import net.postchain.client.*
+import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.AppConfig
@@ -20,19 +23,18 @@ class CliExecution(val config: AppConfig) {
     companion object : KLogging()
 
     private val cryptoSystem = SECP256K1CryptoSystem()
-    private val postchainClientFactory = PostchainClientFactory()
 
     private fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty() || config.privKey.isEmpty()) {
             throw UserMistake("missing required parameters")
         }
-        val resolver = postchainClientFactory.makeSimpleNodeResolver(config.apiURL)
+        val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        return postchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
+        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray()))
     }
 
-    private fun getEncodedGtxValueFromFile(blockchainConfigFile: String) :ByteArray {
-        val gtv =  GtvMLParser.parseGtvML(File(blockchainConfigFile).readText())
+    private fun getEncodedGtxValueFromFile(blockchainConfigFile: String): ByteArray {
+        val gtv = GtvMLParser.parseGtvML(File(blockchainConfigFile).readText())
         return GtvEncoder.encodeGtv(gtv)
     }
 
@@ -134,7 +136,7 @@ class CliExecution(val config: AppConfig) {
     fun addNode(key: String, host: String, port: Long) {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
-                        "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
+                    "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
                 addOperation("add_node",
                         arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
@@ -417,7 +419,7 @@ class CliExecution(val config: AppConfig) {
     /**
      * key - publicKey of node
      */
-    fun listBlockchainsForNode(key: String) : List<ByteArray> {
+    fun listBlockchainsForNode(key: String): List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
         try {
             val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
@@ -433,7 +435,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun getProviderInfo(key: String) : Gtv {
+    fun getProviderInfo(key: String): Gtv {
         try {
             return getPostchainClient().query("get_provider_data",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
@@ -446,7 +448,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun getNodeInfo(key: String) : Gtv {
+    fun getNodeInfo(key: String): Gtv {
         try {
             return getPostchainClient().query("get_node_data",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
@@ -459,7 +461,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun getBlockchainConfiguration(blockchainRID: String, height: Long) : ByteArray {
+    fun getBlockchainConfiguration(blockchainRID: String, height: Long): ByteArray {
         try {
             // it means current height
             var heightConfiguration = height
@@ -470,9 +472,9 @@ class CliExecution(val config: AppConfig) {
                         GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))).get().asInteger()
             }
             return getPostchainClient().query("nm_get_blockchain_configuration",
-                GtvFactory.gtv(
-                        "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
-                        "height" to GtvFactory.gtv(heightConfiguration))).get().asByteArray()
+                    GtvFactory.gtv(
+                            "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
+                            "height" to GtvFactory.gtv(heightConfiguration))).get().asByteArray()
         } catch (e: UserMistake) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
@@ -482,7 +484,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun getNodeListVersion() : Long {
+    fun getNodeListVersion(): Long {
         try {
             return getPostchainClient().query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).get().asInteger()
         } catch (e: UserMistake) {
@@ -494,7 +496,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listNodes() : List<Gtv> {
+    fun listNodes(): List<Gtv> {
         try {
             return getPostchainClient().query("nm_get_peer_infos", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos")))
                     .get()
@@ -509,7 +511,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listNodesWithProvider() : List<Gtv> {
+    fun listNodesWithProvider(): List<Gtv> {
         try {
             return getPostchainClient().query("get_nodes_with_provider", GtvFactory.gtv("type" to GtvFactory.gtv("get_nodes_with_provider")))
                     .get()
@@ -524,7 +526,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listProviders() : List<Gtv> {
+    fun listProviders(): List<Gtv> {
         try {
             return getPostchainClient().query("get_all_providers", GtvFactory.gtv("type" to GtvFactory.gtv("get_all_providers")))
                     .get()
@@ -569,7 +571,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listBlockchainSigners(blockchainRID: String) : List<Gtv> {
+    fun listBlockchainSigners(blockchainRID: String): List<Gtv> {
         try {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
@@ -586,7 +588,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listBlockchainReplicas(blockchainRID: String) : List<Gtv> {
+    fun listBlockchainReplicas(blockchainRID: String): List<Gtv> {
         try {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
@@ -603,7 +605,7 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    fun listNodesByProvider(key: String) : List<Gtv> {
+    fun listNodesByProvider(key: String): List<Gtv> {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
@@ -621,13 +623,13 @@ class CliExecution(val config: AppConfig) {
         }
     }
 
-    private fun readConfigurationFile(blockchainConfigFile: String, format : String?) : ByteArray {
+    private fun readConfigurationFile(blockchainConfigFile: String, format: String?): ByteArray {
         val configFile = File(blockchainConfigFile)
         var fmt = format
         if (fmt == null) {
             fmt = if (configFile.extension == "gtv") "gtv" else "xml"
         }
-        var data : ByteArray
+        var data: ByteArray
         if (fmt == "gtv") {
             data = configFile.readBytes()
             // try to decode to ensure data is valid
