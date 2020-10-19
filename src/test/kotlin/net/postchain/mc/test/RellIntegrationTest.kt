@@ -1,11 +1,14 @@
 package net.postchain.mc.test
 
 import mu.KLogging
+import net.postchain.config.node.ManagedNodeConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.gtv.Gtv
 import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
@@ -75,7 +78,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
      * Create a node running the rell source in rellSourceDir, which is
      * relative to the folder src/main/rell
      */
-    protected fun run(rellSourceDir: String) {
+    protected fun run(rellSourceDir: String): Gtv {
         // Create blockchain config file
         val resourceDirectory = Paths.get("src", "main", "rell", rellSourceDir)
         val rellSourceDir = resourceDirectory.toFile()
@@ -83,10 +86,10 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         val tempRunXml = File.createTempFile("run", ".xml")
         tempRunXml.bufferedWriter().use { out -> out.write(runXml()) }
 
-        run(tempRunXml, rellSourceDir)
+        return run(tempRunXml, rellSourceDir)
     }
 
-    private fun run(runConfigFile: File, rellSourceDir: File) {
+    private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
         val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
@@ -103,5 +106,6 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         systemSetup.needRestApi = true
 
         createNodesFromSystemSetup(systemSetup, true)
+        return appConfig.config.chains[0].configs[0]!!
     }
 }

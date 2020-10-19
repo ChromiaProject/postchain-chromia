@@ -10,35 +10,27 @@ import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.PostchainTestNode
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
 import org.apache.commons.configuration2.Configuration
-import org.apache.commons.configuration2.MapConfiguration
 import org.junit.Assert
-import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 abstract class ManagedModeTest : RellIntegrationTest() {
-//    val clientConfigMap = mapOf(
-//            Pair("pubkey", "0373599a61cc6b3bc02a78c34313e1737ae9cfd56b9bb24360b437d469efdf3b15"),
-//            Pair("privkey", "a68957ba735f98f8d8169ee54fccf2ccf193d97d95e46342bb5e05007c51f324")
-//    )
-//    val provConfigMap = mapOf(
-//            Pair("pubkey", "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"),
-//            Pair("privkey", "9EC6477E36921F519BC2F805BFA01E9D2AE9DFF2D761A1140C76EEEAFEC78453")
-//    )
-//    val prov2ConfigMap = mapOf(
-//            Pair("pubkey", "039622229BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"),
-//            Pair("privkey", "9EC2227E36921F519BC2F805BFA01E9D2AE9DFF2D761A1140C76EEEAFEC78453")
-//    )
+
     val node1Pubkey = KeyPairHelper.pubKeyHex(1)
     val node1Host = "127.0.0.1"
     val node1Port = 9871L
-    val blockSignerKeyNode0 = 0
+
+    val node0Host = "127.0.0.1"
+    val node0Port = 9870L
+    val node0BlockSignerKey = 0
+
     val adminKey = 10
     val providerKey = 11
     val providerKey2 = 12
@@ -48,6 +40,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     open val provExecutor = cliExecution(provConfig)
     open val prov2Executor = cliExecution(prov2Config)
     open val adminExecutor = cliExecution(clientConfig)
+    lateinit var blockchain0ConfigGtv: Gtv
 
     protected fun cliConf(basedOn: Configuration): ClientConfig {
         return cliConf(0, basedOn)
@@ -63,9 +56,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         }
     }
 
-    protected fun cliConf(basedOn: Map<String, Any>): ClientConfig {
-        return cliConf(MapConfiguration(basedOn))
-    }
+//    protected fun cliConf(basedOn: Map<String, Any>): ClientConfig {
+//        return cliConf(MapConfiguration(basedOn))
+//    }
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
@@ -74,43 +67,17 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), defaultSigner)
     }
 
-//    protected fun createNode(nodeIndex: Int, nodeCount: Int, nodeConfigFile: String, blockchainConfigXmlFile: String): PostchainTestNode {
-////        run("chroma0")
-//        return nodes[nodeIndex]
-////        return createSingleNode(nodeIndex, nodeCount, nodeConfigFile, blockchainConfigXmlFile) { appConfig, n ->
-////            runStorageCommand(appConfig) {
-////                DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
-////                        .addPeerInfo(it, TestPeerInfos.peerInfo0)
-////            }
-////        }
-//    }
-//
-//    protected fun createNode(nodeIndex: Int, nodeCount: Int, configFileName: String): PostchainTestNode {
-////        return createNode(nodeIndex, nodeCount, DEFAULT_CONFIG_FILE, configFileName)
-//        return createNode(nodeIndex, nodeCount, configFileName)
-//    }
-//
-//    protected fun createNode(configFileName: String, nodeCount: Int): PostchainTestNode {
-//        val nodeIndex = 0
-//        return createNode(nodeIndex, nodeCount, configFileName)
-//    }
-//
-//    protected fun createNode(configFileName: String): PostchainTestNode {
-//
-//        return createNode(configFileName, 1)
-//    }
-
     abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
 
 
-    protected fun assertProviderData(config: ClientConfig, provPubkey: String, name: String) {
+    protected fun assertProviderData(config: ClientConfig, provPubkey: String, name: String, isActive: Boolean?) {
 
         val client = getPostchainClient(config)
         val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(provPubkey.hexStringToByteArray()))).get()
         val data = provider.asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
         assertk.assert(data["name"]?.asString()).isEqualTo(name)
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        assertk.assert(data["active"]?.asBoolean()).isEqualTo(isActive)
     }
 
     protected fun assertProviderEnabled(config: ClientConfig, providerPublicKey: String) {
@@ -141,49 +108,26 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertk.assert(bc.asByteArray()).isNotNull()
     }
 
-//    Help function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes aware of itself. So that it can be managed.
-    protected fun addProviderAndNode0AndBlockchain(configFileName: String, config: ClientConfig, configProv: ClientConfig) {
-        addProviderAndNode0(config, configProv)
 
-        val executor = cliExecution(config)
-        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
-        assertBlockchainAdded(config)
-    }
-
-    fun addProviderAndNode0(config: ClientConfig, configProv: ClientConfig) {
-
-        val providerPublicKey = configProv.pubKey
-        val executor = cliExecution(config)
-        executor.registerProvider(providerPublicKey)
-        assertProviderData(config, providerPublicKey, "")
-
-        // provider active status should be true after calling enable
-        executor.enableProvider(providerPublicKey)
-        assertProviderEnabled(config, providerPublicKey)
-
-        addNode0(configProv)
-    }
-
-    //    Help function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes aware of itself. So that it can be managed.
-    protected fun addNode0AndBlockchain(configFileName: String, config: ClientConfig, configProv: ClientConfig) {
+    /* Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
+    * aware of itself. So that it can be managed.
+    */
+    protected fun addNode0AndBlockchain0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
         addNode0(configProv)
 
-        val executor = cliExecution(config)
-        executor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
+        adminExecutor.addBlockchainGtv(blockchain0ConfigGtv, nodes[0].pubKey)
+//        adminExecutor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
+//                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
         awaitBlockchainReload()
-
         assertBlockchainAdded(config)
     }
 
 
     fun addNode0(configProv: ClientConfig) {
 
-        val providerPublicKey = configProv.pubKey
-        cliExecution(configProv).addNode(nodes[0].pubKey, "127.0.0.1", 9870L)
+        cliExecution(configProv).addNode(nodes[0].pubKey, node0Host, node0Port)
         awaitBlockchainReload()
-        assertAddedNode(configProv, providerPublicKey, host = "127.0.0.1", port = 9870L)
+        assertAddedNode(configProv, configProv.pubKey, nodes[0].pubKey, host = node0Host, port = node0Port)
     }
 
     fun assertBlockchainAdded(config: ClientConfig) {
@@ -194,37 +138,27 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
 
-    fun assertAddedNode(config: ClientConfig, providerPublicKey: String, host: String, port: Long) {
+    fun assertAddedNode(config: ClientConfig, providerPublicKey: String, nodePubkey: String, host: String, port: Long) {
         val client = getPostchainClient(config)
         val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(nodes[0].pubKey.hexStringToByteArray()))).get().asDict()
+                "pubkey" to GtvFactory.gtv(nodePubkey.hexStringToByteArray()))).get().asDict()
         assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
         assertk.assert(node["host"]?.asString()).isEqualTo(host)
         assertk.assert(node["port"]?.asInteger()).isEqualTo(port)
         Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodes[0].pubKey.hexStringToByteArray())
+        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
     }
 
 
-    fun assertListNodes(clientConfig: ClientConfig) {
-        val executor = cliExecution(clientConfig)
-        val nodesList = executor.listNodesWithProvider()
-        val n = nodesList[0].asDict()
-        assertEquals("127.0.0.1", n["host"]!!.asString())
-        assertEquals(9870L, n["port"]!!.asInteger())
-        assertEquals(nodes[0].pubKey, n["pubkey"]!!.asByteArray().toHex())
 
-        assertEquals(clientConfig.pubKey, n["provider"]!!.asByteArray().toHex())
-        assertEquals(true, n["provider_active"]!!.asBoolean())
-    }
 
 
     /*
         * Initialization function that adds node0 with configuration from  config.properties. Also adds blockchain. This is
         * addNode0AndBlockchain. Also node1 is added both as repica and signer to this bc.
         * */
-    protected fun initAndNode1ReplicaAndSigner(configFileName: String) {
-        addProviderAndNode0AndBlockchain(configFileName, clientConfig, provConfig)
+    protected fun initAndNode1ReplicaAndSigner() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         provExecutor.addNode(node1Pubkey, node1Host, node1Port)
         awaitBlockchainReload()
@@ -249,7 +183,44 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 //                    assertk.assert(nodes[0].getModules(0L).first())
 //                            .isInstanceOf(ManagedTestModuleReconfiguring2::class)
 //                }
-        Thread.sleep(8000)
+        Thread.sleep(2000)
+    }
+
+    protected fun assertBlockchainReplica(clientConfig: ClientConfig, nodePubkey: String, host: String, port: Long) {
+        val executor = cliExecution(clientConfig)
+        val listBlockchains = executor.listBlockchainReplicas(clientConfig.brid)
+        assertEquals(1, listBlockchains.size)
+        val bc = listBlockchains.get(0).asArray()
+        assertEquals(clientConfig.brid, bc.get(0).asByteArray().toHex())
+        assertEquals(nodePubkey, bc.get(1).asByteArray().toHex())
+        assertEquals(host, bc.get(2).asString())
+        assertEquals(port, bc.get(3).asInteger())
+        assertTrue(bc.get(4).asBoolean())
+    }
+
+    fun assertListNodesNode0(provConfig: ClientConfig) {
+        val provExecutor = cliExecution(provConfig)
+        val nodesList = provExecutor.listNodesWithProvider()
+        val n = nodesList[0].asDict()
+        assertEquals(node0Host, n["host"]!!.asString())
+        assertEquals(node0Port, n["port"]!!.asInteger())
+        assertEquals(nodes[0].pubKey, n["pubkey"]!!.asByteArray().toHex())
+
+        assertEquals(provConfig.pubKey, n["provider"]!!.asByteArray().toHex())
+        assertEquals(true, n["provider_active"]!!.asBoolean())
+    }
+
+    protected fun assertListNodes() {
+        val nodeList = provExecutor.listNodes()
+        val n0 = nodeList.get(0)
+        assertEquals(node0Host, n0.get(0).asString())
+        assertEquals(node0Port, n0.get(1).asInteger())
+        assertEquals(nodes[0].pubKey, n0.get(2).asByteArray().toHex())
+
+        val n1 = nodeList.get(1)
+        assertEquals(node1Host, n1.get(0).asString())
+        assertEquals(node1Port, n1.get(1).asInteger())
+        assertEquals(node1Pubkey, n1.get(2).asByteArray().toHex())
     }
 
 }

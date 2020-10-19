@@ -538,6 +538,10 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
         }
     }
 
+    /**
+     * This operation initializes the database with a first provider. If table providers is empty, the public key from the module argument is
+     * registered as a first provider and enabled. The system needs at least one provider, that can vote for update propsals.
+     */
     fun init() {
         doInTryBlock {
             val tx = makeTransactionWithNop().apply {

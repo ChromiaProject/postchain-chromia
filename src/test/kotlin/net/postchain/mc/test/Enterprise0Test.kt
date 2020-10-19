@@ -10,13 +10,10 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class Enterprise0Test : ManagedModeTest() {
 
-//    val blockSignerKey = 0
-//    val adminKey = 10
-//    val providerKey = 11
-//    val providerKey2 = 12
     override fun chainConfSnippet(): String{
         val module = "bc0"
 
@@ -32,7 +29,7 @@ class Enterprise0Test : ManagedModeTest() {
                         </app>
                         <gtv path="signers">
                             <array>
-                                <bytea>${KeyPairHelper.pubKeyHex(blockSignerKeyNode0)}</bytea>
+                                <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
                             </array>
                         </gtv>
                     </config>
@@ -44,36 +41,27 @@ class Enterprise0Test : ManagedModeTest() {
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
         return CliExecution(cliConfig)
     }
+
     val configFileName = "/net/postchain/mc/test/config/ai_blockchain_config.xml"
-//    val clientConfig = cliConf(adminKey)
-//    val provConfig = cliConf(providerKey)
-//    val prov2Config = cliConf(providerKey2)
     override val adminExecutor = CliExecution(clientConfig)
     override val provExecutor = CliExecution(provConfig)
     override val prov2Executor = CliExecution(prov2Config)
 
-//    val clientConfig = cliConf(clientConfigMap)
-//    val provConfig = cliConf(provConfigMap)
-//    val provExecutor = CliExecution(provConfig)
-
 
     @Before
     fun setup() {
-        // do stuff
-        run("enterprise0")
+        blockchain0ConfigGtv = run("enterprise0")
         adminExecutor.init()
     }
 
     @Test
     fun testProposeAddBlockchain() {
 
-        //add node0 to bc0
-        addNode0(provConfig)
+        //add node0 and bc0
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        //propose new bc:
         val bcFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
         provExecutor.proposeBlockchain(bcFile, nodes[0].pubKey, "xml")
-//
-//        provExecutor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-//                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
 
         val id = assertProposalTypeAndGetRowid("bc")
         provExecutor.vote(id, true)
@@ -83,8 +71,7 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testProposeConfigurationAndVote() {
 
-        addProviderAndNode0AndBlockchain(configFileName, clientConfig, provConfig)
-
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
         provExecutor.proposeConfiguration(clientConfig.brid, blockchainConfigFile, 20L, "xml")
 
@@ -97,7 +84,7 @@ class Enterprise0Test : ManagedModeTest() {
     fun testStopBlockchain() {
 
         val executor = cliExecution(clientConfig)
-        initAndNode1ReplicaAndSigner(configFileName)
+        initAndNode1ReplicaAndSigner()
 
         provExecutor.proposeStopBlockchain(clientConfig.brid, true)
 
@@ -119,7 +106,7 @@ class Enterprise0Test : ManagedModeTest() {
         provExecutor.proposeProvider(prov2Config.pubKey)
         var id = assertProposalTypeAndGetRowid("register_provider")
         provExecutor.vote(id, true)
-        assertProviderData(clientConfig, prov2Config.pubKey, "")
+        assertProviderData(clientConfig, prov2Config.pubKey, "", false)
 
         provExecutor.proposeEnableProvider(prov2Config.pubKey)
         id = assertProposalTypeAndGetRowid("provider_state")
@@ -134,12 +121,77 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     @Test
-    fun testListNodesWithProvider() {
-        addNode0(provConfig)
-        assertListNodes(provConfig)
+    fun testListBlockchainsForNode() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val listBlockchains = adminExecutor.listBlockchainsForNode(nodes[0].pubKey)
+        assertEquals(1, listBlockchains.size)
     }
 
+    @Test
+    fun testGetBlockchainConfiguration() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val blockchain = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
+        assert(blockchain.isNotEmpty())
+        val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
+        assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
+    }
 
+    @Test
+    fun testGetNodeListVersion() {
+        addNode0(provConfig)
+        val version = provExecutor.getNodeListVersion()
+        assertTrue(version > 0)
+    }
+
+    @Test
+    fun testListNodes() {
+        addNode0(provConfig)
+        // Add node1 to managed blockchain
+        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        assertListNodes()
+
+    }
+
+    @Test
+    fun testListNodesWithProvider() {
+        addNode0(provConfig)
+        assertListNodesNode0(provConfig)
+    }
+
+    @Test
+    fun testListBlockchains() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val listBlockchains = adminExecutor.listAllBlockchains()
+        assertEquals(1, listBlockchains.size)
+    }
+
+    @Test
+    fun testListBlockchainReplicas() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        awaitBlockchainReload()
+
+        // add node 1 as replica
+        provExecutor.addReplica(clientConfig.brid, node1Pubkey)
+
+        assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
+    }
+
+    @Test
+    fun testListBlockchainSigners() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        awaitBlockchainReload()
+
+        // Add node1 to managed blockchain
+        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        awaitBlockchainReload()
+
+        // Add node1 as blockchain's signer
+        adminExecutor.addBlockchainSigners(clientConfig.brid, node1Pubkey)
+
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(2, listBlockchainSigners.size)
+    }
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
     private fun assertProposalTypeAndGetRowid(expectedType: String): Long {

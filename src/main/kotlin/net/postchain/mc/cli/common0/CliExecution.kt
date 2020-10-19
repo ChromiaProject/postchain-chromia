@@ -5,15 +5,15 @@ import mu.KotlinLogging.logger
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
-import net.postchain.client.core.DefaultSigner
-import net.postchain.client.core.GTXTransactionBuilder
-import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainClientFactory
+import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
@@ -68,6 +68,30 @@ abstract class CliExecution(val config: ClientConfig) {
         } catch (e: Exception) {
             logger.error(e.message)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
+        }
+    }
+
+    /**
+     * format: Format of blockchain configuration file
+     */
+    fun addBlockchainGtv(blockchainConfig: Gtv, nodes: String) {
+        doInTryBlock {
+            val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
+//            val data = blockchainConfig.asDict().toByteArray()
+            val data = GtvEncoder.encodeGtv(blockchainConfig)
+//            println(GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(bc)))
+            val tx = makeTransactionWithNop().apply {
+                addOperation("add_blockchain",
+                        arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+                sign(buildSigMaker())
+            }
+
+            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+            if (txResult.status == TransactionStatus.CONFIRMED) {
+                println("blockchain from gtv was added successfully!")
+            } else {
+                throw CliError.Companion.CliException("Cannot add blockchain from gtv")
+            }
         }
     }
 
