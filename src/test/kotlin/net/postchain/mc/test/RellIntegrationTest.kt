@@ -1,14 +1,17 @@
 package net.postchain.mc.test
 
 import mu.KLogging
+import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
+import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
@@ -94,7 +97,24 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         for (chain in appConfig.config.chains) {
-
+/*
+            <entry key="blockstrategy">
+            <!--
+            This block strategy is the default one if no config is made
+            maxblocktime=30000 (milliseconds)
+            blockdelay=1000 (milliseconds)
+            -->
+            <dict>
+            <entry key="name">
+            <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
+            </entry>
+            </dict>
+            </entry>*/
+//            val bcGtv = chain.configs[0]!!
+//            val dict = bcGtv.asDict().toMutableMap()
+//            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.devtools.OnDemandBlockBuildingStrategy")))
+//            val moddedGtv = GtvFactory.gtv(dict)
+//            val bs = BlockchainSetupFactory.buildFromGtv(0, moddedGtv)
             val bs = BlockchainSetupFactory.buildFromGtv(0, chain.configs[0]!!)
             blockchainSetups.add(bs)
         }

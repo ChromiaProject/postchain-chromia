@@ -119,7 +119,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 //        adminExecutor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
 //                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
         awaitBlockchainReload()
-        assertBlockchainAdded(config)
+        assertBlockchain0Added(config)
     }
 
 
@@ -130,10 +130,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertAddedNode(configProv, configProv.pubKey, nodes[0].pubKey, host = node0Host, port = node0Port)
     }
 
-    fun assertBlockchainAdded(config: ClientConfig) {
+    fun assertBlockchain0Added(config: ClientConfig) {
+        assertBlockchainAdded(config, config.brid.hexStringToByteArray())
+//        val client = getPostchainClient(config)
+//        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
+//                "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
+//
+//        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+    }
+
+    fun assertBlockchainAdded(config: ClientConfig, bridByteArray: ByteArray) {
         val client = getPostchainClient(config)
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
-                "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
+                "rid" to GtvFactory.gtv(bridByteArray))).get()
 
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
@@ -183,6 +192,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 //                    assertk.assert(nodes[0].getModules(0L).first())
 //                            .isInstanceOf(ManagedTestModuleReconfiguring2::class)
 //                }
+
         Thread.sleep(2000)
     }
 

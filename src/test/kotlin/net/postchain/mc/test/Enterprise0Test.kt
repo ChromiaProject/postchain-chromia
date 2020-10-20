@@ -48,6 +48,9 @@ class Enterprise0Test : ManagedModeTest() {
     override val prov2Executor = CliExecution(prov2Config)
 
 
+    /*
+    *
+    * */
     @Before
     fun setup() {
         blockchain0ConfigGtv = run("enterprise0")
@@ -65,7 +68,7 @@ class Enterprise0Test : ManagedModeTest() {
 
         val id = assertProposalTypeAndGetRowid("bc")
         provExecutor.vote(id, true)
-        assertBlockchainAdded(clientConfig)
+        assertBlockchain0Added(clientConfig)
     }
 
     @Test
