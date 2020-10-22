@@ -1,14 +1,10 @@
 package net.postchain.mc.test
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.config.node.ManagedNodeConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
-import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -96,6 +92,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
+        val blockchainConfigsGtv = mutableListOf<Gtv>()
         for (chain in appConfig.config.chains) {
 /*
             <entry key="blockstrategy">
@@ -110,13 +107,15 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
             </entry>
             </dict>
             </entry>*/
-//            val bcGtv = chain.configs[0]!!
-//            val dict = bcGtv.asDict().toMutableMap()
-//            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.devtools.OnDemandBlockBuildingStrategy")))
-//            val moddedGtv = GtvFactory.gtv(dict)
-//            val bs = BlockchainSetupFactory.buildFromGtv(0, moddedGtv)
-            val bs = BlockchainSetupFactory.buildFromGtv(0, chain.configs[0]!!)
+            val bcGtv = chain.configs[0]!!
+            val dict = bcGtv.asDict().toMutableMap()
+            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.devtools.OnDemandBlockBuildingStrategy")))
+            val moddedGtv = GtvFactory.gtv(dict)
+
+            val bs = BlockchainSetupFactory.buildFromGtv(0, moddedGtv)
+//            val bs = BlockchainSetupFactory.buildFromGtv(0, chain.configs[0]!!)
             blockchainSetups.add(bs)
+            blockchainConfigsGtv.add(moddedGtv)
         }
 
         val systemSetup = SystemSetupFactory.buildSystemSetup(blockchainSetups)
@@ -126,6 +125,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         systemSetup.needRestApi = true
 
         createNodesFromSystemSetup(systemSetup, true)
-        return appConfig.config.chains[0].configs[0]!!
+        return blockchainConfigsGtv[0]
+        //return appConfig.config.chains[0].configs[0]!!
     }
 }

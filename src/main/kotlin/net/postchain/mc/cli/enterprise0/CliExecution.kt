@@ -18,26 +18,26 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     companion object : KLogging()
 
 
-    /**
-     * format: Format of blockchain configuration file
-     */
-    override fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
-        doInTryBlock {
-            val data = readConfigurationFile(blockchainConfigFile, format)
-            val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
-            val tx = makeTransactionWithNop().apply {
-                addOperation("add_blockchain",
-                        arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
-                sign(buildSigMaker())
-            }
-            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
-            if (txResult.status == TransactionStatus.CONFIRMED) {
-                println("blockchain was added successfully!")
-            } else {
-                throw CliError.Companion.CliException("Cannot add blockchain")
-            }
-        }
-    }
+//    /**
+//     * format: Format of blockchain configuration file
+//     */
+//    fun addBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
+//        doInTryBlock {
+//            val data = readConfigurationFile(blockchainConfigFile, format)
+//            val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
+//            val tx = makeTransactionWithNop().apply {
+//                addOperation("add_blockchain",
+//                        arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+//                sign(buildSigMaker())
+//            }
+//            val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
+//            if (txResult.status == TransactionStatus.CONFIRMED) {
+//                println("blockchain was added successfully!")
+//            } else {
+//                throw CliError.Companion.CliException("Cannot add blockchain")
+//            }
+//        }
+//    }
 
 //    (blockchain, provider, config_data: byte_array, height: integer)
     fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
@@ -199,7 +199,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
+    fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
         try {
             val data = readConfigurationFile(blockchainConfigFile, format)
             val blockchain = getPostchainClient().query("get_blockchain",
@@ -227,7 +227,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun addNode(key: String, host: String, port: Long) {
+    fun addNode(key: String, host: String, port: Long) {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                         "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
@@ -254,7 +254,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun addReplica(blockchainRID: String, key: String) {
+    fun addReplica(blockchainRID: String, key: String) {
         try {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
@@ -341,7 +341,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun addBlockchainSigners(blockchainRID: String, signers: String) {
+    fun addBlockchainSigners(blockchainRID: String, signers: String) {
         try {
             val nodeList = signers.split(",").map {
                 getPostchainClient().query("get_node",
@@ -399,7 +399,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun registerProvider(key: String) {
+    fun registerProvider(key: String) {
         try {
             val tx = makeTransactionWithNop().apply {
                 addOperation("register_provider",
@@ -474,7 +474,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    override fun enableProvider(key: String) {
+    fun enableProvider(key: String) {
         doInTryBlock {
             val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                     "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()

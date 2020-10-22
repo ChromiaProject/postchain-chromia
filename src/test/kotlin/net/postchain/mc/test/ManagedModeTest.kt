@@ -10,6 +10,7 @@ import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.common0.CliExecution
@@ -114,20 +115,29 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     */
     protected fun addNode0AndBlockchain0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
         addNode0(configProv)
-
-        adminExecutor.addBlockchainGtv(blockchain0ConfigGtv, nodes[0].pubKey)
-//        adminExecutor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-//                + "/src/test/resources" + configFileName, nodes[0].pubKey, "xml")
         awaitBlockchainReload()
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
+        awaitBlockchainReload()
+
+        buildAndAwaitBlocks(5)
+//        awaitBlockchainReload()
         assertBlockchain0Added(config)
     }
 
 
-    fun addNode0(configProv: ClientConfig) {
+    fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
 
-        cliExecution(configProv).addNode(nodes[0].pubKey, node0Host, node0Port)
+        provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(key, host, port))
+        buildAndAwaitBlock()
         awaitBlockchainReload()
-        assertAddedNode(configProv, configProv.pubKey, nodes[0].pubKey, host = node0Host, port = node0Port)
+        assertAddedNode(configProv, configProv.pubKey, key, host, port)
+    }
+
+    fun addNode0(configProv: ClientConfig) {
+        addNode(configProv, nodes[0].pubKey, node0Host, node0Port)
+//        provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(nodes[0].pubKey, node0Host, node0Port))
+//        buildAndAwaitBlock()
+//        assertAddedNode(configProv, configProv.pubKey, nodes[0].pubKey, host = node0Host, port = node0Port)
     }
 
     fun assertBlockchain0Added(config: ClientConfig) {
@@ -169,17 +179,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun initAndNode1ReplicaAndSigner() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
-        awaitBlockchainReload()
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // add replicas
-        provExecutor.addReplica(clientConfig.brid, node1Pubkey)
+        provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))
+        buildAndAwaitBlocks(5)
 
         val replicas = adminExecutor.listBlockchainReplicas(clientConfig.brid)
         assertEquals(1, replicas.size)
 
         // Add node1 as blockchain's signer
-        adminExecutor.addBlockchainSigners(clientConfig.brid, node1Pubkey)
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        buildAndAwaitBlocks(1)
+        //buildAndAwaitBlocks(5)
 
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
@@ -192,7 +204,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 //                    assertk.assert(nodes[0].getModules(0L).first())
 //                            .isInstanceOf(ManagedTestModuleReconfiguring2::class)
 //                }
-
+//        buildAnd
         Thread.sleep(2000)
     }
 
@@ -231,6 +243,22 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertEquals(node1Host, n1.get(0).asString())
         assertEquals(node1Port, n1.get(1).asInteger())
         assertEquals(node1Pubkey, n1.get(2).asByteArray().toHex())
+    }
+
+    protected fun buildAndAwaitBlock() {
+        buildAndAwaitBlocks(1)
+    }
+
+    protected fun buildAndAwaitBlocks(nBlocks: Int) {
+        val strat = strategy()
+        val height = strat.committedHeight + nBlocks
+        strat.buildBlocksUpTo(height.toLong())
+        strat.awaitCommitted(height)
+    }
+
+    private fun strategy(): OnDemandBlockBuildingStrategy {
+        val strat = nodes[0].blockBuildingStrategy(0) as OnDemandBlockBuildingStrategy
+        return strat
     }
 
 }

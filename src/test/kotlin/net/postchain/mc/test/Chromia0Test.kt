@@ -4,6 +4,7 @@ import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.gtv.GtvFactory
+import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.Before
@@ -38,13 +39,13 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
 //    lateinit var blockchain0ConfigGtv: Gtv
-    val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+    //val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
     override val adminExecutor = CliExecution(clientConfig)
     override val provExecutor = CliExecution(provConfig)
     override val prov2Executor = CliExecution(prov2Config)
 
     /*
-    * Almost every single test starts with adding a first provider and enabling it. These steps are put in a pre-step.
+    * A majority of the tests starts with adding a first provider and enabling it. These steps are put in a pre-step.
     * When testing these two operations, a second provider is registered. The pre-step also includes starting a single
     * node, running the rell code in `rellSourceDir`.
     * */
@@ -52,40 +53,38 @@ class Chromia0Test() : ManagedModeTest() {
     fun setup() {
         // start node and add the provider
         blockchain0ConfigGtv = run("chroma0")
-        adminExecutor.registerProvider(provConfig.pubKey)
-        adminExecutor.enableProvider(provConfig.pubKey)
+        adminExecutor.sendTxUnconfirmed(adminExecutor.registerProviderInternal(provConfig.pubKey))
+        buildAndAwaitBlock()
+        adminExecutor.sendTxUnconfirmed(adminExecutor.enableProviderInternal(provConfig.pubKey))
+        buildAndAwaitBlock()
     }
-//
-//    private fun buildBlock() {
-//        val strat = nodes[0].blockBuildingStrategy(0) as OnDemandBlockBuildingStrategy
-//        strat.buildBlocksUpTo(strat.committedHeight+1L)
-//
-//    }
 
     @Test
     fun testRegisterProvider() {
-        adminExecutor.registerProvider(prov2Config.pubKey)
+        adminExecutor.sendTxUnconfirmed(adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        buildAndAwaitBlock()
         assertProviderData(clientConfig, prov2Config.pubKey, "", false)
-        awaitBlockchainReload()
     }
 
     @Test
     fun testUpdateProviderName() {
         assertProviderData(clientConfig, provConfig.pubKey, name = "", isActive = true)
         val newName = "chromia"
-        provExecutor.updateProvider(provConfig.pubKey, newName, "")
+        provExecutor.sendTxUnconfirmed(provExecutor.updateProviderInternal(provConfig.pubKey, newName, ""))
+        buildAndAwaitBlock()
         assertProviderData(clientConfig, provConfig.pubKey, name = newName, isActive = true)
     }
 
     @Test
     fun testDisableEnableProvider() {
         // provider active status should be true after calling enable
-        adminExecutor.enableProvider(provConfig.pubKey)
+        adminExecutor.sendTxUnconfirmed(adminExecutor.enableProviderInternal(provConfig.pubKey))
+        buildAndAwaitBlock()
         assertProviderEnabled(clientConfig, provConfig.pubKey)
-        awaitBlockchainReload()
 
         // provider active status should be false after calling disable
-        adminExecutor.disableProvider(provConfig.pubKey)
+        adminExecutor.sendTx(adminExecutor.disableProviderInternal(provConfig.pubKey))
+        buildAndAwaitBlock()
         assertProviderDisabled(clientConfig, provConfig.pubKey)
     }
 
@@ -107,30 +106,16 @@ class Chromia0Test() : ManagedModeTest() {
 
         val configFileNameGtv = "/net/postchain/mc/test/config/0.gtv"
 //        // Creating node0
-//        createNode(configFileNameXml)
-//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-//        val config = cliConf(clientConfigMap)
-//        val executor = CliExecution(config)
-//        executor.registerProvider(providerPublicKey)
-//
-//        val client = getPostchainClient(cliConf(clientConfigMap))
-//
-//        // provider active status should be true after calling enable
-//        executor.enableProvider(providerPublicKey)
-//
-//        val providerAuth = cliConf(provConfigMap)
-//        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-//        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
         addNode0(provConfig)
+        awaitBlockchainReload()
+//        buildAndAwaitBlock()
+        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileNameGtv
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainInternal(confFile, nodes[0].pubKey, "gtv"))
+        buildAndAwaitBlock()
+        awaitBlockchainReload()
 
-//        Thread.sleep(5000)
-        adminExecutor.addBlockchain(Paths.get(".").toAbsolutePath().normalize().toString()
-                + "/src/test/resources" + configFileNameGtv, nodes[0].pubKey, "gtv")
         val listBlockchains = adminExecutor.listAllBlockchains()
         assertBlockchainAdded(clientConfig, listBlockchains[0])
-//        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
-//                "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
-//        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
 
     @Test
@@ -234,8 +219,7 @@ class Chromia0Test() : ManagedModeTest() {
         assertProviderData(clientConfig, prov2Config.pubKey, "", false)
         }
 
-//    @Test(expected = CliError.Companion.CliException::class)
-    @Test
+    @Test(expected = CliError.Companion.CliException::class)
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 //        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
@@ -323,7 +307,8 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        adminExecutor.addConfiguration(clientConfig.brid, blockchainConfigFile, 20L, "xml")
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile, 20L, "xml"))
+        buildAndAwaitBlocks(5)
         assertAddConfiguration(clientConfig, 20L)
     }
 
@@ -349,7 +334,9 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
-        adminExecutor.addConfiguration(clientConfig.brid, blockchainConfigFile, 20L, "gtv")
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
+                20L, "gtv"))
+        buildAndAwaitBlocks(5)
 
         assertAddConfiguration(clientConfig, 20L)
     }
@@ -472,7 +459,7 @@ class Chromia0Test() : ManagedModeTest() {
     fun testListNodes() {
         addNode0(provConfig)
         // Add node1 to managed blockchain
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
         assertListNodes()
 
     }
@@ -493,11 +480,12 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testListBlockchainReplicas() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        addNode(provConfig,node1Pubkey, node1Host, node1Port)
         awaitBlockchainReload()
 
         // add node 1 as replica
-        provExecutor.addReplica(clientConfig.brid, node1Pubkey)
+        provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))
+        buildAndAwaitBlocks(5)
 
         assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
     }
@@ -505,32 +493,25 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testListBlockchainSigners() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        awaitBlockchainReload()
+        //awaitBlockchainReload()
 
         // Add node1 to managed blockchain
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
-        awaitBlockchainReload()
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        //awaitBlockchainReload()
 
         // Add node1 as blockchain's signer
-        adminExecutor.addBlockchainSigners(clientConfig.brid, node1Pubkey)
-
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        buildAndAwaitBlocks(5)
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
     }
 
     @Test
     fun testStopBlockchain() {
-
-//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-
-//        val adminConfig = cliConf(clientConfigMap)
-//        val executor = CliExecution(adminConfig)
-//        var replicas = executor.listBlockchainReplicas(adminConfig.brid)
-//        var listBlockchainSigners = executor.listBlockchainSigners(adminConfig.brid)
         initAndNode1ReplicaAndSigner()
 
-        adminExecutor.stopBlockchain(clientConfig.brid, true)
-
+        adminExecutor.sendTxUnconfirmed(adminExecutor.stopBlockchainInternal(clientConfig.brid, true))
+        buildAndAwaitBlock()
         // query replicas again to ensure it was deleted after stop blockchain
         val replicas = adminExecutor.listBlockchainReplicas(clientConfig.brid)
         assertEquals(0, replicas.size)
@@ -546,7 +527,7 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0(provConfig)
 
         // Add node1 to managed blockchain
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
         awaitBlockchainReload()
 
         val nodeList = provExecutor.listNodesByProvider(provConfig.pubKey)
@@ -560,8 +541,8 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0(provConfig)
 
 //        add a second provider
-        adminExecutor.registerProvider(prov2Config.pubKey)
-
+        adminExecutor.sendTxUnconfirmed(adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        buildAndAwaitBlock()
         val providers = adminExecutor.listProviders()
 
         assertEquals(2, providers.size)
@@ -574,6 +555,11 @@ class Chromia0Test() : ManagedModeTest() {
         assertEquals(prov2Config.pubKey, provider2["pubkey"]!!.asByteArray().toHex())
         assertEquals(false, provider2["active"]!!.asBoolean())
     }
+
+//    private fun buildBlock() {
+//        val strat = strategy()
+//        strat.buildBlocksUpTo(strat.committedHeight+1L)
+//    }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
         return net.postchain.mc.cli.enterprise0.CliExecution(cliConfig)
