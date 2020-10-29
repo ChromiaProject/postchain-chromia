@@ -5,12 +5,12 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.BlockchainRid
 import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.common0.CliExecution
@@ -95,7 +95,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 
-    protected fun assertAddConfiguration(config: ClientConfig, expectedHeight: Long) {
+    protected fun assertNextConfiguration(config: ClientConfig, expectedHeight: Long) {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
@@ -115,29 +115,24 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     */
     protected fun addNode0AndBlockchain0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
         addNode0(configProv)
-        awaitBlockchainReload()
         adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
-        awaitBlockchainReload()
 
-        buildAndAwaitBlocks(5)
+        buildAndAwaitBlocks(1)
+//        buildAndAwaitBlocks(5)
 //        awaitBlockchainReload()
         assertBlockchain0Added(config)
     }
 
 
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
-
         provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(key, host, port))
-        buildAndAwaitBlock()
-        awaitBlockchainReload()
+        buildAndAwaitBlocks(1)
+//        awaitBlockchainReload()
         assertAddedNode(configProv, configProv.pubKey, key, host, port)
     }
 
     fun addNode0(configProv: ClientConfig) {
         addNode(configProv, nodes[0].pubKey, node0Host, node0Port)
-//        provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(nodes[0].pubKey, node0Host, node0Port))
-//        buildAndAwaitBlock()
-//        assertAddedNode(configProv, configProv.pubKey, nodes[0].pubKey, host = node0Host, port = node0Port)
     }
 
     fun assertBlockchain0Added(config: ClientConfig) {
@@ -191,7 +186,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         // Add node1 as blockchain's signer
         adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(1)
-        //buildAndAwaitBlocks(5)
 
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
@@ -254,11 +248,25 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val height = strat.committedHeight + nBlocks
         strat.buildBlocksUpTo(height.toLong())
         strat.awaitCommitted(height)
+        awaitBlockchainReload()
     }
 
-    private fun strategy(): OnDemandBlockBuildingStrategy {
-        val strat = nodes[0].blockBuildingStrategy(0) as OnDemandBlockBuildingStrategy
+    private fun strategy(): SmartOnDemandBlockBuildingStrategy {
+        val strat = nodes[0].blockBuildingStrategy(0) as SmartOnDemandBlockBuildingStrategy
         return strat
+    }
+
+    fun doAndBuildBlocks(clientConfig: ClientConfig, f: GTXTransactionBuilder, nBlocks: Int = 1) {
+        val executor = cliExecution(clientConfig)
+        executor.sendTxUnconfirmed(f)
+        buildAndAwaitBlocks(nBlocks)
+    }
+
+    protected fun assertListNodesByProvider() {
+        val nodeList = provExecutor.listNodesByProvider(provConfig.pubKey)
+        assertEquals(2, nodeList.size)
+        assertEquals(nodes[0].pubKey.toUpperCase(), nodeList[0].asDict()["pubkey"]!!.asByteArray().toHex())
+        assertEquals(node1Pubkey, nodeList[1].asDict()["pubkey"]!!.asByteArray().toHex())
     }
 
 }

@@ -80,7 +80,7 @@ class Enterprise0Test : ManagedModeTest() {
 
         val id = assertProposalTypeAndGetRowid("conf")
         provExecutor.vote(id, true)
-        assertAddConfiguration(clientConfig, 20L)
+        assertNextConfiguration(clientConfig, 20L)
     }
 
     @Test

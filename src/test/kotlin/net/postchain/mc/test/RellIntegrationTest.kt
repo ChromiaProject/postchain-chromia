@@ -1,8 +1,11 @@
 package net.postchain.mc.test
 
 import mu.KLogging
+import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -15,6 +18,7 @@ import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
 import java.nio.file.Paths
+import java.util.concurrent.LinkedBlockingQueue
 
 
 abstract class RellIntegrationTest : IntegrationTestSetup() {
@@ -109,7 +113,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
             </entry>*/
             val bcGtv = chain.configs[0]!!
             val dict = bcGtv.asDict().toMutableMap()
-            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.devtools.OnDemandBlockBuildingStrategy")))
+            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.mc.test.SmartOnDemandBlockBuildingStrategy")))
             val moddedGtv = GtvFactory.gtv(dict)
 
             val bs = BlockchainSetupFactory.buildFromGtv(0, moddedGtv)
@@ -127,5 +131,45 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         createNodesFromSystemSetup(systemSetup, true)
         return blockchainConfigsGtv[0]
         //return appConfig.config.chains[0].configs[0]!!
+    }
+}
+
+@Suppress("UNUSED_PARAMETER")
+class SmartOnDemandBlockBuildingStrategy(
+        configData: BaseBlockchainConfigurationData,
+        val blockchainConfiguration: BlockchainConfiguration,
+        blockQueries: BlockQueries,
+        val txQueue: TransactionQueue
+) : BlockBuildingStrategy {
+
+    companion object : KLogging()
+
+    @Volatile
+    var upToHeight: Long = -1
+    @Volatile
+    var committedHeight = blockQueries.getBestHeight().get().toInt()
+    val blocks = LinkedBlockingQueue<BlockData>()
+
+    override fun shouldBuildBlock(): Boolean {
+        return upToHeight > committedHeight
+    }
+
+    fun buildBlocksUpTo(height: Long) {
+        upToHeight = height
+    }
+
+    override fun blockCommitted(blockData: BlockData) {
+        committedHeight++
+        blocks.add(blockData)
+    }
+
+    fun awaitCommitted(height: Int) {
+        while (committedHeight < height) {
+            blocks.take()
+        }
+    }
+
+    override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
+        return false
     }
 }
