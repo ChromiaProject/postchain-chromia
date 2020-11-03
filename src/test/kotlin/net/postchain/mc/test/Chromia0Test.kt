@@ -39,16 +39,16 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
 //    lateinit var blockchain0ConfigGtv: Gtv
-    //val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
     override val adminExecutor = CliExecution(clientConfig)
     override val provExecutor = CliExecution(provConfig)
     override val prov2Executor = CliExecution(prov2Config)
 
 
     /*
-    * A majority of the tests starts with adding a first provider and enabling it. These steps are put in a pre-step.
-    * When testing these two operations, a second provider is registered. The pre-step also includes starting a single
-    * node, running the rell code in `rellSourceDir`.
+    *  The pre-step includes starting a single
+    * node, running the rell code in `rellSourceDir`. A majority of the tests starts with adding a first provider and
+    * enabling it. These steps are therefore put in the pre-step.
+    * For testing of these two operations (register_provider and enable_provider), a second provider is introduced.
     * */
     @Before
     fun setup() {
@@ -158,12 +158,16 @@ class Chromia0Test() : ManagedModeTest() {
 //        // Creating node0
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 
-        // Add node1 to managed blockchain
+        // Add node1 & 2 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
 
         // Add node1 as blockchain's signer
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
-
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
+        // Get next configuration height after adding new node as blockchain's signer
+        // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
+        // module0 accordingly. See https://chromadev.zulipchat.com/#narrow/stream/144497-postchain-core-dev/topic/Chromia0/near/211956706
         assertNextConfiguration(clientConfig, 9L)
 
         //Build blocks until new configuration is enabled
@@ -175,6 +179,25 @@ class Chromia0Test() : ManagedModeTest() {
             true
         }
     }
+
+    @Test
+    fun testRemoveBlockchainSigners() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1 & 2 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
+
+        // Add node1 as blockchain's signer
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
+
+        doAndBuildBlocks(clientConfig, adminExecutor.removeBlockchainSignersInternal(clientConfig.brid, signers_list))
+
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(1, listBlockchainSigners.size)
+    }
+
 
     @Test
     fun testAddConfiguration() {
@@ -201,7 +224,7 @@ class Chromia0Test() : ManagedModeTest() {
         assertEquals(1, listBlockchains.size)
     }
 
-    //Test not needed. Functionality alread tested in addNode0()
+    //Test not needed. Functionality already tested in addNode0()
     @Test
     fun testGetNodeInfo() {
 //        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"

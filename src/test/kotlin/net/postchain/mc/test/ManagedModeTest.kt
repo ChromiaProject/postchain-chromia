@@ -24,6 +24,10 @@ import kotlin.test.assertTrue
 
 abstract class ManagedModeTest : RellIntegrationTest() {
 
+    val node2Pubkey = KeyPairHelper.pubKeyHex(2)
+    val node2Host = "127.0.0.1"
+    val node2Port = 9872L
+
     val node1Pubkey = KeyPairHelper.pubKeyHex(1)
     val node1Host = "127.0.0.1"
     val node1Port = 9871L
@@ -43,22 +47,18 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     open val adminExecutor = cliExecution(clientConfig)
     lateinit var blockchain0ConfigGtv: Gtv
 
-    protected fun cliConf(basedOn: Configuration): ClientConfig {
-        return cliConf(0, basedOn)
-    }
-
-    protected fun cliConf(index: Int, basedOn: Configuration): ClientConfig {
-        return object : DelegatingClientConfig(BaseClientConfig(basedOn)) {
-            override val apiURL: String
-                get() = "http://127.0.0.1:" + nodes[index].getRestApiHttpPort()
-
-            override val brid: String
-                get() = nodes[index].getBlockchainRid(0)!!.toHex()
-        }
-    }
-
-//    protected fun cliConf(basedOn: Map<String, Any>): ClientConfig {
-//        return cliConf(MapConfiguration(basedOn))
+//    protected fun cliConf(basedOn: Configuration): ClientConfig {
+//        return cliConf(0, basedOn)
+//    }
+//
+//    protected fun cliConf(index: Int, basedOn: Configuration): ClientConfig {
+//        return object : DelegatingClientConfig(BaseClientConfig(basedOn)) {
+//            override val apiURL: String
+//                get() = "http://127.0.0.1:" + nodes[index].getRestApiHttpPort()
+//
+//            override val brid: String
+//                get() = nodes[index].getBlockchainRid(0)!!.toHex()
+//        }
 //    }
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
@@ -118,8 +118,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
 
         buildAndAwaitBlocks(1)
-//        buildAndAwaitBlocks(5)
-//        awaitBlockchainReload()
         assertBlockchain0Added(config)
     }
 
@@ -127,7 +125,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
         provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(key, host, port))
         buildAndAwaitBlocks(1)
-//        awaitBlockchainReload()
         assertAddedNode(configProv, configProv.pubKey, key, host, port)
     }
 
@@ -137,11 +134,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     fun assertBlockchain0Added(config: ClientConfig) {
         assertBlockchainAdded(config, config.brid.hexStringToByteArray())
-//        val client = getPostchainClient(config)
-//        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
-//                "rid" to GtvFactory.gtv(config.brid.hexStringToByteArray()))).get()
-//
-//        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
 
     fun assertBlockchainAdded(config: ClientConfig, bridByteArray: ByteArray) {

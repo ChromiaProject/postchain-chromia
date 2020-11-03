@@ -26,7 +26,7 @@ abstract class CliExecution(val config: ClientConfig) {
     protected val cryptoSystem = SECP256K1CryptoSystem()
     protected fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {
-            throw UserMistake("missing required parameters")
+            throw UserMistake("Missing required parameters: brid | pub-key | priv-key")
         }
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
@@ -245,7 +245,7 @@ abstract class CliExecution(val config: ClientConfig) {
             logger.error(e.message)
             throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
         } catch (e: Exception) {
-            logger.error(e.message)
+            logger.error(e.message, e)
             throw CliError.Companion.CliException("System Error: Something wrong happen")
         }
     }

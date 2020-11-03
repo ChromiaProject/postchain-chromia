@@ -55,9 +55,8 @@ entity pending_provider_state {
 
 //Without admin, proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
 entity pending_update_blockchain_signer {
-	key proposal;
+	key proposal, signer: node;
 	blockchain;
-	signer: node;
 	add: boolean;
 }
 
@@ -120,21 +119,22 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 	create pending_provider_state(prop, other_prov, .active = false);
 }
 
-// one proposal per signer
+// one proposal for the entire list
 operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
 	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
 	for (signer in add_signers) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
 		require(signer.active);
 		create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
 	}
 }
 
-// one proposal per signer to be removed
+
+// one proposal for entire list
 operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
 	require_provider_auth(me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
 	for (signer in signers) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
 		create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
 	}
 }
@@ -142,7 +142,7 @@ operation propose_remove_blockchain_signers(me: provider, blockchain, signers: l
 //Pubkey used for authorization
 operation make_vote(provider, prop: proposal, ok: boolean) {
 	require_provider_auth(provider);
-	print("vote autorization OK");
+	print("vote authorization OK");
 	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
 	create vote(prop, provider, ok);
 	print("vote added");
@@ -207,16 +207,21 @@ function apply_register_provider(proposal) {
 	delete pending_provider @ { proposal };
 }
 
+// Could be several signers for a single proposal
 function apply_blockchain_signers_update(proposal) {
-	val pending = pending_update_blockchain_signer @ { proposal };
+	val pendings = pending_update_blockchain_signer @* { proposal };
+	for (pending in pendings) {
 		if (pending.add == true) {
 			require(pending.signer.active);
 			create blockchain_signer_node(pending.blockchain, pending.signer);
 		} else {
 			delete blockchain_signer_node @? {pending.blockchain, pending.signer};
 		}
-		update_configuration(pending.blockchain);	
-		delete pending_update_blockchain_signer @ { proposal };
+	}
+	update_configuration(pendings[0].blockchain); //only once for the entire list
+	for (pending in pendings) {	
+		delete pending_update_blockchain_signer @ { proposal , .signer == pending.signer };
+	}
 }
 
 function apply_stop_blockchain(proposal) {

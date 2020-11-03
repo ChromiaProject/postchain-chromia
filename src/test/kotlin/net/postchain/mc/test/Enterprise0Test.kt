@@ -6,6 +6,8 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.enterprise0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
@@ -49,12 +51,32 @@ class Enterprise0Test : ManagedModeTest() {
 
 
     /*
-    *
+    * The pre-step includes starting a single
+    * node, running the rell code in `rellSourceDir`. Operation init() registers and enables the module argument
+    * `initial_provider` as provider. So that we have an initial voter.
     * */
     @Before
     fun setup() {
         blockchain0ConfigGtv = run("enterprise0")
-        adminExecutor.init()
+        doAndBuildBlocks(clientConfig, adminExecutor.initInternal())
+    }
+
+    @Test
+    fun testProposeEnableDisableProvider() {
+        doAndBuildBlocks(clientConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
+
+        voteYes("register_provider")
+        assertProviderData(clientConfig, prov2Config.pubKey, "", false)
+
+        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderInternal(prov2Config.pubKey))
+        voteYes("provider_state")
+        assertProviderEnabled(clientConfig, prov2Config.pubKey)
+
+        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderInternal(prov2Config.pubKey))
+        val id = assertProposalTypeAndGetRowid("provider_state")
+        doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
+        doAndBuildBlocks(prov2Config, prov2Executor.voteInternal(id, true))
+        assertProviderDisabled(clientConfig, prov2Config.pubKey)
     }
 
     @Test
@@ -64,35 +86,81 @@ class Enterprise0Test : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         //propose new bc:
         val bcFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
-        provExecutor.proposeBlockchain(bcFile, nodes[0].pubKey, "xml")
-
-        val id = assertProposalTypeAndGetRowid("bc")
-        provExecutor.vote(id, true)
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcFile, nodes[0].pubKey, "xml"))
+        voteYes("bc")
         assertBlockchain0Added(clientConfig)
     }
 
     @Test
-    fun testProposeConfigurationAndVote() {
+    fun testProposeConfiguration() {
 
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        provExecutor.proposeConfiguration(clientConfig.brid, blockchainConfigFile, 20L, "xml")
-
-        val id = assertProposalTypeAndGetRowid("conf")
-        provExecutor.vote(id, true)
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, blockchainConfigFile, 20L, "xml"))
+        voteYes("conf")
         assertNextConfiguration(clientConfig, 20L)
+    }
+
+    private fun voteYes(proposalType: String) {
+        val id = assertProposalTypeAndGetRowid(proposalType)
+        doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
+    }
+
+    @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
+    fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1 & node2 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
+
+        // Add node1 as blockchain's signer
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(provConfig, provExecutor.proposeAdddBlockchainSignersInternal(clientConfig.brid, signers_list))
+
+        voteYes("bc_signers")
+        // Get next configuration height after adding new node as blockchain's signer
+        // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
+        // module0 accordingly. See https://chromadev.zulipchat.com/#narrow/stream/144497-postchain-core-dev/topic/Chromia0/near/211956706
+        // So why is it here 10 when tow signers are added and 9 when only one signer is added?
+        assertNextConfiguration(clientConfig, 10L)
+
+        //Build blocks until new configuration is enabled
+        buildAndAwaitBlocks(3)
+
+        // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
+        Awaitility.await().atMost(Duration.ONE_SECOND).until {
+            doAndBuildBlocks(provConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
+            true
+        }
+    }
+
+    @Test
+    fun testProposeRemoveBlockchainSigners() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1 & 2 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
+
+        // Add node1 as blockchain's signer
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
+
+        doAndBuildBlocks(provConfig, provExecutor.proposeRemoveBlockchainSignersInternal(clientConfig.brid, signers_list))
+
+        voteYes("bc_signers")
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(1, listBlockchainSigners.size)
     }
 
     @Test
     fun testStopBlockchain() {
-
         val executor = cliExecution(clientConfig)
         initAndNode1ReplicaAndSigner()
 
-        provExecutor.proposeStopBlockchain(clientConfig.brid, true)
-
-        val id = assertProposalTypeAndGetRowid("bc_stop")
-        provExecutor.vote(id, true)
+        doAndBuildBlocks(provConfig, provExecutor.proposeStopBlockchainInternal(clientConfig.brid, true))
+        voteYes("bc_stop")
 
         // query replicas again to ensure it was deleted after stop blockchain
         val replicas = executor.listBlockchainReplicas(clientConfig.brid)
@@ -101,26 +169,6 @@ class Enterprise0Test : ManagedModeTest() {
         // query signers again to ensure it was deleted after stop blockchain
         val listBlockchainSigners = executor.listBlockchainSigners(clientConfig.brid)
         assertEquals(0, listBlockchainSigners.size)
-
-    }
-
-    @Test
-    fun testProposeEnableDisableProvider() {
-        provExecutor.proposeProvider(prov2Config.pubKey)
-        var id = assertProposalTypeAndGetRowid("register_provider")
-        provExecutor.vote(id, true)
-        assertProviderData(clientConfig, prov2Config.pubKey, "", false)
-
-        provExecutor.proposeEnableProvider(prov2Config.pubKey)
-        id = assertProposalTypeAndGetRowid("provider_state")
-        provExecutor.vote(id, true)
-        assertProviderEnabled(clientConfig, prov2Config.pubKey)
-
-        provExecutor.proposeDisableProvider(prov2Config.pubKey)
-        id = assertProposalTypeAndGetRowid("provider_state")
-        provExecutor.vote(id, true)
-        prov2Executor.vote(id, true)
-        assertProviderDisabled(clientConfig, prov2Config.pubKey)
     }
 
     @Test
@@ -150,7 +198,8 @@ class Enterprise0Test : ManagedModeTest() {
     fun testListNodes() {
         addNode0(provConfig)
         // Add node1 to managed blockchain
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+//        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
         assertListNodes()
 
     }
@@ -171,26 +220,23 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testListBlockchainReplicas() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
-        awaitBlockchainReload()
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // add node 1 as replica
-        provExecutor.addReplica(clientConfig.brid, node1Pubkey)
-
+        doAndBuildBlocks(provConfig, provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey),5)
         assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
     }
 
     @Test
     fun testListBlockchainSigners() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        awaitBlockchainReload()
 
         // Add node1 to managed blockchain
-        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
-        awaitBlockchainReload()
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // Add node1 as blockchain's signer
-        adminExecutor.addBlockchainSigners(clientConfig.brid, node1Pubkey)
+        doAndBuildBlocks(provConfig, provExecutor.proposeAdddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        voteYes("bc_signers")
 
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)

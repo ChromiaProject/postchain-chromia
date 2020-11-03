@@ -90,6 +90,9 @@ query get_blockchain_replicas(blockchain) {
 
 query get_blockchain_last_height(blockchain) = get_last_height(blockchain);
 
+query get_all_blockchains(): list<byte_array> {
+    return blockchain @* {} .rid;
+}
 
 //queries used in the voting procedure for configuration updates:
 query get_proposals_since (since: rowid) {
