@@ -27,8 +27,8 @@ class CommandVote: CommandBase() {
 
     @Parameter(
             names = ["-y", "--approve"],
-            description = "to vote for, set this paramter to true. Else set it to false.",
-            required = true)
+            description = "to vote for, set this paramter to true. Else set it to false. (Default true)",
+            required = false)
     private var yes = true
 
     override fun key() = "vote"
@@ -36,7 +36,7 @@ class CommandVote: CommandBase() {
     override fun execute(): CliResult {
         return try {
             CliExecution(loadAppConfig()).vote(idx, yes)
-            Ok("Your vote is registrated")
+            Ok("Your vote is registered")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

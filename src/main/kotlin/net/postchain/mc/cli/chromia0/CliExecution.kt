@@ -146,18 +146,6 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
         }
     }
 
-    fun runTxAndAwaitSent(doer: GTXTransactionBuilder) {
-        doInTryBlock {
-            val txResult = doer.postSync(ConfirmationLevel.NO_WAIT)
-            if (txResult.status == TransactionStatus.WAITING || txResult.status == TransactionStatus.CONFIRMED) {
-                println("Blockchain's signers have been removed")
-            } else {
-                throw CliError.Companion.CliException("Cannot remove blockchain's signers")
-            }
-        }
-    }
-
-
     /**
      *
      */
@@ -171,7 +159,25 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     fun updateProvider(key: String, name: String, beneficiary: String) {
         sendTxSync(updateProviderInternal(key, name, beneficiary), "Provider data has been updated", "Cannot update provider")
     }
-
+    fun updateProviderInternal(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
+        val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        var data: Array<Gtv> = arrayOf(provider)
+        if (name.isNotEmpty()) {
+            data = data.plus(GtvFactory.gtv(name))
+        } else {
+            data = data.plus(GtvNull)
+        }
+        if (beneficiary.isNotEmpty()) {
+            data = data.plus(GtvFactory.gtv(beneficiary))
+        } else {
+            data = data.plus(GtvNull)
+        }
+        return makeTransactionWithNop().apply {
+            addOperation("update_provider_data", data)
+            sign(buildSigMaker())
+        }
+    }
 
     /**
      *

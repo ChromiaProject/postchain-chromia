@@ -1,18 +1,13 @@
 package net.postchain.mc.cli.enterprise0
 
 import mu.KLogging
-import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.TransactionStatus
-import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
-import java.io.File
 
 class CliExecution(config: ClientConfig) : CliExecution(config) {
 
@@ -123,7 +118,7 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     /**
      *
      */
-    fun proposeAdddBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
+    fun proposeAddBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
         val meProvider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
         val nodeList = signers.split(",").map {
@@ -137,8 +132,8 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
             sign(buildSigMaker())
         }
     }
-    fun ProposeAdddBlockchainSigners(blockchainRID: String, signers: String) {
-        sendTxSync(proposeAdddBlockchainSignersInternal(blockchainRID,signers), "proposal of new signers added successfully", "cannot add proposal of new signers for blockchain")
+    fun ProposeAddBlockchainSigners(blockchainRID: String, signers: String) {
+        sendTxSync(proposeAddBlockchainSignersInternal(blockchainRID,signers), "proposal of new signers added successfully", "cannot add proposal of new signers for blockchain")
     }
 
     fun proposeStopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean) : GTXTransactionBuilder {
@@ -193,4 +188,28 @@ class CliExecution(config: ClientConfig) : CliExecution(config) {
     fun init() {
         sendTxSync(initInternal(), "Initial provider added and enabled", "Cannot add and enable initial provider")
     }
+
+
+    /**
+     *
+     */
+    fun updateProvider(key: String, name: String) {
+        sendTxSync(updateProviderInternal(key, name), "Provider data has been updated", "Cannot update provider")
+    }
+
+    fun updateProviderInternal(key: String, name: String): GTXTransactionBuilder {
+        val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+        var data: Array<Gtv> = arrayOf(provider)
+        if (name.isNotEmpty()) {
+            data = data.plus(GtvFactory.gtv(name))
+        } else {
+            data = data.plus(GtvNull)
+        }
+        return makeTransactionWithNop().apply {
+            addOperation("update_provider_data", data)
+            sign(buildSigMaker())
+        }
+    }
+
 }

@@ -364,25 +364,7 @@ abstract class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun updateProviderInternal(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
-        val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
-        var data: Array<Gtv> = arrayOf(provider)
-        if (name.isNotEmpty()) {
-            data = data.plus(GtvFactory.gtv(name))
-        } else {
-            data = data.plus(GtvNull)
-        }
-        if (beneficiary.isNotEmpty()) {
-            data = data.plus(GtvFactory.gtv(beneficiary))
-        } else {
-            data = data.plus(GtvNull)
-        }
-        return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", data)
-            sign(buildSigMaker())
-        }
-    }
+
 
     fun enableProviderInternal(key: String): GTXTransactionBuilder {
         val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(

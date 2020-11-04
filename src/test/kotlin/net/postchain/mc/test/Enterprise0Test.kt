@@ -80,7 +80,7 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     @Test
-    fun testProposeAddBlockchain() {
+    fun testProposeAddBlockchainXml() {
 
         //add node0 and bc0
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
@@ -89,6 +89,16 @@ class Enterprise0Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcFile, nodes[0].pubKey, "xml"))
         voteYes("bc")
         assertBlockchain0Added(clientConfig)
+    }
+
+    @Test
+    fun testProposeConfigurationAcceptGtv() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, blockchainConfigFile,
+                20L, "gtv"))
+        voteYes("conf")
+        assertNextConfiguration(clientConfig, 20L)
     }
 
     @Test
@@ -116,7 +126,7 @@ class Enterprise0Test : ManagedModeTest() {
 
         // Add node1 as blockchain's signer
         val signers_list = "$node1Pubkey,$node2Pubkey"
-        doAndBuildBlocks(provConfig, provExecutor.proposeAdddBlockchainSignersInternal(clientConfig.brid, signers_list))
+        doAndBuildBlocks(provConfig, provExecutor.proposeAddBlockchainSignersInternal(clientConfig.brid, signers_list))
 
         voteYes("bc_signers")
         // Get next configuration height after adding new node as blockchain's signer
@@ -235,7 +245,7 @@ class Enterprise0Test : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // Add node1 as blockchain's signer
-        doAndBuildBlocks(provConfig, provExecutor.proposeAdddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        doAndBuildBlocks(provConfig, provExecutor.proposeAddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         voteYes("bc_signers")
 
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)

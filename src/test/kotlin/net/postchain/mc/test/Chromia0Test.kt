@@ -109,6 +109,19 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     @Test
+    fun testAddBlockchainXml() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+//        // Creating node0
+        addNode0(provConfig)
+        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(confFile, nodes[0].pubKey, "xml"))
+        awaitBlockchainReload()
+
+        val listBlockchains = adminExecutor.listAllBlockchains()
+        assertBlockchainAdded(clientConfig, listBlockchains[0])
+    }
+
+    @Test
     fun testAddBlockchainSigners() {
         // Creating node0
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
@@ -204,7 +217,7 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
         doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
-                20L, "xml"),5)
+                20L, "xml"))
         assertNextConfiguration(clientConfig, 20L)
     }
 
@@ -213,7 +226,7 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
         doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
-                20L, "gtv"),5)
+                20L, "gtv"))
         assertNextConfiguration(clientConfig, 20L)
     }
 
