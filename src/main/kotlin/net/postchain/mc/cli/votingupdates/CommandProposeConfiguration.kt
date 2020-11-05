@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.consensusupdates
+package net.postchain.mc.cli.votingupdates
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -8,20 +8,32 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecution
 
-@Parameters(commandDescription = "propose a new blockchain. Change will be applied after voting amongst providers.")
-class CommandProposeBlockchain: CommandBase() {
+@Parameters(commandDescription = "propose new configuration to blockchain at specific height. Change will be applied after voting amongst providers.")
+class CommandProposeConfiguration: CommandBase() {
 
     @Parameter(
-            names = ["-n", "--nodes"],
-            description = "String of comma separated list of pubkey strings of the nodes that will be signers of the new blockchain",
+            names = ["-brid", "--blockchain-rid"],
+            description = "Blockchain RID",
             required = true)
-    private var nodes = ""
+    private var blockchainRID = ""
+
+    @Parameter(
+            names = ["-pk", "--node-pubkey"],
+            description = "Node pubkey. These are the blocksigners of the blockchain",
+            required = true)
+    private var pubkey = ""
 
     @Parameter(
             names = ["-bc", "--blockchain-config"],
             description = "Configuration file of blockchain (gtxml)",
             required = true)
     private var blockchainConfigFile = ""
+
+    @Parameter(
+            names = ["-h", "--height"],
+            description = "block height at which new configuration will be applied",
+            required = true)
+    private var height = 0L
 
     @Parameter(
             names = ["-fmt", "--format"],
@@ -33,7 +45,7 @@ class CommandProposeBlockchain: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).proposeBlockchain(blockchainConfigFile, nodes, format)
+            CliExecution(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

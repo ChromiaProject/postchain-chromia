@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.consensusupdates
+package net.postchain.mc.cli.votingupdates
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -8,8 +8,8 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecution
 
-@Parameters(commandDescription = "propose removal of signers for a blockchain. Change will be applied after voting amongst providers.")
-class CommandProposeRemoveBlockchainSigners: CommandBase() {
+@Parameters(commandDescription = "propose stopping a blockchain. Change will be applied after voting amongst providers.")
+class CommandProposeStopBlockchain: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -18,16 +18,16 @@ class CommandProposeRemoveBlockchainSigners: CommandBase() {
     private var blockchainRID = ""
 
     @Parameter(
-            names = ["-n", "--nodes"],
-            description = "String of comma separated list of pubkey strings of nodes that no longer should be blocksigners for the given blockchain",
-            required = true)
-    private var nodes = ""
+            names = ["-r", "--remove-replicas"],
+            description = "flag to remove replicas or not",
+            required = false)
+    private var removeReplicas = false
 
-    override fun key() = "propose-remove-blockchain-signers"
+    override fun key() = "propose-stop-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).proposeRemoveBlockchainSigners(blockchainRID, nodes)
+            CliExecution(loadAppConfig()).proposeStopBlockchain(blockchainRID, removeReplicas)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

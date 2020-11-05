@@ -8,7 +8,7 @@ import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 
 
 interface ClientConfig {
-    open val apiURL: String
+    val apiURL: String
     val brid: String
     val privKey: String
     val pubKey: String

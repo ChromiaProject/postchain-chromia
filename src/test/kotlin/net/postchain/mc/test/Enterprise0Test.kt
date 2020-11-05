@@ -58,7 +58,7 @@ class Enterprise0Test : ManagedModeTest() {
     @Before
     fun setup() {
         blockchain0ConfigGtv = run("enterprise0")
-        doAndBuildBlocks(clientConfig, adminExecutor.initInternal())
+        doAndBuildBlocks(provConfig, provExecutor.initInternal())
     }
 
     @Test
@@ -160,7 +160,7 @@ class Enterprise0Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeRemoveBlockchainSignersInternal(clientConfig.brid, signers_list))
 
         voteYes("bc_signers")
-        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        val listBlockchainSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(1, listBlockchainSigners.size)
     }
 
@@ -184,14 +184,14 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testListBlockchainsForNode() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val listBlockchains = adminExecutor.listBlockchainsForNode(nodes[0].pubKey)
+        val listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
         assertEquals(1, listBlockchains.size)
     }
 
     @Test
     fun testGetBlockchainConfiguration() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val blockchain = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
+        val blockchain = provExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
         assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
@@ -223,7 +223,7 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testListBlockchains() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val listBlockchains = adminExecutor.listAllBlockchains()
+        val listBlockchains = provExecutor.listAllBlockchains()
         assertEquals(1, listBlockchains.size)
     }
 
@@ -248,7 +248,7 @@ class Enterprise0Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeAddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         voteYes("bc_signers")
 
-        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        val listBlockchainSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
     }
 
