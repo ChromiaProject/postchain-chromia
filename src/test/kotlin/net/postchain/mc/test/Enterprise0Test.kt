@@ -4,7 +4,7 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.enterprise0.CliExecution
+import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -41,13 +41,13 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
-        return CliExecution(cliConfig)
+        return Enterprise0CliExecution(cliConfig)
     }
 
     val configFileName = "/net/postchain/mc/test/config/ai_blockchain_config.xml"
-    override val adminExecutor = CliExecution(clientConfig)
-    override val provExecutor = CliExecution(provConfig)
-    override val prov2Executor = CliExecution(prov2Config)
+    override val adminExecutor = Enterprise0CliExecution(clientConfig)
+    override val provExecutor = Enterprise0CliExecution(provConfig)
+    override val prov2Executor = Enterprise0CliExecution(prov2Config)
 
 
     /*

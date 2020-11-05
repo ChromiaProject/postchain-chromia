@@ -9,7 +9,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
-class CliExecution(config: ClientConfig) : CliExecution(config) {
+class Enterprise0CliExecution(config: ClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 

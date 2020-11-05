@@ -10,7 +10,7 @@ import net.postchain.mc.config.app.ClientConfig
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 
-class CliExecution(config: ClientConfig) : CliExecution(config) {
+class Chromia0CliExecution(config: ClientConfig) : CliExecution(config) {
 
 //    companion object : KLogging()
 

@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecution
+import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
 
 @Parameters(commandDescription = "Block signers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposition.")
 class CommandVote: CommandBase() {
@@ -35,7 +35,7 @@ class CommandVote: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).vote(idx, yes)
+            Enterprise0CliExecution(loadAppConfig()).vote(idx, yes)
             Ok("Your vote is registered")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

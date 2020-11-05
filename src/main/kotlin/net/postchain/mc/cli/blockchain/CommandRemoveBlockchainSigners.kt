@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.chromia0.Chromia0CliExecution
 
 @Parameters(commandDescription = "remove blockchain's signers")
 class CommandRemoveBlockchainSigners: CommandBase() {
@@ -27,7 +27,7 @@ class CommandRemoveBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).removeBlockchainSigners(blockchainRID, signers)
+            Chromia0CliExecution(loadAppConfig()).removeBlockchainSigners(blockchainRID, signers)
             Ok("Blockchain's signers have been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

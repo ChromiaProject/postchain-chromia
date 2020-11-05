@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.chromia0.Chromia0CliExecution
 
 @Parameters(commandDescription = "stop blockchain")
 class CommandStopBlockchain: CommandBase() {
@@ -27,7 +27,7 @@ class CommandStopBlockchain: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).stopBlockchain(blockchainRID, removeReplicas)
+            Chromia0CliExecution(loadAppConfig()).stopBlockchain(blockchainRID, removeReplicas)
             Ok("blockchain has been stop successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

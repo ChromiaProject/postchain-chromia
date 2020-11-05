@@ -7,7 +7,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.chromia0.Chromia0CliExecution
 
 @Parameters(commandDescription = "list nodes by provider")
 class CommandListProviderNodes : CommandBase() {
@@ -22,7 +22,7 @@ class CommandListProviderNodes : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val nodes = CliExecution(loadAppConfig()).listNodesByProvider(key)
+            val nodes = Chromia0CliExecution(loadAppConfig()).listNodesByProvider(key)
             nodes.forEach { info ->
                 println("host: ${info.get(0).asString()}")
                 println("port: ${info.get(1).asInteger()}")

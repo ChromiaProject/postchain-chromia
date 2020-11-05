@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.chromia0.Chromia0CliExecution
 
 @Parameters(commandDescription = "add blockchain's signers")
 class CommandAddBlockchainSigners: CommandBase() {
@@ -27,7 +27,7 @@ class CommandAddBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).addBlockchainSigners(blockchainRID, signers)
+            Chromia0CliExecution(loadAppConfig()).addBlockchainSigners(blockchainRID, signers)
             Ok("Blockchain's signers have been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

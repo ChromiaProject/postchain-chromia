@@ -19,7 +19,7 @@ import nl.komponents.kovenant.task
 import java.io.File
 import java.time.Instant
 
-abstract class CliExecution(val config: ClientConfig) {
+open class CliExecution(val config: ClientConfig) {
 
     companion object : KLogging()
 

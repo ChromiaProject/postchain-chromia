@@ -2,15 +2,14 @@ package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+//import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "Get blockchain configuration")
 class CommandGetBlockchainConfiguration : CommandBase() {
