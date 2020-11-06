@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
+import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
 @Parameters(commandDescription = "propose stopping a blockchain. Change will be applied after voting amongst providers.")
 class CommandProposeStopBlockchain: CommandBase() {
@@ -27,7 +27,7 @@ class CommandProposeStopBlockchain: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Enterprise0CliExecution(loadAppConfig()).proposeStopBlockchain(blockchainRID, removeReplicas)
+            CliExecutionE0(loadAppConfig()).proposeStopBlockchain(blockchainRID, removeReplicas)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "register provider by specific pubkey")
 class CommandRegisterProvider: CommandBase() {
@@ -21,7 +21,7 @@ class CommandRegisterProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Chromia0CliExecution(loadAppConfig()).registerProvider(key)
+            CliExecutionC0(loadAppConfig()).registerProvider(key)
             Ok("Provider has been registered successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

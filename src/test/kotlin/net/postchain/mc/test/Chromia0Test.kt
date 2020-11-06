@@ -3,7 +3,7 @@ package net.postchain.mc.test
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -39,9 +39,9 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
 //    lateinit var blockchain0ConfigGtv: Gtv
-    override val adminExecutor = Chromia0CliExecution(clientConfig)
-    override val provExecutor = Chromia0CliExecution(provConfig)
-    override val prov2Executor = Chromia0CliExecution(prov2Config)
+    override val adminExecutor = CliExecutionC0(clientConfig)
+    override val provExecutor = CliExecutionC0(provConfig)
+    override val prov2Executor = CliExecutionC0(prov2Config)
 
 
     /*
@@ -383,7 +383,7 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
-        return net.postchain.mc.cli.enterprise0.Enterprise0CliExecution(cliConfig)
+        return net.postchain.mc.cli.enterprise0.CliExecutionE0(cliConfig)
     }
 //
 //    @Test(expected = CliError.Companion.CliException::class)

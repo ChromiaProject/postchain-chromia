@@ -1,7 +1,7 @@
 package net.postchain.mc.test
 
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 import org.junit.Test
 
 class DummyTest : RellIntegrationTest() {
@@ -36,10 +36,10 @@ class DummyTest : RellIntegrationTest() {
     fun testSetup() {
         run("chroma0")
 
-        val adminCliExecution = Chromia0CliExecution(cliConf(adminKey))
+        val adminCliExecution = CliExecutionC0(cliConf(adminKey))
         adminCliExecution.registerProvider(KeyPairHelper.pubKeyHex(providerKey))
 
-        val providerCliExecution = Chromia0CliExecution(cliConf(providerKey))
+        val providerCliExecution = CliExecutionC0(cliConf(providerKey))
         providerCliExecution.addNode(KeyPairHelper.pubKeyHex(blockSignerKey), "localhost", 9999)
     }
 }

@@ -9,7 +9,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
-class Enterprise0CliExecution(config: ClientConfig) : CliExecution(config) {
+class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
@@ -210,6 +210,18 @@ class Enterprise0CliExecution(config: ClientConfig) : CliExecution(config) {
             addOperation("update_provider_data", data)
             sign(buildSigMaker())
         }
+    }
+
+    fun listProposalsSince(rowid: Long) : List<Gtv> {
+        val returnList = arrayListOf<Gtv>()
+        doInTryBlock {
+            val list =  getPostchainClient().query("get_proposals_since", GtvFactory.gtv(
+                    "since" to GtvFactory.gtv(rowid)))
+                    .get()
+                    .asArray()
+            returnList.addAll(list.map { it })
+        }
+        return returnList
     }
 
 }

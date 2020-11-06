@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
+import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
 @Parameters(commandDescription = "propose enabling of provider. Providers can add nodes add vote for different configuration updates, such as new providers, new nodes or new blockchains.")
 class CommandProposeEnableProvider: CommandBase() {
@@ -21,7 +21,7 @@ class CommandProposeEnableProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Enterprise0CliExecution(loadAppConfig()).proposeEnableProvider(key)
+            CliExecutionE0(loadAppConfig()).proposeEnableProvider(key)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

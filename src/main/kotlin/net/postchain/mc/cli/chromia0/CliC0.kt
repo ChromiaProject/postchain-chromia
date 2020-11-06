@@ -1,30 +1,30 @@
-package net.postchain.mc.cli.enterprise0
+package net.postchain.mc.cli.chromia0
 
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
-import net.postchain.mc.cli.votingupdates.*
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
 
-class Enterprise0Cli: CliBase() {
+class CliC0: CliBase() {
     override val commands: Map<String, Command> = listOf(
-            CommandProposeProvider(),
-            CommandUpdateProviderName(),
-            CommandProposeEnableProvider(),
-            CommandProposeDisableProvider(),
+            CommandRegisterProvider(),
+            CommandUpdateProvider(),
+            CommandEnableProvider(),
+            CommandDisableProvider(),
             CommandGetProviderInfo(),
             CommandAddNode(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
             CommandAddReplica(),
             CommandRemoveReplica(),
-            CommandProposeBlockchain(),
-            CommandProposeConfiguration(),
-            CommandProposeAddBlockchainSigners(),
-            CommandProposeRemoveBlockchainSigners(),
+            CommandAddBlockchain(),
+            CommandStopBlockchain(),
+            CommandAddConfiguration(),
+            CommandAddBlockchainSigners(),
+            CommandRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
             CommandListAllBlockchains(),
             CommandListActiveBlockchains(),

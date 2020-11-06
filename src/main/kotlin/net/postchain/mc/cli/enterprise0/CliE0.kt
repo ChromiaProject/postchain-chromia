@@ -1,30 +1,31 @@
-package net.postchain.mc.cli.chromia0
+package net.postchain.mc.cli.enterprise0
 
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
+import net.postchain.mc.cli.votingupdates.*
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
 
-class Chromia0Cli: CliBase() {
+class CliE0: CliBase() {
     override val commands: Map<String, Command> = listOf(
-            CommandRegisterProvider(),
-            CommandUpdateProvider(),
-            CommandEnableProvider(),
-            CommandDisableProvider(),
+            CommandInit(),
+            CommandProposeProvider(),
+            CommandUpdateProviderName(),
+            CommandProposeEnableProvider(),
+            CommandProposeDisableProvider(),
             CommandGetProviderInfo(),
             CommandAddNode(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
             CommandAddReplica(),
             CommandRemoveReplica(),
-            CommandAddBlockchain(),
-            CommandStopBlockchain(),
-            CommandAddConfiguration(),
-            CommandAddBlockchainSigners(),
-            CommandRemoveBlockchainSigners(),
+            CommandProposeBlockchain(),
+            CommandProposeConfiguration(),
+            CommandProposeAddBlockchainSigners(),
+            CommandProposeRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
             CommandListAllBlockchains(),
             CommandListActiveBlockchains(),
@@ -34,7 +35,9 @@ class Chromia0Cli: CliBase() {
             CommandGetNodeListVersion(),
             CommandListProviderNodes(),
             CommandListProviders(),
-            CommandListNodes()
+            CommandListNodes(),
+            CommandListProposalsSince(),
+            CommandVote()
     ).map { it.key() to it }.toMap()
 
     init {

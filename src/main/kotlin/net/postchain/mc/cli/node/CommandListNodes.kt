@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "list nodes")
 class CommandListNodes : CommandBase() {
@@ -23,7 +23,7 @@ class CommandListNodes : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val cliExecution = Chromia0CliExecution(loadAppConfig())
+            val cliExecution = CliExecutionC0(loadAppConfig())
             val nodes : List<Gtv>
             if (showProvider) {
                 nodes = cliExecution.listNodesWithProvider()

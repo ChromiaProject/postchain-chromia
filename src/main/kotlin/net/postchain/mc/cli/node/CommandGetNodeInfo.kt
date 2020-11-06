@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "Get node info")
 class CommandGetNodeInfo : CommandBase() {
@@ -21,7 +21,7 @@ class CommandGetNodeInfo : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val node = Chromia0CliExecution(loadAppConfig()).getNodeInfo(key).asDict()
+            val node = CliExecutionC0(loadAppConfig()).getNodeInfo(key).asDict()
             println("Status: ${node["active"]!!.asBoolean()}")
             println("Host: ${node["host"]!!.asString()}")
             println("Port: ${node["port"]!!.asInteger()}")

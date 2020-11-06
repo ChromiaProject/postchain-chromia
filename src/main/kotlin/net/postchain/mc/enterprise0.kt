@@ -1,7 +1,7 @@
 package net.postchain.mc
 
-import net.postchain.mc.cli.enterprise0.Enterprise0Cli
+import net.postchain.mc.cli.enterprise0.CliE0
 
 fun main(args: Array<String>) {
-    exec(Enterprise0Cli(), args)
+    exec(CliE0(), args)
 }

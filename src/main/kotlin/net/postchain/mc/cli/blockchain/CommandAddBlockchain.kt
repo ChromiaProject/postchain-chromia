@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "add blockchain")
 class CommandAddBlockchain: CommandBase() {
@@ -33,7 +33,7 @@ class CommandAddBlockchain: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Chromia0CliExecution(loadAppConfig()).addBlockchain(blockchainConfigFile, nodes, format)
+            CliExecutionC0(loadAppConfig()).addBlockchain(blockchainConfigFile, nodes, format)
             Ok("blockchain has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

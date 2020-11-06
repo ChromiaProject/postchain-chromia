@@ -7,7 +7,6 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
 import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "List blockchain signers")

@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "add new configuration to blockchain at specific height")
 class CommandAddConfiguration: CommandBase() {
@@ -39,7 +39,7 @@ class CommandAddConfiguration: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Chromia0CliExecution(loadAppConfig()).addConfiguration(blockchainRID, blockchainConfigFile, height, format)
+            CliExecutionC0(loadAppConfig()).addConfiguration(blockchainRID, blockchainConfigFile, height, format)
             Ok("blockchain configuration has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

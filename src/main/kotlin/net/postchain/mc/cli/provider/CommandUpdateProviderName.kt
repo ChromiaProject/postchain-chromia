@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
+import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
 @Parameters(commandDescription = "update name of provider")
 class CommandUpdateProviderName: CommandBase() {
@@ -27,7 +27,7 @@ class CommandUpdateProviderName: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Enterprise0CliExecution(loadAppConfig()).updateProvider(key, name)
+            CliExecutionE0(loadAppConfig()).updateProvider(key, name)
             Ok("Provider has been renamed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

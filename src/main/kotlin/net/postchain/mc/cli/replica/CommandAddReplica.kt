@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.Chromia0CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "add replica")
 class CommandAddReplica: CommandBase() {
@@ -27,7 +27,7 @@ class CommandAddReplica: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            Chromia0CliExecution(loadAppConfig()).addReplica(blockchainRID, key)
+            CliExecutionC0(loadAppConfig()).addReplica(blockchainRID, key)
             Ok("Replica node has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

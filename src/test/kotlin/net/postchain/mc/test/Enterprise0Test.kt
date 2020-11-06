@@ -4,7 +4,7 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.enterprise0.Enterprise0CliExecution
+import net.postchain.mc.cli.enterprise0.CliExecutionE0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -41,13 +41,13 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
-        return Enterprise0CliExecution(cliConfig)
+        return CliExecutionE0(cliConfig)
     }
 
     val configFileName = "/net/postchain/mc/test/config/ai_blockchain_config.xml"
-    override val adminExecutor = Enterprise0CliExecution(clientConfig)
-    override val provExecutor = Enterprise0CliExecution(provConfig)
-    override val prov2Executor = Enterprise0CliExecution(prov2Config)
+    override val adminExecutor = CliExecutionE0(clientConfig)
+    override val provExecutor = CliExecutionE0(provConfig)
+    override val prov2Executor = CliExecutionE0(prov2Config)
 
 
     /*
@@ -254,9 +254,7 @@ class Enterprise0Test : ManagedModeTest() {
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
     private fun assertProposalTypeAndGetRowid(expectedType: String): Long {
-        val client = getPostchainClient(clientConfig)
-        val proposals = client.query("get_proposals_since", GtvFactory.gtv(
-                "since" to GtvFactory.gtv(0L))).get()
+        val proposals = provExecutor.listProposalsSince(0)
         val type = (proposals[0].asDict()["proposal_type"] as GtvString).string
         val id = (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
         assertEquals(expectedType, type, "Wrong proposal type")
