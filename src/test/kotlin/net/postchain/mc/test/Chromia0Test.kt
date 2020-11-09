@@ -61,26 +61,26 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testRegisterProvider() {
         doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-        assertProviderData(clientConfig, prov2Config.pubKey, "", false)
+        assertProviderData(prov2Config.pubKey, "", false)
     }
 
     @Test
     fun testUpdateProviderName() {
-        assertProviderData(clientConfig, provConfig.pubKey, name = "", isActive = true)
+        assertProviderData(provConfig.pubKey, name = "", isActive = true)
         val newName = "chromia"
         doAndBuildBlocks(provConfig, provExecutor.updateProviderInternal(provConfig.pubKey, newName, ""))
-        assertProviderData(clientConfig, provConfig.pubKey, name = newName, isActive = true)
+        assertProviderData(provConfig.pubKey, name = newName, isActive = true)
     }
 
     @Test
     fun testDisableEnableProvider() {
         // provider active status should be true after calling enable
         doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
-        assertProviderEnabled(clientConfig, provConfig.pubKey)
+        assertProviderEnabled(provConfig.pubKey)
 
         // provider active status should be false after calling disable
         doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(provConfig.pubKey))
-        assertProviderDisabled(clientConfig, provConfig.pubKey)
+        assertProviderDisabled(provConfig.pubKey)
     }
 
     @Test
@@ -159,7 +159,7 @@ class Chromia0Test() : ManagedModeTest() {
         // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
         Awaitility.await().atMost(Duration.ONE_SECOND).until {
             doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-            assertProviderData(clientConfig, prov2Config.pubKey, "", false)
+            assertProviderData(prov2Config.pubKey, "", false)
             true
         }
         }
@@ -262,7 +262,7 @@ class Chromia0Test() : ManagedModeTest() {
 //        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
     }
 
-    //Test not needed. Functionality included in other tests
+    //Test not needed. Functionality included in other tests e.g.  assertProviderData
     @Test
     fun testGetProviderInfo() {
 //        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"

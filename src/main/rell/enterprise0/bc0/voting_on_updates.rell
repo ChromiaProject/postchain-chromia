@@ -66,12 +66,15 @@ operation propose_configuration (blockchain, provider, config_data: byte_array, 
 	require(get_last_height(blockchain) < height);
 	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
 	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
-	val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider);
-	create pending_conf(prop,
-		blockchain,		
-		height,
-		data = config_data
-	);
+	//If already proposed, do not add again.
+	if (empty(pending_conf @* {blockchain, height, .data == config_data } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider);
+		create pending_conf(prop,
+			blockchain,		
+			height,
+			data = config_data
+		);
+	}
 }
 
 operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>) {
@@ -89,43 +92,66 @@ operation propose_blockchain( me: provider, config_data: byte_array, initial_nod
 	}
 	config["signers"] = signers.to_gtv();
 		print("f");
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc, me);
+	
+	val new_data = 	config.to_gtv().to_bytes(); 
+	//If already proposed, do not add again.
+	if (empty(pending_blockchain @* {.data == new_data } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me);
 		print("g");
-	create pending_blockchain(prop, config.to_gtv().to_bytes());
+		create pending_blockchain(prop, new_data);
+	}
 }
 
 
 operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boolean) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me);
-	create pending_stop_blockchain(prop, blockchain, remove_replicas);
+	//If already proposed, do not add again.
+	if (empty(pending_stop_blockchain @* {remove_replicas, blockchain } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me);
+		create pending_stop_blockchain(prop, blockchain, remove_replicas);
+	}
 }
 
 operation propose_provider(me: provider, pubkey) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
-	create pending_provider(prop, pubkey);
+	//If already proposed, do not add again.
+	if (empty(pending_provider @* {pubkey } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
+		create pending_provider(prop, pubkey);
+	}
 }
 
 operation propose_enable_provider(me: provider, other_prov: provider) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
-	create pending_provider_state(prop, other_prov, .active = true);
+	//If proposal already exist, do not add again.
+	if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		create pending_provider_state(prop, other_prov, .active = true);
+	}
 }
 
 operation propose_disable_provider(me: provider, other_prov: provider) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
-	create pending_provider_state(prop, other_prov, .active = false);
+	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		create pending_provider_state(prop, other_prov, .active = false);
+	}
 }
 
 // one proposal for the entire list
 operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+	var new = false;
 	for (signer in add_signers) {
-		require(signer.active);
-		create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
+		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == true} limit 1))
+		new = true;
+	}
+	if (new) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		for (signer in add_signers) {
+			require(signer.active);
+			create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
+		}
 	}
 }
 
@@ -133,9 +159,16 @@ operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: 
 // one proposal for entire list
 operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
 	require_provider_auth(me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+	var new = false;
 	for (signer in signers) {
-		create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
+		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == false} limit 1))
+		new = true;
+	}
+	if (new) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		for (signer in signers) {
+			create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
+		}
 	}
 }
 
@@ -152,7 +185,7 @@ operation make_vote(provider, prop: proposal, ok: boolean) {
 function apply_voting_result (prop: proposal) {
 	print("consensus?");
 	if (consensus_achieved(prop)) {
-		print("consensus achieved");
+		print("approval achieved");
 		when (prop.proposal_type) {
 	 		conf              -> apply_conf(prop);
 	 		bc                -> apply_bc(prop);
@@ -168,7 +201,21 @@ function apply_voting_result (prop: proposal) {
 		val prop_id = vote @* {.proposal == prop} (.rowid);
 		delete vote @* {.proposal == prop};	
 		delete proposal @ {.rowid == prop.rowid}; 
+	} else if (proposal_rejected(prop)) {
+		print("proposal has been rejected");
+		when (prop.proposal_type) {
+	 		conf              -> delete pending_conf @ { prop };
+	 		bc                -> delete pending_blockchain @ { prop };
+			register_provider -> delete pending_provider @ { prop };
+			provider_state    -> delete pending_provider_state @ { prop };
+			bc_signers        -> delete pending_update_blockchain_signer @* { prop };
+			bc_stop			  -> delete pending_stop_blockchain @ { prop };
+	}
+		val prop_id = vote @* {.proposal == prop} (.rowid);
+		delete vote @* {.proposal == prop};	
+		delete proposal @ {.rowid == prop.rowid};
 	} else {
+		
 		print("no, not yet");
 	}
 }
@@ -235,12 +282,34 @@ function apply_stop_blockchain(proposal) {
 	delete pending_stop_blockchain @ { proposal };
 }
 
+function max_votes() { return provider_state @* { .active == true } (@sum 1) limit 1;}
+function positive_votes(proposal) { return vote @* {proposal, .ok == true }; }
+function negative_votes(proposal) { return vote @* {proposal, .ok == false }; }
+
+
 function consensus_achieved (proposal) {
-	val positive_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
-	print("positive votes:", positive_votes);
-	val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
-	//val max_votes = provider @* {} ( @sum 1 ) limit 1;
-	print("max votes:", max_votes);
-	print("needed votes:", max_votes[0]/2+1);
-	return ((positive_votes[0] > max_votes[0]/2));
+	if (exists(positive_votes(proposal))) {
+		val nof_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
+		print("positive votes:", nof_votes);
+		//val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
+		//val max_votes = provider @* {} ( @sum 1 ) limit 1;
+		print("max votes:", max_votes());
+		print("needed votes:", max_votes()[0]/2+1);
+		return ((nof_votes[0] > max_votes()[0]/2));
+	}
+	print("No positive votes");
+	return false; 
+}
+
+function proposal_rejected (proposal) {
+	if (exists(negative_votes(proposal))) {		
+		val nof_votes = vote @* { .proposal == proposal, .ok == false} ( @sum 1 );
+		print("negative votes:", nof_votes);
+		//val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
+		print("max votes:", max_votes());
+		print("needed votes:", max_votes()[0]/2+1);
+		return ((nof_votes[0] > max_votes()[0]/2));
+	}
+	print("No negative votes");
+	return false;	
 }

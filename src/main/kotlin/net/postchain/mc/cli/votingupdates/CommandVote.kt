@@ -8,26 +8,20 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
-@Parameters(commandDescription = "Providers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposal.")
+@Parameters(commandDescription = "Providers decide if proposed configuration changes should be applied. Use this " +
+        "function to vote yes or no to a proposal.")
 class CommandVote: CommandBase() {
-
-
-    @Parameter(
-            names = ["-pk", "--node-pubkey"],
-            description = "Node pubkey. Only the blocksigners (nodes) are allowed to propose and vote for configuration changes",
-            required = true)
-    private var pubkey = ""
-
 
     @Parameter(
             names = ["-idx", "--voting index"],
-            description = "Unique index, used as reference to a proposed configuration update, of various type. Could be e.g. provider/node management or rell-module updates",
+            description = "Unique index, used as reference to a proposed configuration update, of various type. Could be" +
+                    " e.g. provider/node management or rell-module updates",
             required = true)
     private var idx = 0L
 
     @Parameter(
             names = ["-y", "--approve"],
-            description = "to vote for, set this paramter to true. Else set it to false. (Default true)",
+            description = "to approve, set this paramter to true. Else set it to false.",
             required = false)
     private var yes = true
 

@@ -27,7 +27,11 @@ class CommandListProposalsSince: CommandBase() {
                 println("proposal type: ${n["proposal_type"]!!.asString()}")
                 println("index: ${n["rowid"]!!.asInteger()}")
             }
-            Ok("Listed proposals are waiting for votes")
+            if (proposals.isEmpty()) {
+                Ok("There are no proposals waiting for approval.")
+            } else {
+                Ok("Listed proposals, waiting for votes")
+            }
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

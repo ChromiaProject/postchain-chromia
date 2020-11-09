@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.chromia0.CliExecutionC0
 
-@Parameters(commandDescription = "list providers")
+@Parameters(commandDescription = "list all providers")
 class CommandListProviders : CommandBase() {
 
     override fun key(): String = "list-providers"
@@ -21,7 +21,9 @@ class CommandListProviders : CommandBase() {
                 println("pubkey: ${dict["pubkey"]!!.asByteArray().toHex()}")
                 println("name: ${dict["name"]!!.asString()}")
                 println("active: ${dict["active"]!!.asBoolean()}")
-                println("beneficiary: ${dict["beneficiary"]!!.asByteArray().toHex()}")
+                if (dict.containsKey("beneficiary")) { //Enterprise0 does not have this key.
+                    println("beneficiary: ${dict["beneficiary"]!!.asByteArray().toHex()}")
+                }
             }
             Ok("List providers successfully")
         } catch (e: CliError.Companion.CliException) {

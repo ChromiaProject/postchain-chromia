@@ -48,13 +48,11 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
      * Instead of an admin node, configuration changes are made via propositions and voting. This is how a block signing node can vote for a pending configuration.
      */
     fun voteInternal(rowid: Long, yes: Boolean) : GTXTransactionBuilder {
-        val proposal = getPostchainClient().query("get_proposal", GtvFactory.gtv(
-                "rowid" to GtvFactory.gtv(rowid))).get()
         val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
         return makeTransactionWithNop().apply {
             addOperation("make_vote",
-                    arrayOf(provider, proposal, GtvFactory.gtv((yes))))
+                    arrayOf(provider, GtvFactory.gtv(rowid), GtvFactory.gtv((yes))))
             sign(buildSigMaker())
         }
     }
@@ -222,6 +220,17 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
             returnList.addAll(list.map { it })
         }
         return returnList
+    }
+
+    fun getProposal(rowid: Long) : Gtv {
+        var returnValue : Gtv? = null
+        doInTryBlock {
+            val prop =  getPostchainClient().query("get_proposal", GtvFactory.gtv(
+                    "rowid" to GtvFactory.gtv(rowid)))
+                    .get()
+            returnValue = prop
+        }
+        return returnValue!!
     }
 
 }

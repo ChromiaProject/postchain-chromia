@@ -14,10 +14,7 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
-import net.postchain.mc.config.app.DelegatingClientConfig
-import org.apache.commons.configuration2.Configuration
 import org.junit.Assert
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -71,27 +68,20 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
 
 
-    protected fun assertProviderData(config: ClientConfig, provPubkey: String, name: String, isActive: Boolean?) {
-
-        val client = getPostchainClient(config)
-        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(provPubkey.hexStringToByteArray()))).get()
-        val data = provider.asDict()
+    protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
+        val data = provExecutor.getProviderInfo(provPubkey).asDict()
         Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
         assertk.assert(data["name"]?.asString()).isEqualTo(name)
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(isActive)
     }
 
-    protected fun assertProviderEnabled(config: ClientConfig, providerPublicKey: String) {
-        val client = getPostchainClient(config)
-        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        val data = provider.asDict()
+    protected fun assertProviderEnabled(providerPublicKey: String) {
+        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
     }
 
-    protected fun assertProviderDisabled(config: ClientConfig, providerPublicKey: String) {
-        val client = getPostchainClient(config)
-        val provider = client.query("get_provider_data", GtvFactory.gtv("pubkey" to GtvFactory.gtv(providerPublicKey.hexStringToByteArray()))).get()
-        val data = provider.asDict()
+    protected fun assertProviderDisabled(providerPublicKey: String) {
+        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
     }
 

@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
-@Parameters(commandDescription = "propose removal of signers for a blockchain. Change will be applied after voting amongst providers.")
+@Parameters(commandDescription = "propose removal of signers of a blockchain. Change will be applied after voting amongst providers.")
 class CommandProposeRemoveBlockchainSigners: CommandBase() {
 
     @Parameter(

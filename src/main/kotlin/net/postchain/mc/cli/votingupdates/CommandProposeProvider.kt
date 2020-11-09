@@ -8,7 +8,8 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
-@Parameters(commandDescription = "propose new provider. Providers can add nodes add vote for different configuration updates, such as new providers, new nodes or new blockchains.")
+@Parameters(commandDescription = "propose new provider. Providers can add nodes add vote for different configuration " +
+        "updates, such as new providers, new nodes or new blockchains.")
 class CommandProposeProvider: CommandBase() {
 
     @Parameter(

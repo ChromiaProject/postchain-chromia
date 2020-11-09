@@ -37,6 +37,7 @@ class CliE0: CliBase() {
             CommandListProviders(),
             CommandListNodes(),
             CommandListProposalsSince(),
+            CommandGetProposal(),
             CommandVote()
     ).map { it.key() to it }.toMap()
 

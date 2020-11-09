@@ -94,11 +94,26 @@ query get_all_blockchains(): list<byte_array> {
     return blockchain @* {} .rid;
 }
 
+query get_active_blockchains (): list<byte_array> {
+    val blockchain_set = set(
+        (blockchain, blockchain_signer_node) @* {
+            blockchain_signer_node.blockchain == blockchain
+        } (.rid)
+    );
+    return list(blockchain_set);
+}
+
 //queries used in the voting procedure for configuration updates:
 query get_proposals_since (since: rowid) {
   return proposal @* {  .rowid > since } (.rowid, .proposal_type) limit 10;
 }
 
-query get_proposal (rowid: rowid) {
-  return proposal @{  .rowid == rowid };
+query get_proposal (rowid) {
+  return proposal @{  rowid }
+  (
+        proposed_by = .proposed_by.pubkey,
+        timestamp = .timestamp,
+        proposal_type = .proposal_type,
+        rowid = .rowid
+    );
 }

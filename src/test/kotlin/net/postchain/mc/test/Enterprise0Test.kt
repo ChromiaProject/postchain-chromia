@@ -1,5 +1,6 @@
 package net.postchain.mc.test
 
+import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
@@ -12,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class Enterprise0Test : ManagedModeTest() {
@@ -66,17 +68,25 @@ class Enterprise0Test : ManagedModeTest() {
         doAndBuildBlocks(clientConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
 
         voteYes("register_provider")
-        assertProviderData(clientConfig, prov2Config.pubKey, "", false)
+        assertProviderData(prov2Config.pubKey, "", false)
 
         doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderInternal(prov2Config.pubKey))
         voteYes("provider_state")
-        assertProviderEnabled(clientConfig, prov2Config.pubKey)
+        assertProviderEnabled(prov2Config.pubKey)
 
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderInternal(prov2Config.pubKey))
         val id = assertProposalTypeAndGetRowid("provider_state")
         doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
         doAndBuildBlocks(prov2Config, prov2Executor.voteInternal(id, true))
-        assertProviderDisabled(clientConfig, prov2Config.pubKey)
+        assertProviderDisabled(prov2Config.pubKey)
+    }
+
+    @Test
+    fun testProposeProviderVoteNo() {
+        doAndBuildBlocks(clientConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
+
+        voteNo("register_provider")
+        assertEquals(1, provExecutor.listProviders().size, "")
     }
 
     @Test
@@ -114,6 +124,11 @@ class Enterprise0Test : ManagedModeTest() {
     private fun voteYes(proposalType: String) {
         val id = assertProposalTypeAndGetRowid(proposalType)
         doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
+    }
+
+    private fun voteNo(proposalType: String) {
+        val id = assertProposalTypeAndGetRowid(proposalType)
+        doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, false))
     }
 
     @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
@@ -208,7 +223,6 @@ class Enterprise0Test : ManagedModeTest() {
     fun testListNodes() {
         addNode0(provConfig)
         // Add node1 to managed blockchain
-//        provExecutor.addNode(node1Pubkey, node1Host, node1Port)
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
         assertListNodes()
 
@@ -250,6 +264,24 @@ class Enterprise0Test : ManagedModeTest() {
 
         val listBlockchainSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
+    }
+
+    @Test
+    fun testGetProposal() {
+        doAndBuildBlocks(clientConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
+        val type = "register_provider"
+        val id = assertProposalTypeAndGetRowid(type)
+        val proposal = provExecutor.getProposal(id).asDict()
+        val actualType = (proposal["proposal_type"] as GtvString).string
+        val propid = (proposal["rowid"] as GtvInteger).asInteger()
+        val timestamp = (proposal["timestamp"] as GtvInteger).asInteger()
+        val proposedBy = proposal["proposed_by"]!!.asByteArray().toHex()
+
+        assertEquals(provConfig.pubKey, proposedBy, "wrong proposed_by")
+        assertEquals(id, propid, "wrong idx")
+        assertEquals(type, actualType, "Wrong proposal type")
+        assertNotEquals(0, timestamp, "timestamp is 0")
+
     }
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
