@@ -10,6 +10,7 @@ import org.awaitility.Duration
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
+import org.junit.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -122,6 +123,7 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     @Test
+    @Ignore //Ignoring, since a second test nod is not yet implemented.
     fun testAddBlockchainSigners() {
         // Creating node0
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
@@ -173,10 +175,11 @@ class Chromia0Test() : ManagedModeTest() {
 
         // Add node1 & 2 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
-        addNode(provConfig, node2Pubkey, node2Host, node2Port)
+//        addNode(provConfig, node2Pubkey, node2Host, node2Port)
 
         // Add node1 as blockchain's signer
-        val signers_list = "$node1Pubkey,$node2Pubkey"
+//        val signers_list = "$node1Pubkey,$node2Pubkey"
+        val signers_list = node1Pubkey
         doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
         // Get next configuration height after adding new node as blockchain's signer
         // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
