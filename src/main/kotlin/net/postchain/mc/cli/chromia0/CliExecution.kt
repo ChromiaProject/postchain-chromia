@@ -66,10 +66,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -93,10 +93,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -121,10 +121,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -148,10 +148,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -178,10 +178,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -208,10 +208,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -235,10 +235,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -265,10 +265,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -293,10 +293,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -318,10 +318,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -355,10 +355,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -381,10 +381,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -407,10 +407,10 @@ class CliExecution(val config: AppConfig) {
             }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -426,10 +426,10 @@ class CliExecution(val config: AppConfig) {
             return listBlockChain
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -439,10 +439,10 @@ class CliExecution(val config: AppConfig) {
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -452,10 +452,10 @@ class CliExecution(val config: AppConfig) {
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -475,10 +475,10 @@ class CliExecution(val config: AppConfig) {
                         "height" to GtvFactory.gtv(heightConfiguration))).get().asByteArray()
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -487,10 +487,10 @@ class CliExecution(val config: AppConfig) {
             return getPostchainClient().query("nm_get_peer_list_version", GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))).get().asInteger()
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -502,10 +502,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -517,10 +517,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -532,10 +532,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -547,10 +547,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it.asByteArray() }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -562,10 +562,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it.asByteArray() }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -579,10 +579,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -596,10 +596,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 
@@ -614,10 +614,10 @@ class CliExecution(val config: AppConfig) {
                     .map { it }
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 

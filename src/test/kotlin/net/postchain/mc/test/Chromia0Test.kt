@@ -16,6 +16,7 @@ import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 const val DEFAULT_APP_CONFIG = "app.properties"
 const val DEFAULT_PROV_CONFIG = "prov.properties"
@@ -1040,6 +1041,64 @@ class Chromia0Test : IntegrationTest() {
         assertEquals(anotherProviderPR, provider2["pubkey"]!!.asByteArray().toHex())
         assertEquals(false, provider2["active"]!!.asBoolean())
     }
+
+    @Test
+    fun testGetProviderInfoErrorReporting() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+        executor.enableProvider(providerPublicKey)
+
+        try {
+            val data = executor.getProviderInfo(wrongProviderPublicKey).asDict()
+            fail("Fail test for get provider error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
+    }
+
+    @Test
+    fun testGetNodeInfoErrorReporting() {
+        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+        // Creating node0
+        createSingleNode(0, 1, DEFAULT_CONFIG_FILE, configFileName) { appConfig, _ ->
+            val dbConnector = SimpleDatabaseConnector(appConfig)
+            dbConnector.withWriteConnection { connection ->
+                AppConfigDbLayer(appConfig, connection).addPeerInfo(TestPeerInfos.peerInfo0)
+            }
+        }
+        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+        val config = AppConfig.fromPropertiesFile(DEFAULT_APP_CONFIG)
+        val executor = CliExecution(config)
+        executor.registerProvider(providerPublicKey)
+
+        // provider active status should be true after calling enable
+        executor.enableProvider(providerPublicKey)
+
+        val providerAuth = AppConfig.fromPropertiesFile(DEFAULT_PROV_CONFIG)
+        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
+        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+
+        try {
+            executor.getNodeInfo(wrongNode).asDict()
+            fail("Fail test for get node info error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
+
+    }
+
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {
