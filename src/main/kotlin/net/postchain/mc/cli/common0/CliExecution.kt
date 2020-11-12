@@ -121,10 +121,7 @@ open class CliExecution(val config: ClientConfig) {
             // it means current height
             var heightConfiguration = height
             if (height == -1L) {
-                val blockchain = getPostchainClient().query("get_blockchain",
-                        GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
-                heightConfiguration = getPostchainClient().query("get_blockchain_last_height",
-                        GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))).get().asInteger()
+                heightConfiguration = getBlockchainLastHeight(blockchainRID)
             }
             val conf = getPostchainClient().query("nm_get_blockchain_configuration",
                 GtvFactory.gtv(
@@ -133,6 +130,18 @@ open class CliExecution(val config: ClientConfig) {
             returnVal = conf
         }
         return returnVal!!
+    }
+
+    fun getBlockchainLastHeight(blockchainRID: String) : Long {
+        var returnVal = -1L
+        doInTryBlock {
+            val blockchain = getPostchainClient().query("get_blockchain",
+                    GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
+            val height = getPostchainClient().query("get_blockchain_last_height",
+                    GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))).get().asInteger()
+            returnVal = height
+        }
+        return returnVal
     }
 
     fun getNodeListVersion() : Long {

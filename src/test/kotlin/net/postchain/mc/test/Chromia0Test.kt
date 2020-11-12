@@ -137,9 +137,8 @@ class Chromia0Test() : ManagedModeTest() {
         // Add node1 as blockchain's signer
         doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         // Get next configuration height after adding new node as blockchain's signer
-        // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
-        // module0 accordingly. See https://chromadev.zulipchat.com/#narrow/stream/144497-postchain-core-dev/topic/Chromia0/near/211956706
-         assertNextConfiguration(clientConfig, expectedHeight = 9L)
+        // expected next congiguration height = -1 + registerProvider + enableProvider + 2*addNode + addBlockhain + addSigners + 5 = 10
+        assertNextConfiguration(clientConfig, expectedHeight = 10L)
 
 //        Thread.sleep(120000)
 
@@ -170,21 +169,16 @@ class Chromia0Test() : ManagedModeTest() {
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-//        // Creating node0
-//        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
-
         // Add node1 & 2 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
-//        addNode(provConfig, node2Pubkey, node2Host, node2Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
 
         // Add node1 as blockchain's signer
-//        val signers_list = "$node1Pubkey,$node2Pubkey"
-        val signers_list = node1Pubkey
+        val signers_list = "$node1Pubkey,$node2Pubkey"
         doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
         // Get next configuration height after adding new node as blockchain's signer
-        // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
-        // module0 accordingly. See https://chromadev.zulipchat.com/#narrow/stream/144497-postchain-core-dev/topic/Chromia0/near/211956706
-        assertNextConfiguration(clientConfig, 9L)
+        // expected next congiguration height = -1 + registerProvider + enableProvider + 3*addNode + addBlockhain + addSigners + 5 = 11
+        assertNextConfiguration(clientConfig, 11L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(3)
@@ -240,47 +234,7 @@ class Chromia0Test() : ManagedModeTest() {
         assertEquals(1, listBlockchains.size)
     }
 
-    //Test not needed. Functionality already tested in addNode0()
-    @Test
-    fun testGetNodeInfo() {
-//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-//        // Creating node0
-//        createNode(configFileName)
-//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-//        val config = cliConf(clientConfigMap)
-//        val executor = CliExecution(config)
-//        executor.registerProvider(providerPublicKey)
-//
-//        // provider active status should be true after calling enable
-//        executor.enableProvider(providerPublicKey)
-//
-//        val providerAuth = cliConf(provConfigMap)
-//        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-//        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
-//        val node = adminExecutor.getNodeInfo(node0).asDict()
-//        assertEquals(true, node["active"]!!.asBoolean())
-//        assertEquals("127.0.0.1", node["host"]!!.asString())
-//        assertEquals(9870L, node["port"]!!.asInteger())
-//        Assert.assertArrayEquals(node["provider"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
-//        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
-    }
 
-    //Test not needed. Functionality included in other tests e.g.  assertProviderData
-    @Test
-    fun testGetProviderInfo() {
-//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
-//        createNode(configFileName)
-//
-//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
-//        val config = cliConf(clientConfigMap)
-//        val executor = CliExecution(config)
-//        executor.registerProvider(providerPublicKey)
-//        executor.enableProvider(providerPublicKey)
-//        val data = executor.getProviderInfo(providerPublicKey).asDict()
-//        Assert.assertArrayEquals(data["pubkey"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
-//        assertEquals("", data["name"]!!.asString())
-//        assertEquals(true, data["active"]!!.asBoolean())
-    }
 
     @Test
     fun testGetBlockchainConfiguration() {
@@ -296,6 +250,14 @@ class Chromia0Test() : ManagedModeTest() {
         addNode0(provConfig)
         val version = provExecutor.getNodeListVersion()
         assertTrue(version > 0)
+    }
+
+    @Test
+    fun testGeBlockchainLastHeight() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val h = provExecutor.getBlockchainLastHeight(clientConfig.brid)
+        //Expected height = -1 + registerProvider + enableProvider + addNode + addBlockhain = 3
+        assertEquals(3, h)
     }
 
     @Test
@@ -388,6 +350,50 @@ class Chromia0Test() : ManagedModeTest() {
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
         return net.postchain.mc.cli.enterprise0.CliExecutionE0(cliConfig)
     }
+
+    //Test not needed. Functionality already tested in addNode0()
+    @Test
+    fun testGetNodeInfo() {
+//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+//        // Creating node0
+//        createNode(configFileName)
+//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+//        val config = cliConf(clientConfigMap)
+//        val executor = CliExecution(config)
+//        executor.registerProvider(providerPublicKey)
+//
+//        // provider active status should be true after calling enable
+//        executor.enableProvider(providerPublicKey)
+//
+//        val providerAuth = cliConf(provConfigMap)
+//        val node0 = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+//        CliExecution(providerAuth).addNode(node0, "127.0.0.1", 9870L)
+//        val node = adminExecutor.getNodeInfo(node0).asDict()
+//        assertEquals(true, node["active"]!!.asBoolean())
+//        assertEquals("127.0.0.1", node["host"]!!.asString())
+//        assertEquals(9870L, node["port"]!!.asInteger())
+//        Assert.assertArrayEquals(node["provider"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+//        Assert.assertArrayEquals(node["pubkey"]!!.asByteArray(), node0.hexStringToByteArray())
+    }
+
+    //Test not needed. Functionality included in other tests e.g. assertProviderData
+    @Test
+    fun testGetProviderInfo() {
+//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+//        createNode(configFileName)
+//
+//        val providerPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB0"
+//        val config = cliConf(clientConfigMap)
+//        val executor = CliExecution(config)
+//        executor.registerProvider(providerPublicKey)
+//        executor.enableProvider(providerPublicKey)
+//        val data = executor.getProviderInfo(providerPublicKey).asDict()
+//        Assert.assertArrayEquals(data["pubkey"]!!.asByteArray(), providerPublicKey.hexStringToByteArray())
+//        assertEquals("", data["name"]!!.asString())
+//        assertEquals(true, data["active"]!!.asBoolean())
+    }
+
+
 //
 //    @Test(expected = CliError.Companion.CliException::class)
 //    fun testAddBlockchainConfiguration_ConfigNotFound() {

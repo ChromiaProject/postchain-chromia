@@ -150,7 +150,7 @@ operation disable_provider (provider) {
 
 function get_last_height (blockchain): integer {
 	if (blockchain.rid == chain_context.blockchain_rid) {
-		return (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
+		return op_context.block_height;
 	} else {
 		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
 	}
@@ -217,8 +217,7 @@ operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) 
 }
 
 
-
-operation old_add_configuration (blockchain, config_data: byte_array, height: integer) {
+operation add_configuration (blockchain, config_data: byte_array, height: integer) {
 	require_admin();
 	require(get_last_height(blockchain) < height);
 	require(empty(blockchain_configuration @? { blockchain, .height > height } limit 1));

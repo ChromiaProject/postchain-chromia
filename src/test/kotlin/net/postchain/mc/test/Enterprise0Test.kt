@@ -46,7 +46,7 @@ class Enterprise0Test : ManagedModeTest() {
         return CliExecutionE0(cliConfig)
     }
 
-    val configFileName = "/net/postchain/mc/test/config/ai_blockchain_config.xml"
+    val configFileName = "/net/postchain/mc/test/config/blockchain_config_1.xml"
     override val adminExecutor = CliExecutionE0(clientConfig)
     override val provExecutor = CliExecutionE0(provConfig)
     override val prov2Executor = CliExecutionE0(prov2Config)
@@ -145,10 +145,8 @@ class Enterprise0Test : ManagedModeTest() {
 
         voteYes("bc_signers")
         // Get next configuration height after adding new node as blockchain's signer
-        // TODO: This is supposed to be 10, but a change in rell 0.10.3 causes it to be 9. We should fix our
-        // module0 accordingly. See https://chromadev.zulipchat.com/#narrow/stream/144497-postchain-core-dev/topic/Chromia0/near/211956706
-        // So why is it here 10 when tow signers are added and 9 when only one signer is added?
-        assertNextConfiguration(clientConfig, 10L)
+        // expected next congiguration height = -1 + init + 3*addNode + addBlockhain + addSigners + vote + 5 = 11
+        assertNextConfiguration(clientConfig, 11L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(3)
@@ -201,6 +199,14 @@ class Enterprise0Test : ManagedModeTest() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
         val listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
         assertEquals(1, listBlockchains.size)
+    }
+
+    @Test
+    fun testGeBlockchainLastHeight() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val h = provExecutor.getBlockchainLastHeight(clientConfig.brid)
+        // expected height = -1 + init() + addNode0 + addBlockchain0 = 2
+        assertEquals(2, h)
     }
 
     @Test

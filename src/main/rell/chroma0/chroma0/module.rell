@@ -160,7 +160,8 @@ operation disable_provider (provider) {
 
 function get_last_height (blockchain): integer {
 	if (blockchain.rid == chain_context.blockchain_rid) {
-		return (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
+		//return (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
+        return op_context.block_height;
 	} else {
 		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
 	}
