@@ -76,35 +76,6 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         }
     }
 
-    /**
-     *
-     */
-    fun addNode(key: String, host: String, port: Long) {
-        sendTxSync(addNodeInternal(key, host, port), "Node has been enabled", "Cannot add node")
-    }
-
-    /**
-     *
-     */
-    fun addReplica(blockchainRID: String, key: String) {
-        sendTxSync(addReplicaInternal(blockchainRID, key), "Replica added", "Cannot add replica node")
-    }
-
-    /**
-     *
-     */
-    fun removeReplica(blockchainRID: String, key: String) {
-        sendTxSync(removeReplicaInternal(blockchainRID, key), "Replica removed", "Cannot remove replica node")
-    }
-
-
-    /**
-     *
-     */
-    fun removeNode(key: String) {
-        sendTxSync(removeNodeInternal(key), "Node removed", "Cannot remove node")
-    }
-
 
     /**
      *

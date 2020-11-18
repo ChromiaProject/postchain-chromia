@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -223,6 +224,22 @@ class Enterprise0Test : ManagedModeTest() {
         addNode0(provConfig)
         val version = provExecutor.getNodeListVersion()
         assertTrue(version > 0)
+    }
+
+    @Test
+    fun testRemoveNode() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        var nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertTrue(nodeInfo["active"]!!.asBoolean())
+
+        // Remove node1
+        doAndBuildBlocks(clientConfig, provExecutor.removeNodeInternal(node1Pubkey))
+
+        nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertFalse(nodeInfo["active"]!!.asBoolean())
     }
 
     @Test

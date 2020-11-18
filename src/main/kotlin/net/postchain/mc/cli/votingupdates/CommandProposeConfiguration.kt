@@ -18,12 +18,6 @@ class CommandProposeConfiguration: CommandBase() {
     private var blockchainRID = ""
 
     @Parameter(
-            names = ["-pk", "--node-pubkey"],
-            description = "Node pubkey. These are the blocksigners of the blockchain",
-            required = true)
-    private var pubkey = ""
-
-    @Parameter(
             names = ["-bc", "--blockchain-config"],
             description = "Configuration file of blockchain (gtxml)",
             required = true)

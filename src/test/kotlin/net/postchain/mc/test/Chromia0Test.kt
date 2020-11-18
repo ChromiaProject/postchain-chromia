@@ -3,6 +3,7 @@ package net.postchain.mc.test
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
+import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
@@ -12,6 +13,7 @@ import org.junit.Test
 import java.nio.file.Paths
 import org.junit.Ignore
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class Chromia0Test() : ManagedModeTest() {
@@ -191,6 +193,22 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     @Test
+    fun testRemoveNode() {
+        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        var nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertTrue(nodeInfo["active"]!!.asBoolean())
+
+        // Remove node1
+        doAndBuildBlocks(clientConfig, provExecutor.removeNodeInternal(node1Pubkey))
+
+        nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertFalse(nodeInfo["active"]!!.asBoolean())
+    }
+
+    @Test
     fun testRemoveBlockchainSigners() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
 
@@ -266,7 +284,6 @@ class Chromia0Test() : ManagedModeTest() {
         // Add node1 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
         assertListNodes()
-
     }
 
     @Test
@@ -303,6 +320,7 @@ class Chromia0Test() : ManagedModeTest() {
         doAndBuildBlocks(clientConfig,adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
+        PrintUtils.printBlockchainNodes(listBlockchainSigners, false)
     }
 
     @Test
@@ -345,6 +363,7 @@ class Chromia0Test() : ManagedModeTest() {
         val provider2 = providers.get(1).asDict()
         assertEquals(prov2Config.pubKey, provider2["pubkey"]!!.asByteArray().toHex())
         assertEquals(false, provider2["active"]!!.asBoolean())
+        PrintUtils.printProviders(providers)
     }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {

@@ -86,7 +86,7 @@ query get_blockchain_signers(blockchain) {
 }
 
 query get_blockchain_replicas(blockchain) {
-    return blockchain_replica_node @* { blockchain} (
+    return blockchain_replica_node @* { blockchain } (
         .blockchain.rid,
         @sort .node.pubkey,
         .node.host,

@@ -3,13 +3,14 @@ package net.postchain.mc.cli.node
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import net.postchain.common.toHex
+import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "list nodes by provider")
+@Parameters(commandDescription = "list nodes by provider. To see also inactive nodes, set flag -i.")
 class CommandListProviderNodes : CommandBase() {
 
     @Parameter(
@@ -18,17 +19,17 @@ class CommandListProviderNodes : CommandBase() {
             required = true)
     private var key = ""
 
+    @Parameter(
+            names = ["-i", "--includeinactive"],
+            description = "Include inactive nodes")
+    private var includeInactive = false
+
     override fun key(): String = "list-provider-nodes"
 
     override fun execute(): CliResult {
         return try {
-            val nodes = CliExecutionC0(loadAppConfig()).listNodesByProvider(key)
-            nodes.forEach { info ->
-                println("host: ${info.get(0).asString()}")
-                println("port: ${info.get(1).asInteger()}")
-                println("pubkey: ${info.get(2).asByteArray().toHex()}")
-                println("last_update: ${info.get(3).asInteger()}")
-            }
+            val nodes = CliExecution(loadAppConfig()).listNodesByProvider(key)
+            PrintUtils.printNodes(nodes, includeInactive, false)
             Ok("List nodes by provider successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

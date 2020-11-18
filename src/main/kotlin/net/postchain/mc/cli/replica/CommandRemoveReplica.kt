@@ -7,6 +7,7 @@ import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "remove replica")
 class CommandRemoveReplica: CommandBase() {
@@ -27,7 +28,7 @@ class CommandRemoveReplica: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionC0(loadAppConfig()).removeReplica(blockchainRID, key)
+            CliExecution(loadAppConfig()).removeReplica(blockchainRID, key)
             Ok("Replica node has been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

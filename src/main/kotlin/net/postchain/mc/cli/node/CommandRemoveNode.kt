@@ -7,8 +7,9 @@ import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "remove node by specific public key")
+@Parameters(commandDescription = "Remove node with given public key. Node is not removed completely, but made inactive.")
 class CommandRemoveNode: CommandBase() {
 
     @Parameter(
@@ -21,7 +22,7 @@ class CommandRemoveNode: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionC0(loadAppConfig()).removeNode(key)
+            CliExecution(loadAppConfig()).removeNode(key)
             Ok("Node has been removed successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

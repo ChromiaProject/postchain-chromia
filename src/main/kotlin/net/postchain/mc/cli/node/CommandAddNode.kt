@@ -6,9 +6,9 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "add node")
+@Parameters(commandDescription = "add node. This command is also used for updating node info.")
 class CommandAddNode: CommandBase() {
 
     @Parameter(
@@ -33,7 +33,7 @@ class CommandAddNode: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionC0(loadAppConfig()).addNode(key, host, port)
+            CliExecution(loadAppConfig()).addNode(key, host, port)
             Ok("Node has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

@@ -26,7 +26,7 @@ class CommandListBlockchainsForNode : CommandBase() {
             listBlockchains.forEach { blockchain ->
                 println(blockchain.toHex())
             }
-            Ok("List blockchains successfully")
+            Ok("Listed blockchains successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

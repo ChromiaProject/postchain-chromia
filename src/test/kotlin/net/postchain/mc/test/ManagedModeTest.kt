@@ -13,6 +13,7 @@ import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
+import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.Assert
@@ -186,14 +187,15 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     protected fun assertBlockchainReplica(clientConfig: ClientConfig, nodePubkey: String, host: String, port: Long) {
         val executor = cliExecution(clientConfig)
-        val listBlockchains = executor.listBlockchainReplicas(clientConfig.brid)
-        assertEquals(1, listBlockchains.size)
-        val bc = listBlockchains.get(0).asArray()
+        val listReplicas = executor.listBlockchainReplicas(clientConfig.brid)
+        assertEquals(1, listReplicas.size)
+        val bc = listReplicas.get(0).asArray()
         assertEquals(clientConfig.brid, bc.get(0).asByteArray().toHex())
         assertEquals(nodePubkey, bc.get(1).asByteArray().toHex())
         assertEquals(host, bc.get(2).asString())
         assertEquals(port, bc.get(3).asInteger())
         assertTrue(bc.get(4).asBoolean())
+        PrintUtils.printBlockchainNodes(listReplicas)
     }
 
     fun assertListNodesNode0(provConfig: ClientConfig) {
@@ -206,6 +208,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         assertEquals(provConfig.pubKey, n["provider"]!!.asByteArray().toHex())
         assertEquals(true, n["provider_active"]!!.asBoolean())
+        PrintUtils.printNodes(nodesList)
     }
 
     protected fun assertListNodes() {
@@ -247,8 +250,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun assertListNodesByProvider() {
         val nodeList = provExecutor.listNodesByProvider(provConfig.pubKey)
         assertEquals(2, nodeList.size)
-        assertEquals(nodes[0].pubKey.toUpperCase(), nodeList[0].asDict()["pubkey"]!!.asByteArray().toHex())
+        val node0 = nodeList[0].asDict()
+        assertEquals(nodes[0].pubKey.toUpperCase(), node0["pubkey"]!!.asByteArray().toHex())
         assertEquals(node1Pubkey, nodeList[1].asDict()["pubkey"]!!.asByteArray().toHex())
+        PrintUtils.printNodes(nodeList, true, false)
     }
 
 }
