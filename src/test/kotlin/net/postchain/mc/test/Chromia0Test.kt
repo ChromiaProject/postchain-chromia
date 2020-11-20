@@ -248,8 +248,11 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testListBlockchainsForNode() {
         addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val listBlockchains = adminExecutor.listBlockchainsForNode(nodes[0].pubKey)
+        var listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
         assertEquals(1, listBlockchains.size)
+
+        listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
+        assertEquals(0, listBlockchains.size)
     }
 
 

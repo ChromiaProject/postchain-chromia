@@ -216,7 +216,6 @@ operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) 
 	create blockchain_added (blockchain, op_context.transaction);
 }
 
-
 operation add_configuration (blockchain, config_data: byte_array, height: integer) {
 	require_admin();
 	require(get_last_height(blockchain) < height);

@@ -192,9 +192,13 @@ open class CliExecution(val config: ClientConfig) {
     fun listBlockchainsForNode(key: String) : List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
-            val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
-                    "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
-            listBlockChain.addAll(list.map { it.asByteArray() })
+            val isNode = getPostchainClient().query("is_node",
+                        GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asBoolean()
+            if (isNode) {
+                val list = getPostchainClient().query("nm_compute_blockchain_list", GtvFactory.gtv(
+                        "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+                listBlockChain.addAll(list.map { it.asByteArray() })
+            }
         }
         return listBlockChain
     }

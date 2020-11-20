@@ -1,4 +1,4 @@
-query get_provider (pubkey) = provider @ { pubkey };
+
 
 query get_provider_data (pubkey) {
     return provider_state @ {
@@ -20,32 +20,6 @@ query get_all_providers() {
     );
 }
 
-query get_node (pubkey) = node @ { pubkey };
-
-query get_node_data (pubkey) {
-    return node @ {
-        pubkey
-    } (
-        provider = .provider.pubkey,
-        pubkey = .pubkey,
-        active = .active,
-        host = .host,
-        port = .port,
-        last_updated = .last_updated
-    );
-}
-
-query get_blockchain (rid: byte_array) = blockchain @ { rid };
-
-query get_active_blockchains (): list<byte_array> {
-    val blockchain_set = set(
-        (blockchain, blockchain_signer_node) @* {
-            blockchain_signer_node.blockchain == blockchain
-        } (.rid)
-    );
-    return list(blockchain_set);
-}
-
 query get_nodes_with_provider() {
     return (node, provider_state) @* { node.provider == provider_state.provider } (
         pubkey = .pubkey,
@@ -58,55 +32,6 @@ query get_nodes_with_provider() {
         beneficiary = .beneficiary.id,
         provider = node.provider.pubkey
     );
-}
-
-query get_all_blockchains(): list<byte_array> {
-    return blockchain @* {} .rid;
-}
-
-query get_nodes_by_provider(provider) {
-    return node @* { provider } (
-        .pubkey,
-        .active,
-        .host,
-        .port,
-        .last_updated
-    );
-}
-
-query get_blockchain_signers(blockchain) {
-    return blockchain_signer_node @* { blockchain } (
-        .blockchain.rid,
-        @sort .node.pubkey,
-        .node.host,
-        .node.port,
-        .node.active,
-        .node.last_updated
-    );
-}
-
-query get_blockchain_replicas(blockchain) {
-    return blockchain_replica_node @* { blockchain } (
-        .blockchain.rid,
-        @sort .node.pubkey,
-        .node.host,
-        .node.port,
-        .node.active,
-        .node.last_updated
-    );
-}
-
-//Cannot use function get_last_height, since it uses an op_context.
-query get_blockchain_last_height(blockchain) : integer {
-	if (blockchain.rid == chain_context.blockchain_rid) {
-		return  (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
-	} else {
-		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
-	}
-}
-
-query get_added_blockchain_rid(tx_rid: byte_array) {
-	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }
 
 query chromia_version() = "0.1";
