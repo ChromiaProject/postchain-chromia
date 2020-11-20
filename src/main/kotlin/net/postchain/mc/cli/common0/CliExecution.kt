@@ -67,10 +67,10 @@ open class CliExecution(val config: ClientConfig) {
             todo()
         } catch (e: UserMistake) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("User Mistake: Input parameters might be wrong or missing")
+            throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
             logger.error(e.message)
-            throw CliError.Companion.CliException("System Error: Something wrong happen")
+            throw CliError.Companion.CliException(e.message!!)
         }
     }
 

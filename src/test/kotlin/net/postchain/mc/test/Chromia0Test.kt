@@ -1,9 +1,11 @@
 package net.postchain.mc.test
 
+import net.postchain.client.AppConfig
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
@@ -15,6 +17,7 @@ import org.junit.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class Chromia0Test() : ManagedModeTest() {
 
@@ -367,6 +370,31 @@ class Chromia0Test() : ManagedModeTest() {
         assertEquals(prov2Config.pubKey, provider2["pubkey"]!!.asByteArray().toHex())
         assertEquals(false, provider2["active"]!!.asBoolean())
         PrintUtils.printProviders(providers)
+    }
+
+
+    @Test
+    fun testGetProviderInfoErrorReporting() {
+        addNode0(provConfig)
+        val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
+        try {
+            val data = provExecutor.getProviderInfo(wrongProviderPublicKey).asDict()
+            fail("Fail test for get provider error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
+    }
+
+    @Test
+    fun testGetNodeInfoErrorReporting() {
+        addNode0(provConfig)
+        val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
+        try {
+            provExecutor.getNodeInfo(wrongNode).asDict()
+            fail("Fail test for get node info error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
     }
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
