@@ -45,19 +45,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     open val adminExecutor = cliExecution(clientConfig)
     lateinit var blockchain0ConfigGtv: Gtv
 
-//    protected fun cliConf(basedOn: Configuration): ClientConfig {
-//        return cliConf(0, basedOn)
-//    }
-//
-//    protected fun cliConf(index: Int, basedOn: Configuration): ClientConfig {
-//        return object : DelegatingClientConfig(BaseClientConfig(basedOn)) {
-//            override val apiURL: String
-//                get() = "http://127.0.0.1:" + nodes[index].getRestApiHttpPort()
-//
-//            override val brid: String
-//                get() = nodes[index].getBlockchainRid(0)!!.toHex()
-//        }
-//    }
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
@@ -67,7 +54,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
-
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
         val data = provExecutor.getProviderInfo(provPubkey).asDict()
@@ -104,14 +90,13 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     /* Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
     * aware of itself. So that it can be managed.
     */
-    protected fun addNode0AndBlockchain0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
+    protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
         addNode0(configProv)
-        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
-
-        buildAndAwaitBlocks(1)
-        assertBlockchain0Added(config)
+        addBc(blockchain0ConfigGtv)
+        assertBc0Added(config)
     }
 
+    abstract fun addBc(blockchain0ConfigGtv: Gtv)
 
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
         provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(key, host, port))
@@ -123,11 +108,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(configProv, nodes[0].pubKey, node0Host, node0Port)
     }
 
-    fun assertBlockchain0Added(config: ClientConfig) {
-        assertBlockchainAdded(config, config.brid.hexStringToByteArray())
+    fun assertBc0Added(config: ClientConfig) {
+        assertBcAdded(config, config.brid.hexStringToByteArray())
     }
 
-    fun assertBlockchainAdded(config: ClientConfig, bridByteArray: ByteArray) {
+    fun assertBcAdded(config: ClientConfig, bridByteArray: ByteArray) {
         val client = getPostchainClient(config)
         val blockchain = client.query("get_blockchain", GtvFactory.gtv(
                 "rid" to GtvFactory.gtv(bridByteArray))).get()
@@ -147,15 +132,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
 
-
-
-
     /*
         * Initialization function that adds node0 with configuration from  config.properties. Also adds blockchain. This is
         * addNode0AndBlockchain. Also node1 is added both as repica and signer to this bc.
         * */
     protected fun initAndNode1ReplicaAndSigner() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
@@ -163,16 +145,18 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(5)
 
-        val replicas = adminExecutor.listBlockchainReplicas(clientConfig.brid)
+        val replicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
         assertEquals(1, replicas.size)
 
         // Add node1 as blockchain's signer
-        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
-        buildAndAwaitBlocks(1)
+        addBcSigners(node1Pubkey)
 
-        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        val listBlockchainSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
     }
+
+    // nodelist: comma-separated list of node pubkeys
+    abstract fun addBcSigners(nodeList: String)
 
     fun awaitBlockchainReload() {
 //        Awaitility.await().atMost(Duration.ONE_MINUTE)

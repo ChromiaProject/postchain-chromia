@@ -1,8 +1,8 @@
 package net.postchain.mc.test
 
-import net.postchain.client.AppConfig
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
@@ -96,7 +96,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testAddBlockchain() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
     }
 
     @Test
@@ -111,7 +111,7 @@ class Chromia0Test() : ManagedModeTest() {
         awaitBlockchainReload()
 
         val listBlockchains = adminExecutor.listAllBlockchains()
-        assertBlockchainAdded(clientConfig, listBlockchains[0])
+        assertBcAdded(clientConfig, listBlockchains[0])
     }
 
     @Test
@@ -124,7 +124,7 @@ class Chromia0Test() : ManagedModeTest() {
         awaitBlockchainReload()
 
         val listBlockchains = adminExecutor.listAllBlockchains()
-        assertBlockchainAdded(clientConfig, listBlockchains[0])
+        assertBcAdded(clientConfig, listBlockchains[0])
     }
 
     @Test
@@ -134,7 +134,7 @@ class Chromia0Test() : ManagedModeTest() {
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 //
 
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         // Add node1 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
@@ -172,7 +172,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         // Add node1 & 2 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
@@ -197,7 +197,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testRemoveNode() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
@@ -213,7 +213,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testRemoveBlockchainSigners() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         // Add node1 & 2 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
@@ -232,7 +232,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testAddConfiguration() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
         doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
                 20L, "xml"))
@@ -241,7 +241,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testAddConfigurationAcceptGtv() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
         doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
                 20L, "gtv"))
@@ -250,7 +250,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testListBlockchainsForNode() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         var listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
         assertEquals(1, listBlockchains.size)
 
@@ -262,7 +262,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainConfiguration() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         val blockchain = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
@@ -278,7 +278,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testGeBlockchainLastHeight() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         val h = provExecutor.getBlockchainLastHeight(clientConfig.brid)
         //Expected height = -1 + registerProvider + enableProvider + addNode + addBlockhain = 3
         assertEquals(3, h)
@@ -300,14 +300,14 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testListBlockchains() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         val listBlockchains = adminExecutor.listAllBlockchains()
         assertEquals(1, listBlockchains.size)
     }
 
     @Test
     fun testListBlockchainReplicas() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         addNode(provConfig,node1Pubkey, node1Host, node1Port)
 
         // add node 1 as replica
@@ -317,7 +317,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testListBlockchainSigners() {
-        addNode0AndBlockchain0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         // Add node1 to managed blockchain
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
@@ -399,6 +399,17 @@ class Chromia0Test() : ManagedModeTest() {
 
     override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
         return net.postchain.mc.cli.enterprise0.CliExecutionE0(cliConfig)
+    }
+
+    override fun addBc(blockchain0ConfigGtv: Gtv) {
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
+        buildAndAwaitBlocks(1)
+
+    }
+
+    override fun addBcSigners(nodeList: String) {
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, nodeList))
+        buildAndAwaitBlocks(1)
     }
 
     //Test not needed. Functionality already tested in addNode0()

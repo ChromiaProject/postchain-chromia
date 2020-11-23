@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
@@ -85,13 +86,22 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     }
 
     fun proposeBlockchainInternal(blockchainConfigFile: String, nodes: String, format: String?) : GTXTransactionBuilder {
+        val data = readConfigurationFile(blockchainConfigFile, format)
+        return proposeBc(nodes, data)
+    }
+
+    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
+        val data = GtvEncoder.encodeGtv(blockchainConfig)
+        return proposeBc(nodes, data)
+    }
+
+    private fun proposeBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
         val meProvider = getPostchainClient().query("get_provider", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(config.pubKey.hexStringToByteArray()))).get()
-        val data = readConfigurationFile(blockchainConfigFile, format)
         val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
-
         return makeTransactionWithNop().apply {
-            addOperation("propose_blockchain", arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+            addOperation("propose_blockchain",
+                    arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
             sign(buildSigMaker())
         }
     }

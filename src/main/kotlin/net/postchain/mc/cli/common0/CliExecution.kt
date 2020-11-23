@@ -74,27 +74,6 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /**
-     * format: Format of blockchain configuration file
-     */
-    fun addBlockchainGtv(blockchainConfig: Gtv, nodes: String) {
-        sendTxSync(addBlockchainGtvInternal(blockchainConfig, nodes),"Blockchain added from gtv", "Cannot add blockchain")
-    }
-
-    /**
-     * format: Format of blockchain configuration file
-     */
-    fun addBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
-            val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
-            val data = GtvEncoder.encodeGtv(blockchainConfig)
-            return makeTransactionWithNop().apply {
-                addOperation("add_blockchain",
-                        arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
-                sign(buildSigMaker())
-        }
-    }
-
-
     fun getProviderInfo(key: String) : Gtv {
         var returnVal : Gtv? = null
         doInTryBlock {

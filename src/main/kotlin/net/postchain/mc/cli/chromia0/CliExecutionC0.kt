@@ -23,6 +23,18 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
 
     fun addBlockchainInternal(blockchainConfigFile: String, nodes: String, format: String?): GTXTransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
+        return addBc(nodes, data)
+    }
+
+    /**
+     *
+     */
+    fun addBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
+        val data = GtvEncoder.encodeGtv(blockchainConfig)
+        return addBc(nodes, data)
+    }
+
+    private fun addBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
         val nodeList = nodes.split(",").map { getPostchainClient().query("get_node", GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
         return makeTransactionWithNop().apply {
             addOperation("add_blockchain",

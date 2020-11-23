@@ -2,7 +2,6 @@
 module;
 
 struct module_args {
-    admin: pubkey;
     initial_provider: pubkey;
 }
 
@@ -40,8 +39,6 @@ entity blockchain_configuration {
 entity blockchain_signer_node { key blockchain, node; }
 entity blockchain_replica_node { key blockchain, node; }
 
-function require_admin() { 	require(is_signer(chain_context.args.admin)); }
-
 function require_block_signer(pubkey) {
 	val signer = blockchain_signer_node @? { .blockchain.rid == chain_context.blockchain_rid and .node.pubkey == pubkey };
 	require(exists(signer));
@@ -55,11 +52,6 @@ operation init () {
 	update provider_state @ { prov } ( .active = true );
 }
 
-
-operation register_provider (pubkey) {
-	require_admin();
-	add_pubkey_as_provider(pubkey);
-}
 
 function add_pubkey_as_provider(pubkey) {
 	val provider = create provider (pubkey);
@@ -99,12 +91,14 @@ operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
 	node_list.last_update = op_context.last_block_time;
 }
 
+function require_initial_provider() { 	require(is_signer(chain_context.args.initial_provider)); }
+
 operation add_replica (provider?, blockchain, node) {
 	if (exists(provider)) {
 		require_provider_auth(provider);
 		require( node.provider == provider );		
 	} else {
-		require_admin();			
+		require_initial_provider();			
 	}
 	
 	require(empty(blockchain_signer_node @? { blockchain, node }));
@@ -117,7 +111,7 @@ operation remove_replica (provider?, blockchain, node) {
 		require_provider_auth(provider);
 		require( node.provider == provider );		
 	} else {
-		require_admin();			
+		require_initial_provider();			
 	}
 	delete blockchain_replica_node @ { blockchain, node };
 }
@@ -133,20 +127,6 @@ operation remove_node (provider, node_pubkey: pubkey) {
 	node_list.last_update = op_context.last_block_time;
 }
 
-operation enable_provider (provider) {
-	require_admin();
-	update provider_state @ { provider } ( .active = true );
-}
-
-operation disable_provider (provider) {
-	require_admin();
-	update provider_state @ { provider } ( .active = false );
-	update node @* { provider } ( .active = false );
-	for (blockchain in blockchain_signer_node @* { .node.provider == provider } (.blockchain)) {
-		update_configuration(blockchain);
-	}
-	node_list.last_update = op_context.last_block_time;
-}
 
 function get_last_height (blockchain): integer {
 	if (blockchain.rid == chain_context.blockchain_rid) {
@@ -178,62 +158,4 @@ function update_configuration (blockchain) {
         height = last_height + 5,
         data = updated_config
     );
-}
-
-operation add_blockchain_signers (blockchain, add_signers: list<node>) {
-	require_admin();
-	for (signer in add_signers) {
-		require(signer.active);
-		create blockchain_signer_node(blockchain, signer);
-	}
-	update_configuration(blockchain);	
-}
-
-operation remove_blockchain_signers (blockchain, remove_signers: list<node>) {
-	require_admin();
-	for (signer in remove_signers) {
-		delete blockchain_signer_node @? {blockchain, signer};
-	}
-	update_configuration(blockchain);
-}
-
-operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) {
-	require_admin();
-	require(initial_nodes.size() > 0);
-	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
-	val signers = list<pubkey>();
-	for (node in initial_nodes) {
-		signers.add(node.pubkey);
-	}
-	config["signers"] = signers.to_gtv();
-	val blockchain_rid = config.hash();
-	print("Added blockchain", blockchain_rid);
-	val blockchain = create blockchain ( blockchain_rid );
-	create blockchain_configuration (blockchain, 0, config.to_gtv().to_bytes());
-	for (node in initial_nodes) {
-		create blockchain_signer_node (blockchain, node);
-	}
-	create blockchain_added (blockchain, op_context.transaction);
-}
-
-operation add_configuration (blockchain, config_data: byte_array, height: integer) {
-	require_admin();
-	require(get_last_height(blockchain) < height);
-	require(empty(blockchain_configuration @? { blockchain, .height > height } limit 1));
-	create blockchain_configuration(
-		blockchain,
-		height,
-		data = patch_configuration_signers(blockchain, config_data)
-	);
-}
-
-operation stop_blockchain (blockchain, remove_replicas: boolean) {
-	require_admin();
-	
-	// NOTE: we do not update blockchain configuration, making it possible to 
-	// restart blockchain later. Data such as anchored blocks is not removed.
-	delete blockchain_signer_node @* { blockchain };
-	if (remove_replicas) {
-		delete blockchain_replica_node @* { blockchain };
-	} 
 }
