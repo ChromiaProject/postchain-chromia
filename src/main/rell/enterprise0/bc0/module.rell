@@ -91,29 +91,18 @@ operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
 	node_list.last_update = op_context.last_block_time;
 }
 
-function require_initial_provider() { 	require(is_signer(chain_context.args.initial_provider)); }
-
-operation add_replica (provider?, blockchain, node) {
-	if (exists(provider)) {
-		require_provider_auth(provider);
-		require( node.provider == provider );		
-	} else {
-		require_initial_provider();			
-	}
-	
+operation add_replica (provider, blockchain, node) {
+	require_provider_auth(provider);
+	require( node.provider == provider );			
 	require(empty(blockchain_signer_node @? { blockchain, node }));
 	require(empty(blockchain_replica_node @? { blockchain, node }));
 	create blockchain_replica_node ( blockchain, node );
 }
 
-operation remove_replica (provider?, blockchain, node) {
-	if (exists(provider)) {
-		require_provider_auth(provider);
-		require( node.provider == provider );		
-	} else {
-		require_initial_provider();			
-	}
-	delete blockchain_replica_node @ { blockchain, node };
+operation remove_replica (provider, blockchain, node) {
+	require_provider_auth(provider);
+	require( node.provider == provider );		
+	delete blockchain_replica_node @? { blockchain, node };
 }
 
 

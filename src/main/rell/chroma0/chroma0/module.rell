@@ -156,6 +156,8 @@ operation disable_provider (provider) {
 		update_configuration(blockchain);
 	}
 	node_list.last_update = op_context.last_block_time;
+	//Delete all replicas of the provider
+    delete blockchain_replica_node @* { .node.provider == provider };
 }
 
 function get_last_height (blockchain): integer {
@@ -195,6 +197,8 @@ operation add_blockchain_signers (blockchain, add_signers: list<node>) {
 	for (signer in add_signers) {
 		require(signer.active);
 		create blockchain_signer_node(blockchain, signer);
+        //A signer is more than a replica. Cannot be both.
+		delete blockchain_replica_node @? {blockchain, signer};
 	}
 	update_configuration(blockchain);	
 }

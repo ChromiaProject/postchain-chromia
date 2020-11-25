@@ -80,13 +80,30 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testDisableEnableProvider() {
-        // provider active status should be true after calling enable
-        doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
-        assertProviderEnabled(provConfig.pubKey)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-        // provider active status should be false after calling disable
-        doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(provConfig.pubKey))
-        assertProviderDisabled(provConfig.pubKey)
+        // add second provider
+        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(prov2Config.pubKey))
+        // provider active status should be true after calling enable
+        assertProviderEnabled(prov2Config.pubKey)
+
+        // The new provider adds node 1 and node 2
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port)
+        addNode(prov2Config, node2Pubkey, node2Host, node2Port)
+
+        // make node1 a signer of bc0
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+
+        //make node2 a replica of bc0
+        doAndBuildBlocks(prov2Config, prov2Executor.addReplicaInternal(clientConfig.brid, node2Pubkey))
+        assertBlockchainReplica(clientConfig, node2Pubkey,node2Host, node2Port)
+
+        //disable second provider
+        doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(prov2Config.pubKey))
+        // provider active status should be false after calling disable. Blockchain replicas list  and blockchain signers
+        // list should also be updated accordingly.
+        assertProviderDisabled(prov2Config.pubKey)
     }
 
     @Test
@@ -331,7 +348,7 @@ class Chromia0Test() : ManagedModeTest() {
 
     @Test
     fun testStopBlockchain() {
-        initAndNode1ReplicaAndSigner()
+        initAndNode1Replica()
 
         doAndBuildBlocks(clientConfig, adminExecutor.stopBlockchainInternal(clientConfig.brid, true))
         // query replicas again to ensure it was deleted after stop blockchain
@@ -341,7 +358,6 @@ class Chromia0Test() : ManagedModeTest() {
         // query signers again to ensure it was deleted after stop blockchain
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(0, listBlockchainSigners.size)
-
     }
 
     @Test

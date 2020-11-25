@@ -48,7 +48,6 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     val configFileName = "/net/postchain/mc/test/config/blockchain_config_1.xml"
-    override val adminExecutor = CliExecutionE0(clientConfig)
     override val provExecutor = CliExecutionE0(provConfig)
     override val prov2Executor = CliExecutionE0(prov2Config)
 
@@ -66,6 +65,11 @@ class Enterprise0Test : ManagedModeTest() {
 
     @Test
     fun testProposeEnableDisableProvider() {
+
+        //First provider adds node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+//        Then proposes a second provider
         doAndBuildBlocks(clientConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
 
         voteYes("register_provider")
@@ -75,8 +79,23 @@ class Enterprise0Test : ManagedModeTest() {
         voteYes("provider_state")
         assertProviderEnabled(prov2Config.pubKey)
 
+
+        // The new provider adds node 1 and node 2
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port)
+        addNode(prov2Config, node2Pubkey, node2Host, node2Port)
+
+       // prov2 makes node1 a signer of bc0
+        doAndBuildBlocks(prov2Config, prov2Executor.proposeAddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        var id = assertProposalTypeAndGetRowid("bc_signers")
+        doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
+        doAndBuildBlocks(prov2Config, prov2Executor.voteInternal(id, true))
+
+        //prov2 makes node2 a replica of bc0 (no voting needed)
+        doAndBuildBlocks(prov2Config, prov2Executor.addReplicaInternal(clientConfig.brid, node2Pubkey))
+
+        //Disable provider:
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderInternal(prov2Config.pubKey))
-        val id = assertProposalTypeAndGetRowid("provider_state")
+        id = assertProposalTypeAndGetRowid("provider_state")
         doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))
         doAndBuildBlocks(prov2Config, prov2Executor.voteInternal(id, true))
         assertProviderDisabled(prov2Config.pubKey)
@@ -180,7 +199,7 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testStopBlockchain() {
         val executor = cliExecution(clientConfig)
-        initAndNode1ReplicaAndSigner()
+        initAndNode1Replica()
 
         doAndBuildBlocks(provConfig, provExecutor.proposeStopBlockchainInternal(clientConfig.brid, true))
         voteYes("bc_stop")
@@ -316,6 +335,7 @@ class Enterprise0Test : ManagedModeTest() {
         voteYes("bc")
     }
 
+    //First (the only) provider adds signers and vote yes to apply the change. This is not a general function.
     override fun addBcSigners(nodeList: String) {
         doAndBuildBlocks(provConfig, provExecutor.proposeAddBlockchainSignersInternal(clientConfig.brid, nodeList))
         voteYes("bc_signers")

@@ -190,11 +190,7 @@ function apply_voting_result (prop: proposal) {
 	 		conf              -> apply_conf(prop);
 	 		bc                -> apply_bc(prop);
 			register_provider -> apply_register_provider(prop);
-			provider_state    -> {
-				val pps = pending_provider_state @ {prop}; 
-				update provider_state @ { pps.provider } ( .active = pps.active );
-				delete pending_provider_state @ { prop };
-			}
+			provider_state    -> apply_provider_state(prop);
 			bc_signers        -> apply_blockchain_signers_update(prop);
 			bc_stop			  -> apply_stop_blockchain(prop);
 	}
@@ -218,6 +214,22 @@ function apply_voting_result (prop: proposal) {
 		
 		print("no, not yet");
 	}
+}
+
+//For both enabling and disabling of providers
+function apply_provider_state(proposal) {
+	val pps = pending_provider_state @ {proposal}; 
+	update provider_state @ { pps.provider } ( .active = pps.active );
+	if (pps.active == false) {
+		update node @* { pps.provider } ( .active = false );
+		for (blockchain in blockchain_signer_node @* { .node.provider == pps.provider } (.blockchain)) {
+			update_configuration(blockchain);
+		}
+		node_list.last_update = op_context.last_block_time;
+		//TODO: Delete all replicas of the provider?
+		delete blockchain_replica_node @* { .node.provider == pps.provider };
+	}
+	delete pending_provider_state @ { proposal };
 }
 
 function apply_conf(proposal) {
@@ -261,6 +273,7 @@ function apply_blockchain_signers_update(proposal) {
 		if (pending.add == true) {
 			require(pending.signer.active);
 			create blockchain_signer_node(pending.blockchain, pending.signer);
+			delete blockchain_replica_node @? {pending.blockchain, pending.signer};
 		} else {
 			delete blockchain_signer_node @? {pending.blockchain, pending.signer};
 		}

@@ -70,6 +70,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun assertProviderDisabled(providerPublicKey: String) {
         val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
+        assertEquals(0, listReplicas.size)
+
+        val listSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(1, listSigners.size)
     }
 
     protected fun assertNextConfiguration(config: ClientConfig, expectedHeight: Long) {
@@ -99,7 +104,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     abstract fun addBc(blockchain0ConfigGtv: Gtv)
 
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
-        provExecutor.sendTxUnconfirmed(provExecutor.addNodeInternal(key, host, port))
+        val executor = cliExecution(configProv)
+        executor.sendTxUnconfirmed(executor.addNodeInternal(key, host, port))
         buildAndAwaitBlocks(1)
         assertAddedNode(configProv, configProv.pubKey, key, host, port)
     }
@@ -133,26 +139,21 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
 
     /*
-        * Initialization function that adds node0 with configuration from  config.properties. Also adds blockchain. This is
-        * addNode0AndBlockchain. Also node1 is added both as repica and signer to this bc.
+        * Initialization function that adds node0 with configuration from  config.properties. It also adds blockchain (This is
+        * function addNode0AndBlockchain). Finally, node1 is added as replica.
         * */
-    protected fun initAndNode1ReplicaAndSigner() {
+    protected fun initAndNode1Replica() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
+        //add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
-        // add replicas
+        // make node 1 a replica
         provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(5)
 
         val replicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
         assertEquals(1, replicas.size)
-
-        // Add node1 as blockchain's signer
-        addBcSigners(node1Pubkey)
-
-        val listBlockchainSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
-        assertEquals(2, listBlockchainSigners.size)
     }
 
     // nodelist: comma-separated list of node pubkeys
