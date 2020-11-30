@@ -15,7 +15,7 @@ class CommandInit: CommandBase() {
     override fun execute(): CliResult {
         return try {
             CliExecutionE0(loadAppConfig()).init()
-            Ok("You have a initial provider that can vote for updates.")
+            Ok("You have an initial provider that can vote for updates.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

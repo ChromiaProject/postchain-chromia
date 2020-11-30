@@ -3,6 +3,7 @@ package net.postchain.mc.test
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
@@ -14,10 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
 import org.junit.Ignore
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.test.*
 
 class Chromia0Test() : ManagedModeTest() {
 
@@ -120,24 +118,21 @@ class Chromia0Test() : ManagedModeTest() {
     fun testAddBlockchainAcceptGtv() {
         // still need that for creating node test due to IntegrateTest expect xml to create node config
         // for testing only
-        val configFileNameGtv = "/net/postchain/mc/test/config/0.gtv"
-//        // Creating node0
+        // Creating node0
         addNode0(provConfig)
-        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileNameGtv
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(confFile, nodes[0].pubKey, "gtv"))
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfigGtvFile, nodes[0].pubKey, "gtv"))
         awaitBlockchainReload()
-
         val listBlockchains = adminExecutor.listAllBlockchains()
         assertBcAdded(clientConfig, listBlockchains[0])
     }
 
     @Test
     fun testAddBlockchainXml() {
-        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
+//        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
 //        // Creating node0
         addNode0(provConfig)
-        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(confFile, nodes[0].pubKey, "xml"))
+//        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfig1xmlFile, nodes[0].pubKey, "xml"))
         awaitBlockchainReload()
 
         val listBlockchains = adminExecutor.listAllBlockchains()
@@ -239,9 +234,7 @@ class Chromia0Test() : ManagedModeTest() {
         // Add node1 as blockchain's signer
         val signers_list = "$node1Pubkey,$node2Pubkey"
         doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
-
         doAndBuildBlocks(clientConfig, adminExecutor.removeBlockchainSignersInternal(clientConfig.brid, signers_list))
-
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(1, listBlockchainSigners.size)
     }
@@ -250,17 +243,57 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testAddConfiguration() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
+        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
                 20L, "xml"))
         assertNextConfiguration(clientConfig, 20L)
+    }
+
+    /*
+    * 1.  A new configurations is added att height 20 (future height = 20)
+    * 2.  A new signer is added at height 6 (current height = 6+5 = 11)
+    *    The new config should not be applied at height 11.
+    *    The new configuration should be updated with the new signer.
+    * => initGtx == currentGTx
+    *    current Signer list == future signer list
+    *    currentGtx != future Gtx
+    *    current config has two signers (init config has one signer)
+    * */
+    @Test
+    fun testJiraCHROM9() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
+                20L, "xml"))
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addBcSigners(node1Pubkey)
+        val futureConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 20L)
+        val signers = GtvDecoder.decodeGtv(futureConf).asDict()["signers"]
+        assertNotNull(signers)
+        val futureSignersArray = signers.asArray()
+        assertEquals(2, futureSignersArray.size)
+
+        //current is not really current, but current +5: h+5 = 6+5 = 11
+        val currentConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 11L)
+        val currentDict = GtvDecoder.decodeGtv(currentConf).asDict()
+        val currentSigners = currentDict["signers"]!!.asArray()
+        val currentGtx = currentDict["gtx"]!!.asDict()
+        assertEquals(2, currentSigners.size)
+
+        val initConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
+        val initDict = GtvDecoder.decodeGtv(initConf).asDict()
+        val initSigners = initDict["signers"]!!.asArray()
+        val initGtx = initDict["gtx"]!!.asDict()
+        assertEquals(1, initSigners.size)
+        assertEquals(currentGtx, initGtx)
+
+        assertTrue(currentSigners contentEquals futureSignersArray, "Future configurations are not updated with the new signer")
+        assertNotEquals(futureConf, currentConf, "future conf is applied too early")
+        assertNotEquals(initConf, currentConf, "comparing with wrong current conf")
     }
 
     @Test
     fun testAddConfigurationAcceptGtv() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
-        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, blockchainConfigFile,
+        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfigGtvFile,
                 20L, "gtv"))
         assertNextConfiguration(clientConfig, 20L)
     }

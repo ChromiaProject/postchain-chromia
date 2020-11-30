@@ -79,20 +79,13 @@ operation propose_configuration (blockchain, provider, config_data: byte_array, 
 
 operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>) {
 	require_provider_auth(me);
-	print("a");
 	require(initial_nodes.size() > 0);
-	print("b");
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
-	print("c");
 	val signers = list<pubkey>();
-	print("d");
 	for (node in initial_nodes) {
-		print("e");
 		signers.add(node.pubkey);
 	}
 	config["signers"] = signers.to_gtv();
-		print("f");
-	
 	val new_data = 	config.to_gtv().to_bytes(); 
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == new_data } limit 1)) {

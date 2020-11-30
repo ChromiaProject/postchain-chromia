@@ -47,7 +47,6 @@ class Enterprise0Test : ManagedModeTest() {
         return CliExecutionE0(cliConfig)
     }
 
-    val configFileName = "/net/postchain/mc/test/config/blockchain_config_1.xml"
     override val provExecutor = CliExecutionE0(provConfig)
     override val prov2Executor = CliExecutionE0(prov2Config)
 
@@ -115,8 +114,8 @@ class Enterprise0Test : ManagedModeTest() {
         //add node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         //propose new bc:
-        val bcFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcFile, nodes[0].pubKey, "xml"))
+//        val bcFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcConfig1xmlFile, nodes[0].pubKey, "xml"))
         voteYes("bc")
         assertBc0Added(clientConfig)
     }
@@ -124,8 +123,7 @@ class Enterprise0Test : ManagedModeTest() {
     @Test
     fun testProposeConfigurationAcceptGtv() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, blockchainConfigFile,
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, bcConfigGtvFile,
                 20L, "gtv"))
         voteYes("conf")
         assertNextConfiguration(clientConfig, 20L)
@@ -135,8 +133,7 @@ class Enterprise0Test : ManagedModeTest() {
     fun testProposeConfiguration() {
 
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        val blockchainConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, blockchainConfigFile, 20L, "xml"))
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(clientConfig.brid, bcConfig1xmlFile, 20L, "xml"))
         voteYes("conf")
         assertNextConfiguration(clientConfig, 20L)
     }

@@ -5,53 +5,25 @@ struct module_args {
     initial_provider: pubkey;
 }
 
-entity provider { key pubkey; }
-
-entity node {
-	index provider;
-	key pubkey;
-	mutable active: boolean = true;
-	mutable host: text;
-	mutable port: integer;
-	mutable last_updated: timestamp;
-}
-
-object node_list {
-	mutable last_update: timestamp = 0;
-}
-
 entity provider_state {
 	key provider;
 	mutable name: text;
 	mutable active: boolean;
 }
 
-entity blockchain { key rid: byte_array; }
-
-entity blockchain_added { key blockchain; key transaction; }
-
-entity blockchain_configuration {
-	key blockchain, height: integer;
-	data: byte_array;
-}
-
-
-entity blockchain_signer_node { key blockchain, node; }
-entity blockchain_replica_node { key blockchain, node; }
-
 function require_block_signer(pubkey) {
 	val signer = blockchain_signer_node @? { .blockchain.rid == chain_context.blockchain_rid and .node.pubkey == pubkey };
 	require(exists(signer));
 }
 
-// This operation will check that provider table is empty and if so add the provider supplied as module argument. And enable this first provider.
+// This operation will check that provider table is empty and if so add the provider supplied as module argument. And
+// enable this first provider.
 operation init () {
 	require(empty( provider @* {}));
 	add_pubkey_as_provider(chain_context.args.initial_provider);
 	val prov = provider @ { chain_context.args.initial_provider};
 	update provider_state @ { prov } ( .active = true );
 }
-
 
 function add_pubkey_as_provider(pubkey) {
 	val provider = create provider (pubkey);
@@ -61,8 +33,6 @@ function add_pubkey_as_provider(pubkey) {
 		create activity_counter (provider);
 }
 
-function require_provider_auth (provider) { require( is_signer(provider.pubkey)); }
-
 operation update_provider_data (provider, name?) {
 	require_provider_auth(provider);
 	if (exists(name)) {
@@ -70,25 +40,6 @@ operation update_provider_data (provider, name?) {
 			.name = name
 		);		
 	}
-}
-
-operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
-	require_provider_auth(provider);
-	val existing_node = node @? { node_pubkey }; 
-	if (exists(existing_node)) {
-		require(existing_node.provider == provider);
-		update existing_node (
-			.active = true,
-			.host = host, 
-			.port = port,
-			.last_updated = op_context.last_block_time
-		);
-	} else {
-		create node (provider, node_pubkey, host, port,
-			last_updated = op_context.last_block_time
-		);
-	}
-	node_list.last_update = op_context.last_block_time;
 }
 
 operation add_replica (provider, blockchain, node) {
@@ -103,48 +54,4 @@ operation remove_replica (provider, blockchain, node) {
 	require_provider_auth(provider);
 	require( node.provider == provider );		
 	delete blockchain_replica_node @? { blockchain, node };
-}
-
-
-operation remove_node (provider, node_pubkey: pubkey) {
-	require_provider_auth(provider);
-	val node_to_remove = node @ { node_pubkey };
-	node_to_remove.active = false;
-	for (blockchain in blockchain_signer_node @* { .node == node_to_remove } .blockchain) {
-		update_configuration(blockchain);
-	}
-	node_list.last_update = op_context.last_block_time;
-}
-
-
-function get_last_height (blockchain): integer {
-	if (blockchain.rid == chain_context.blockchain_rid) {
-		return op_context.block_height;
-	} else {
-		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
-	}
-}
-
-function patch_configuration_signers(blockchain, data: byte_array): byte_array {
-    val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
-	val signers = blockchain_signer_node @* { blockchain } (@sort .node.pubkey);
-	require(signers.size() > 0);
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that
-    config_dict["signers"] = signers.to_gtv();     
-	return config_dict.to_gtv().to_bytes();
-}
-
-
-function update_configuration (blockchain) {
-	val last_config = blockchain_configuration @ { blockchain } (@sort_desc .height, .data) limit 1;
-    delete blockchain_signer_node @* { blockchain, .node.active == false};
-    val last_height = get_last_height(blockchain);
-    val updated_config = patch_configuration_signers( blockchain, last_config.data );
-    
-    create blockchain_configuration (
-        blockchain,
-        height = last_height + 5,
-        data = updated_config
-    );
 }
