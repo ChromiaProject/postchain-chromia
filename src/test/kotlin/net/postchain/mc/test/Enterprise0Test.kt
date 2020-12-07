@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 class Enterprise0Test : ManagedModeTest() {
 
     override fun chainConfSnippet(): String{
-        val module = "bc0"
+        val module = "enterprise0"
 
         return """
             <chains>
@@ -83,7 +83,7 @@ class Enterprise0Test : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port)
         addNode(prov2Config, node2Pubkey, node2Host, node2Port)
 
-       // prov2 makes node1 a signer of bc0
+        // prov2 makes node1 a signer of bc0
         doAndBuildBlocks(prov2Config, prov2Executor.proposeAddBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
         var id = assertProposalTypeAndGetRowid("bc_signers")
         doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, true))

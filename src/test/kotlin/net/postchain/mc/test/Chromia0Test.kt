@@ -42,7 +42,6 @@ class Chromia0Test() : ManagedModeTest() {
         """.trimIndent()
     }
 
-//    lateinit var blockchain0ConfigGtv: Gtv
     override val adminExecutor = CliExecutionC0(clientConfig)
     override val provExecutor = CliExecutionC0(provConfig)
     override val prov2Executor = CliExecutionC0(prov2Config)
@@ -180,7 +179,7 @@ class Chromia0Test() : ManagedModeTest() {
             assertProviderData(prov2Config.pubKey, "", false)
             true
         }
-        }
+    }
 
     @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
@@ -259,7 +258,7 @@ class Chromia0Test() : ManagedModeTest() {
     *    current config has two signers (init config has one signer)
     * */
     @Test
-    fun testJiraCHROM9() {
+    fun testAddSignerToFutureConfig() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
         doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
                 20L, "xml"))
