@@ -9,13 +9,19 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.chromia0.CliExecution
 
 @Parameters(commandDescription = "add blockchain's signers")
-class CommandAddBlockchainSigners: CommandBase() {
+class CommandAddBlockchainSigners : CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
             description = "Blockchain RID",
             required = true)
     private var blockchainRID = ""
+
+    @Parameter(
+            names = ["-hd", "--height-delay"],
+            description = "height delay at which new configuration will be applied (5 by default)",
+            required = false)
+    private var heightDelay: Long = 5L
 
     @Parameter(
             names = ["-s", "--signers"],
@@ -27,7 +33,7 @@ class CommandAddBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).addBlockchainSigners(blockchainRID, signers)
+            CliExecution(loadAppConfig()).addBlockchainSigners(blockchainRID, signers, heightDelay)
             Ok("Blockchain's signers have been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

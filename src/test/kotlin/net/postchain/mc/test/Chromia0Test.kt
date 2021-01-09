@@ -309,7 +309,7 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
 
         // Add node1 as blockchain's signer
-        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1, 5L)
 
         // Get next configuration height after adding new node as blockchain's signer
         val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
@@ -402,7 +402,7 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
 
         // Add node1 as blockchain's signer
-        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1, 5L)
 
         // Get next configuration height after adding new node as blockchain's signer
         val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
@@ -832,7 +832,7 @@ class Chromia0Test : IntegrationTest() {
         Thread.sleep(5000)
 
         // Add node1 as blockchain's signer
-        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1, 5L)
 
         val listBlockchainSigners = executor.listBlockchainSigners(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(2, listBlockchainSigners.size)
@@ -871,7 +871,7 @@ class Chromia0Test : IntegrationTest() {
         assertEquals(1, replicas.size)
 
         // Add node1 as blockchain's signer
-        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1)
+        executor.addBlockchainSigners(DEFAULT_BLOCKCHAIN_RID, node1, 5L)
 
         var listBlockchainSigners = executor.listBlockchainSigners(DEFAULT_BLOCKCHAIN_RID)
         assertEquals(2, listBlockchainSigners.size)

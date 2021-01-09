@@ -23,11 +23,11 @@ class CommandListProviderNodes : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val nodes = CliExecution(loadAppConfig()).listNodesByProvider(key)
-            nodes.forEach { info ->
-                println("host: ${info.get(0).asString()}")
-                println("port: ${info.get(1).asInteger()}")
-                println("pubkey: ${info.get(2).asByteArray().toHex()}")
-                println("last_update: ${info.get(3).asInteger()}")
+                nodes.forEach { info ->
+                println("host: ${info["host"]?.asString()}")
+                println("port: ${info["port"]?.asInteger()}")
+                println("pubkey: ${info["pubkey"]?.asByteArray()?.toHex()}")
+                println("last_update: ${info["last_update"]?.asInteger()}")
             }
             Ok("List nodes by provider successfully")
         } catch (e: CliError.Companion.CliException) {
