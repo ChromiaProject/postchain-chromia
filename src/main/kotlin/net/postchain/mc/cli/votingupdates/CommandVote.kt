@@ -13,7 +13,7 @@ import net.postchain.mc.cli.enterprise0.CliExecutionE0
 class CommandVote: CommandBase() {
 
     @Parameter(
-            names = ["-idx", "--voting index"],
+            names = ["-idx", "--proposal-index"],
             description = "Unique index, used as reference to a proposed configuration update, of various type. Could be" +
                     " e.g. provider/node management or rell-module updates",
             required = true)
@@ -21,8 +21,7 @@ class CommandVote: CommandBase() {
 
     @Parameter(
             names = ["-y", "--approve"],
-            description = "to approve, set this paramter to true. Else set it to false.",
-            required = false)
+            description = "Default value is yes/approve. To vote no, set flag to false.")
     private var yes = true
 
     override fun key() = "vote"

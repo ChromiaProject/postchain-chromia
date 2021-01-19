@@ -12,7 +12,7 @@ import net.postchain.mc.cli.enterprise0.CliExecutionE0
 class CommandListProposalsSince: CommandBase() {
 
     @Parameter(
-            names = ["-idx", "--proposal index"],
+            names = ["-idx", "--proposal-index"],
             description = "Unique index, used as reference to a proposed configuration update, of various type. Could be e.g. provider/node management or rell-module updates",
             required = false)
     private var idx = 0L

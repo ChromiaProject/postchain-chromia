@@ -15,11 +15,13 @@ class CliC0: CliBase() {
             CommandEnableProvider(),
             CommandDisableProvider(),
             CommandGetProviderInfo(),
+
             CommandAddNode(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
             CommandAddReplica(),
             CommandRemoveReplica(),
+
             CommandAddBlockchain(),
             CommandStopBlockchain(),
             CommandAddConfiguration(),
