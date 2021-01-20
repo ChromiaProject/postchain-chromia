@@ -59,7 +59,7 @@ query get_blockchain_last_height(blockchain) : integer {
 	}
 }
 
-//Function used to auto-populate blockchainReplicaNodes pos-145
+//Function used mustSyncUntil (height) pos-146
 query get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<integer> {
 	val res = list<integer>();    
     for (brid in blockchain_rids) {
@@ -76,7 +76,6 @@ query get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<i
     }
     return res;
 }
-
 
 query get_all_blockchains(): list<byte_array> {
     return blockchain @* {} .rid;
