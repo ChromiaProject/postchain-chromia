@@ -59,24 +59,6 @@ query get_blockchain_last_height(blockchain) : integer {
 	}
 }
 
-//Function used mustSyncUntil (height) pos-146
-query get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<integer> {
-	val res = list<integer>();    
-    for (brid in blockchain_rids) {
-    		val bc = blockchain @? { brid };
-    		if (brid == chain_context.blockchain_rid) {
-    			val h = (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
-    		    res.add( h );
-    		} else if (empty(bc)) {
-            	res.add(-1);
-            } else {
-            	val h = (anchored_block @? { bc } (@sort_desc .height) limit 1) ?: -1;
-                res.add( h );
-            }
-    }
-    return res;
-}
-
 query get_all_blockchains(): list<byte_array> {
     return blockchain @* {} .rid;
 }
