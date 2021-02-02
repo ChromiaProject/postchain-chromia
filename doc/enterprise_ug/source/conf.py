@@ -19,9 +19,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'postchain-mc'
-copyright = '2021, Alex Linnéa Rosenbaum'
-author = 'Alex Linnéa Rosenbaum'
+project = 'Enterprise0'
+copyright = '2021, ChromaWay AB'
+author = 'Linnéa Rosenbaum'
 
 # The short X.Y version
 version = ''
@@ -74,7 +74,7 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -101,7 +101,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'postchain-mcdoc'
+htmlhelp_basename = 'enterprise0doc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -129,7 +129,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'postchain-mc.tex', 'postchain-mc Documentation',
-     'Alex Linnéa Rosenbaum', 'manual'),
+     'Linnéa Rosenbaum', 'manual'),
 ]
 
 
