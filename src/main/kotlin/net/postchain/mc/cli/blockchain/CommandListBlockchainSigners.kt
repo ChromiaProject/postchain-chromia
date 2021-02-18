@@ -3,13 +3,14 @@ package net.postchain.mc.cli.blockchain
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import net.postchain.common.toHex
+import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "List blockchain signers")
+@Parameters(commandDescription = "List blockchain signers. To see also inactive signers, set flag -i.")
 class CommandListBlockchainSigners : CommandBase() {
 
 
@@ -19,20 +20,19 @@ class CommandListBlockchainSigners : CommandBase() {
             required = true)
     private var blockchainRID = ""
 
+    @Parameter(
+            names = ["-i", "--includeinactive"],
+            description = "Include inactive signers")
+    private var includeInactive = false
+
     override fun key(): String = "list-blockchain-signers"
 
     override fun execute(): CliResult {
         return try {
-            val listBlockchains = CliExecution(loadAppConfig()).listBlockchainSigners(blockchainRID)
-            listBlockchains.forEach { item ->
-                println("BlockchainRID: ${item.get(0).asByteArray().toHex()}")
-                println("Node pubkey: ${item.get(1).asByteArray().toHex()}")
-                println("Node host: ${item.get(2).asString()}")
-                println("Node port: ${item.get(3).asInteger()}")
-                println("Node active: ${item.get(4).asBoolean()}")
-                println("Node last_update: ${item.get(5).asInteger()}")
-            }
-            Ok("List blockchain signers successfully")
+            val listSigners = CliExecution(loadAppConfig()).listBlockchainSigners(blockchainRID)
+            println("Signers:")
+            PrintUtils.printBlockchainNodes(listSigners, includeInactive)
+            Ok("Listed blockchain signers successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

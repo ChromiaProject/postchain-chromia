@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.chromia0.CliExecutionC0
 
 @Parameters(commandDescription = "disable existing provider by specific pubkey")
 class CommandDisableProvider: CommandBase() {
@@ -21,7 +21,7 @@ class CommandDisableProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).disableProvider(key)
+            CliExecutionC0(loadAppConfig()).disableProvider(key)
             Ok("Provider has been disabled successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

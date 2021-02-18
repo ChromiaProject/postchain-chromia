@@ -1,0 +1,24 @@
+<run wipe-db="false">
+    <nodes>
+        <config src="conf0/node-config.properties" add-signers="false" />
+    </nodes>
+    <chains>
+        <chain name="manager" iid="0">
+            <config height="0" add-dependencies="false">
+                <app module="chroma0">
+                <args module="chroma0">
+                  <arg key="admin"><bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea></arg>
+                </args>
+		</app>
+	 <gtv path="signers">
+                    <array>
+                        <bytea>0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57</bytea>
+                    </array>
+                </gtv>
+            </config>
+        </chain>
+    </chains>
+</run>
+
+
+

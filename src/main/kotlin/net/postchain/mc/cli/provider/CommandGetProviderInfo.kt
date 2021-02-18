@@ -2,12 +2,13 @@ package net.postchain.mc.cli.provider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
+import net.postchain.gtv.Gtv
+import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "Get provider info")
 class CommandGetProviderInfo : CommandBase() {
@@ -22,11 +23,10 @@ class CommandGetProviderInfo : CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val provider = CliExecution(loadAppConfig()).getProviderInfo(key).asDict()
-            println("provider pubkey:  ${provider["pubkey"]!!.asByteArray().toHex()}")
-            println("provider name:  ${provider["name"]!!.asString()}")
-            println("provider status:  ${provider["active"]!!.asBoolean()}")
-            Ok("Get provider info successfully")
+            val provider = CliExecution(loadAppConfig()).getProviderInfo(key)
+            val providerList = arrayListOf<Gtv>(provider)
+            PrintUtils.printProviders(providerList)
+            Ok("Got provider info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

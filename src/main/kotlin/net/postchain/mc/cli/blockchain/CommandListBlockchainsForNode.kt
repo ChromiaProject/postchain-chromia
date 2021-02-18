@@ -7,7 +7,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecution
+import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "List blockchains for node")
 class CommandListBlockchainsForNode : CommandBase() {
@@ -26,7 +26,7 @@ class CommandListBlockchainsForNode : CommandBase() {
             listBlockchains.forEach { blockchain ->
                 println(blockchain.toHex())
             }
-            Ok("List blockchains successfully")
+            Ok("Listed blockchains successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }
