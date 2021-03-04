@@ -21,7 +21,7 @@ class CommandAddBlockchainSigners : CommandBase() {
             names = ["-hd", "--height-delay"],
             description = "height delay at which new configuration will be applied (5 by default)",
             required = false)
-    private var heightDelay: Long = 5L
+    private var heightDelay: Long = -1L
 
     @Parameter(
             names = ["-s", "--signers"],

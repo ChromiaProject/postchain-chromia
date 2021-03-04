@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess

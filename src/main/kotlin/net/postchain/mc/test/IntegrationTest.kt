@@ -149,7 +149,7 @@ open class IntegrationTest {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
@@ -241,7 +241,7 @@ open class IntegrationTest {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
 
         //require(nodeConfigProvider.getConfiguration().activeChainIds.size == blockchainConfigFilenames.size) {
         //    "The nodes config must have the same number of active chains as the number of specified BC config files."

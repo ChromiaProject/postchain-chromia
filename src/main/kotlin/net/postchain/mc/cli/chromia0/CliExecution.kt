@@ -256,7 +256,11 @@ class CliExecution(val config: AppConfig) {
             val blockchain = getPostchainClient().query("get_blockchain",
                     GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
             val tx = makeTransactionWithNop().apply {
-                addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList), GtvFactory.gtv(heightDelay)))
+                if (heightDelay == -1L) {
+                    addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
+                } else {
+                    addOperation("add_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList), GtvFactory.gtv(heightDelay)))
+                }
                 sign(buildSigMaker())
             }
             val txResult = tx.postSync(ConfirmationLevel.UNVERIFIED)
