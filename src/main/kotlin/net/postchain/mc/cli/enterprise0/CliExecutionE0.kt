@@ -3,10 +3,7 @@ package net.postchain.mc.cli.enterprise0
 import mu.KLogging
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.*
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
@@ -31,23 +28,24 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
 
     }
 
-    fun proposeProvider(key: String) {
-        sendTxSync(proposeProviderInternal(key), "proposed provider was added successfully!",
+    fun proposeProvider(key: String, systemProvider: Boolean, tier: Long, clusterName: String) {
+        sendTxSync(proposeProviderInternal(key, systemProvider, tier, clusterName), "proposed provider was added successfully!",
                 "Cannot add provider proposal")
     }
 
-    fun proposeProviderInternal(key: String) : GTXTransactionBuilder {
+    fun proposeProviderInternal(key: String, isSystem: Boolean = false, tier: Long = 0L, clusterName: String) : GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
         return makeTransactionWithNop().apply {
             addOperation("propose_provider",
-                    arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray())))
+                    arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(isSystem), GtvInteger(tier), cluster))
             sign(buildSigMaker())
         }
     }
 
     /**
-     * Instead of an admin node, configuration changes are made via propositions and voting. This is how a block signing
-     * node can vote for a pending configuration.
+     * Instead of an admin node, configuration changes are made via propositions and voting. This is how a provider
+     * can vote for a pending configuration.
      */
     fun voteInternal(rowid: Long, yes: Boolean) : GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
@@ -75,27 +73,31 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot propose enabling of provider")
     }
 
-    fun proposeBlockchain(blockchainConfigFile: String, nodes: String, format: String?) {
-        sendTxSync(proposeBlockchainInternal(blockchainConfigFile, nodes, format), "Blockchain has been proposed",
+    fun proposeBlockchain(blockchainConfigFile: String, nodes: String, format: String?, container: String) {
+        sendTxSync(proposeBlockchainInternal(blockchainConfigFile, nodes, format, container), "Blockchain has been proposed",
                 "Cannot add bc proposal")
     }
 
-    fun proposeBlockchainInternal(blockchainConfigFile: String, nodes: String, format: String?) : GTXTransactionBuilder {
+    /**
+     * Propose add Blockchain to an existing container
+     */
+    fun proposeBlockchainInternal(blockchainConfigFile: String, nodes: String, format: String?, container: String) : GTXTransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(nodes, data)
+        return proposeBc(nodes, data, container)
     }
 
-    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
+    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String, container: String): GTXTransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
-        return proposeBc(nodes, data)
+        return proposeBc(nodes, data, container)
     }
 
-    private fun proposeBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
+    private fun proposeBc(nodes: String, data: ByteArray, containerName: String): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
+        val container = containerGtv(containerName)
         val nodeList = nodes.split(",").map { nodeGtv(it) }
         return makeTransactionWithNop().apply {
             addOperation("propose_blockchain",
-                    arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+                    arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList), container))
             sign(buildSigMaker())
         }
     }
@@ -129,6 +131,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "cannot add proposal of new signers for blockchain")
     }
 
+    /** Who can stop a blokchain? Container configurator
+     * */
     fun proposeStopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean) : GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
         val blockchain = blockchainGtv(blockchainRID)
@@ -167,7 +171,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     /**
      * This operation initializes the database with a first provider. If table `providers` is empty, the public key from
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
-     * that can vote for update propsals.
+     * that can vote for update proposals.
      */
     fun initInternal() : GTXTransactionBuilder {
         return makeTransactionWithNop().apply {

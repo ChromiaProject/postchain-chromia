@@ -1,15 +1,42 @@
-enum proposal_type {
+entity voter_set {
+    key name;
+    mutable threshold: integer = 0;
+	// special values for threshold:
+	// 	0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
+	// -1: simple majority
+	// positive number: that many voters
+}
+
+// Who is allowed to change a voter set?
+// If not defined, it is the voter set itself
+entity voter_set_governance {
+	key voter_set;
+	index governor: voter_set;
+}
+
+entity voter_set_member {
+    key voter_set, provider;
+}
+/* Governance semantics:
+ *
+ * Anybody can create a new voter_set directly, but it consumes an action point.
+ * voter_set can be updated. if voter_set_goverance is defined, it will control voter set, otherwise, it is the voter set itself
+ * */
+
+ enum proposal_type {
    conf,
    bc,
    register_provider,
    provider_state,
    bc_signers,
    bc_stop
+   // and a lot more
 }
 
 entity proposal {
   index timestamp, proposal_type;
   proposed_by: provider;
+  index voter_set; // voter set is determined at the time proposal is created
 }
 
 
@@ -19,7 +46,7 @@ entity vote {
 }
 
  
-//Without admin, proposed configuration changes are put here while waiting for enough positive votes.
+//Proposed configuration changes are put here while waiting for enough positive votes.
 entity pending_conf {
     key proposal;
     blockchain;
@@ -27,60 +54,50 @@ entity pending_conf {
     data: byte_array;
 }
 
-//Without admin, proposed stops of bcs are put here while waiting for enough positive votes.
+//Proposed stops of bcs are put here while waiting for enough positive votes.
 entity pending_stop_blockchain {
     key proposal;
     blockchain;
 	remove_replicas: boolean;
     }
 
-//Without admin, proposed providers are put here while waiting for enough positive votes. 
+//Proposed providers are put here while waiting for enough positive system provider votes.
 entity pending_provider {
 	key proposal;
 	pubkey;
+	system: boolean;
+	tier: integer;
+	cluster;
 }
 
-//Without admin, proposed bc:s are put here while waiting for enough positive votes. One row per node in init list?
+//Proposed bc:s are put here while waiting for enough positive votes. One row per node in init list?
 entity pending_blockchain {
 	key proposal;
 	data: byte_array;
+	container;
 }
 
-//Without admin, proposed enabling of providers are put here while waiting for enough positive votes. 
+//Proposed enabling/disabling of providers are put here while waiting for enough positive votes.
 entity pending_provider_state {
 	key proposal;
 	provider;
 	active: boolean;
 }
 
-//Without admin, proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
+//Proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
 entity pending_update_blockchain_signer {
 	key proposal, signer: node;
 	blockchain;
 	add: boolean;
 }
 
-//Pubkey used for authorization 
-operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
-	require_provider_auth(provider);
-	require(get_last_height(blockchain) < height);
-	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
-	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
-	//If already proposed, do not add again.
-	if (empty(pending_conf @* {blockchain, height, .data == config_data } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider);
-		create pending_conf(prop,
-			blockchain,		
-			height,
-			data = config_data
-		);
-	}
-}
-
-operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>) {
-	require_provider_auth(me);
+operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>, container) {
+	print("propose bc, cahin0 brid:");
+	print(chain_context.blockchain_rid);
+	require_provider_auth_with_rl(me);
 	require(initial_nodes.size() > 0);
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
+	val blockchain_rid = config.hash();
 	val signers = list<pubkey>();
 	for (node in initial_nodes) {
 		signers.add(node.pubkey);
@@ -89,90 +106,142 @@ operation propose_blockchain( me: provider, config_data: byte_array, initial_nod
 	val new_data = 	config.to_gtv().to_bytes(); 
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == new_data } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.configurator);
 		print("g");
-		create pending_blockchain(prop, new_data);
+		create pending_blockchain(prop, new_data, container);
+		internal_vote( me, prop, true);
 	}
 }
 
 
+//Pubkey used for authorization. Who can propse configuration updates? Container configurators
+//TODO: make voter_set variable. 
+operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
+	require_provider_auth_with_rl(provider);
+	require_container_configurator(blockchain, provider);
+	require(get_last_height(blockchain) < height);
+	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
+	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
+	//If already proposed, do not add again.
+	if (empty(pending_conf @* {blockchain, height, .data == config_data } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider, voter_set @ {"SYSTEM_P"});
+		create pending_conf(prop,
+			blockchain,		
+			height,
+			data = config_data
+		);
+		internal_vote(provider, prop, true);
+	}
+}
+
+
+//Who can stop bcs? Container configurators
+//TODO: make voter_set variable. 
 operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boolean) {
-	require_provider_auth(me);
+	require_provider_auth_with_rl (me);
+	require_container_configurator(blockchain, me);
 	//If already proposed, do not add again.
 	if (empty(pending_stop_blockchain @* {remove_replicas, blockchain } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me, voter_set @ {"SYSTEM_P"});
 		create pending_stop_blockchain(prop, blockchain, remove_replicas);
+		internal_vote( me, prop, true);
 	}
 }
 
-operation propose_provider(me: provider, pubkey) {
-	require_provider_auth(me);
+
+
+//Only system providers can add new providers => voter_set = SYSTEM_P
+//When proposing provider, also (optinally?) say which cluster it should be added to.
+operation propose_provider(me: provider, pubkey, system: boolean, tier: integer, cluster) {
+	require_provider_auth_with_rl(me);
+	//Provider with tier > 0 can invite a provider of tier 0.
+	//val my_tier = provider_state @ {me} .tier;
+	//require(my_tier > tier);
 	//If already proposed, do not add again.
 	if (empty(pending_provider @* {pubkey } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
-		create pending_provider(prop, pubkey);
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me, system_voter_set);
+		create pending_provider(prop, pubkey, system, tier, cluster);
+		internal_vote(me, prop, true);
 	}
 }
 
 operation propose_enable_provider(me: provider, other_prov: provider) {
-	require_provider_auth(me);
+	require_provider_auth_with_rl(me);
 	//If proposal already exist, do not add again.
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
 		create pending_provider_state(prop, other_prov, .active = true);
+		internal_vote( me, prop, true);
 	}
 }
 
 operation propose_disable_provider(me: provider, other_prov: provider) {
-	require_provider_auth(me);
+	require_provider_auth_with_rl(me);
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
 		create pending_provider_state(prop, other_prov, .active = false);
+		internal_vote( me, prop, true);
 	}
 }
 
+
+/**
+
 // one proposal for the entire list
 operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
-	require_provider_auth(me);
+	require_voter_auth (me, blockchain.rid);
 	var new = false;
 	for (signer in add_signers) {
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == true} limit 1))
 		new = true;
 	}
 	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me, blockchain.rid);
 		for (signer in add_signers) {
 			require(signer.active);
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
 		}
+		internal_vote(me, prop, true);
 	}
 }
 
 
 // one proposal for entire list
 operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
-	require_provider_auth(me);
+	require_voter_auth (me, blockchain.rid);
 	var new = false;
 	for (signer in signers) {
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == false} limit 1))
 		new = true;
 	}
 	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me, blockchain.rid);
 		for (signer in signers) {
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
 		}
+		internal_vote(me, prop, true);
 	}
+}
+
+ */
+
+//NB: check authority before calling this function
+function internal_vote (provider, prop: proposal, ok: boolean) {
+	create vote(prop, provider, ok);
+	print("vote added");
+	apply_voting_result(prop);
 }
 
 //Pubkey used for authorization
 operation make_vote(provider, prop: proposal, ok: boolean) {
-	require_provider_auth(provider);
+	require_provider_auth_with_rl(provider);
+	require(not(empty(voter_set_member @* {prop.voter_set, provider})));
 	print("vote authorization OK");
 	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
-	create vote(prop, provider, ok);
-	print("vote added");
-	apply_voting_result(prop);
+	internal_vote( provider, prop, ok);
 }
 
 function apply_voting_result (prop: proposal) {
@@ -184,7 +253,7 @@ function apply_voting_result (prop: proposal) {
 	 		bc                -> apply_bc(prop);
 			register_provider -> apply_register_provider(prop);
 			provider_state    -> apply_provider_state(prop);
-			bc_signers        -> apply_blockchain_signers_update(prop);
+			//bc_signers        -> apply_blockchain_signers_update(prop);
 			bc_stop			  -> apply_stop_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -197,7 +266,7 @@ function apply_voting_result (prop: proposal) {
 	 		bc                -> delete pending_blockchain @ { prop };
 			register_provider -> delete pending_provider @ { prop };
 			provider_state    -> delete pending_provider_state @ { prop };
-			bc_signers        -> delete pending_update_blockchain_signer @* { prop };
+			//bc_signers        -> delete pending_update_blockchain_signer @* { prop };
 			bc_stop			  -> delete pending_stop_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -209,18 +278,30 @@ function apply_voting_result (prop: proposal) {
 	}
 }
 
-//For both enabling and disabling of providers
+//For both enabling and disabling of providers: Add `tier` and `system`
+// updates (not just `active`)? No it is done when registering the provider.
 function apply_provider_state(proposal) {
 	val pps = pending_provider_state @ {proposal}; 
 	update provider_state @ { pps.provider } ( .active = pps.active );
 	if (pps.active == false) {
 		update node @* { pps.provider } ( .active = false );
-		for (blockchain in blockchain_signer_node @* { .node.provider == pps.provider } (.blockchain)) {
-			update_configuration(blockchain);
+		for (cl in cluster_provider @* { .provider == pps.provider } (.cluster)) {
+			for (n in node @* { pps.provider }) {
+				delete cluster_node @* { n };	
+			}
+			update_configuration_signers(cl);
 		}
 		node_list.last_update = op_context.last_block_time;
+		//remove disabled provider from voter_set_member table
+		delete voter_set_member @* { .provider == pps.provider};
 		//TODO: Delete all replicas of the provider?
 		delete blockchain_replica_node @* { .node.provider == pps.provider };
+	} else { //enable
+		//If enabled provider is a system provider, update SYSTEM_P voter set
+		if (provider_state @ { pps.provider }.system) {
+			//val system_voter_set = voter_set @ {"SYSTEM_P"};
+			create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
+		}
 	}
 	delete pending_provider_state @ { proposal };
 }
@@ -232,7 +313,7 @@ function apply_conf(proposal) {
 	create blockchain_configuration(
 		pc.blockchain,
 		pc.height,
-		data = patch_configuration_signers(pc.blockchain, pc.data)
+		data = pc.data
 	);
 	delete pending_conf @* { proposal };
 }
@@ -245,20 +326,19 @@ function apply_bc(proposal) {
 	val blockchain = create blockchain ( blockchain_rid );
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
-	val pubkeys = list<pubkey>.from_gtv(config["signers"]);
-	for (pubkey in pubkeys) {
-		create blockchain_signer_node (blockchain, node @ {pubkey});
-	}
+	create blockchain_configuration_signers(blockchain, 0, config["signers"].to_gtv().to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);
+	create container_blockchain(bc.container, blockchain);
 	delete pending_blockchain @* { proposal };
 }
 
 function apply_register_provider(proposal) {
 	val pp = pending_provider @ { proposal };
-	add_pubkey_as_provider(pp.pubkey);
+	add_pubkey_as_provider(pp.pubkey, pp.system, pp.tier, pp.cluster);
 	delete pending_provider @ { proposal };
 }
 
+/*
 // Could be several signers for a single proposal
 function apply_blockchain_signers_update(proposal) {
 	val pendings = pending_update_blockchain_signer @* { proposal };
@@ -276,17 +356,20 @@ function apply_blockchain_signers_update(proposal) {
 		delete pending_update_blockchain_signer @ { proposal , .signer == pending.signer };
 	}
 }
+ */
 
+//TODO: How to set signers empty?
 function apply_stop_blockchain(proposal) {
-	// NOTE: we do not update blockchain configuration, making it possible to 
-	// restart blockchain later. Data such as anchored blocks is not removed.
 	val bc_to_stop = pending_stop_blockchain @ { proposal };
-	delete blockchain_signer_node @* { .blockchain == bc_to_stop.blockchain };
+	//val h = get_last_height(bc_to_stop);
+	//create blockchain_configuration_signers ( blockchain = bc_to_stop, height = h, ??? );
+	//delete blockchain_configuration_signers @ { .blockchain == bc_to_stop.blockchain};
 	if (bc_to_stop.remove_replicas) {
 		delete blockchain_replica_node @* { bc_to_stop.blockchain };
 	} 	
 	delete pending_stop_blockchain @ { proposal };
 }
+
 
 function max_votes() { return provider_state @* { .active == true } (@sum 1) limit 1;}
 function positive_votes(proposal) { return vote @* {proposal, .ok == true }; }

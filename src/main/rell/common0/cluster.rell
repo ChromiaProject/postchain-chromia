@@ -1,0 +1,113 @@
+/* Governance semantics:
+ *
+ * Anybody can create a cluster, but it consumes an action point.
+ *
+ * A cluster defines a list of providers involved in it. Each provider is supposed to contribute one node.
+ * Cluster is considered operational only once every provider specified in a cluster have provided a node.
+ * Cluster composition (providers) can change, operational status does not change if new provider is added.
+ *
+ * Cluster composition can be changed by its 'governance' voter set, they can vote to add or remove providers
+ *
+ * a provider can add at most one node to a cluster he is a member of. he can also replace his node.
+ *
+ * Cluster's deployer can add containers, specifying their resource limits. He can change limits for existing containers.
+ *
+ * Container configurator can deploy, update and stop blockchains in the container.
+ *
+ *
+ * Node can belong to multiple clusters. Although it is not recommended, but permitted.
+ *
+ * blockchain_signer_node records are not needed for blockchains which run on a cluster, as list
+ * of signer nodes can be deduced from list of nodes of a cluster.
+ *
+ */
+
+ // node cluster
+ entity cluster {
+     key name;
+     governance: voter_set; // who controls the cluster
+     deployer: voter_set; // who can deploy containers
+     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
+ }
+
+ entity cluster_provider { key cluster, provider; }
+ entity cluster_node { key cluster, node; }
+
+//entity cluster_signer_list { key cluster_node;}
+
+/**Adding a node to a cluster automatically makes it replica of all bc in this cluster. Only one node per provider and cluster.
+ * Once it is in sync, it will become signer.
+ * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node. 
+ * */
+operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
+	require_provider_auth_with_rl(provider);
+	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
+	//make_node_a_replica_in_cluster(cluster, node_pubkey);
+	update_configuration_signers (cluster); //signer lists for all bcs are updated on their current height.	
+}
+
+
+/** Make node a replica of all bcs in a cluster */
+function make_node_a_replica_in_cluster(cluster, node_pubkey: pubkey) {
+	val containers = container @*{ cluster };
+	for (container in containers) {
+		val bcs = container_blockchain @* {container} .blockchain;
+		for (bc in bcs) {
+			create blockchain_replica_node (bc, node @ { node_pubkey });
+		}
+	}
+}
+
+/** If a provider is part of that cluster, and if provider do not already have a node in this cluster,
+* add node as block signer to this cluster
+*/
+function add_node_to_cluster_internal(provider, node, cluster) {
+	if (exists( cluster_provider @* {cluster, provider})) {
+		val nodes = cluster_node @* {cluster} .node;
+		for (n in nodes) {
+			require(n.provider != provider);
+		}
+		create cluster_node(cluster, node);
+		update_configuration_signers (cluster);
+	}
+}
+
+ enum container_type {
+ 	naked, // running directly on the node
+ 	isolated // container with resource limits
+ }
+
+ entity container {
+ 	key name;
+ 	index cluster;
+ 	container_type;
+ 	index configurator: voter_set; //  who can supply configurations to blockchains within the container
+ }
+
+ enum resource_limit_type {
+ 	cpu,
+ 	ram,
+ 	storage
+ }
+
+ entity cluster_capacity_limit {
+ 	key cluster, resource_limit_type;
+ 	mutable value: integer;
+ }
+
+ entity container_resource_limit {
+ 	key container, resource_limit_type;
+ 	mutable value: integer;
+ }
+
+//TODO: Make configurator and type variable. + create container_resourece limit for this container
+operation create_container(provider, cluster, name) {
+	//check that provider authority and that it is cluster's deployer
+	require_provider_auth_with_rl(provider);
+	require_cluster_deployer(cluster, provider);
+	create container(name, cluster, container_type.isolated, voter_set @ {"SYSTEM_P"});
+}
+ entity blockchain { key rid: byte_array; }
+
+ // indicates that blockchain is running on a cluster
+ entity container_blockchain { key container, blockchain; }

@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.enterprise0.CliExecutionE0
 
-@Parameters(commandDescription = "propose a new blockchain. Change will be applied after voting amongst providers.")
+@Parameters(commandDescription = "propose a new blockchain in a specific container. Change will be applied after voting amongst providers.")
 class CommandProposeBlockchain: CommandBase() {
 
     @Parameter(
@@ -29,11 +29,17 @@ class CommandProposeBlockchain: CommandBase() {
             required = false)
     private var format : String? = null
 
+    @Parameter(
+            names = ["-c", "--container"],
+            description = "which container bc should run in",
+            required = true)
+    private var container = ""
+
     override fun key() = "propose-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionE0(loadAppConfig()).proposeBlockchain(blockchainConfigFile, nodes, format)
+            CliExecutionE0(loadAppConfig()).proposeBlockchain(blockchainConfigFile, nodes, format, container)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

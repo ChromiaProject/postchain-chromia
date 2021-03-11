@@ -13,6 +13,8 @@ entity provider_state {
 	key provider;
 	mutable name: text;
 	mutable active: boolean;
+	mutable system: boolean; // NEW. System provider has extra permissions.
+    mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
 	mutable beneficiary: ft3_account.account; 	 
 }
 

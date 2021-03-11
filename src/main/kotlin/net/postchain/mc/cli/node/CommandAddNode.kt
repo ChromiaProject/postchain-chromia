@@ -29,11 +29,16 @@ class CommandAddNode: CommandBase() {
             required = true)
     private var port = 0L
 
+    @Parameter(
+            names = ["-c", "--cluster"],
+            description = "Specify which cluster node should belong to. Can be several.")
+    private var clusterName = ""
+
     override fun key(): String = "add-node"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).addNode(key, host, port)
+            CliExecution(loadAppConfig()).addNode(key, host, port, clusterName)
             Ok("Node has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

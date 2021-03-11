@@ -3,6 +3,10 @@ query get_provider (pubkey) = provider @ { pubkey };
 
 query get_node (pubkey) = node @ { pubkey };
 
+query get_container (name) = container @ { name };
+
+query get_cluster (name) = cluster @ { name };
+
 query get_node_data (pubkey) {
     return node @ {
         pubkey
@@ -29,8 +33,8 @@ query get_nodes_by_provider(provider) {
 }
 
 query get_blockchain_signers(blockchain) {
-    return blockchain_signer_node @* { blockchain } (
-        .blockchain.rid,
+	val cl = container_blockchain @ {blockchain}.container.cluster;
+    return cluster_node @* { cl } (
         @sort .node.pubkey,
         .node.host,
         .node.port,
@@ -63,6 +67,7 @@ query get_all_blockchains(): list<byte_array> {
     return blockchain @* {} .rid;
 }
 
+/* TODO: Have not figured out how to stop bcs and how to mark them as inactive.
 query get_active_blockchains (): list<byte_array> {
     val blockchain_set = set(
         (blockchain, blockchain_signer_node) @* {
@@ -71,7 +76,7 @@ query get_active_blockchains (): list<byte_array> {
     );
     return list(blockchain_set);
 }
-
+ */
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }

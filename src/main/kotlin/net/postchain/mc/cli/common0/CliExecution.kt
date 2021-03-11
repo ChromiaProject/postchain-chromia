@@ -1,7 +1,6 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import mu.KotlinLogging.logger
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
@@ -10,7 +9,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
-import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
@@ -51,12 +49,49 @@ open class CliExecution(val config: ClientConfig) {
     }
 
 
-    fun addNodeInternal(key: String, host: String, port: Long) : GTXTransactionBuilder {
+    /** Add new node. Optionally, also add it to a cluster */
+    fun addNodeInternal(key: String, host: String, port: Long, clusterName: String) : GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
+        var data: Array<Gtv> = arrayOf(provider)
+        data = data.plus(GtvFactory.gtv(key.hexStringToByteArray()))
+        data = data.plus(GtvFactory.gtv(host))
+        data = data.plus(GtvFactory.gtv(port))
+        if (clusterName != "") {
+            val cluster = clusterGtv(clusterName)
+            data = data.plus(cluster)
+        } else {
+            data = data.plus(GtvNull)
+        }
         return makeTransactionWithNop().apply {
-            addOperation("add_node",
+            addOperation("add_node", data)
+            sign(buildSigMaker())
+        }
+    }
+
+    /** Add existing node to existing cluster
+     * */
+    fun addNodeToClusterInternal(key: String, clusterName: String) : GTXTransactionBuilder {
+        val provider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val node = nodeGtv(key)
+        return makeTransactionWithNop().apply {
+            addOperation("add_node_to_cluster",
                     arrayOf(provider,
-                            GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)))
+                            GtvFactory.gtv(key.hexStringToByteArray()), node, cluster))
+            sign(buildSigMaker())
+        }
+    }
+
+    /** Create a new container in an existing cluster (TODO: with given resource limits (table container_resource_limit)).
+     * Who can create a container and update resource limits? Cluster's deployer.
+     * */
+    fun createContainerInternal(clusterName: String, containerName: String) : GTXTransactionBuilder {
+        val provider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        return makeTransactionWithNop().apply {
+            addOperation("create_container",
+                    arrayOf(provider,
+                            cluster, GtvFactory.gtv(containerName)))
             sign(buildSigMaker())
         }
     }
@@ -349,8 +384,8 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun addNode(key: String, host: String, port: Long) {
-        sendTxSync(addNodeInternal(key, host, port), "Node has been enabled", "Cannot add node")
+    fun addNode(key: String, host: String, port: Long, clusterName: String) {
+        sendTxSync(addNodeInternal(key, host, port, clusterName), "Node has been enabled", "Cannot add node")
     }
 
 
@@ -366,6 +401,18 @@ open class CliExecution(val config: ClientConfig) {
 
     fun removeNode(key: String) {
         sendTxSync(removeNodeInternal(key), "Node removed", "Cannot remove node")
+    }
+
+    fun clusterGtv(name: String): Gtv {
+        val cluster = getPostchainClient().query("get_cluster", GtvFactory.gtv(
+                "name" to GtvFactory.gtv(name))).get()
+        return cluster
+    }
+
+    fun containerGtv(name: String): Gtv {
+        val container = getPostchainClient().query("get_container", GtvFactory.gtv(
+                "name" to GtvFactory.gtv(name))).get()
+        return container
     }
 
 

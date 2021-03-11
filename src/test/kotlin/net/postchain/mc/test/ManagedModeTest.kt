@@ -97,25 +97,29 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
 
     /* Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
-    * aware of itself. So that it can be managed.
+    * aware of itself. So that it can be managed. Bc0 is added to naked system container. Node0 is added to
+    * system cluster so that it becomes signer.
     */
     protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
-        addNode0(configProv)
-        addBc(blockchain0ConfigGtv)
+        addNode0(configProv, "system")
+        addBc(blockchain0ConfigGtv, "system")
         assertBc0Added(config)
     }
 
-    abstract fun addBc(blockchain0ConfigGtv: Gtv)
+    abstract fun addBc(blockchain0ConfigGtv: Gtv, container: String)
 
-    fun addNode(configProv: ClientConfig, key: String, host: String, port: Long) {
+    fun addNode(configProv: ClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
-        executor.sendTxUnconfirmed(executor.addNodeInternal(key, host, port))
+        executor.sendTxUnconfirmed(executor.addNodeInternal(key, host, port, clusterName))
         buildAndAwaitBlocks(1)
         assertAddedNode(configProv, configProv.pubKey, key, host, port)
     }
 
-    fun addNode0(configProv: ClientConfig) {
-        addNode(configProv, nodes[0].pubKey, node0Host, node0Port)
+    /**
+     * Add node0 to cluster
+     */
+    fun addNode0(configProv: ClientConfig, clusterName: String) {
+        addNode(configProv, nodes[0].pubKey, node0Host, node0Port, clusterName)
     }
 
     fun assertBc0Added(config: ClientConfig) {
@@ -150,7 +154,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
         //add node1
-        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica
         provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))

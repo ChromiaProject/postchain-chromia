@@ -9,28 +9,39 @@ entity provider_state {
 	key provider;
 	mutable name: text;
 	mutable active: boolean;
-}
-
-function require_block_signer(pubkey) {
-	val signer = blockchain_signer_node @? { .blockchain.rid == chain_context.blockchain_rid and .node.pubkey == pubkey };
-	require(exists(signer));
+	mutable system: boolean; // NEW. System provider has extra permissions.
+    mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
 }
 
 // This operation will check that provider table is empty and if so add the provider supplied as module argument. And
-// enable this first provider.
+// enable this first system provider.
 operation init () {
+	val tier = 1;
 	require(empty( provider @* {}));
-	add_pubkey_as_provider(chain_context.args.initial_provider);
+	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
+	 * which will run the directory bc.
+	 */
+	val system_voter_set = create voter_set("SYSTEM_P", 0);
+	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
+	add_pubkey_as_provider(chain_context.args.initial_provider, true, tier, system_cluster);
 	val prov = provider @ { chain_context.args.initial_provider};
 	update provider_state @ { prov } ( .active = true );
+	create voter_set_member(system_voter_set, prov);
+	create provider_quota(tier, provider_quota_type.max_actions_per_day, value = 100);
+	create container("system", system_cluster, container_type.naked, system_voter_set);
 }
 
-function add_pubkey_as_provider(pubkey) {
+
+function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster) {
 	val provider = create provider (pubkey);
 		create provider_state (provider, name="",
-			active=false
+			active=false,
+			system=is_system,
+			tier=tier
 		);
 		create activity_counter (provider);
+		create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
+		create cluster_provider(cluster, provider);
 }
 
 operation update_provider_data (provider, name?) {
@@ -45,7 +56,6 @@ operation update_provider_data (provider, name?) {
 operation add_replica (provider, blockchain, node) {
 	require_provider_auth(provider);
 	require( node.provider == provider );			
-	require(empty(blockchain_signer_node @? { blockchain, node }));
 	require(empty(blockchain_replica_node @? { blockchain, node }));
 	create blockchain_replica_node ( blockchain, node );
 }

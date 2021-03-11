@@ -7,14 +7,13 @@ entity node {
 	mutable active: boolean = true;
 	mutable host: text;
 	mutable port: integer;
+	mutable api_port: integer; // NEW. Need API port to connect client to a node.
 	mutable last_updated: timestamp;
 }
 
 object node_list {
 	mutable last_update: timestamp = 0;
 }
-
-entity blockchain { key rid: byte_array; }
 
 entity blockchain_added { key blockchain; key transaction; }
 
@@ -23,36 +22,54 @@ entity blockchain_configuration {
 	mutable data: byte_array;
 }
 
-entity blockchain_signer_node { key blockchain, node; }
+entity blockchain_configuration_signers {
+      key blockchain, height: integer;
+      signers: byte_array;
+}
+
+/**entity blockchain_signer_node { key blockchain, node; }
+*/
 entity blockchain_replica_node { key blockchain, node; }
+
 
 function require_provider_auth (provider) { require( is_signer(provider.pubkey)); }
 
-operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
-	require_provider_auth(provider);
-	val existing_node = node @? { node_pubkey };
+operation add_node (provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
+	require_provider_auth_with_rl(provider);
+	add_node_internal(provider, node_pubkey, host, port, cluster);
+}
+
+function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
+		val existing_node = node @? { node_pubkey };
 	if (exists(existing_node)) {
 		require(existing_node.provider == provider);
 		update existing_node (
 			.active = true,
 			.host = host,
 			.port = port,
+			.api_port = port,
 			.last_updated = op_context.last_block_time
 		);
 	} else {
-		create node (provider, node_pubkey, host, port,
+		create node (provider, node_pubkey, host, port=port, api_port=port,
 			last_updated = op_context.last_block_time
 		);
 	}
 	node_list.last_update = op_context.last_block_time;
+	//If a cluster is given and provider is part of that cluster, add node as block signer to this cluster
+	if (exists(cluster)) {
+		add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
+	}
 }
 
 operation remove_node (provider, node_pubkey: pubkey) {
-	require_provider_auth(provider);
+	require_provider_auth_with_rl(provider);
 	val node_to_remove = node @ { node_pubkey };
 	node_to_remove.active = false;
-	for (blockchain in blockchain_signer_node @* { .node == node_to_remove } .blockchain) {
-		update_configuration(blockchain);
+	val clusters = cluster_node @* {.node.pubkey == node_pubkey} .cluster;
+	delete cluster_node @* { .node.pubkey == node_pubkey };
+	for (cl in clusters) {
+		update_configuration_signers (cl);	
 	}
 	node_list.last_update = op_context.last_block_time;
 	//TODO: update blockchain_replica_node correspondingly?
@@ -66,7 +83,23 @@ function get_last_height (blockchain): integer {
 	}
 }
 
+/*
+
+
 function patch_configuration_signers(blockchain, data: byte_array): byte_array {
+    val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
+    val cluster = container_blockchain @ { blockchain } .container.cluster;
+    // only active nodes can be signers
+	val signers = blockchain_configuration_signers @* {blockchain, .cluster_signer_list.cluster_node.node.active==true}  
+		(@sort .cluster_signer_list.cluster_node.node.pubkey);
+    require(signers.size() > 0);
+	// do not write new configuration when size is 0 since it's impossible to recover
+	// from that
+    config_dict["signers"] = signers.to_gtv();     
+	return config_dict.to_gtv().to_bytes();
+}
+
+function patch_configuration_signers_old(blockchain, data: byte_array): byte_array {
     val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
     // only active nodes can be signers
 	val signers = blockchain_signer_node @* { blockchain, .node.active == true } (@sort .node.pubkey);
@@ -77,15 +110,15 @@ function patch_configuration_signers(blockchain, data: byte_array): byte_array {
 	return config_dict.to_gtv().to_bytes();
 }
 
-//When a change is done in the signers list for a bc, current and future configurations need to be updated.
-//TODO: cahnge name to update_configurations?
+//When a change is done in the signers list for a bc, current and future configurations are not updated. 
+//Information can instead be found in separate table blockchain_configuration_signers. The two tables are merged upon query.
+//TODO: change name to update_configurations?
 function update_configuration (blockchain) {
-	delete blockchain_signer_node @* { blockchain, .node.active == false};
+	delete blockchain_configuration_signers @* { blockchain, .node.active == false};
     val current_height =  get_last_height(blockchain);
     //There might be future configs in blockchain_configurations. Do not include them in the search for current config:
 	val current_config = blockchain_configuration @ { blockchain, .height <= current_height } (@sort_desc .height, .data) limit 1;
-	//val current_config = blockchain_configuration @ { blockchain } (@sort_desc .height, .data) limit 1;
-    var updated_config = patch_configuration_signers( blockchain, current_config.data );
+	var updated_config = patch_configuration_signers( blockchain, current_config.data );
     create blockchain_configuration (
         blockchain,
         height = current_height + 5,
@@ -95,5 +128,22 @@ function update_configuration (blockchain) {
 	for (config in future_configs) {
 		updated_config = patch_configuration_signers( blockchain, config.data );
 		update blockchain_configuration @ {blockchain, config.height} (.data = updated_config);
+	}
+}
+
+* 
+*/
+
+//Use this to update singers after a change in cluster_node table. TODO: +5 or not?
+function update_configuration_signers (cluster) {
+	val bcs = container_blockchain @*{ .container.cluster == cluster} .blockchain;
+	for (blockchain in bcs) {
+		val current_height =  get_last_height(blockchain);
+		val container = container_blockchain @ {blockchain} .container; 
+		val signers = cluster_node @* { container.cluster } (@sort .node.pubkey);
+		// do not write new configuration when size is 0 since it's impossible to recover
+		// from that
+		require(signers.size() > 0);
+		create blockchain_configuration_signers(blockchain, current_height + 5, signers.to_gtv().to_bytes());
 	}
 }
