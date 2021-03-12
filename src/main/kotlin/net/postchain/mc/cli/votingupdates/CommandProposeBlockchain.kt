@@ -12,12 +12,6 @@ import net.postchain.mc.cli.enterprise0.CliExecutionE0
 class CommandProposeBlockchain: CommandBase() {
 
     @Parameter(
-            names = ["-n", "--nodes"],
-            description = "String of comma separated list of pubkey strings of the nodes that will be signers of the new blockchain",
-            required = true)
-    private var nodes = ""
-
-    @Parameter(
             names = ["-bc", "--blockchain-config"],
             description = "Configuration file of blockchain (gtxml)",
             required = true)
@@ -39,7 +33,7 @@ class CommandProposeBlockchain: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionE0(loadAppConfig()).proposeBlockchain(blockchainConfigFile, nodes, format, container)
+            CliExecutionE0(loadAppConfig()).proposeBlockchain(blockchainConfigFile, format, container)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

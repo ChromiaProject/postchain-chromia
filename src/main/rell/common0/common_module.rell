@@ -69,7 +69,9 @@ operation remove_node (provider, node_pubkey: pubkey) {
 	val clusters = cluster_node @* {.node.pubkey == node_pubkey} .cluster;
 	delete cluster_node @* { .node.pubkey == node_pubkey };
 	for (cl in clusters) {
-		update_configuration_signers (cl);	
+	    //removing the last node of a cluster is not allowed:
+	    require (not (empty (cluster_node @* { cl })));
+        update_configuration_signers (cl);
 	}
 	node_list.last_update = op_context.last_block_time;
 	//TODO: update blockchain_replica_node correspondingly?
@@ -82,57 +84,6 @@ function get_last_height (blockchain): integer {
 		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
 	}
 }
-
-/*
-
-
-function patch_configuration_signers(blockchain, data: byte_array): byte_array {
-    val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
-    val cluster = container_blockchain @ { blockchain } .container.cluster;
-    // only active nodes can be signers
-	val signers = blockchain_configuration_signers @* {blockchain, .cluster_signer_list.cluster_node.node.active==true}  
-		(@sort .cluster_signer_list.cluster_node.node.pubkey);
-    require(signers.size() > 0);
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that
-    config_dict["signers"] = signers.to_gtv();     
-	return config_dict.to_gtv().to_bytes();
-}
-
-function patch_configuration_signers_old(blockchain, data: byte_array): byte_array {
-    val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(data));
-    // only active nodes can be signers
-	val signers = blockchain_signer_node @* { blockchain, .node.active == true } (@sort .node.pubkey);
-	require(signers.size() > 0);
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that
-    config_dict["signers"] = signers.to_gtv();     
-	return config_dict.to_gtv().to_bytes();
-}
-
-//When a change is done in the signers list for a bc, current and future configurations are not updated. 
-//Information can instead be found in separate table blockchain_configuration_signers. The two tables are merged upon query.
-//TODO: change name to update_configurations?
-function update_configuration (blockchain) {
-	delete blockchain_configuration_signers @* { blockchain, .node.active == false};
-    val current_height =  get_last_height(blockchain);
-    //There might be future configs in blockchain_configurations. Do not include them in the search for current config:
-	val current_config = blockchain_configuration @ { blockchain, .height <= current_height } (@sort_desc .height, .data) limit 1;
-	var updated_config = patch_configuration_signers( blockchain, current_config.data );
-    create blockchain_configuration (
-        blockchain,
-        height = current_height + 5,
-        data = updated_config
-    );
-	val future_configs = blockchain_configuration @* { blockchain, .height > current_height };
-	for (config in future_configs) {
-		updated_config = patch_configuration_signers( blockchain, config.data );
-		update blockchain_configuration @ {blockchain, config.height} (.data = updated_config);
-	}
-}
-
-* 
-*/
 
 //Use this to update singers after a change in cluster_node table. TODO: +5 or not?
 function update_configuration_signers (cluster) {

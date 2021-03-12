@@ -34,13 +34,11 @@ query nm_get_blockchain_configuration(
     else
         return null;		
 }
-		
+	
+//checking that signers.size() is non-zero i done when population blockchain_configuration_signers. Thus, not needed to check here.	
 function blockchain_configuration_merge(blockchain, height: integer, conf_h: integer) : byte_array {
 	val signer_h = blockchain_configuration_signers @ { blockchain , .height <= height } (@sort_desc .height) limit 1;
 	val signers = blockchain_configuration_signers @ {blockchain, .height==signer_h } .signers;
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that:
-	require(signers.size() > 0);
 	val current_config = blockchain_configuration @ { blockchain, .height <= conf_h } (@sort_desc .height, .data) limit 1;
 	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(current_config.data));
 	config_dict["signers"] = signers.to_gtv();     

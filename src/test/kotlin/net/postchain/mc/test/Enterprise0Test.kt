@@ -1,5 +1,6 @@
 package net.postchain.mc.test
 
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -111,10 +112,9 @@ class Enterprise0Test : ManagedModeTest() {
         //add new container to system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.createContainerInternal("system", container1))
-//        val bcFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
         //propose new bc in new container:
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcConfig1xmlFile, nodes[0].pubKey, "xml", container1))
-        assertBc0Added(clientConfig)
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcConfig1xmlFile, "xml", container1))
+        assertEquals(2, provExecutor.listAllBlockchains().size)
     }
 
     @Test
@@ -311,7 +311,7 @@ class Enterprise0Test : ManagedModeTest() {
     }
 
     override fun addBc(blockchain0ConfigGtv: Gtv, container: String) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey, container))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainGtvInternal(blockchain0ConfigGtv, container))
     }
 
     //First (the only) provider adds signers and vote yes to apply the change. This is not a general function.

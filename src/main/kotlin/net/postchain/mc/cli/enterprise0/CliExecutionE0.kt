@@ -73,31 +73,30 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot propose enabling of provider")
     }
 
-    fun proposeBlockchain(blockchainConfigFile: String, nodes: String, format: String?, container: String) {
-        sendTxSync(proposeBlockchainInternal(blockchainConfigFile, nodes, format, container), "Blockchain has been proposed",
+    fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String) {
+        sendTxSync(proposeBlockchainInternal(blockchainConfigFile, format, container), "Blockchain has been proposed",
                 "Cannot add bc proposal")
     }
 
     /**
      * Propose add Blockchain to an existing container
      */
-    fun proposeBlockchainInternal(blockchainConfigFile: String, nodes: String, format: String?, container: String) : GTXTransactionBuilder {
+    fun proposeBlockchainInternal(blockchainConfigFile: String, format: String?, container: String) : GTXTransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(nodes, data, container)
+        return proposeBc(data, container)
     }
 
-    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String, container: String): GTXTransactionBuilder {
+    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, container: String): GTXTransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
-        return proposeBc(nodes, data, container)
+        return proposeBc(data, container)
     }
 
-    private fun proposeBc(nodes: String, data: ByteArray, containerName: String): GTXTransactionBuilder {
+    private fun proposeBc(data: ByteArray, containerName: String): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
         val container = containerGtv(containerName)
-        val nodeList = nodes.split(",").map { nodeGtv(it) }
         return makeTransactionWithNop().apply {
             addOperation("propose_blockchain",
-                    arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList), container))
+                    arrayOf(meProvider, GtvFactory.gtv(data), container))
             sign(buildSigMaker())
         }
     }

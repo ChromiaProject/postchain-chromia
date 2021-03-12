@@ -28,7 +28,6 @@ entity voter_set_member {
    bc,
    register_provider,
    provider_state,
-   bc_signers,
    bc_stop
    // and a lot more
 }
@@ -91,24 +90,13 @@ entity pending_update_blockchain_signer {
 	add: boolean;
 }
 
-operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>, container) {
-	print("propose bc, cahin0 brid:");
+operation propose_blockchain( me: provider, config_data: byte_array, container) {
+	print("propose bc, chain0 brid:");
 	print(chain_context.blockchain_rid);
 	require_provider_auth_with_rl(me);
-	require(initial_nodes.size() > 0);
-	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
-	val blockchain_rid = config.hash();
-	val signers = list<pubkey>();
-	for (node in initial_nodes) {
-		signers.add(node.pubkey);
-	}
-	config["signers"] = signers.to_gtv();
-	val new_data = 	config.to_gtv().to_bytes(); 
-	//If already proposed, do not add again.
-	if (empty(pending_blockchain @* {.data == new_data } limit 1)) {
+	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.configurator);
-		print("g");
-		create pending_blockchain(prop, new_data, container);
+		create pending_blockchain(prop, config_data, container);
 		internal_vote( me, prop, true);
 	}
 }
@@ -144,7 +132,7 @@ operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boo
 	if (empty(pending_stop_blockchain @* {remove_replicas, blockchain } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me, voter_set @ {"SYSTEM_P"});
 		create pending_stop_blockchain(prop, blockchain, remove_replicas);
-		internal_vote( me, prop, true);
+		internal_vote(me, prop, true);
 	}
 }
 
@@ -187,47 +175,6 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 	}
 }
 
-
-/**
-
-// one proposal for the entire list
-operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
-	require_voter_auth (me, blockchain.rid);
-	var new = false;
-	for (signer in add_signers) {
-		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == true} limit 1))
-		new = true;
-	}
-	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me, blockchain.rid);
-		for (signer in add_signers) {
-			require(signer.active);
-			create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
-		}
-		internal_vote(me, prop, true);
-	}
-}
-
-
-// one proposal for entire list
-operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
-	require_voter_auth (me, blockchain.rid);
-	var new = false;
-	for (signer in signers) {
-		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == false} limit 1))
-		new = true;
-	}
-	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me, blockchain.rid);
-		for (signer in signers) {
-			create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
-		}
-		internal_vote(me, prop, true);
-	}
-}
-
- */
-
 //NB: check authority before calling this function
 function internal_vote (provider, prop: proposal, ok: boolean) {
 	create vote(prop, provider, ok);
@@ -253,7 +200,6 @@ function apply_voting_result (prop: proposal) {
 	 		bc                -> apply_bc(prop);
 			register_provider -> apply_register_provider(prop);
 			provider_state    -> apply_provider_state(prop);
-			//bc_signers        -> apply_blockchain_signers_update(prop);
 			bc_stop			  -> apply_stop_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -266,7 +212,6 @@ function apply_voting_result (prop: proposal) {
 	 		bc                -> delete pending_blockchain @ { prop };
 			register_provider -> delete pending_provider @ { prop };
 			provider_state    -> delete pending_provider_state @ { prop };
-			//bc_signers        -> delete pending_update_blockchain_signer @* { prop };
 			bc_stop			  -> delete pending_stop_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -318,15 +263,19 @@ function apply_conf(proposal) {
 	delete pending_conf @* { proposal };
 }
 
+//Initial signers of new bc are the ones in cluster_node table.
 function apply_bc(proposal) {
 	val bc = pending_blockchain @ {proposal};
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
-	
 	val blockchain_rid = config.hash();
 	val blockchain = create blockchain ( blockchain_rid );
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
-	create blockchain_configuration_signers(blockchain, 0, config["signers"].to_gtv().to_bytes());
+	val signers = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
+	// do not write new configuration when size is 0 since it's impossible to recover
+	// from that.
+	require(signers.size() > 0);
+	create blockchain_configuration_signers(blockchain, 0, signers.to_gtv().to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);
 	create container_blockchain(bc.container, blockchain);
 	delete pending_blockchain @* { proposal };
@@ -338,31 +287,13 @@ function apply_register_provider(proposal) {
 	delete pending_provider @ { proposal };
 }
 
-/*
-// Could be several signers for a single proposal
-function apply_blockchain_signers_update(proposal) {
-	val pendings = pending_update_blockchain_signer @* { proposal };
-	for (pending in pendings) {
-		if (pending.add == true) {
-			require(pending.signer.active);
-			create blockchain_signer_node(pending.blockchain, pending.signer);
-			delete blockchain_replica_node @? {pending.blockchain, pending.signer};
-		} else {
-			delete blockchain_signer_node @? {pending.blockchain, pending.signer};
-		}
-	}
-	update_configuration(pendings[0].blockchain); //only once for the entire list
-	for (pending in pendings) {	
-		delete pending_update_blockchain_signer @ { proposal , .signer == pending.signer };
-	}
-}
- */
 
 //TODO: How to set signers empty?
 function apply_stop_blockchain(proposal) {
 	val bc_to_stop = pending_stop_blockchain @ { proposal };
 	//val h = get_last_height(bc_to_stop);
-	//create blockchain_configuration_signers ( blockchain = bc_to_stop, height = h, ??? );
+	//val signers = list<pubkey>();
+	//create blockchain_configuration_signers ( blockchain = bc_to_stop, height = h, signers.to_gtv().to_bytes() );
 	//delete blockchain_configuration_signers @ { .blockchain == bc_to_stop.blockchain};
 	if (bc_to_stop.remove_replicas) {
 		delete blockchain_replica_node @* { bc_to_stop.blockchain };
@@ -380,8 +311,6 @@ function consensus_achieved (proposal) {
 	if (exists(positive_votes(proposal))) {
 		val nof_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
 		print("positive votes:", nof_votes);
-		//val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
-		//val max_votes = provider @* {} ( @sum 1 ) limit 1;
 		print("max votes:", max_votes());
 		print("needed votes:", max_votes()[0]/2+1);
 		return ((nof_votes[0] > max_votes()[0]/2));
@@ -394,7 +323,6 @@ function proposal_rejected (proposal) {
 	if (exists(negative_votes(proposal))) {		
 		val nof_votes = vote @* { .proposal == proposal, .ok == false} ( @sum 1 );
 		print("negative votes:", nof_votes);
-		//val max_votes = provider_state @* { .active == true } (@sum 1) limit 1;
 		print("max votes:", max_votes());
 		print("needed votes:", max_votes()[0]/2+1);
 		return ((nof_votes[0] > max_votes()[0]/2));
