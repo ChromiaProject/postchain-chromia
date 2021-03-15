@@ -35,17 +35,33 @@
 
 //entity cluster_signer_list { key cluster_node;}
 
-/**Adding a node to a cluster automatically makes it replica of all bc in this cluster. Only one node per provider and cluster.
- * Once it is in sync, it will become signer.
+/**Adding a node to a cluster automatically makes it signer of all bc in this cluster. Only one node per provider and cluster.
+ * TODO: Start as replica; once it is in sync, it will become signer.
  * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node. 
  * */
 operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
 	require_provider_auth_with_rl(provider);
 	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
 	//make_node_a_replica_in_cluster(cluster, node_pubkey);
-	update_configuration_signers (cluster); //signer lists for all bcs are updated on their current height.	
+	//check if cluster now is operational, if so update the flag:
+	check_operational(cluster);	
 }
 
+//Provider with tier > 0 can add a provider of tier 0 to a cluster. Or if I'm system provider.
+operation add_provider_to_cluster(me: provider, provider, cluster) {
+	require_provider_auth_with_rl(me);
+	require( (provider_state @ {me}.tier > 0 and provider_state @ {provider}.tier == 0) or (provider_state @ {me}.system));
+	create cluster_provider(cluster, provider);
+}
+
+/* When all providers have provided a node each, cluster goes operational */
+function check_operational(cl: cluster) {
+	val providers = cluster_provider @* {cl}.provider;
+	val nodes = cluster_node @* {cl}.node;
+	if (nodes.size() == providers.size()) {
+		update cluster @ {cl.name} (.operational = true);
+	}
+}
 
 /** Make node a replica of all bcs in a cluster */
 function make_node_a_replica_in_cluster(cluster, node_pubkey: pubkey) {
@@ -59,7 +75,7 @@ function make_node_a_replica_in_cluster(cluster, node_pubkey: pubkey) {
 }
 
 /** If a provider is part of that cluster, and if provider do not already have a node in this cluster,
-* add node as block signer to this cluster
+* add node as block signer to this cluster. blockchain_configuration_signers update is included.
 */
 function add_node_to_cluster_internal(provider, node, cluster) {
 	if (exists( cluster_provider @* {cluster, provider})) {
@@ -99,6 +115,17 @@ function add_node_to_cluster_internal(provider, node, cluster) {
  	key container, resource_limit_type;
  	mutable value: integer;
  }
+
+//Who can create a cluster? Any provider
+operation create_cluster(me: provider, name, initials: list<provider>?, governance: voter_set, deployer: voter_set) {
+	require_provider_auth_with_rl(me);
+	val cl = create cluster(name, governance, deployer);
+	if (exists(initials)) {
+		for (prov in initials) {
+		create cluster_provider(cl, prov);			
+		}
+	}
+}
 
 //TODO: Make configurator and type variable. + create container_resourece limit for this container
 operation create_container(provider, cluster, name) {

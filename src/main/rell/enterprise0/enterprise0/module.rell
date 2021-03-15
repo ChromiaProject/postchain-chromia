@@ -18,6 +18,7 @@ entity provider_state {
 operation init () {
 	val tier = 1;
 	require(empty( provider @* {}));
+	create voter_set("SYSTEM", 1);
 	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */

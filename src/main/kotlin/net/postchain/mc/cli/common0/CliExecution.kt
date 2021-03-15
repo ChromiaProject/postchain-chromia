@@ -346,6 +346,23 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
+    fun createClusterInternal(meKey: String, newClusterName: String, providerKeys: String, govenorSet: String, deployerSet: String): GTXTransactionBuilder {
+        val provider = providerGtv(meKey)
+        var initials: Gtv
+        if (providerKeys.isEmpty()) {
+            initials = GtvNull
+        } else {
+            initials = providersGtv(providerKeys)
+        }
+        val govenor = voterSetGtv(govenorSet)
+        val deployer = voterSetGtv(deployerSet)
+        return makeTransactionWithNop().apply {
+            addOperation("create_cluster", arrayOf(provider, GtvString(newClusterName), initials, govenor, deployer))
+            sign(buildSigMaker())
+        }
+    }
+
+
     fun addBlockchainSignersInternal(blockchainRID: String, signers: String): GTXTransactionBuilder {
         val nodeList = signers.split(",").map { nodeGtv(it) }
         val blockchain = blockchainGtv(blockchainRID)
@@ -398,39 +415,70 @@ open class CliExecution(val config: ClientConfig) {
                 "Cannot remove replica node")
     }
 
-
     fun removeNode(key: String) {
         sendTxSync(removeNodeInternal(key), "Node removed", "Cannot remove node")
     }
 
-    fun clusterGtv(name: String): Gtv {
-        val cluster = getPostchainClient().query("get_cluster", GtvFactory.gtv(
+    private fun voterSetGtv(name: String): Gtv {
+        return getPostchainClient().query("get_voter_set", GtvFactory.gtv(
                 "name" to GtvFactory.gtv(name))).get()
-        return cluster
+    }
+
+    fun clusterGtv(name: String): Gtv {
+        return getPostchainClient().query("get_cluster", GtvFactory.gtv(
+                "name" to GtvFactory.gtv(name))).get()
     }
 
     fun containerGtv(name: String): Gtv {
-        val container = getPostchainClient().query("get_container", GtvFactory.gtv(
+        return getPostchainClient().query("get_container", GtvFactory.gtv(
                 "name" to GtvFactory.gtv(name))).get()
-        return container
     }
 
 
+    //comma separeted list of providers
+    fun providersGtv(keys: String): Gtv {
+         return GtvFactory.gtv(keys.split(",").map { getPostchainClient().query("get_provider",
+                GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() } )
+    }
+
+    //Single provider
     fun providerGtv(key: String): Gtv {
-        val provider = getPostchainClient().query("get_provider", GtvFactory.gtv(
+        return getPostchainClient().query("get_provider", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
-        return provider
     }
 
     fun nodeGtv(key: String): Gtv {
-        val node = getPostchainClient().query("get_node",
+        return getPostchainClient().query("get_node",
                 GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
-        return node
     }
 
     fun blockchainGtv(blockchainRID: String): Gtv {
-        val blockchain = getPostchainClient().query("get_blockchain",
+        return getPostchainClient().query("get_blockchain",
                 GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))).get()
-        return blockchain
+    }
+
+    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String) {
+        createVoterSetInternal(name, providers, threshold, governorName)
+    }
+
+    fun createVoterSetInternal(name: String, providerKeys: String, threshold: Long, governorName: String): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        var providerList: Gtv
+        if (providerKeys.isEmpty()) {
+            providerList = GtvNull
+        } else {
+            providerList = GtvFactory.gtv(providerKeys.split(",").map { getPostchainClient().query("get_provider",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() } )
+        }
+        var governor: Gtv
+        if (governorName.isEmpty()) {
+            governor = GtvNull
+        } else {
+            governor = voterSetGtv(governorName)
+        }
+        return makeTransactionWithNop().apply {
+            addOperation("create_voter_set", arrayOf(meProvider, GtvString(name), GtvInteger(threshold), providerList, governor))
+            sign(buildSigMaker())
+        }
     }
 }

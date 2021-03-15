@@ -1,6 +1,5 @@
 package net.postchain.mc.test
 
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -103,6 +102,19 @@ class Enterprise0Test : ManagedModeTest() {
         assertEquals(2, provExecutor.listProviders().size, "")
     }
 
+    /**
+     * New voter set with system as governor
+     */
+    @Test
+    fun testCreateVoterSet() {
+
+        val voterSetName = "Ellen"
+        val providers_list = ""
+//        val providers_list = clientConfig.pubKey
+//        val providers_list = "${clientConfig.pubKey},${clientConfig.pubKey}"
+        doAndBuildBlocks(clientConfig, provExecutor.createVoterSetInternal(voterSetName, providers_list, 0, "SYSTEM_P"))
+    }
+
     @Test
     fun testProposeAddBlockchainXml() {
 
@@ -115,6 +127,17 @@ class Enterprise0Test : ManagedModeTest() {
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcConfig1xmlFile, "xml", container1))
         assertEquals(2, provExecutor.listAllBlockchains().size)
+    }
+
+    @Test
+    fun testCreateCluster() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val newClusterName = "Vera"
+        val providers_list = ""
+//        val providers_list = clientConfig.pubKey
+//        val providers_list = "${clientConfig.pubKey},${clientConfig.pubKey}"
+        //create cluster, initial providers added
+        doAndBuildBlocks(provConfig, provExecutor.createClusterInternal(provConfig.pubKey, newClusterName, providers_list,  "SYSTEM_P", "SYSTEM_P"))
     }
 
     @Test

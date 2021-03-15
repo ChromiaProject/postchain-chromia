@@ -38,6 +38,8 @@ class CliE0: CliBase() {
             CommandListNodes(),
             CommandListProposalsSince(),
             CommandGetProposal(),
+
+            CommandCreateVoterSet(),
             CommandVote()
     ).map { it.key() to it }.toMap()
 

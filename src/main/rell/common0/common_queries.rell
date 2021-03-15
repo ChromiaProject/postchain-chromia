@@ -85,3 +85,4 @@ query is_node (pubkey) : boolean {
 	return not(empty(node @? { pubkey }));
 	}
 
+query get_voter_set (name) = voter_set @ { name };
