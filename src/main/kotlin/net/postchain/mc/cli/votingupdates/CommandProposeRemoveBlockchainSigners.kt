@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecutionE0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "propose removal of signers of a blockchain. Change will be applied after voting amongst providers.")
 class CommandProposeRemoveBlockchainSigners: CommandBase() {
@@ -27,7 +27,7 @@ class CommandProposeRemoveBlockchainSigners: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionE0(loadAppConfig()).proposeRemoveBlockchainSigners(blockchainRID, nodes)
+            CliExecutionD1(loadAppConfig()).proposeRemoveBlockchainSigners(blockchainRID, nodes)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

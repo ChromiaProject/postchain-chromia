@@ -5,7 +5,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecutionE0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "Providers decide if proposed configuration changes should be applied. This function adds an initial provider that can approve things.")
 class CommandInit: CommandBase() {
@@ -14,7 +14,7 @@ class CommandInit: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionE0(loadAppConfig()).init()
+            CliExecutionD1(loadAppConfig()).init()
             Ok("You have an initial provider that can vote for updates.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

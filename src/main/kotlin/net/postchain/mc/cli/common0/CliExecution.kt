@@ -346,8 +346,8 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun createClusterInternal(meKey: String, newClusterName: String, providerKeys: String, govenorSet: String, deployerSet: String): GTXTransactionBuilder {
-        val provider = providerGtv(meKey)
+    fun createClusterInternal(newClusterName: String, providerKeys: String, govenorSet: String, deployerSet: String): GTXTransactionBuilder {
+        val provider = providerGtv(config.pubKey)
         var initials: Gtv
         if (providerKeys.isEmpty()) {
             initials = GtvNull
@@ -437,8 +437,9 @@ open class CliExecution(val config: ClientConfig) {
 
     //comma separeted list of providers
     fun providersGtv(keys: String): Gtv {
-         return GtvFactory.gtv(keys.split(",").map { getPostchainClient().query("get_provider",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() } )
+        val gtvList = keys.split(",").map { getPostchainClient().query("get_provider",
+                GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
+        return GtvFactory.gtv(gtvList)
     }
 
     //Single provider
@@ -467,8 +468,7 @@ open class CliExecution(val config: ClientConfig) {
         if (providerKeys.isEmpty()) {
             providerList = GtvNull
         } else {
-            providerList = GtvFactory.gtv(providerKeys.split(",").map { getPostchainClient().query("get_provider",
-                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() } )
+            providerList = providersGtv(providerKeys)
         }
         var governor: Gtv
         if (governorName.isEmpty()) {
@@ -480,5 +480,9 @@ open class CliExecution(val config: ClientConfig) {
             addOperation("create_voter_set", arrayOf(meProvider, GtvString(name), GtvInteger(threshold), providerList, governor))
             sign(buildSigMaker())
         }
+    }
+
+    fun addCluster(name: String, providers: String, governorName: String, deployersName: String) {
+        createClusterInternal(name, providers, governorName, deployersName)
     }
 }

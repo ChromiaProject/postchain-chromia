@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecutionE0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "Providers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposal.")
 class CommandListProposalsSince: CommandBase() {
@@ -21,7 +21,7 @@ class CommandListProposalsSince: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val proposals = CliExecutionE0(loadAppConfig()).listProposalsSince(idx)
+            val proposals = CliExecutionD1(loadAppConfig()).listProposalsSince(idx)
             proposals.forEach {
                 val n = it.asDict()
                 println("proposal type: ${n["proposal_type"]!!.asString()}")

@@ -7,7 +7,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecutionE0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "Use this function to get information on a given proposal, before you vote.")
 class CommandGetProposal: CommandBase() {
@@ -23,9 +23,9 @@ class CommandGetProposal: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            val proposal = CliExecutionE0(loadAppConfig()).getProposal(idx).asDict()
+            val proposal = CliExecutionD1(loadAppConfig()).getProposal(idx).asDict()
             val provPubkey = proposal["proposed_by"]!!.asByteArray().toHex()
-            val proposedBy = CliExecutionE0(loadAppConfig()).getProviderInfo(provPubkey).asDict()
+            val proposedBy = CliExecutionD1(loadAppConfig()).getProviderInfo(provPubkey).asDict()
             val name = proposedBy["name"]!!.asString()
             println("proposal type: ${proposal["proposal_type"]!!.asString()}")
             println("index: ${proposal["rowid"]!!.asInteger()}")

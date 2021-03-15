@@ -49,6 +49,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     lateinit var blockchain0ConfigGtv: Gtv
 
+    val voterSetSystemP = "SYSTEM_P"
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
@@ -103,7 +104,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
         addNode0(configProv, "system")
         addBc(blockchain0ConfigGtv, "system")
-        assertBc0Added(config)
+        assertAdded("get_blockchain", "rid", GtvFactory.gtv(config.brid.hexStringToByteArray()))
     }
 
     abstract fun addBc(blockchain0ConfigGtv: Gtv, container: String)
@@ -122,16 +123,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(configProv, nodes[0].pubKey, node0Host, node0Port, clusterName)
     }
 
-    fun assertBc0Added(config: ClientConfig) {
-        assertBcAdded(config, config.brid.hexStringToByteArray())
-    }
-
-    fun assertBcAdded(config: ClientConfig, bridByteArray: ByteArray) {
-        val client = getPostchainClient(config)
-        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
-                "rid" to GtvFactory.gtv(bridByteArray))).get()
-
-        assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
+    fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
+        val client = getPostchainClient(provConfig)
+        val vs = client.query(opName, GtvFactory.gtv(keyName to addedItem)).get()
+        assertk.assert(vs.asInteger()).isGreaterThan(0L)
     }
 
     fun assertAddedNode(config: ClientConfig, providerPublicKey: String, nodePubkey: String, host: String, port: Long) {

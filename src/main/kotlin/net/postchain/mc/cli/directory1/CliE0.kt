@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.enterprise0
+package net.postchain.mc.cli.directory1
 
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase

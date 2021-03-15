@@ -6,7 +6,7 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.enterprise0.CliExecutionE0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "propose new provider. Providers can add nodes add vote for different configuration " +
         "updates, such as new providers, new nodes or new blockchains.")
@@ -40,7 +40,7 @@ class CommandProposeProvider: CommandBase() {
             clusterName = "system"
         }
         return try {
-            CliExecutionE0(loadAppConfig()).proposeProvider(key, systemProvider, tier, clusterName)
+            CliExecutionD1(loadAppConfig()).proposeProvider(key, systemProvider, tier, clusterName)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

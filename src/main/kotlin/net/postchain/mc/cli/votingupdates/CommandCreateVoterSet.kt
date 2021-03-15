@@ -30,7 +30,7 @@ class CommandCreateVoterSet: CommandBase() {
     private var threshold = 0L
 
     @Parameter(
-            names = ["-g", "--govenor"],
+            names = ["-g", "--governor"],
             description = "Name of another voter set which can update this voter set. Default: voter set is its own governor.")
     private var governorName = ""
 

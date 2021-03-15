@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.enterprise0
+package net.postchain.mc.cli.directory1
 
 import mu.KLogging
 import net.postchain.client.core.GTXTransactionBuilder
@@ -7,7 +7,7 @@ import net.postchain.gtv.*
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
-class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
+class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
