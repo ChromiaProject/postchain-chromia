@@ -33,20 +33,22 @@ operation init () {
 }
 
 
-function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster) {
+function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {
 	val provider = create provider (pubkey);
 		create provider_state (provider, name="",
-			active=false,
+			active=true,
 			system=is_system,
 			tier=tier
 		);
 		create activity_counter (provider);
 		create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
-		create cluster_provider(cluster, provider);
+		if (exists(cluster)) {
+			create cluster_provider(cluster, provider);
+		}
 }
 
 operation update_provider_data (provider, name?) {
-	require_provider_auth(provider);
+	require_provider_auth_with_rl(provider);
 	if (exists(name)) {
 		update provider_state @ {provider} (
 			.name = name
@@ -54,15 +56,22 @@ operation update_provider_data (provider, name?) {
 	}
 }
 
+//Includes enabling (active = true)
+operation register_provider (me: provider, pubkey, tier: integer) {
+	require_provider_auth_with_rl(me);
+	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
+	add_pubkey_as_provider(pubkey, false, tier, null);
+}
+
 operation add_replica (provider, blockchain, node) {
-	require_provider_auth(provider);
+	require_provider_auth_with_rl(provider);
 	require( node.provider == provider );			
 	require(empty(blockchain_replica_node @? { blockchain, node }));
 	create blockchain_replica_node ( blockchain, node );
 }
 
 operation remove_replica (provider, blockchain, node) {
-	require_provider_auth(provider);
+	require_provider_auth_with_rl(provider);
 	require( node.provider == provider );		
 	delete blockchain_replica_node @? { blockchain, node };
 }

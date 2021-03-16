@@ -38,8 +38,9 @@ entity voter_set_member {
  enum proposal_type {
    conf,
    bc,
-   register_provider,
-   provider_state,
+   //register_provider, //TODO: remove. No voting needed
+   //provider_state,
+   provider_is_system,
    bc_stop
    // and a lot more
 }
@@ -81,7 +82,7 @@ entity pending_provider {
 	cluster;
 }
 
-//Proposed bc:s are put here while waiting for enough positive votes. One row per node in init list?
+//Proposed bc:s are put here while waiting for enough positive votes.
 entity pending_blockchain {
 	key proposal;
 	data: byte_array;
@@ -95,11 +96,11 @@ entity pending_provider_state {
 	active: boolean;
 }
 
-//Proposed changes of blockchain signers are put here while waiting for enough positive votes. Signers can be added (add = true) or removed (add = false).
-entity pending_update_blockchain_signer {
-	key proposal, signer: node;
-	blockchain;
-	add: boolean;
+//Proposed promotion/demotion of provider to/from being system provider
+entity pending_provider_is_system {
+	key proposal;
+	provider;
+	system: boolean;
 }
 
 operation propose_blockchain( me: provider, config_data: byte_array, container) {
@@ -149,6 +150,7 @@ operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boo
 }
 
 
+/*
 
 //Only system providers can add new providers => voter_set = SYSTEM_P
 //When proposing provider, also (optinally?) say which cluster it should be added to.
@@ -187,6 +189,20 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 	}
 }
 
+*  */
+
+operation propose_provider_is_system(me: provider, other_prov: provider, promote: boolean) {
+	print("propose_provider_is_system");
+	require_provider_auth_with_rl(me);
+	//If proposal already exist, do not add again.
+	if (empty(pending_provider_is_system @* { .provider == other_prov, .system == promote } limit 1)) {
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_is_system, me, system_voter_set);
+		create pending_provider_is_system(prop, other_prov, .system = promote);
+		internal_vote( me, prop, true);
+	}
+}
+
 //NB: check authority before calling this function
 function internal_vote (provider, prop: proposal, ok: boolean) {
 	create vote(prop, provider, ok);
@@ -210,8 +226,9 @@ function apply_voting_result (prop: proposal) {
 		when (prop.proposal_type) {
 	 		conf              -> apply_conf(prop);
 	 		bc                -> apply_bc(prop);
-			register_provider -> apply_register_provider(prop);
-			provider_state    -> apply_provider_state(prop);
+			//register_provider -> apply_register_provider(prop);
+			//provider_state    -> apply_provider_state(prop);
+			provider_is_system-> apply_provider_is_system(prop);
 			bc_stop			  -> apply_stop_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -222,8 +239,9 @@ function apply_voting_result (prop: proposal) {
 		when (prop.proposal_type) {
 	 		conf              -> delete pending_conf @ { prop };
 	 		bc                -> delete pending_blockchain @ { prop };
-			register_provider -> delete pending_provider @ { prop };
-			provider_state    -> delete pending_provider_state @ { prop };
+			//register_provider -> delete pending_provider @ { prop };
+			//provider_state    -> delete pending_provider_state @ { prop };
+			provider_is_system-> delete pending_provider_is_system @ { prop };
 			bc_stop			  -> delete pending_stop_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -235,8 +253,22 @@ function apply_voting_result (prop: proposal) {
 	}
 }
 
-//For both enabling and disabling of providers: Add `tier` and `system`
-// updates (not just `active`)? No it is done when registering the provider.
+//For promotion an demotion of system providers
+function apply_provider_is_system(proposal) {
+	val pps = pending_provider_is_system @ {proposal}; 
+	update provider_state @ { pps.provider } ( .system = pps.system );
+	
+	//If promotion, update SYSTEM_P voter set
+	if (provider_state @ { pps.provider }.system) {
+		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
+	} else {
+		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
+	}
+	delete pending_provider_is_system @ { proposal };
+}
+
+/* 
+//For both enabling and disabling of providers:
 function apply_provider_state(proposal) {
 	val pps = pending_provider_state @ {proposal}; 
 	update provider_state @ { pps.provider } ( .active = pps.active );
@@ -262,6 +294,14 @@ function apply_provider_state(proposal) {
 	}
 	delete pending_provider_state @ { proposal };
 }
+ 
+function apply_register_provider(proposal) {
+	val pp = pending_provider @ { proposal };
+	add_pubkey_as_provider(pp.pubkey, pp.system, pp.tier, pp.cluster);
+	delete pending_provider @ { proposal };
+}
+*/
+
 
 function apply_conf(proposal) {
 	val pc = pending_conf @ {proposal};
@@ -293,11 +333,7 @@ function apply_bc(proposal) {
 	delete pending_blockchain @* { proposal };
 }
 
-function apply_register_provider(proposal) {
-	val pp = pending_provider @ { proposal };
-	add_pubkey_as_provider(pp.pubkey, pp.system, pp.tier, pp.cluster);
-	delete pending_provider @ { proposal };
-}
+
 
 
 //TODO: How to set signers empty?
@@ -314,7 +350,7 @@ function apply_stop_blockchain(proposal) {
 }
 
 
-function max_votes() { return provider_state @* { .active == true } (@sum 1) limit 1;}
+function max_votes(voter_set) { return voter_set_member @* { voter_set } (@sum 1) limit 1;}
 function positive_votes(proposal) { return vote @* {proposal, .ok == true }; }
 function negative_votes(proposal) { return vote @* {proposal, .ok == false }; }
 
@@ -323,9 +359,9 @@ function consensus_achieved (proposal) {
 	if (exists(positive_votes(proposal))) {
 		val nof_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
 		print("positive votes:", nof_votes);
-		print("max votes:", max_votes());
-		print("needed votes:", max_votes()[0]/2+1);
-		return ((nof_votes[0] > max_votes()[0]/2));
+		print("max votes:", max_votes(proposal.voter_set));
+		print("needed votes:", max_votes(proposal.voter_set)[0]/2+1);
+		return ((nof_votes[0] > max_votes(proposal.voter_set)[0]/2));
 	}
 	print("No positive votes");
 	return false; 
@@ -335,9 +371,9 @@ function proposal_rejected (proposal) {
 	if (exists(negative_votes(proposal))) {		
 		val nof_votes = vote @* { .proposal == proposal, .ok == false} ( @sum 1 );
 		print("negative votes:", nof_votes);
-		print("max votes:", max_votes());
-		print("needed votes:", max_votes()[0]/2+1);
-		return ((nof_votes[0] > max_votes()[0]/2));
+		print("max votes:", max_votes(proposal.voter_set));
+		print("needed votes:", max_votes(proposal.voter_set)[0]/2+1);
+		return ((nof_votes[0] > max_votes(proposal.voter_set)[0]/2));
 	}
 	print("No negative votes");
 	return false;	

@@ -101,10 +101,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     * aware of itself. So that it can be managed. Bc0 is added to naked system container. Node0 is added to
     * system cluster so that it becomes signer.
     */
-    protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, config: ClientConfig, configProv: ClientConfig) {
+    protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, configProv: ClientConfig) {
         addNode0(configProv, "system")
         addBc(blockchain0ConfigGtv, "system")
-        assertAdded("get_blockchain", "rid", GtvFactory.gtv(config.brid.hexStringToByteArray()))
+        assertAdded("get_blockchain", "rid", GtvFactory.gtv(configProv.brid.hexStringToByteArray()))
     }
 
     abstract fun addBc(blockchain0ConfigGtv: Gtv, container: String)
@@ -146,7 +146,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         * function addNode0AndBlockchain). Finally, node1 is added as replica.
         * */
     protected fun initAndNode1Replica() {
-        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")

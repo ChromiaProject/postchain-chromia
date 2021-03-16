@@ -68,6 +68,19 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
+    /** Add existing provider to existing cluster
+     * */
+    fun addProviderToClusterInternal(key: String, clusterName: String) : GTXTransactionBuilder {
+        val me = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val provider = providerGtv(key)
+        return makeTransactionWithNop().apply {
+            addOperation("add_provider_to_cluster",
+                    arrayOf(me, provider, cluster))
+            sign(buildSigMaker())
+        }
+    }
+
     /** Add existing node to existing cluster
      * */
     fun addNodeToClusterInternal(key: String, clusterName: String) : GTXTransactionBuilder {
@@ -256,6 +269,18 @@ open class CliExecution(val config: ClientConfig) {
         return returnList
     }
 
+    fun listVoterSetMembers(name: String) : List<Gtv> {
+        val returnList = arrayListOf<Gtv>()
+        doInTryBlock {
+            val list =  getPostchainClient().query("get_voter_set_members",
+                    GtvFactory.gtv("name" to GtvString(name)))
+                    .get()
+                    .asArray()
+            returnList.addAll(list.map { it })
+        }
+        return returnList
+    }
+
     fun listBlockchainReplicas(blockchainRID: String) : List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
@@ -322,10 +347,11 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun registerProviderInternal(key: String): GTXTransactionBuilder {
+    fun registerProviderInternal(key: String, tier: Long): GTXTransactionBuilder {
+        val me = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation("register_provider",
-                    arrayOf(GtvFactory.gtv(key.hexStringToByteArray())))
+                    arrayOf(me, GtvFactory.gtv(key.hexStringToByteArray()), GtvInteger(tier)))
             sign(buildSigMaker())
         }
     }
@@ -484,5 +510,14 @@ open class CliExecution(val config: ClientConfig) {
 
     fun addCluster(name: String, providers: String, governorName: String, deployersName: String) {
         createClusterInternal(name, providers, governorName, deployersName)
+    }
+
+    fun proposeProviderIsSystemInternal(pubKey: String, isSystem: Boolean): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val otherProvider = providerGtv(pubKey)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_provider_is_system", arrayOf(meProvider, otherProvider, GtvFactory.gtv(isSystem)))
+            sign(buildSigMaker())
+        }
     }
 }

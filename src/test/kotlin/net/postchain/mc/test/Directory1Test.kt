@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 class Directory1Test : ManagedModeTest() {
 
     override fun chainConfSnippet(): String{
-        val module = "enterprise0"
+        val module = "directory1"
 
         return """
             <chains>
@@ -57,18 +57,19 @@ class Directory1Test : ManagedModeTest() {
     * */
     @Before
     fun setup() {
-        blockchain0ConfigGtv = run("enterprise0")
+        blockchain0ConfigGtv = run("directory1")
         doAndBuildBlocks(provConfig, provExecutor.initInternal())
     }
 
+    /*
     @Test
     fun testProposeEnableDisableProvider() {
 
         //First provider adds node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
 //        Then proposes a second provider to system cluster. Implies Also add it to system voter_set.
-        addAndEnableSystemProv2()
+        addSystemProv2()
         assertProviderEnabled(prov2Config.pubKey)
 
 
@@ -83,33 +84,39 @@ class Directory1Test : ManagedModeTest() {
         assertProviderDisabled(prov2Config.pubKey)
     }
 
-    private fun addAndEnableSystemProv2() {
-        doAndBuildBlocks(provConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey, true, 1L,
-                "system"))
-        assertProviderData(prov2Config.pubKey, "", false)
-        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderInternal(prov2Config.pubKey))
+*/
+    /**
+     * Add provider prov2 as system provider. Includes activating it: active = true, system = true
+     */
+    private fun addSystemProv2() {
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderInternal(prov2Config.pubKey, 1L))
+        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemInternal(prov2Config.pubKey, true))
+        assertProviderData(prov2Config.pubKey, "", true)
     }
 
     /**
-     * Two active providers. Prov2 proposes disabling of Prov1. Prov1 votes no.
+     * Two active providers. Prov2 proposes demotion of Prov1. Prov1 votes no.
      */
     @Test
-    fun testProposeProviderVoteNo() {
+    fun testProposeDegradeProviderVoteNo() {
 
-        addAndEnableSystemProv2()
-        doAndBuildBlocks(provConfig, prov2Executor.proposeDisableProviderInternal(provConfig.pubKey))
+        addSystemProv2()
+        // Prov2 proposes degradation/demotion of prov1.
+        doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemInternal(provConfig.pubKey, false))
 
-        voteNo("provider_state")
-        assertEquals(2, provExecutor.listProviders().size, "")
+        // Prov votes no
+        voteNo("provider_is_system")
+        val listVoterset = provExecutor.listVoterSetMembers(voterSetSystemP)
+        assertEquals(2, listVoterset.size, "")
     }
 
     /**
-     * New voter set with system as governor
+     * New voter set with two providers and SYSTEM_P as governor
      */
     @Test
     fun testCreateVoterSet() {
 
-        addAndEnableSystemProv2()
+        addSystemProv2()
 
         val voterSetName = "Ellen"
         val providers_list = "${provConfig.pubKey},${prov2Config.pubKey}"
@@ -122,7 +129,7 @@ class Directory1Test : ManagedModeTest() {
     fun testProposeAddBlockchainXml() {
 
         //add node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //add new container to system cluster
         val container1 = "container1"
@@ -134,7 +141,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testCreateCluster() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val addedItem = "Vera"
         val providers_list = provConfig.pubKey
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
@@ -149,7 +156,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeConfigurationAcceptGtv() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(provConfig.brid, bcConfigGtvFile,
                 20L, "gtv"))
         assertNextConfiguration(provConfig, 20L)
@@ -157,7 +164,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeConfiguration() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationInternal(provConfig.brid, bcConfig1xmlFile,
                 20L, "xml"))
         assertNextConfiguration(provConfig, 20L)
@@ -170,17 +177,19 @@ class Directory1Test : ManagedModeTest() {
 
     @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        addAndEnableSystemProv2()
+        addSystemProv2()
+
+        //prov adds prov2 to system cluster
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterInternal(prov2Config.pubKey, "system"))
 
         // Add node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
 
         // Get next configuration height after adding new node as blockchain's signer
-        // expected next congiguration height = -1 + init + 3*addNode + proposeBlockhain + vote + addSigners + vote + 5 = 12
-        // expected next congiguration height = -1 + init + 3*addNode + proposeBlockhain + addSigners + 5 = 10 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 10L)
+        // expected next congiguration height = -1 + init + 3*addNode + proposeBlockhain + addprov2toCluster + addNode + 5 = 11 (with vote included in proposal)
+        assertNextConfiguration(provConfig, 11L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)
@@ -194,10 +203,10 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testRemoveBlockchainSigners() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        addAndEnableSystemProv2()
-        // Add node1 to system cluster
+        addSystemProv2()
+        // Prov2 adds node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
 
         doAndBuildBlocks(prov2Config, provExecutor.removeNodeInternal(node1Pubkey))
@@ -223,7 +232,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchainsForNode() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         var listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
         assertEquals(0, listBlockchains.size)
@@ -235,7 +244,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainLastHeight() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val h = provExecutor.getBlockchainLastHeight(provConfig.brid)
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 + vote = 3
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 = 2 (vote included in proposal)
@@ -244,7 +253,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainConfiguration() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val blockchain = provExecutor.getBlockchainConfiguration(provConfig.brid, 0L)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
@@ -260,7 +269,7 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testRemoveNode() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
@@ -291,14 +300,14 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchains() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val listBlockchains = provExecutor.listAllBlockchains()
         assertEquals(1, listBlockchains.size)
     }
 
     @Test
     fun testListBlockchainReplicas() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
@@ -308,10 +317,13 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchainSigners() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //Add second system provider
-        addAndEnableSystemProv2()
+        addSystemProv2()
+
+        //prov adds prov2 to system cluster
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterInternal(prov2Config.pubKey, "system"))
 
         // Prov2 adds new node to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
@@ -322,11 +334,11 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetProposal() {
-        addAndEnableSystemProv2()
-        //Propose disabling of prov2 again
-        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderInternal(prov2Config.pubKey))
+        addSystemProv2()
+        //Propose degradation of prov2 again
+        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemInternal(prov2Config.pubKey, false))
 
-        val type = "provider_state"
+        val type = "provider_is_system"
         val id = assertProposalTypeAndGetRowid(type)
         val proposal = provExecutor.getProposal(id).asDict()
         val actualType = (proposal["proposal_type"] as GtvString).string

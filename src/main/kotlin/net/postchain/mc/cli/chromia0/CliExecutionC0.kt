@@ -7,8 +7,6 @@ import net.postchain.gtv.*
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
 
 class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
 
@@ -111,7 +109,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
     }
 
     fun registerProvider(key: String) {
-        sendTxSync(registerProviderInternal(key), "Provider has been registered",
+        sendTxSync(registerProviderInternal(key, 0), "Provider has been registered",
                 "Cannot register provider")
     }
 
