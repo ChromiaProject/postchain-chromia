@@ -133,7 +133,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.createContainerInternal("system", container1))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerInternal("system", container1, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainInternal(bcConfig1xmlFile, "xml", container1))
         assertEquals(2, provExecutor.listAllBlockchains().size)

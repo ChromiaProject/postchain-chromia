@@ -1,43 +1,12 @@
-entity voter_set {
-    key name;
-    mutable threshold: integer = 0;
-	// special values for threshold:
-	// 	0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
-	// -1: simple majority
-	// positive number: that many voters
-}
-
-// Who is allowed to change a voter set?
-// If not defined, it is the voter set itself
-entity voter_set_governance {
-	key voter_set;
-	index governor: voter_set;
-}
-
-entity voter_set_member {
-    key voter_set, provider;
-}
-/* Governance semantics:
- *
- * Anybody can create a new voter_set directly, but it consumes an action point.
- * voter_set can be updated. if voter_set_goverance is defined, it will control voter set, otherwise, it is the voter set itself
- * */
- operation create_voter_set(me: provider, name, threshold: integer, initials: list<provider>?, govenor: voter_set?) {
- 	require_provider_auth_with_rl(me);
- 	val vs = create voter_set(name, threshold);
- 	if (exists(govenor)) {
- 		create voter_set_governance(voter_set=vs, governor=govenor);
- 	}
- 	 if (exists(initials)) {
- 		for (prov in initials) {
- 			create voter_set_member(voter_set=vs, prov);	
- 	 	}
- 	}
- }
 
  enum proposal_type {
    conf,
    bc,
+   container,
+   container_limits,
+   cluster_limits,
+   cluster_provider,
+   voter_set_provider,
    //register_provider, //TODO: remove. No voting needed
    //provider_state,
    provider_is_system,
@@ -52,18 +21,50 @@ entity proposal {
 }
 
 
-entity vote {
-    key proposal, provider;
-	ok: boolean; //here we see if the signer voted yes or no
-}
-
- 
 //Proposed configuration changes are put here while waiting for enough positive votes.
 entity pending_conf {
     key proposal;
     blockchain;
 	height: integer;
     data: byte_array;
+}
+
+entity pending_container {
+	key proposal;
+	key name;
+ 	cluster;
+ 	container_type;
+ 	configurator: voter_set;
+}
+
+entity pending_container_limits {
+	key proposal;
+	key container;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+entity pending_cluster_limits {
+	key proposal;
+	key cluster;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+entity pending_cluster_provider {
+	key proposal;
+	key cluster;
+	provider;
+	add: boolean;
+}
+
+entity pending_voter_set_provider {
+	key proposal;
+	key voter_set;
+	provider;
+	add: boolean;
 }
 
 //Proposed stops of bcs are put here while waiting for enough positive votes.
@@ -74,6 +75,7 @@ entity pending_stop_blockchain {
     }
 
 //Proposed providers are put here while waiting for enough positive system provider votes.
+//TODO: remove
 entity pending_provider {
 	key proposal;
 	pubkey;
@@ -103,47 +105,98 @@ entity pending_provider_is_system {
 	system: boolean;
 }
 
-operation propose_blockchain( me: provider, config_data: byte_array, container) {
-	print("propose bc, chain0 brid:");
-	print(chain_context.blockchain_rid);
+//Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
+operation propose_container(me: provider, cluster, name, configurator: voter_set) {
+	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
+	require_cluster_deployer(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.container, me, cluster.deployer);
+	create pending_container(prop, name, cluster, container_type.isolated, configurator);
+	internal_vote( me, prop, true );
+}
+
+//Who can update container limits? Cluster deployers' voter set.
+operation propose_container_limits(me: provider, container, ram: integer, cpu: integer, storage: integer) {
+	//check that provider authority and that it is cluster's deployer
+	require_provider_auth_with_rl(me);
+	require_cluster_deployer(container.cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
+	create pending_container_limits(prop, container, cpu, ram, storage);
+	internal_vote( me, prop, true );
+}
+
+//Who can update cluster limits? Cluster governance voter set.
+operation propose_cluster_limits(me: provider, cluster, ram: integer, cpu: integer, storage: integer) {
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_limits, me, cluster.governance);
+	create pending_cluster_limits(prop, cluster, cpu, ram, storage);
+	internal_vote( me, prop, true );
+}
+
+//Who can update voter set's provider list? Voter set's governor.
+operation propose_voter_set_provider(me: provider, voter_set, provider, add: boolean) {
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_voter_set_governor(voter_set, me);
+	val governor = voter_set_governance @ { voter_set } .governor;
+	val prop = create proposal(op_context.last_block_time, proposal_type.voter_set_provider, me, governor);
+	create pending_voter_set_provider(prop, voter_set, provider, add);
+	internal_vote( me, prop, true );
+}
+
+//Who can update cluster provider list? Cluster governance voter set.
+operation propose_cluster_provider(me: provider, cluster, provider, add: boolean) {
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_provider, me, cluster.governance);
+	create pending_cluster_provider(prop, cluster, provider, add);
+	internal_vote( me, prop, true );
+}
+
+
+//Who can propose a new blockchain? The container configurator voter set
+operation propose_blockchain( me: provider, config_data: byte_array, container) {
+	require_provider_auth_with_rl(me);
+	require_container_configurator(container, me);
+	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.configurator);
 		create pending_blockchain(prop, config_data, container);
-		internal_vote( me, prop, true);
+		internal_vote( me, prop, true );
 	}
 }
 
 
-//Pubkey used for authorization. Who can propse configuration updates? Container configurators
-//TODO: make voter_set variable. 
-operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
-	require_provider_auth_with_rl(provider);
-	require_container_configurator(blockchain, provider);
+//Pubkey used for authorization. Who can propose configuration updates? Container configurators
+//TODO: make voter_set variable.
+operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer) {
+	require_provider_auth_with_rl(me);
+	val container = container_blockchain @ {blockchain} .container;
+	require_container_configurator(container, me);
 	require(get_last_height(blockchain) < height);
 	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
 	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
-	//If already proposed, do not add again.
-	if (empty(pending_conf @* {blockchain, height, .data == config_data } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.conf, provider, voter_set @ {"SYSTEM_P"});
-		create pending_conf(prop,
-			blockchain,		
-			height,
-			data = config_data
-		);
-		internal_vote(provider, prop, true);
-	}
+
+	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.configurator);
+	create pending_conf(prop,
+		blockchain,
+		height,
+		data = config_data
+	);
+	internal_vote(me, prop, true);
 }
 
 
 //Who can stop bcs? Container configurators
-//TODO: make voter_set variable. 
 operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boolean) {
 	require_provider_auth_with_rl (me);
-	require_container_configurator(blockchain, me);
-	//If already proposed, do not add again.
+	val container = container_blockchain @ {blockchain} .container;
+	require_container_configurator(container, me);
 	if (empty(pending_stop_blockchain @* {remove_replicas, blockchain } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me, voter_set @ {"SYSTEM_P"});
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me, container.configurator);
 		create pending_stop_blockchain(prop, blockchain, remove_replicas);
 		internal_vote(me, prop, true);
 	}
@@ -203,22 +256,6 @@ operation propose_provider_is_system(me: provider, other_prov: provider, promote
 	}
 }
 
-//NB: check authority before calling this function
-function internal_vote (provider, prop: proposal, ok: boolean) {
-	create vote(prop, provider, ok);
-	print("vote added");
-	apply_voting_result(prop);
-}
-
-//Pubkey used for authorization
-operation make_vote(provider, prop: proposal, ok: boolean) {
-	require_provider_auth_with_rl(provider);
-	require(not(empty(voter_set_member @* {prop.voter_set, provider})));
-	print("vote authorization OK");
-	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
-	internal_vote( provider, prop, ok);
-}
-
 function apply_voting_result (prop: proposal) {
 	print("consensus?");
 	if (consensus_achieved(prop)) {
@@ -226,38 +263,95 @@ function apply_voting_result (prop: proposal) {
 		when (prop.proposal_type) {
 	 		conf              -> apply_conf(prop);
 	 		bc                -> apply_bc(prop);
+			container         -> apply_container(prop);
+			container_limits  -> apply_container_limits(prop);
+			cluster_limits    -> apply_cluster_limits(prop);
+			cluster_provider  -> apply_cluster_provider(prop);
+			voter_set_provider-> apply_voter_set_provider(prop);
 			//register_provider -> apply_register_provider(prop);
 			//provider_state    -> apply_provider_state(prop);
 			provider_is_system-> apply_provider_is_system(prop);
 			bc_stop			  -> apply_stop_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
-		delete vote @* {.proposal == prop};	
-		delete proposal @ {.rowid == prop.rowid}; 
+		delete vote @* {.proposal == prop};
+		delete proposal @ {.rowid == prop.rowid};
 	} else if (proposal_rejected(prop)) {
 		print("proposal has been rejected");
 		when (prop.proposal_type) {
 	 		conf              -> delete pending_conf @ { prop };
 	 		bc                -> delete pending_blockchain @ { prop };
+			container         -> delete pending_container @ { prop };
+			container_limits  -> delete pending_container_limits @ { prop };
+			cluster_limits    -> delete pending_cluster_limits @ { prop };
+			cluster_provider  -> delete pending_cluster_provider @ { prop };
+			voter_set_provider-> delete pending_voter_set_provider @ { prop };
 			//register_provider -> delete pending_provider @ { prop };
 			//provider_state    -> delete pending_provider_state @ { prop };
 			provider_is_system-> delete pending_provider_is_system @ { prop };
 			bc_stop			  -> delete pending_stop_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
-		delete vote @* {.proposal == prop};	
+		delete vote @* {.proposal == prop};
 		delete proposal @ {.rowid == prop.rowid};
 	} else {
-		
 		print("no, not yet");
 	}
 }
 
-//For promotion an demotion of system providers
+//Apply decision on creation of new container. With default resource limits.
+//TODO: Update default values to make sense.
+function apply_container(proposal) {
+	val pps = pending_container @ {proposal};
+	val c = create container(pps.name, pps.cluster, pps.container_type, pps.configurator);
+	create container_resource_limit(c, resource_limit_type.cpu , 100);
+	create container_resource_limit(c, resource_limit_type.ram , 100);
+	create container_resource_limit(c, resource_limit_type.storage , 100);
+	delete pending_container @ { proposal };
+}
+
+function apply_container_limits(proposal) {
+	val pps = pending_container_limits @ {proposal};
+	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
+	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
+	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
+	delete pending_container_limits @ { proposal };
+}
+
+function apply_cluster_limits(proposal) {
+	val pps = pending_cluster_limits @ {proposal};
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
+	delete pending_cluster_limits @ { proposal };
+}
+
+function apply_cluster_provider(proposal) {
+	val pps = pending_cluster_provider @ {proposal};
+	if (pps.add) {
+		create cluster_provider(pps.cluster, pps.provider);
+	} else {
+		delete cluster_provider @ {pps.cluster, pps.provider};
+	}
+	delete pending_cluster_provider @ { proposal };
+}
+
+function apply_voter_set_provider(proposal) {
+	val pps = pending_voter_set_provider @ {proposal};
+	if (pps.add) {
+		create voter_set_member(pps.voter_set, pps.provider);
+	} else {
+		delete voter_set_member @ {pps.voter_set, pps.provider};
+	}
+	delete pending_voter_set_provider @ { proposal };
+}
+
+
+//For promotion and demotion of system providers
 function apply_provider_is_system(proposal) {
-	val pps = pending_provider_is_system @ {proposal}; 
+	val pps = pending_provider_is_system @ {proposal};
 	update provider_state @ { pps.provider } ( .system = pps.system );
-	
+
 	//If promotion, update SYSTEM_P voter set
 	if (provider_state @ { pps.provider }.system) {
 		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
@@ -267,16 +361,16 @@ function apply_provider_is_system(proposal) {
 	delete pending_provider_is_system @ { proposal };
 }
 
-/* 
+/*
 //For both enabling and disabling of providers:
 function apply_provider_state(proposal) {
-	val pps = pending_provider_state @ {proposal}; 
+	val pps = pending_provider_state @ {proposal};
 	update provider_state @ { pps.provider } ( .active = pps.active );
 	if (pps.active == false) {
 		update node @* { pps.provider } ( .active = false );
 		for (cl in cluster_provider @* { .provider == pps.provider } (.cluster)) {
 			for (n in node @* { pps.provider }) {
-				delete cluster_node @* { n };	
+				delete cluster_node @* { n };
 			}
 			update_configuration_signers(cl);
 		}
@@ -294,7 +388,7 @@ function apply_provider_state(proposal) {
 	}
 	delete pending_provider_state @ { proposal };
 }
- 
+
 function apply_register_provider(proposal) {
 	val pp = pending_provider @ { proposal };
 	add_pubkey_as_provider(pp.pubkey, pp.system, pp.tier, pp.cluster);
@@ -334,9 +428,7 @@ function apply_bc(proposal) {
 }
 
 
-
-
-//TODO: How to set signers empty?
+//TODO: How to stop blockchain?
 function apply_stop_blockchain(proposal) {
 	val bc_to_stop = pending_stop_blockchain @ { proposal };
 	//val h = get_last_height(bc_to_stop);
@@ -345,36 +437,6 @@ function apply_stop_blockchain(proposal) {
 	//delete blockchain_configuration_signers @ { .blockchain == bc_to_stop.blockchain};
 	if (bc_to_stop.remove_replicas) {
 		delete blockchain_replica_node @* { bc_to_stop.blockchain };
-	} 	
+	}
 	delete pending_stop_blockchain @ { proposal };
-}
-
-
-function max_votes(voter_set) { return voter_set_member @* { voter_set } (@sum 1) limit 1;}
-function positive_votes(proposal) { return vote @* {proposal, .ok == true }; }
-function negative_votes(proposal) { return vote @* {proposal, .ok == false }; }
-
-
-function consensus_achieved (proposal) {
-	if (exists(positive_votes(proposal))) {
-		val nof_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
-		print("positive votes:", nof_votes);
-		print("max votes:", max_votes(proposal.voter_set));
-		print("needed votes:", max_votes(proposal.voter_set)[0]/2+1);
-		return ((nof_votes[0] > max_votes(proposal.voter_set)[0]/2));
-	}
-	print("No positive votes");
-	return false; 
-}
-
-function proposal_rejected (proposal) {
-	if (exists(negative_votes(proposal))) {		
-		val nof_votes = vote @* { .proposal == proposal, .ok == false} ( @sum 1 );
-		print("negative votes:", nof_votes);
-		print("max votes:", max_votes(proposal.voter_set));
-		print("needed votes:", max_votes(proposal.voter_set)[0]/2+1);
-		return ((nof_votes[0] > max_votes(proposal.voter_set)[0]/2));
-	}
-	print("No negative votes");
-	return false;	
 }

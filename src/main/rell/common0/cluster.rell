@@ -109,7 +109,7 @@ function add_node_to_cluster_internal(provider, node, cluster) {
  	storage
  }
 
- entity cluster_capacity_limit {
+ entity cluster_resource_limit {
  	key cluster, resource_limit_type;
  	mutable value: integer;
  }
@@ -130,13 +130,7 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 	}
 }
 
-//TODO: Make configurator and type variable. + create container_resourece limit for this container
-operation create_container(provider, cluster, name) {
-	//check that provider authority and that it is cluster's deployer
-	require_provider_auth_with_rl(provider);
-	require_cluster_deployer(cluster, provider);
-	create container(name, cluster, container_type.isolated, voter_set @ {"SYSTEM_P"});
-}
+
  entity blockchain { key rid: byte_array; }
 
  // indicates that blockchain is running on a cluster

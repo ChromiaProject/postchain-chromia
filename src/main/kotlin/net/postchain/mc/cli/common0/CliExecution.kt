@@ -95,16 +95,17 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Create a new container in an existing cluster (TODO: with given resource limits (table container_resource_limit)).
-     * Who can create a container and update resource limits? Cluster's deployer.
+    /** Propose a new (isolated) container with default resource limits in an existing cluster.
+     * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
-    fun createContainerInternal(clusterName: String, containerName: String) : GTXTransactionBuilder {
+    fun proposeContainerInternal(clusterName: String, containerName: String, configuratorName: String) : GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
         val cluster = clusterGtv(clusterName)
+        val configurator = voterSetGtv(configuratorName)
         return makeTransactionWithNop().apply {
-            addOperation("create_container",
+            addOperation("propose_container",
                     arrayOf(provider,
-                            cluster, GtvFactory.gtv(containerName)))
+                            cluster, GtvFactory.gtv(containerName), configurator))
             sign(buildSigMaker())
         }
     }

@@ -40,7 +40,7 @@ operation add_node (provider, node_pubkey: pubkey, host: text, port: integer, cl
 }
 
 function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
-		val existing_node = node @? { node_pubkey };
+	val existing_node = node @? { node_pubkey };
 	if (exists(existing_node)) {
 		require(existing_node.provider == provider);
 		update existing_node (
