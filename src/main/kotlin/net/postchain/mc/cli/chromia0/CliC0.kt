@@ -12,8 +12,6 @@ class CliC0: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandRegisterProvider(),
             CommandUpdateProvider(),
-            CommandEnableProvider(),
-            CommandDisableProvider(),
             CommandGetProviderInfo(),
 
             CommandAddNode(),
@@ -22,11 +20,7 @@ class CliC0: CliBase() {
             CommandAddReplica(),
             CommandRemoveReplica(),
 
-            CommandAddBlockchain(),
             CommandStopBlockchain(),
-            CommandAddConfiguration(),
-            CommandAddBlockchainSigners(),
-            CommandRemoveBlockchainSigners(),
             CommandListBlockchainsForNode(),
             CommandListBlockchains(),
             CommandListBlockchainSigners(),

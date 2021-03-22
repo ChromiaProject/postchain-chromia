@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.blockchain
+package net.postchain.mc.cli.votingupdates
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -6,10 +6,11 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "add blockchain's signers")
-class CommandAddBlockchainSigners: CommandBase() {
+@Parameters(commandDescription = "propose delete blockchain. Command is irrevertible." +
+        "Change will be applied after voting of container configurator voter set.")
+class CommandProposeDeleteBlockchain: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -17,18 +18,12 @@ class CommandAddBlockchainSigners: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    @Parameter(
-            names = ["-s", "--signers"],
-            description = "Blockchain's signers",
-            required = true)
-    private var signers = ""
-
-    override fun key(): String = "add-blockchain-signers"
+    override fun key() = "propose-delete-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionC0(loadAppConfig()).addBlockchainSigners(blockchainRID, signers)
-            Ok("Blockchain's signers have been added successfully")
+            CliExecutionD1(loadAppConfig()).proposeDeleteBlockchain(blockchainRID)
+            Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

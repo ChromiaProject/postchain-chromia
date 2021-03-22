@@ -8,8 +8,9 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "propose new signers for a blockchain. Change will be applied after voting amongst providers.")
-class CommandProposeAddBlockchainSigners: CommandBase() {
+@Parameters(commandDescription = "propose stopping building blocks on blockchain. Current blockbuilding nodes will become replica nodes." +
+        "Change will be applied after voting of container configurator voter set.")
+class CommandProposePauseBlockchain: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -17,17 +18,11 @@ class CommandProposeAddBlockchainSigners: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    @Parameter(
-            names = ["-n", "--nodes"],
-            description = "String of comma separated list of pubkey strings of nodes that will be new blocksigners for the blockchain",
-            required = true)
-    private var nodes = ""
-
-    override fun key() = "propose-add-blockchain-signers"
+    override fun key() = "propose-pause-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionD1(loadAppConfig()).ProposeAddBlockchainSigners(blockchainRID, nodes)
+            CliExecutionD1(loadAppConfig()).proposePauseBlockchain(blockchainRID)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

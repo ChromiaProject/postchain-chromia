@@ -111,7 +111,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
-        executor.sendTxUnconfirmed(executor.addNodeInternal(key, host, port, clusterName))
+        executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, clusterName))
         buildAndAwaitBlocks(1)
         assertAddedNode(configProv, configProv.pubKey, key, host, port)
     }
@@ -152,15 +152,15 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica
-        provExecutor.sendTxUnconfirmed(provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey))
+        provExecutor.sendTxUnconfirmed(provExecutor.addReplicaAsync(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(5)
 
         val replicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
         assertEquals(1, replicas.size)
     }
 
-    // nodelist: comma-separated list of node pubkeys
-    abstract fun addBcSigners(nodeList: String)
+//    // nodelist: comma-separated list of node pubkeys
+//    abstract fun addBcSigners(nodeList: String)
 
     fun awaitBlockchainReload() {
 //        Awaitility.await().atMost(Duration.ONE_MINUTE)
@@ -200,7 +200,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     protected fun assertListNodes() {
-        val nodeList = provExecutor.listNodes()
+        val nodeList = provExecutor.listNodesWithProvider()
         val n0 = nodeList.get(0)
         assertEquals(node0Host, n0.get(0).asString())
         assertEquals(node0Port, n0.get(1).asInteger())

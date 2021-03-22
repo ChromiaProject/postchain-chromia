@@ -4,29 +4,35 @@ import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
+import net.postchain.mc.cli.cluster.CommandAddCluster
 import net.postchain.mc.cli.votingupdates.*
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
 
-class CliE0: CliBase() {
+class CliD1: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandInit(),
-            CommandProposeProvider(),
+            CommandRegisterProvider(),
             CommandUpdateProviderName(),
             CommandProposeEnableProvider(),
             CommandProposeDisableProvider(),
             CommandGetProviderInfo(),
+
+            CommandAddCluster(),
+
             CommandAddNode(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
+
             CommandAddReplica(),
             CommandRemoveReplica(),
+
             CommandProposeBlockchain(),
             CommandProposeConfiguration(),
-            CommandProposeAddBlockchainSigners(),
-            CommandProposeRemoveBlockchainSigners(),
-            CommandProposeStopBlockchain(),
+
+            CommandProposePauseBlockchain(),
+
             CommandListBlockchainsForNode(),
             CommandListBlockchains(),
             CommandListBlockchainSigners(),
@@ -37,8 +43,8 @@ class CliE0: CliBase() {
             CommandListProviders(),
             CommandListNodes(),
             CommandListProposalsSince(),
-            CommandGetProposal(),
 
+            CommandGetProposal(),
             CommandCreateVoterSet(),
             CommandVote()
     ).map { it.key() to it }.toMap()
