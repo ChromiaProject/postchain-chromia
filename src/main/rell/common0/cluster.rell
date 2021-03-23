@@ -131,7 +131,11 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 }
 
 
- entity blockchain { key rid: byte_array; }
+ entity blockchain { key rid: byte_array; mutable active: boolean;}
 
  // indicates that blockchain is running on a cluster
  entity container_blockchain { key container, blockchain; }
+ 
+ // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
+ entity cluster_container_replica { key cluster, container; }
+ 

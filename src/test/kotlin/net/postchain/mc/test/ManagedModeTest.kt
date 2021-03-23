@@ -97,10 +97,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
 
-    /* Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
-    * aware of itself. So that it can be managed. Bc0 is added to naked system container. Node0 is added to
-    * system cluster so that it becomes signer.
-    */
+    /** Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
+     * aware of itself. So that it can be managed. Bc0 is added to naked system container. Node0 is added to
+     * system cluster so that it becomes signer.
+     */
     protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, configProv: ClientConfig) {
         addNode0(configProv, "system")
         addBc(blockchain0ConfigGtv, "system")
@@ -109,6 +109,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     abstract fun addBc(blockchain0ConfigGtv: Gtv, container: String)
 
+    /**
+     * Add node; optionally also add it to a cluster
+     */
     fun addNode(configProv: ClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
         executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, clusterName))
@@ -117,7 +120,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     /**
-     * Add node0 to cluster
+     * Add node0; optionally also add it to a cluster
      */
     fun addNode0(configProv: ClientConfig, clusterName: String) {
         addNode(configProv, nodes[0].pubKey, node0Host, node0Port, clusterName)
@@ -141,17 +144,16 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
 
-    /*
-        * Initialization function that adds node0 with configuration from  config.properties. It also adds blockchain (This is
-        * function addNode0AndBlockchain). Finally, node1 is added as replica.
-        * */
-    protected fun initAndNode1Replica() {
+    /** Initialization function that adds node0 with configuration from  config.properties. It also adds blockchain (This is
+     * function addNode0AndBlockchain). Finally, node1 is added as replica for bc0.
+     * */
+    protected fun initAndNode1ReplicaOfBc0() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        //add node1
+        //add node1 (no specified cluster)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
-        // make node 1 a replica
+        // make node 1 a replica for bc0
         provExecutor.sendTxUnconfirmed(provExecutor.addReplicaAsync(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(5)
 
@@ -189,31 +191,27 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     fun assertListNodesNode0(provConfig: ClientConfig) {
         val provExecutor = cliExecution(provConfig)
         val nodesList = provExecutor.listNodesWithProvider()
-        val n = nodesList[0].asDict()
-        assertEquals(node0Host, n["host"]!!.asString())
-        assertEquals(node0Port, n["port"]!!.asInteger())
-        assertEquals(nodes[0].pubKey, n["pubkey"]!!.asByteArray().toHex())
-
-        assertEquals(provConfig.pubKey, n["provider"]!!.asByteArray().toHex())
-        assertEquals(true, n["provider_active"]!!.asBoolean())
+        assertNodeInfo(nodesList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubKey, true)
         PrintUtils.printNodes(nodesList)
     }
 
-    protected fun assertListNodes() {
-        val nodeList = provExecutor.listNodesWithProvider()
-        val n0 = nodeList.get(0)
-        assertEquals(node0Host, n0.get(0).asString())
-        assertEquals(node0Port, n0.get(1).asInteger())
-        assertEquals(nodes[0].pubKey, n0.get(2).asByteArray().toHex())
+    private fun assertNodeInfo(n: Gtv, node0Host: String, node0Port: Long, pubKey: String, pubKey1: String, b: Boolean) {
+        val nodeDict = n.asDict()
+        assertEquals(node0Host, nodeDict["host"]!!.asString())
+        assertEquals(node0Port, nodeDict["port"]!!.asInteger())
+        assertEquals(pubKey, nodeDict["pubkey"]!!.asByteArray().toHex())
 
-        val n1 = nodeList.get(1)
-        assertEquals(node1Host, n1.get(0).asString())
-        assertEquals(node1Port, n1.get(1).asInteger())
-        assertEquals(node1Pubkey, n1.get(2).asByteArray().toHex())
+        assertEquals(pubKey1, nodeDict["provider"]!!.asByteArray().toHex())
+        assertEquals(b, nodeDict["provider_active"]!!.asBoolean())
     }
 
-    protected fun buildAndAwaitBlock() {
-        buildAndAwaitBlocks(1)
+    protected fun assertListNodes() {
+        val providerNodes = provExecutor.listNodesByProvider(provConfig.pubKey)
+        assertEquals(2, providerNodes.size)
+
+        val nodeList = provExecutor.listNodesWithProvider()
+        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubKey, true)
+        assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubKey, true)
     }
 
     protected fun buildAndAwaitBlocks(nBlocks: Int) {

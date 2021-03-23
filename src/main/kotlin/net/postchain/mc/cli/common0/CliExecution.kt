@@ -171,11 +171,11 @@ open class CliExecution(val config: ClientConfig) {
         return listBlockChain
     }
 
-    fun listAllBlockchains(): List<ByteArray> {
+    fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
-            val list = getPostchainClient().query("get_all_blockchains",
-                    GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains")))
+            val list = getPostchainClient().query("get_blockchains",
+                    GtvFactory.gtv("include_inactive" to GtvFactory.gtv(includeInactive)))
                     .get()
                     .asArray()
             listBlockChain.addAll(list.map { it.asByteArray() })
@@ -200,7 +200,7 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
             val list =  getPostchainClient().query("get_blockchain_signers",
-                    GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger())))
+                    GtvFactory.gtv("bc" to GtvFactory.gtv(blockchain.asInteger())))
                     .get()
                     .asArray()
             returnList.addAll(list.map { it })

@@ -7,7 +7,6 @@
    cluster_limits,
    cluster_provider,
    voter_set_provider,
-   //register_provider, //TODO: remove. No voting needed
    provider_state,
    provider_is_system,
    bc_pause,
@@ -215,24 +214,6 @@ operation propose_delete_blockchain(me: provider, blockchain) {
 	internal_vote(me, prop, true);
 }
 
-/*
-//Only system providers can add new providers => voter_set = SYSTEM_P
-//When proposing provider, also (optinally?) say which cluster it should be added to.
-operation propose_provider(me: provider, pubkey, system: boolean, tier: integer, cluster) {
-	require_provider_auth_with_rl(me);
-	//Provider with tier > 0 can invite a provider of tier 0.
-	//val my_tier = provider_state @ {me} .tier;
-	//require(my_tier > tier);
-	//If already proposed, do not add again.
-	if (empty(pending_provider @* {pubkey } limit 1)) {
-		val system_voter_set = voter_set @ {"SYSTEM_P"};
-		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me, system_voter_set);
-		create pending_provider(prop, pubkey, system, tier, cluster);
-		internal_vote(me, prop, true);
-	}
-}
-*  */
-
 //Who can enable providers with tier=0? Any existing provider with tier > 0.
 //Who can enable providers with tier > 0? SYSTEM_P voter set.
 operation propose_enable_provider(me: provider, other_prov: provider) {
@@ -240,6 +221,7 @@ operation propose_enable_provider(me: provider, other_prov: provider) {
 	if (provider_state @ {other_prov}.tier == 0 and provider_state @ {me}.tier > 0) {
 		update_provider_state(other_prov, true);		
 	} else {
+		require_system_p_member(me);
 		//If proposal already exist, do not add again.
 		if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
 			val system_voter_set = voter_set @ {"SYSTEM_P"};
@@ -253,6 +235,7 @@ operation propose_enable_provider(me: provider, other_prov: provider) {
 //Who can disable provider? SYSTEM_P voter set.
 operation propose_disable_provider(me: provider, other_prov: provider) {
 	require_provider_auth_with_rl(me);
+	require_system_p_member(me);
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
 		val system_voter_set = voter_set @ {"SYSTEM_P"};
 		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
@@ -261,9 +244,11 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 	}
 }
 
+//Who can promote/demote a provider? SYSTEM_P voter set.
 operation propose_provider_is_system(me: provider, other_prov: provider, promote: boolean) {
 	print("propose_provider_is_system");
 	require_provider_auth_with_rl(me);
+	require_system_p_member(me);
 	//If proposal already exist, do not add again.
 	if (empty(pending_provider_is_system @* { .provider == other_prov, .system == promote } limit 1)) {
 		val system_voter_set = voter_set @ {"SYSTEM_P"};
@@ -285,11 +270,10 @@ function apply_voting_result (prop: proposal) {
 			cluster_limits    -> apply_cluster_limits(prop);
 			cluster_provider  -> apply_cluster_provider(prop);
 			voter_set_provider-> apply_voter_set_provider(prop);
-			//register_provider -> apply_register_provider(prop);
 			provider_state    -> apply_provider_state(prop);
 			provider_is_system-> apply_provider_is_system(prop);
-			bc_pause			  -> apply_pause_blockchain(prop);
-			bc_delete			  -> apply_delete_blockchain(prop);
+			bc_pause		  -> apply_pause_blockchain(prop);
+			bc_delete		  -> apply_delete_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
 		delete vote @* {.proposal == prop};
@@ -304,11 +288,10 @@ function apply_voting_result (prop: proposal) {
 			cluster_limits    -> delete pending_cluster_limits @ { prop };
 			cluster_provider  -> delete pending_cluster_provider @ { prop };
 			voter_set_provider-> delete pending_voter_set_provider @ { prop };
-			//register_provider -> delete pending_provider @ { prop };
 			provider_state    -> delete pending_provider_state @ { prop };
 			provider_is_system-> delete pending_provider_is_system @ { prop };
-			bc_pause			  -> delete pending_pause_blockchain @ { prop };
-			bc_delete			  -> delete pending_delete_blockchain @ { prop };
+			bc_pause		  -> delete pending_pause_blockchain @ { prop };
+			bc_delete		  -> delete pending_delete_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
 		delete vote @* {.proposal == prop};
@@ -405,19 +388,10 @@ function update_provider_state(provider, active: boolean) {
 	} else { //enable
 		//If enabled provider is a system provider, update SYSTEM_P voter set
 		if (provider_state @ { provider }.system) {
-			//val system_voter_set = voter_set @ {"SYSTEM_P"};
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}
 }
-/*
-function apply_register_provider(proposal) {
-	val pp = pending_provider @ { proposal };
-	add_pubkey_as_provider(pp.pubkey, pp.system, pp.tier, pp.cluster);
-	delete pending_provider @ { proposal };
-}
-*/
-
 
 function apply_conf(proposal) {
 	val pc = pending_conf @ {proposal};
@@ -436,7 +410,7 @@ function apply_bc(proposal) {
 	val bc = pending_blockchain @ {proposal};
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
 	val blockchain_rid = config.hash();
-	val blockchain = create blockchain ( blockchain_rid );
+	val blockchain = create blockchain ( blockchain_rid, true );
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
 	val signers = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
@@ -450,14 +424,14 @@ function apply_bc(proposal) {
 }
 
 
-//remove block production, but keep replicas (transition existing block producers to be replicas)
+//remove block production, Keep replicas and transition existing block producers to be replicas
 function apply_pause_blockchain(proposal) {
 	val bc = pending_pause_blockchain @ { proposal };
-	//val h = get_last_height(bc_to_stop);
-	//val signers = list<pubkey>();
-	//create blockchain_configuration_signers ( blockchain = bc_to_stop, height = h, signers.to_gtv().to_bytes() );
-	//delete blockchain_configuration_signers @ { .blockchain == bc_to_stop.blockchain};
-	//delete blockchain_replica_node @* { bc.blockchain };
+	update blockchain @ { bc.blockchain.rid } (.active = false);
+	val cl = container_blockchain @ {bc.blockchain}.container.cluster;
+	for (n in cluster_node @* {.cluster == cl} .node) {
+		create blockchain_replica_node(bc.blockchain, n);	
+	} 
 	delete pending_pause_blockchain @ { proposal };
 }
 
@@ -467,14 +441,8 @@ function apply_delete_blockchain(proposal) {
 	delete container_blockchain @ { bc };
 	delete blockchain_configuration @* { bc };
 	delete blockchain_configuration_signers @* { bc };
-	delete blockchain @ { bc.rid };
 	delete blockchain_added @* { bc };
 	delete blockchain_replica_node @* { bc };
-	
-	//val h = get_last_height(bc_to_stop);
-	//val signers = list<pubkey>();
-	//create blockchain_configuration_signers ( blockchain = bc_to_stop, height = h, signers.to_gtv().to_bytes() );
-	//delete blockchain_configuration_signers @ { .blockchain == bc_to_stop.blockchain};
-	//delete blockchain_replica_node @* { bc.blockchain };
 	delete pending_delete_blockchain @ { proposal };
+	delete blockchain @ { bc.rid };
 }

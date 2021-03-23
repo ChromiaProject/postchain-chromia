@@ -14,23 +14,16 @@ class CommandListBlockchains : CommandBase() {
 
     @Parameter(
             names = ["-i", "--includeinactive"],
-            description = "Include inactive blockchains. A blockchain is inactivated with the command stop-blockchain.")
+            description = "Include inactive blockchains. A blockchain is inactivated with the command pause-blockchain.")
     private var includeInactive = false
 
     override fun key(): String = "list-blockchains"
 
     override fun execute(): CliResult {
         return try {
-            if (includeInactive) {
-                val listBlockchains = CliExecution(loadAppConfig()).listAllBlockchains()
-                listBlockchains.forEach { blockchain ->
-                    println(blockchain.toHex())
-                }
-            } else {
-                val listBlockchains = CliExecution(loadAppConfig()).listActiveBlockchains()
-                listBlockchains.forEach { blockchain ->
-                    println(blockchain.toHex())
-                }
+            val listBlockchains = CliExecution(loadAppConfig()).listBlockchains(includeInactive)
+            listBlockchains.forEach { blockchain ->
+                println(blockchain.toHex())
             }
             Ok("Listed blockchains successfully")
         } catch (e: CliError.Companion.CliException) {

@@ -86,10 +86,11 @@ class Directory1Test : ManagedModeTest() {
 
 */
     /**
-     * Add provider prov2 as system provider. Includes activating it: active = true, system = true
+     * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 1L))
+        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubKey))
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubKey, true))
         assertProviderData(prov2Config.pubKey, "", true)
     }
@@ -136,7 +137,7 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync("system", container1, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
-        assertEquals(2, provExecutor.listAllBlockchains().size)
+        assertEquals(2, provExecutor.listBlockchains(false).size)
     }
 
     @Test
@@ -188,8 +189,8 @@ class Directory1Test : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
 
         // Get next configuration height after adding new node as blockchain's signer
-        // expected next congiguration height = -1 + init + 3*addNode + proposeBlockhain + addprov2toCluster + addNode + 5 = 11 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 11L)
+        // expected next congiguration height = -1 + init + 3*addNode + porposeEnableProv + proposeBlockhain + addprov2toCluster + addNode + 5 = 12 (with vote included in proposal)
+        assertNextConfiguration(provConfig, 12L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)
@@ -216,34 +217,38 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testPauseBlockchain() {
-        val executor = cliExecution(provConfig)
-        initAndNode1Replica()
+        initAndNode1ReplicaOfBc0()
 
         doAndBuildBlocks(provConfig, provExecutor.proposePauseBlockchainAsync(provConfig.brid))
 
-        // query replicas again to ensure it was deleted after stop blockchain
-        val replicas = executor.listBlockchainReplicas(provConfig.brid)
-        assertEquals(0, replicas.size)
+        // signers node0 is transfered to be replica => two replicas of bc0
+        val replicas = provExecutor.listBlockchainReplicas(provConfig.brid)
+        assertEquals(2, replicas.size)
 
-        // query signers again to ensure it was deleted after stop blockchain
-        val listBlockchainSigners = executor.listBlockchainSigners(provConfig.brid)
-        assertEquals(0, listBlockchainSigners.size)
+        var bcs = provExecutor.listBlockchains(true)
+        assertEquals(1, bcs.size)
+        bcs = provExecutor.listBlockchains(false)
+        assertEquals(0, bcs.size)
     }
 
     @Test
     fun testDeleteBlockchain() {
-        val executor = cliExecution(provConfig)
-        initAndNode1Replica()
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        doAndBuildBlocks(provConfig, provExecutor.proposeDeleteBlockchainAsync(provConfig.brid))
+        //add new bc in new container in system cluster
+        val container1 = "container1"
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync("system", container1, voterSetSystemP))
+        println("container1 added to system cluster")
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
-        // query replicas again to ensure it was deleted after stop blockchain
-        val replicas = executor.listBlockchainReplicas(provConfig.brid)
-        assertEquals(0, replicas.size)
+        var bcs = provExecutor.listBlockchains(false)
+        assertEquals(2, bcs.size)
 
-        // query signers again to ensure it was deleted after stop blockchain
-        val listBlockchainSigners = executor.listBlockchainSigners(provConfig.brid)
-        assertEquals(0, listBlockchainSigners.size)
+        //delete new bc
+        doAndBuildBlocks(provConfig, provExecutor.proposeDeleteBlockchainAsync(bcs[1].toHex()))
+
+        bcs = provExecutor.listBlockchains(true)
+        assertEquals(1, bcs.size)
     }
 
     @Test
@@ -302,7 +307,7 @@ class Directory1Test : ManagedModeTest() {
     @Test
     fun testListNodes() {
         addNode0(provConfig, "")
-        // Add node1 to managed blockchain
+        // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
         assertListNodes()
 
@@ -317,7 +322,7 @@ class Directory1Test : ManagedModeTest() {
     @Test
     fun testListBlockchains() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        val listBlockchains = provExecutor.listAllBlockchains()
+        val listBlockchains = provExecutor.listBlockchains(false)
         assertEquals(1, listBlockchains.size)
     }
 
@@ -341,7 +346,7 @@ class Directory1Test : ManagedModeTest() {
         //prov adds prov2 to system cluster
         doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey, "system"))
 
-        // Prov2 adds new node to system cluster
+        // Prov2 adds new node to system cluster => Two blockchain signers in system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
 
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.brid)
