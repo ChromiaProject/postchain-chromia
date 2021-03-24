@@ -25,13 +25,16 @@ class CliD1: CliBase() {
             CommandGetNodeInfo(),
             CommandRemoveNode(),
 
-            CommandAddReplica(),
-            CommandRemoveReplica(),
+            CommandAddBlockchainReplica(),
+            CommandRemoveBlockchainReplica(),
+            CommandAddContainerReplica(),
+            CommandRemoveContainerReplica(),
 
             CommandProposeBlockchain(),
             CommandProposeConfiguration(),
 
             CommandProposePauseBlockchain(),
+            CommandProposeDeleteBlockchain(),
 
             CommandListBlockchainsForNode(),
             CommandListBlockchains(),

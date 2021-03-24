@@ -6,11 +6,10 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "remove replica")
-class CommandRemoveReplica: CommandBase() {
+@Parameters(commandDescription = "add replica of a blockchain. The node is verifying but not building blocks.")
+class CommandAddBlockchainReplica: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -24,12 +23,12 @@ class CommandRemoveReplica: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "remove-replica"
+    override fun key(): String = "add-blockchain-replica"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).removeReplica(blockchainRID, key)
-            Ok("Replica node has been removed successfully")
+            CliExecution(loadAppConfig()).addBlockchainReplica(blockchainRID, key)
+            Ok("Replica of blockchain has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

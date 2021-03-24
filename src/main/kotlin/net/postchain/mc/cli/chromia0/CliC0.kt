@@ -17,8 +17,8 @@ class CliC0: CliBase() {
             CommandAddNode(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
-            CommandAddReplica(),
-            CommandRemoveReplica(),
+            CommandAddBlockchainReplica(),
+            CommandRemoveBlockchainReplica(),
 
             CommandListBlockchainsForNode(),
             CommandListBlockchains(),

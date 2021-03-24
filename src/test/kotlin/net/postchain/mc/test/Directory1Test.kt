@@ -2,7 +2,6 @@ package net.postchain.mc.test
 
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
@@ -61,14 +60,13 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.initInternal())
     }
 
-    /*
     @Test
     fun testProposeEnableDisableProvider() {
 
         //First provider adds node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-//        Then proposes a second provider to system cluster. Implies Also add it to system voter_set.
+//        Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubKey)
 
@@ -78,13 +76,13 @@ class Directory1Test : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
 
         //First provider proposes Disable prov2. Prov2 agrees:
-        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderInternal(prov2Config.pubKey))
+        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubKey))
         val id = assertProposalTypeAndGetRowid("provider_state")
-        doAndBuildBlocks(prov2Config, prov2Executor.voteInternal(id, true))
+        doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         assertProviderDisabled(prov2Config.pubKey)
     }
 
-*/
+
     /**
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
@@ -134,7 +132,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync("system", container1, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
         assertEquals(2, provExecutor.listBlockchains(false).size)
@@ -221,7 +219,7 @@ class Directory1Test : ManagedModeTest() {
 
         doAndBuildBlocks(provConfig, provExecutor.proposePauseBlockchainAsync(provConfig.brid))
 
-        // signers node0 is transfered to be replica => two replicas of bc0
+        // signers node0 is transferred to be replica => two replicas of bc0
         val replicas = provExecutor.listBlockchainReplicas(provConfig.brid)
         assertEquals(2, replicas.size)
 
@@ -237,7 +235,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync("system", container1, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
         println("container1 added to system cluster")
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
@@ -305,18 +303,11 @@ class Directory1Test : ManagedModeTest() {
     }
 
     @Test
-    fun testListNodes() {
+    fun testListNodesWithProvider() {
         addNode0(provConfig, "")
         // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
         assertListNodes()
-
-    }
-
-    @Test
-    fun testListNodesWithProvider() {
-        addNode0(provConfig, "")
-        assertListNodesNode0(provConfig)
     }
 
     @Test
@@ -332,7 +323,7 @@ class Directory1Test : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addReplicaAsync(provConfig.brid, node1Pubkey),5)
+        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.brid, node1Pubkey),5)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
     }
 
@@ -351,6 +342,31 @@ class Directory1Test : ManagedModeTest() {
 
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
+    }
+
+    @Test
+    fun testListContainerReplicas() {
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        //create new cluster Vera.
+        val clusterA = "A"
+        val clusterB = "B"
+        val containerName = "C"
+        val providers_list = provConfig.pubKey
+        //create two new clusters with initial provider added
+        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterA, providers_list,
+                voterSetSystemP, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterB, providers_list,
+                voterSetSystemP, voterSetSystemP))
+
+        //add a container C to cluster A
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, clusterA, voterSetSystemP))
+        // add a replica of C in cluster B
+        doAndBuildBlocks(provConfig, provExecutor.addContainerReplicaAsync(clusterB, containerName))
+
+        val listContainerReplicas = provExecutor.listContainerReplicas(containerName)
+        assertEquals(1, listContainerReplicas.size)
+        assertEquals(clusterB, listContainerReplicas[0].asString())
     }
 
     @Test
@@ -374,21 +390,12 @@ class Directory1Test : ManagedModeTest() {
 
     }
 
-    override fun addBc(blockchain0ConfigGtv: Gtv, container: String) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainGtvAsync(blockchain0ConfigGtv, container))
-    }
-
-//    //First (the only) provider adds signers and vote yes to apply the change. This is not a general function.
-//    override fun addBcSigners(nodeList: String) {
-//        doAndBuildBlocks(provConfig, provExecutor.proposeAddBlockchainSignersInternal(provConfig.brid, nodeList))
-//    }
-
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
     private fun assertProposalTypeAndGetRowid(expectedType: String): Long {
         val proposals = provExecutor.listProposalsSince(0)
         val type = (proposals[0].asDict()["proposal_type"] as GtvString).string
-        val id = (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
         assertEquals(expectedType, type, "Wrong proposal type")
-        return id
+        return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
     }
+
 }

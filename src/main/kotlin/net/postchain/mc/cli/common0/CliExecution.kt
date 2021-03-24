@@ -233,6 +233,19 @@ open class CliExecution(val config: ClientConfig) {
         return returnList
     }
 
+    fun listContainerReplicas(containerName: String) : List<Gtv> {
+        val returnList = arrayListOf<Gtv>()
+        doInTryBlock {
+            val container = containerGtv(containerName)
+            val list = getPostchainClient().query("get_container_replicas",
+                    GtvFactory.gtv("container" to GtvFactory.gtv(container.asInteger())))
+                    .get()
+                    .asArray()
+            returnList.addAll(list.map { it })
+        }
+        return returnList
+    }
+
     fun listNodesByProvider(key: String) : List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
@@ -332,17 +345,29 @@ open class CliExecution(val config: ClientConfig) {
         sendTxSync(createClusterAsync(name, providers, governorName, deployersName), "Cluster added", "Adding cluster failed")
     }
 
+    fun proposeContainer(containerName: String, clusterName: String, deployerName: String) {
+        sendTxSync(proposeContainerAsync(containerName, clusterName, deployerName), "Container proposed", "Failed proposing new container")
+    }
     fun addNode(key: String, host: String, port: Long, clusterName: String) {
         sendTxSync(addNodeAsync(key, host, port, clusterName), "Node has been enabled", "Cannot add node")
     }
 
-    fun addReplica(blockchainRID: String, key: String) {
-        sendTxSync(addReplicaAsync(blockchainRID, key), "Replica added", "Cannot add replica node")
+    fun addBlockchainReplica(blockchainRID: String, key: String) {
+        sendTxSync(addBlockchainReplicaAsync(blockchainRID, key), "Replica added", "Cannot add replica")
     }
 
-    fun removeReplica(blockchainRID: String, key: String) {
-        sendTxSync(removeReplicaAsync(blockchainRID, key), "Replica removed",
+    fun addContainerReplica(clusterName: String, containerName: String) {
+        sendTxSync(addBlockchainReplicaAsync(clusterName, containerName), "Replica added", "Cannot add replica")
+    }
+
+    fun removeBlockchainReplica(blockchainRID: String, key: String) {
+        sendTxSync(removeBlockchainReplicaAsync(blockchainRID, key), "Replica removed",
                 "Cannot remove replica node")
+    }
+
+    fun removeContainerReplica(clusterName: String, containerName: String) {
+        sendTxSync(removeContainerReplicaAsync(clusterName, containerName), "Replica removed",
+                "Cannot remove replica")
     }
 
     fun removeNode(key: String) {
@@ -495,13 +520,13 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Propose a new (isolated) container with default resource limits in an existing cluster.
+    /** Propose a new (isolated) container with default resource limits and a deployer/configurator voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
-    fun proposeContainerAsync(clusterName: String, containerName: String, configuratorName: String) : GTXTransactionBuilder {
+    fun proposeContainerAsync(containerName: String, clusterName: String, deployerName: String) : GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
         val cluster = clusterGtv(clusterName)
-        val configurator = voterSetGtv(configuratorName)
+        val configurator = voterSetGtv(deployerName)
         return makeTransactionWithNop().apply {
             addOperation("propose_container",
                     arrayOf(provider,
@@ -526,22 +551,42 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun addReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
+    fun addBlockchainReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
         return makeTransactionWithNop().apply {
-            addOperation("add_replica", arrayOf(provider, blockchain, node))
+            addOperation("add_bc_replica", arrayOf(provider, blockchain, node))
             sign(buildSigMaker())
         }
     }
 
-    fun removeReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
+    fun addContainerReplicaAsync(clusterName: String, containerName: String): GTXTransactionBuilder {
+        val provider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val container = containerGtv(containerName)
+        return makeTransactionWithNop().apply {
+            addOperation("add_container_replica", arrayOf(provider, cluster, container))
+            sign(buildSigMaker())
+        }
+    }
+
+    fun removeBlockchainReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
         return makeTransactionWithNop().apply {
-            addOperation("remove_replica", arrayOf(provider, blockchain, node))
+            addOperation("remove_bc_replica", arrayOf(provider, blockchain, node))
+            sign(buildSigMaker())
+        }
+    }
+
+    fun removeContainerReplicaAsync(clusterName: String, containerName: String): GTXTransactionBuilder {
+        val provider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val container = containerGtv(containerName)
+        return makeTransactionWithNop().apply {
+            addOperation("remove_bc_replica", arrayOf(provider, cluster, container))
             sign(buildSigMaker())
         }
     }

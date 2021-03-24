@@ -13,18 +13,18 @@ class CommandAddCluster: CommandBase() {
 
     @Parameter(
             names = ["-n", "--name"],
-            description = "Name of new voter set",
+            description = "Name of new cluster",
             required = true)
     private var name = ""
 
     @Parameter(
             names = ["-p", "--providers"],
-            description = "String of comma separated list of pubkey strings of providers that should belong to this clsuter")
+            description = "String of comma separated list of pubkey strings of providers that should belong to this cluster")
     private var providers = ""
 
     @Parameter(
             names = ["-g", "--governor"],
-            description = "Name of another voter set which can update this voter set.",
+            description = "Name of another voter set which can update this cluster.",
             required = true)
     private var governorName = ""
 

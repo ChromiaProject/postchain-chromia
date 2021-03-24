@@ -43,7 +43,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val prov2Config = cliConf(providerKey2)
     open val provExecutor = cliExecution(provConfig)
     open val prov2Executor = cliExecution(prov2Config)
-    open val adminExecutor = cliExecution(clientConfig)
     val bcConfig1xmlFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
     val bcConfigGtvFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
 
@@ -107,7 +106,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertAdded("get_blockchain", "rid", GtvFactory.gtv(configProv.brid.hexStringToByteArray()))
     }
 
-    abstract fun addBc(blockchain0ConfigGtv: Gtv, container: String)
+    fun addBc(blockchain0ConfigGtv: Gtv, container: String) {
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainGtvAsync(blockchain0ConfigGtv, container))
+    }
 
     /**
      * Add node; optionally also add it to a cluster
@@ -154,7 +155,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica for bc0
-        provExecutor.sendTxUnconfirmed(provExecutor.addReplicaAsync(clientConfig.brid, node1Pubkey))
+        provExecutor.sendTxUnconfirmed(provExecutor.addBlockchainReplicaAsync(clientConfig.brid, node1Pubkey))
         buildAndAwaitBlocks(5)
 
         val replicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
@@ -162,7 +163,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
 //    // nodelist: comma-separated list of node pubkeys
-//    abstract fun addBcSigners(nodeList: String)
 
     fun awaitBlockchainReload() {
 //        Awaitility.await().atMost(Duration.ONE_MINUTE)
@@ -188,20 +188,13 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         PrintUtils.printBlockchainNodes(listReplicas)
     }
 
-    fun assertListNodesNode0(provConfig: ClientConfig) {
-        val provExecutor = cliExecution(provConfig)
-        val nodesList = provExecutor.listNodesWithProvider()
-        assertNodeInfo(nodesList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubKey, true)
-        PrintUtils.printNodes(nodesList)
-    }
-
-    private fun assertNodeInfo(n: Gtv, node0Host: String, node0Port: Long, pubKey: String, pubKey1: String, b: Boolean) {
+    private fun assertNodeInfo(n: Gtv, nodeHost: String, nodePort: Long, nodePubkey: String, providerPubkey: String, b: Boolean) {
         val nodeDict = n.asDict()
-        assertEquals(node0Host, nodeDict["host"]!!.asString())
-        assertEquals(node0Port, nodeDict["port"]!!.asInteger())
-        assertEquals(pubKey, nodeDict["pubkey"]!!.asByteArray().toHex())
+        assertEquals(nodeHost, nodeDict["host"]!!.asString())
+        assertEquals(nodePort, nodeDict["port"]!!.asInteger())
+        assertEquals(nodePubkey, nodeDict["pubkey"]!!.asByteArray().toHex())
 
-        assertEquals(pubKey1, nodeDict["provider"]!!.asByteArray().toHex())
+        assertEquals(providerPubkey, nodeDict["provider"]!!.asByteArray().toHex())
         assertEquals(b, nodeDict["provider_active"]!!.asBoolean())
     }
 
@@ -212,6 +205,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val nodeList = provExecutor.listNodesWithProvider()
         assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubKey, true)
         assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubKey, true)
+
+        PrintUtils.printNodes(nodeList)
+
     }
 
     protected fun buildAndAwaitBlocks(nBlocks: Int) {
@@ -231,15 +227,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val executor = cliExecution(clientConfig)
         executor.sendTxUnconfirmed(f)
         buildAndAwaitBlocks(nBlocks)
-    }
-
-    protected fun assertListNodesByProvider() {
-        val nodeList = provExecutor.listNodesByProvider(provConfig.pubKey)
-        assertEquals(2, nodeList.size)
-        val node0 = nodeList[0].asDict()
-        assertEquals(nodes[0].pubKey.toUpperCase(), node0["pubkey"]!!.asByteArray().toHex())
-        assertEquals(node1Pubkey, nodeList[1].asDict()["pubkey"]!!.asByteArray().toHex())
-        PrintUtils.printNodes(nodeList, true, false)
     }
 
 }

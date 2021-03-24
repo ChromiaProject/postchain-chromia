@@ -98,3 +98,13 @@ function update_configuration_signers (cluster) {
 		create blockchain_configuration_signers(blockchain, current_height + 5, signers.to_gtv().to_bytes());
 	}
 }
+
+operation add_container_replica(me: provider, cluster, container) {
+	require_provider_auth_with_rl(me);
+	create cluster_container_replica(cluster, container);
+}
+
+operation remove_container_replica(me: provider, cluster, container) {
+	require_provider_auth_with_rl(me);
+	delete cluster_container_replica @ {cluster, container};
+}
