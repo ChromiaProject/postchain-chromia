@@ -395,6 +395,12 @@ open class CliExecution(val config: ClientConfig) {
                 "Cannot add proposal for pausing blockchain")
     }
 
+    fun proposeUnPauseBlockchain(blockchainRID: String) {
+        sendTxSync(proposeUnPauseBlockchainAsync(blockchainRID),
+                "blockchain un-pause proposition was added successfully",
+                "Cannot add proposal for un-pausing blockchain")
+    }
+
     fun proposeDeleteBlockchain(blockchainRID: String) {
         sendTxSync(proposeDeleteBlockchainAsync(blockchainRID),
                 "blockchain delete proposition was added successfully",
@@ -682,6 +688,18 @@ open class CliExecution(val config: ClientConfig) {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation("propose_pause_blockchain",
+                    arrayOf(meProvider, blockchain))
+            sign(buildSigMaker())
+        }
+    }
+
+    /** Who can pause a blockchain? Container configurator voter set
+     * */
+    fun proposeUnPauseBlockchainAsync(blockchainRID: String) : GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val blockchain = blockchainGtv(blockchainRID)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_unpause_blockchain",
                     arrayOf(meProvider, blockchain))
             sign(buildSigMaker())
         }

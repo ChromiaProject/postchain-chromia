@@ -10,6 +10,7 @@
    provider_state,
    provider_is_system,
    bc_pause,
+   bc_unpause,
    bc_delete
    // and a lot more
 }
@@ -67,26 +68,22 @@ entity pending_voter_set_provider {
 	add: boolean;
 }
 
-//Proposed destruction of bcs are put here while waiting for enough positive votes.
+//Proposed destructions of bcs are put here while waiting for enough positive votes.
 entity pending_delete_blockchain {
     key proposal;
     key blockchain;
 }
 
-//Proposed destruction of bcs are put here while waiting for enough positive votes.
+//Proposed pauses of bcs are put here while waiting for enough positive votes.
 entity pending_pause_blockchain {
     key proposal;
     key blockchain;
 }
 
-//Proposed providers are put here while waiting for enough positive system provider votes.
-//TODO: remove
-entity pending_provider {
-	key proposal;
-	pubkey;
-	system: boolean;
-	tier: integer;
-	cluster;
+//Proposed unpauses (start building blocks again) of bcs are put here while waiting for enough positive votes.
+entity pending_unpause_blockchain {
+    key proposal;
+    key blockchain;
 }
 
 //Proposed bc:s are put here while waiting for enough positive votes.
@@ -175,8 +172,8 @@ operation propose_blockchain( me: provider, config_data: byte_array, container) 
 }
 
 
-//Pubkey used for authorization. Who can propose configuration updates? Container configurators
-//TODO: make voter_set variable.
+//Pubkey used for authorization. Who can propose configuration updates? Container configurators == container deployers. 
+//SYSTEM_P is configurator of system container
 operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer) {
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
@@ -194,13 +191,23 @@ operation propose_configuration (blockchain, me: provider, config_data: byte_arr
 	internal_vote(me, prop, true);
 }
 
-//Who can pause and delete bcs? Container configurators
+//Who can pause, unpause and delete bcs? Container configurators
 operation propose_pause_blockchain(me: provider, blockchain) {
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_configurator(container, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.bc_pause, me, container.configurator);
 	create pending_pause_blockchain(prop, blockchain);
+	internal_vote(me, prop, true);
+}
+
+//Who can pause, unpause and delete bcs? Container configurators
+operation propose_unpause_blockchain(me: provider, blockchain) {
+	require_provider_auth_with_rl (me);
+	val container = container_blockchain @ {blockchain} .container;
+	require_container_configurator(container, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_unpause, me, container.configurator);
+	create pending_unpause_blockchain(prop, blockchain);
 	internal_vote(me, prop, true);
 }
 
@@ -273,6 +280,7 @@ function apply_voting_result (prop: proposal) {
 			provider_state    -> apply_provider_state(prop);
 			provider_is_system-> apply_provider_is_system(prop);
 			bc_pause		  -> apply_pause_blockchain(prop);
+			bc_unpause		  -> apply_unpause_blockchain(prop);
 			bc_delete		  -> apply_delete_blockchain(prop);
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -291,6 +299,7 @@ function apply_voting_result (prop: proposal) {
 			provider_state    -> delete pending_provider_state @ { prop };
 			provider_is_system-> delete pending_provider_is_system @ { prop };
 			bc_pause		  -> delete pending_pause_blockchain @ { prop };
+			bc_unpause		  -> delete pending_unpause_blockchain @ { prop };
 			bc_delete		  -> delete pending_delete_blockchain @ { prop };
 	}
 		val prop_id = vote @* {.proposal == prop} (.rowid);
@@ -424,15 +433,30 @@ function apply_bc(proposal) {
 }
 
 
-//remove block production, Keep replicas and transition existing block producers to be replicas
+//remove block production by inactivating bc, Keep replicas.
 function apply_pause_blockchain(proposal) {
 	val bc = pending_pause_blockchain @ { proposal };
 	update blockchain @ { bc.blockchain.rid } (.active = false);
-	val cl = container_blockchain @ {bc.blockchain}.container.cluster;
+	/* val cl = container_blockchain @ {bc.blockchain}.container.cluster;
 	for (n in cluster_node @* {.cluster == cl} .node) {
 		create blockchain_replica_node(bc.blockchain, n);	
-	} 
+	} */
 	delete pending_pause_blockchain @ { proposal };
+}
+
+/* restart block production (activate bc), block builders will be the ones in cluster_node.
+ * cluster nodes are removed from blockchain_replica_node table. To ensure that signers 
+are not also replicas.
+* 
+*/
+function apply_unpause_blockchain(proposal) {
+	val bc = pending_unpause_blockchain @ { proposal };
+	update blockchain @ { bc.blockchain.rid } (.active = true);
+	val cl = container_blockchain @ {bc.blockchain}.container.cluster;
+	for (n in cluster_node @* {.cluster == cl} .node) {
+		delete blockchain_replica_node @? {bc.blockchain, n};	
+	}
+	delete pending_unpause_blockchain @ { proposal };
 }
 
 //Delete everything about this bc.

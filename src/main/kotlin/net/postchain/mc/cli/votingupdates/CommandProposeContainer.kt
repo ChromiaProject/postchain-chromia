@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.cluster
+package net.postchain.mc.cli.votingupdates
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters

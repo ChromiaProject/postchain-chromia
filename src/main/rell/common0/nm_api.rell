@@ -41,11 +41,15 @@ function blockchain_configuration_merge(blockchain, height: integer, conf_h: int
 	val signers = blockchain_configuration_signers @ {blockchain, .height==signer_h } .signers;
 	val current_config = blockchain_configuration @ { blockchain, .height <= conf_h } (@sort_desc .height, .data) limit 1;
 	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(current_config.data));
-	config_dict["signers"] = signers.to_gtv();     
+	config_dict["signers"] = gtv.from_bytes(signers);     
 	return config_dict.to_gtv().to_bytes();
 }
 
 
+/* Blockchains to launch uses this query. If caller (nod_id) is a signer, return only active bcs. 
+ * Inactive bcs should not be launched, to alleviate block building. 
+ * If caller is a replica node of bc, include inactive bcs as well.
+ */
 query nm_compute_blockchain_list(node_id: pubkey): list<byte_array> {
 	val node = node @? { .pubkey == node_id};
 	
@@ -56,7 +60,7 @@ query nm_compute_blockchain_list(node_id: pubkey): list<byte_array> {
 		for (cl in clusters) {
 			val containers = container @*{ cl };
 			for (container in containers) {
-				res.add_all(container_blockchain @* {container} .blockchain.rid);
+				res.add_all(container_blockchain @* {container, .blockchain.active == true} .blockchain.rid);
 			}
 		}
 		return res;	

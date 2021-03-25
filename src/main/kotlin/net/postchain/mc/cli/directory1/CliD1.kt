@@ -20,6 +20,7 @@ class CliD1: CliBase() {
             CommandGetProviderInfo(),
 
             CommandAddCluster(),
+            CommandProposeContainer(),
 
             CommandAddNode(),
             CommandGetNodeInfo(),
@@ -34,6 +35,7 @@ class CliD1: CliBase() {
             CommandProposeConfiguration(),
 
             CommandProposePauseBlockchain(),
+            CommandProposeUnPauseBlockchain(),
             CommandProposeDeleteBlockchain(),
 
             CommandListBlockchainsForNode(),

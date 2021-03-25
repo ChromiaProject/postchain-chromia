@@ -8,9 +8,9 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "propose stopping building blocks on blockchain." +
+@Parameters(commandDescription = "propose restart of building blocks on blockchain." +
         "Change will be applied after approval from container configurator voter set.")
-class CommandProposePauseBlockchain: CommandBase() {
+class CommandProposeUnPauseBlockchain: CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
@@ -18,11 +18,11 @@ class CommandProposePauseBlockchain: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    override fun key() = "propose-pause-blockchain"
+    override fun key() = "propose-unpause-blockchain"
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionD1(loadAppConfig()).proposePauseBlockchain(blockchainRID)
+            CliExecutionD1(loadAppConfig()).proposeUnPauseBlockchain(blockchainRID)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

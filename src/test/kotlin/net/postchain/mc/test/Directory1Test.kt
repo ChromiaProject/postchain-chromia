@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 
 class Directory1Test : ManagedModeTest() {
 
-    override fun chainConfSnippet(): String{
+    override fun chainConfSnippet(): String {
         val module = "directory1"
 
         return """
@@ -136,6 +136,9 @@ class Directory1Test : ManagedModeTest() {
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
         assertEquals(2, provExecutor.listBlockchains(false).size)
+
+        //test building blocks for new bc
+        buildBlock(100, 4)
     }
 
     @Test
@@ -150,7 +153,6 @@ class Directory1Test : ManagedModeTest() {
 
         assertAdded("get_cluster", "name", GtvString(addedItem))
     }
-
 
 
     @Test
@@ -215,18 +217,32 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testPauseBlockchain() {
-        initAndNode1ReplicaOfBc0()
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        doAndBuildBlocks(provConfig, provExecutor.proposePauseBlockchainAsync(provConfig.brid))
+        //add new bc in new container in system cluster
+        val container1 = "container1"
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
-        // signers node0 is transferred to be replica => two replicas of bc0
-        val replicas = provExecutor.listBlockchainReplicas(provConfig.brid)
-        assertEquals(2, replicas.size)
+        //pause new bc
+        var bcs = provExecutor.listBlockchains(false)
+        val bridToPause = bcs[1].toHex()
+        doAndBuildBlocks(provConfig, provExecutor.proposePauseBlockchainAsync(bridToPause))
 
-        var bcs = provExecutor.listBlockchains(true)
-        assertEquals(1, bcs.size)
+        bcs = provExecutor.listBlockchains(true)
+        assertEquals(2, bcs.size)
         bcs = provExecutor.listBlockchains(false)
-        assertEquals(0, bcs.size)
+        assertEquals(1, bcs.size)
+
+        // try building blocks of pause bc
+        assertBuildBlockFailure()
+
+        doAndBuildBlocks(provConfig, provExecutor.proposeUnPauseBlockchainAsync(bridToPause))
+        bcs = provExecutor.listBlockchains(false)
+        assertEquals(2, bcs.size)
+
+        // build after unpause
+        buildBlock(100, 3)
     }
 
     @Test
@@ -236,7 +252,6 @@ class Directory1Test : ManagedModeTest() {
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
-        println("container1 added to system cluster")
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
         var bcs = provExecutor.listBlockchains(false)
@@ -247,6 +262,19 @@ class Directory1Test : ManagedModeTest() {
 
         bcs = provExecutor.listBlockchains(true)
         assertEquals(1, bcs.size)
+
+        // try building blocks of deleted bc
+        assertBuildBlockFailure()
+    }
+
+    private fun assertBuildBlockFailure() {
+        var buildFailed = false
+        try {
+            buildBlock(100, 2)
+        } catch (e: TypeCastException) {
+            buildFailed = true
+        }
+        assertTrue(buildFailed)
     }
 
     @Test
@@ -323,7 +351,7 @@ class Directory1Test : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.brid, node1Pubkey),5)
+        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.brid, node1Pubkey), 5)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
     }
 
