@@ -125,6 +125,61 @@ class Directory1Test : ManagedModeTest() {
     }
 
     @Test
+    fun testProposeContainerAndLimits() {
+        //add node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        //add new container to system cluster
+        val containerName = "container1"
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, "system", voterSetSystemP))
+        assertAdded("get_container", "name", GtvString(containerName))
+
+        val default = provExecutor.listContainerLimits(containerName)
+        assertEquals(3, default.size)
+
+        //Now updated container resource limits and check result
+        proposeAndAssertContainerLimits(containerName, mapOf("ramm" to 123L), mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L))
+
+        proposeAndAssertContainerLimits(containerName, mapOf("ram" to 123L), mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L))
+
+        val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
+        proposeAndAssertContainerLimits(containerName, limits, limits)
+    }
+
+    private fun proposeAndAssertContainerLimits(containerName: String, limits: Map<String, Long>, expected: Map<String, Long>) {
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
+        var updated = provExecutor.listContainerLimits(containerName)
+        assertEquals(expected, updated)
+    }
+
+    @Test
+    fun testProposeClusterLimits() {
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+        val clusterName = "Vera"
+        val providers_list = provConfig.pubKey
+        //create cluster, initial providers added
+        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterName, providers_list,
+                voterSetSystemP, voterSetSystemP))
+
+        var limits = mapOf("ramm" to 123L)
+        var expected = mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L)
+        proposeAndAssertClusterLimits(clusterName, limits, expected)
+
+        limits = mapOf("ram" to 123L)
+        expected = mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L)
+        proposeAndAssertClusterLimits(clusterName, limits, expected)
+
+        limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
+        proposeAndAssertClusterLimits(clusterName, limits, limits)
+    }
+
+    private fun proposeAndAssertClusterLimits(clusterName: String, limits: Map<String, Long>, expected: Map<String, Long>) {
+        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
+        var updated = provExecutor.listClusterLimits(clusterName)
+        assertEquals(expected, updated)
+    }
+
+    @Test
     fun testProposeAddBlockchainXml() {
 
         //add node0 and bc0
