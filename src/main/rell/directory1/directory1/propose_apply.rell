@@ -35,7 +35,7 @@ entity pending_container {
 	key name;
  	cluster;
  	container_type;
- 	configurator: voter_set;
+ 	deployer: voter_set;
 }
 
 entity pending_container_limits {
@@ -108,12 +108,12 @@ entity pending_provider_is_system {
 }
 
 //Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
-operation propose_container(me: provider, cluster, name, configurator: voter_set) {
+operation propose_container(me: provider, cluster, name, deployer: voter_set) {
 	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
 	require_cluster_deployer(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.container, me, cluster.deployer);
-	create pending_container(prop, name, cluster, container_type.isolated, configurator);
+	create pending_container(prop, name, cluster, container_type.isolated, deployer);
 	internal_vote( me, prop, true );
 }
 
@@ -159,30 +159,30 @@ operation propose_cluster_provider(me: provider, cluster, provider, add: boolean
 }
 
 
-//Who can propose a new blockchain? The container configurator voter set
+//Who can propose a new blockchain? The container deployer voter set
 operation propose_blockchain( me: provider, config_data: byte_array, container) {
 	require_provider_auth_with_rl(me);
-	require_container_configurator(container, me);
+	require_container_deployer(container, me);
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.configurator);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.deployer);
 		create pending_blockchain(prop, config_data, container);
 		internal_vote( me, prop, true );
 	}
 }
 
 
-//Pubkey used for authorization. Who can propose configuration updates? Container configurators == container deployers. 
-//SYSTEM_P is configurator of system container
+//Pubkey used for authorization. Who can propose configuration updates? Container deployers.
+//SYSTEM_P is deployer of system container
 operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer) {
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
-	require_container_configurator(container, me);
+	require_container_deployer(container, me);
 	require(get_last_height(blockchain) < height);
 	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
 	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
 
-	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.configurator);
+	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.deployer);
 	create pending_conf(prop,
 		blockchain,
 		height,
@@ -191,32 +191,32 @@ operation propose_configuration (blockchain, me: provider, config_data: byte_arr
 	internal_vote(me, prop, true);
 }
 
-//Who can pause, unpause and delete bcs? Container configurators
+//Who can pause, unpause and delete bcs? Container deployers
 operation propose_pause_blockchain(me: provider, blockchain) {
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
-	require_container_configurator(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_pause, me, container.configurator);
+	require_container_deployer(container, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_pause, me, container.deployer);
 	create pending_pause_blockchain(prop, blockchain);
 	internal_vote(me, prop, true);
 }
 
-//Who can pause, unpause and delete bcs? Container configurators
+//Who can pause, unpause and delete bcs? Container deployers
 operation propose_unpause_blockchain(me: provider, blockchain) {
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
-	require_container_configurator(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_unpause, me, container.configurator);
+	require_container_deployer(container, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_unpause, me, container.deployer);
 	create pending_unpause_blockchain(prop, blockchain);
 	internal_vote(me, prop, true);
 }
 
-//Who can pause and delete bcs? Container configurators
+//Who can pause and delete bcs? Container deployers
 operation propose_delete_blockchain(me: provider, blockchain) {
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
-	require_container_configurator(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_delete, me, container.configurator);
+	require_container_deployer(container, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.bc_delete, me, container.deployer);
 	create pending_delete_blockchain(prop, blockchain);
 	internal_vote(me, prop, true);
 }
@@ -314,7 +314,7 @@ function apply_voting_result (prop: proposal) {
 //TODO: Update default values to make sense.
 function apply_container(proposal) {
 	val pps = pending_container @ {proposal};
-	val c = create container(pps.name, pps.cluster, pps.container_type, pps.configurator);
+	val c = create container(pps.name, pps.cluster, pps.container_type, pps.deployer);
 	create container_resource_limit(c, resource_limit_type.cpu , 100);
 	create container_resource_limit(c, resource_limit_type.ram , 100);
 	create container_resource_limit(c, resource_limit_type.storage , 100);

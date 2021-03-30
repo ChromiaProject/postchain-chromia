@@ -70,6 +70,16 @@ open class CliExecution(val config: ClientConfig) {
         return returnVal!!
     }
 
+    fun listProvidersActionPoints(key: String): Long {
+        var returnVal: Gtv? = null
+        doInTryBlock {
+            val info = getPostchainClient().query("get_provider_points",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
+            returnVal = info
+        }
+        return returnVal!!.asInteger()
+    }
+
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
         doInTryBlock {
@@ -360,6 +370,10 @@ open class CliExecution(val config: ClientConfig) {
         sendTxSync(createClusterAsync(name, providers, governorName, deployersName), "Cluster added", "Adding cluster failed")
     }
 
+    fun transferActionPoints(to: String, amount: Long) {
+        sendTxSync(transferActionPointsAsync(to, amount), "Action points transferred", "Transferring action points failed")
+    }
+
     fun addNode(key: String, host: String, port: Long, clusterName: String) {
         sendTxSync(addNodeAsync(key, host, port, clusterName), "Node has been enabled", "Cannot add node")
     }
@@ -404,6 +418,11 @@ open class CliExecution(val config: ClientConfig) {
     fun proposeDisableProvider(key: String) {
         sendTxSync(proposeDisableProviderAsync(key), "Disabling of provider has been proposed",
                 "Cannot propose disabling of provider")
+    }
+
+    fun proposeClusterLimits(containerName: String, limitMap: Map<String, Long>) {
+        sendTxSync(proposeClusterLimitsAsync(containerName, limitMap),
+                "Cluster limits proposed", "Failed proposing new cluster limits")
     }
 
     fun proposeContainerLimits(containerName: String, limitMap: Map<String, Long>) {
@@ -575,17 +594,17 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Propose a new (isolated) container with default resource limits and a deployer/configurator voter set in an existing cluster.
+    /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
     fun proposeContainerAsync(containerName: String, clusterName: String, deployerName: String): GTXTransactionBuilder {
         val provider = providerGtv(config.pubKey)
         val cluster = clusterGtv(clusterName)
-        val configurator = voterSetGtv(deployerName)
+        val deployer = voterSetGtv(deployerName)
         return makeTransactionWithNop().apply {
             addOperation("propose_container",
                     arrayOf(provider,
-                            cluster, GtvFactory.gtv(containerName), configurator))
+                            cluster, GtvFactory.gtv(containerName), deployer))
             sign(buildSigMaker())
         }
     }
@@ -602,6 +621,15 @@ open class CliExecution(val config: ClientConfig) {
             addOperation("propose_cluster_limits",
                     arrayOf(provider,
                             cluster, GtvFactory.gtv(currentLimits["ram"]!!), GtvFactory.gtv(currentLimits["cpu"]!!), GtvFactory.gtv(currentLimits["storage"]!!)))
+            sign(buildSigMaker())
+        }
+    }
+
+    fun transferActionPointsAsync(to: String, amount: Long): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val toProvider = providerGtv(to)
+        return makeTransactionWithNop().apply {
+            addOperation("transfer_action_points", arrayOf(meProvider, toProvider, GtvFactory.gtv(amount)))
             sign(buildSigMaker())
         }
     }
@@ -746,7 +774,7 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Who can pause a blockchain? Container configurator voter set
+    /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposePauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
@@ -758,7 +786,7 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Who can pause a blockchain? Container configurator voter set
+    /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposeUnPauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
@@ -770,7 +798,7 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    /** Who can delete a blockchain? Container configurator voter set
+    /** Who can delete a blockchain? Container deployer voter set
      * */
     fun proposeDeleteBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)

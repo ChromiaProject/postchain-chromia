@@ -9,7 +9,7 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "propose delete blockchain. Command is irrevertible." +
-        "Change will be applied after voting of container configurator voter set.")
+        "Change will be applied after voting of container deployer voter set.")
 class CommandProposeDeleteBlockchain: CommandBase() {
 
     @Parameter(

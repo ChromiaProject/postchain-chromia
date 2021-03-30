@@ -12,7 +12,7 @@
  *
  * Cluster's deployer can add containers, specifying their resource limits. He can change limits for existing containers.
  *
- * Container configurator can deploy, update and stop blockchains in the container.
+ * Container deployer can deploy, update and stop blockchains in the container.
  *
  *
  * Node can belong to multiple clusters. Although it is not recommended, but permitted.
@@ -100,7 +100,7 @@ function add_node_to_cluster_internal(provider, node, cluster) {
  	key name;
  	index cluster;
  	container_type;
- 	index configurator: voter_set; //  who can supply configurations to blockchains within the container
+ 	index deployer: voter_set; //  who can deploy and upsate bcs in this container
  }
 
  enum resource_limit_type {

@@ -26,6 +26,11 @@ class CommandGetProviderInfo : CommandBase() {
             val provider = CliExecution(loadAppConfig()).getProviderInfo(key)
             val providerList = arrayListOf<Gtv>(provider)
             PrintUtils.printProviders(providerList)
+
+            val points = CliExecution(loadAppConfig()).listProvidersActionPoints(key)
+            println("action points: $points")
+            println("")
+
             Ok("Got provider info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

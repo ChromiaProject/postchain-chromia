@@ -57,7 +57,7 @@ class Directory1Test : ManagedModeTest() {
     @Before
     fun setup() {
         blockchain0ConfigGtv = run("directory1")
-        doAndBuildBlocks(provConfig, provExecutor.initInternal())
+        doAndBuildBlocks(provConfig, provExecutor.initAsync())
     }
 
     @Test
@@ -66,7 +66,7 @@ class Directory1Test : ManagedModeTest() {
         //First provider adds node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-//        Then proposes a second provider to system cluster. Includes also add it to system voter_set.
+        //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubKey)
 
@@ -82,6 +82,22 @@ class Directory1Test : ManagedModeTest() {
         assertProviderDisabled(prov2Config.pubKey)
     }
 
+    @Test
+    fun testTransferActionPoints() {
+        //First provider adds node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
+        addSystemProv2()
+        val myAP = provExecutor.listProvidersActionPoints(provConfig.pubKey)
+        val othersAP = provExecutor.listProvidersActionPoints(prov2Config.pubKey)
+        val amount: Long = 20
+        doAndBuildBlocks(provConfig, provExecutor.transferActionPointsAsync(prov2Config.pubKey, amount))
+        val othersAPAfter = provExecutor.listProvidersActionPoints(prov2Config.pubKey)
+        assertEquals(othersAP+amount, othersAPAfter)
+        val myAPAfter = provExecutor.listProvidersActionPoints(provConfig.pubKey)
+        assertEquals(myAP-amount-1, myAPAfter)
+    }
 
     /**
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true

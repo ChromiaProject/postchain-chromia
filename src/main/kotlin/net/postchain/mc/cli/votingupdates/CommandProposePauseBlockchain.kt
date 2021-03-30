@@ -9,7 +9,7 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "propose stopping building blocks on blockchain." +
-        "Change will be applied after approval from container configurator voter set.")
+        "Change will be applied after approval from container deployer voter set.")
 class CommandProposePauseBlockchain: CommandBase() {
 
     @Parameter(

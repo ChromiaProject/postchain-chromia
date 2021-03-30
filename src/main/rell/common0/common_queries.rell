@@ -115,3 +115,7 @@ query get_cluster_limits (name) : map<text, integer> {
 	}
 	return return_map;
 }
+
+query get_provider_points(pubkey): integer {
+	return provider_rl_state @ {provider @ { pubkey }} .points;
+}

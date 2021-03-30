@@ -16,14 +16,14 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
      * that can vote for update proposals.
      */
-    fun initInternal() : GTXTransactionBuilder {
+    fun initAsync() : GTXTransactionBuilder {
         return makeTransactionWithNop().apply {
             addOperation("init", arrayOf<Gtv>())
             sign(buildSigMaker())
         }
     }
     fun init() {
-        sendTxSync(initInternal(), "Initial provider added and enabled",
+        sendTxSync(initAsync(), "Initial provider added and enabled",
                 "Cannot add and enable initial provider")
     }
 

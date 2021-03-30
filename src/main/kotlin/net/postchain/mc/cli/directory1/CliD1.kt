@@ -5,10 +5,11 @@ import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.cluster.CommandAddCluster
-import net.postchain.mc.cli.votingupdates.*
+import net.postchain.mc.cli.cluster.CommandInit
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
+import net.postchain.mc.cli.votingupdates.*
 
 class CliD1: CliBase() {
     override val commands: Map<String, Command> = listOf(
@@ -17,10 +18,13 @@ class CliD1: CliBase() {
             CommandUpdateProviderName(),
             CommandProposeEnableProvider(),
             CommandProposeDisableProvider(),
+            CommandTransferActionPoints(),
             CommandGetProviderInfo(),
 
             CommandAddCluster(),
+            CommandProposeClusterResourceLimits(),
             CommandProposeContainer(),
+            CommandProposeContainerResourceLimits(),
 
             CommandAddNode(),
             CommandGetNodeInfo(),
