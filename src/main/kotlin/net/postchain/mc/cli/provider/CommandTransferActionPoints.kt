@@ -18,8 +18,8 @@ class CommandTransferActionPoints: CommandBase() {
     private var key = ""
 
     @Parameter(
-            names = ["-k", "--key"],
-            description = "provider's public key",
+            names = ["-a", "--amount"],
+            description = "number of points to transfer",
             required = true)
     private var amount = 0L
 

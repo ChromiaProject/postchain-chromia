@@ -167,7 +167,7 @@ open class CliExecution(val config: ClientConfig) {
     fun listClusterLimits(name: String): Map<String, Long> {
         var listLimits = mapOf<String, Long>()
         doInTryBlock {
-            val d = getPostchainClient().query("get_cluster_limits",
+            val d = getPostchainClient().query("nm_get_cluster_limits",
                     GtvFactory.gtv("name" to GtvFactory.gtv(name)))
                     .get()
                     .asDict()
@@ -180,7 +180,7 @@ open class CliExecution(val config: ClientConfig) {
     fun listContainerLimits(name: String): Map<String, Long> {
         var listLimits = mapOf<String, Long>()
         doInTryBlock {
-            val d = getPostchainClient().query("get_container_limits",
+            val d = getPostchainClient().query("nm_get_container_limits",
                     GtvFactory.gtv("name" to GtvFactory.gtv(name)))
                     .get()
                     .asDict()

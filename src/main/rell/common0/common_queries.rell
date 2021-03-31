@@ -94,27 +94,6 @@ query get_voter_set_members (name) {
 	return voter_set_member @* {voter_set @ {name}} (.provider.pubkey);
 }
 
-query get_container_limits (name) : map<text, integer> {
-	val container = container @ {name};
-	var return_map = map<text, integer>();
-	val limits_list = container_resource_limit @* {container};
-	for (l in limits_list) {
-		val r = l.resource_limit_type;
-		return_map.put(r.name, l.value);
-	}
-	return return_map;
-}
-
-query get_cluster_limits (name) : map<text, integer> {
-	val cluster = cluster @ {name};
-	var return_map = map<text, integer>();
-	val limits_list = cluster_resource_limit @* {cluster};
-	for (l in limits_list) {
-		val r = l.resource_limit_type;
-		return_map.put(r.name, l.value);
-	}
-	return return_map;
-}
 
 query get_provider_points(pubkey): integer {
 	return provider_rl_state @ {provider @ { pubkey }} .points;
