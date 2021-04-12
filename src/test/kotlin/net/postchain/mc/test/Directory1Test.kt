@@ -196,6 +196,28 @@ class Directory1Test : ManagedModeTest() {
     }
 
     @Test
+    fun testGetContainersForNode() {
+        //add node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        //add new container to system cluster
+        val containerName = "container1"
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, "system", voterSetSystemP))
+        val containerList = prov2Executor.listContainersForNode(nodes[0].pubKey)
+        assertEquals(2, containerList.size)
+    }
+
+    @Test
+    fun testGetBlockchainsForContainer() {
+        //add node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        val bclist = prov2Executor.listBlockchainsForContainer("system")
+        assertEquals(1, bclist.size)
+        assertEquals(nodes[0].getBlockchainRid(0)!!.toHex(), bclist[0].toHex())
+    }
+
+    @Test
     fun testProposeAddBlockchainXml() {
 
         //add node0 and bc0

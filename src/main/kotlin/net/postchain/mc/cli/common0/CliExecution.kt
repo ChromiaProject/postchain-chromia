@@ -192,6 +192,23 @@ open class CliExecution(val config: ClientConfig) {
     /**
      * key - publicKey of node
      */
+    fun listContainersForNode(key: String): List<String> {
+        val listContainers = arrayListOf<String>()
+        doInTryBlock {
+            val isNode = getPostchainClient().query("is_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asBoolean()
+            if (isNode) {
+                val list = getPostchainClient().query("nm_get_containers", GtvFactory.gtv(
+                        "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+                listContainers.addAll(list.map { it.asString() })
+            }
+        }
+        return listContainers
+    }
+
+    /**
+     * key - publicKey of node
+     */
     fun listBlockchainsForNode(key: String): List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
@@ -202,6 +219,20 @@ open class CliExecution(val config: ClientConfig) {
                         "node_id" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
                 listBlockChain.addAll(list.map { it.asByteArray() })
             }
+        }
+        return listBlockChain
+    }
+
+    /**
+     * key - publicKey of node
+     */
+    fun listBlockchainsForContainer(name: String): List<ByteArray> {
+        val listBlockChain = arrayListOf<ByteArray>()
+        doInTryBlock {
+            val container = containerGtv(name)
+                val list = getPostchainClient().query("nm_get_blockchains_for_container", GtvFactory.gtv(
+                        "container_name" to GtvString(name))).get().asArray()
+                listBlockChain.addAll(list.map { it.asByteArray() })
         }
         return listBlockChain
     }
