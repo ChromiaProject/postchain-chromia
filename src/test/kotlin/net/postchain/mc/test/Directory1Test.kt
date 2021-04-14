@@ -232,19 +232,31 @@ class Directory1Test : ManagedModeTest() {
 
         //test building blocks for new bc
         buildBlock(100, 4)
+
+        //add yet another bc, dependent on previous one
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1))
+        val listOfBcs = provExecutor.listBlockchains(false)
+        val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[2].toHex(), 0)
+
+        assertEquals(1, listOfDependencies.size)
+        assertEquals(listOfBcs[1].toHex(), listOfDependencies[0].toHex())
+
+        //Now make sure that you cannot delete a bc that someone else is dependent on
+        doAndBuildBlocks(provConfig, provExecutor.proposeDeleteBlockchainAsync(listOfBcs[1].toHex()))
+        assertEquals(3, provExecutor.listBlockchains(false).size)
     }
 
     @Test
     fun testCreateCluster() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        val addedItem = "Vera"
+        val newClusterName = "Vera"
         val providers_list = provConfig.pubKey
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
         //create cluster, initial providers added
-        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(addedItem, providers_list,
+        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(newClusterName, providers_list,
                 voterSetSystemP, voterSetSystemP))
 
-        assertAdded("get_cluster", "name", GtvString(addedItem))
+        assertAdded("get_cluster", "name", GtvString(newClusterName))
     }
 
 

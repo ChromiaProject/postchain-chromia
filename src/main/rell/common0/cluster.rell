@@ -134,7 +134,6 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 	}
 }
 
-
  entity blockchain { key rid: byte_array; mutable active: boolean;}
 
  //Defines which container a blockchain belongs to
@@ -142,4 +141,33 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
  
  // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
  entity cluster_container_replica { key cluster, container; }
+ 
+ /*
+  * For blockchain dependency tracking. Blockhain A (me) might be dependent on 
+  * blockchain B (dependent_on). Dependency is not static; 
+  * a bc can be different dependencies at different heights.
+  */
+ entity blockchain_dependency { key me: blockchain, height: integer, dependent_on: blockchain; }
+ 
+ function add_dependencies(data: byte_array, me_brid: byte_array, height: integer) {
+ 	val config_map = map<text, gtv>.from_gtv(gtv.from_bytes(data));
+	if (config_map.contains("dependencies")) {
+		val deps = list<byte_array>.from_gtv(config_map["dependencies"]);   // Returns e.g.  [brid0, brid22, ..]
+		for (dep in deps) {
+			val dependent_on = blockchain @? { dep };
+			if (exists(dependent_on)) {
+				require(me_brid != dep);
+				create blockchain_dependency( 
+					me = blockchain @ {me_brid}, 
+					dependent_on,
+					height = height);	
+			}
+		}
+	}
+}
+
+ function require_no_dependenices(blockchain) {
+	require ( empty ( blockchain_dependency @* { .dependent_on == blockchain}));	
+}
+ 
  

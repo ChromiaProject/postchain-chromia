@@ -212,7 +212,9 @@ operation propose_unpause_blockchain(me: provider, blockchain) {
 }
 
 //Who can pause and delete bcs? Container deployers
+//NB not Ok to delete a bc if other bcs dependend on it.
 operation propose_delete_blockchain(me: provider, blockchain) {
+	require_no_dependenices(blockchain);
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
@@ -411,6 +413,7 @@ function apply_conf(proposal) {
 		pc.height,
 		data = pc.data
 	);
+	add_dependencies(pc.data, pc.blockchain.rid, pc.height);
 	delete pending_conf @* { proposal };
 }
 
@@ -429,6 +432,7 @@ function apply_bc(proposal) {
 	create blockchain_configuration_signers(blockchain, 0, signers.to_gtv().to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);
 	create container_blockchain(bc.container, blockchain);
+	add_dependencies(bc.data, blockchain_rid, 0);
 	delete pending_blockchain @* { proposal };
 }
 
@@ -467,6 +471,7 @@ function apply_delete_blockchain(proposal) {
 	delete blockchain_configuration_signers @* { bc };
 	delete blockchain_added @* { bc };
 	delete blockchain_replica_node @* { bc };
+	delete blockchain_dependency @* { .me == bc };
 	delete pending_delete_blockchain @ { proposal };
 	delete blockchain @ { bc.rid };
 }

@@ -44,6 +44,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     open val provExecutor = cliExecution(provConfig)
     open val prov2Executor = cliExecution(prov2Config)
     val bcConfig1xmlFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
+    val bcConfig1xmlDependencyFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1_dependency.xml"
     val bcConfigGtvFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
 
     lateinit var blockchain0ConfigGtv: Gtv

@@ -65,7 +65,6 @@ operation transfer_action_points (from: provider, to: provider, amount: integer)
 	require( provider_rl_state @ { from } .points >= amount);
 	update provider_rl_state @ { from } ( .points -= amount );
 	update provider_rl_state @ { to } ( .points += amount );
-
 }
 
 function require_cluster_deployer(cluster, provider) {
