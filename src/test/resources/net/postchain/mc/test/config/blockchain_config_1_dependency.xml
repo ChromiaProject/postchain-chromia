@@ -29,8 +29,11 @@
     </entry>
     <entry key="dependencies">
         <array>
-            <!-- brid of config_1 -->
-            <bytea>47388EDE43E8326379C14BE5FB7FF87F35A49EA304CFEEFACC7907B1C9462EE7</bytea>
+            <array>
+                <string>My first dependency</string>
+                <!-- brid of config_1 -->
+                <bytea>47388EDE43E8326379C14BE5FB7FF87F35A49EA304CFEEFACC7907B1C9462EE7</bytea>
+            </array>
         </array>
     </entry>
     <entry key="gtx">

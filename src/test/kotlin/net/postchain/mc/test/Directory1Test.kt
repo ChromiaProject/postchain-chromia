@@ -218,7 +218,7 @@ class Directory1Test : ManagedModeTest() {
     }
 
     @Test
-    fun testProposeAddBlockchainXml() {
+    fun testProposeAddBlockchainXmlWithDependency() {
 
         //add node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
@@ -239,7 +239,8 @@ class Directory1Test : ManagedModeTest() {
         val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[2].toHex(), 0)
 
         assertEquals(1, listOfDependencies.size)
-        assertEquals(listOfBcs[1].toHex(), listOfDependencies[0].toHex())
+        assertEquals(listOfBcs[1].toHex(), listOfDependencies[0].first.toHex())
+        assertEquals(container1, listOfDependencies[0].second)
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
         doAndBuildBlocks(provConfig, provExecutor.proposeDeleteBlockchainAsync(listOfBcs[1].toHex()))

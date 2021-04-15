@@ -237,8 +237,8 @@ open class CliExecution(val config: ClientConfig) {
         return listBlockChain
     }
 
-    fun listBlockchainDependencies(blockchainRID: String, height: Long): List<ByteArray> {
-        val listBlockChain = arrayListOf<ByteArray>()
+    fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
+        val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
             val list = getPostchainClient().query("nm_get_blockchain_dependencies",
@@ -246,9 +246,14 @@ open class CliExecution(val config: ClientConfig) {
                                             "height" to GtvInteger(height)))
                     .get()
                     .asArray()
-            listBlockChain.addAll(list.map { it.asByteArray() })
+            list.forEach {
+                val pair = it.asArray()
+                val rid = pair[0].asByteArray()
+                val container = pair[1].asString()
+                listBlockChainContainerPair.add(rid to container)
+            }
         }
-        return listBlockChain
+        return listBlockChainContainerPair
     }
 
     fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
