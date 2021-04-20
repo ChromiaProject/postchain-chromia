@@ -27,10 +27,7 @@ entity blockchain_configuration_signers {
       signers: byte_array;
 }
 
-/**entity blockchain_signer_node { key blockchain, node; }
-*/
 entity blockchain_replica_node { key blockchain, node; }
-
 
 function require_provider_auth (provider) { require( is_signer(provider.pubkey)); }
 
@@ -90,7 +87,7 @@ function update_configuration_signers (cluster) {
 	val bcs = container_blockchain @*{ .container.cluster == cluster} .blockchain;
 	for (blockchain in bcs) {
 		val current_height =  get_last_height(blockchain);
-		val container = container_blockchain @ {blockchain} .container; 
+		val container = container_blockchain @ {blockchain} .container;
 		val signers = cluster_node @* { container.cluster } (@sort .node.pubkey);
 		// do not write new configuration when size is 0 since it's impossible to recover
 		// from that
@@ -107,4 +104,17 @@ operation add_container_replica(me: provider, cluster, container) {
 operation remove_container_replica(me: provider, cluster, container) {
 	require_provider_auth_with_rl(me);
 	delete cluster_container_replica @ {cluster, container};
+}
+
+operation add_bc_replica (provider, blockchain, node) {
+	require_provider_auth_with_rl(provider);
+	require( node.provider == provider );			
+	require(empty(blockchain_replica_node @? { blockchain, node }));
+	create blockchain_replica_node ( blockchain, node );
+}
+
+operation remove_bc_replica (provider, blockchain, node) {
+	require_provider_auth_with_rl(provider);
+	require( node.provider == provider );		
+	delete blockchain_replica_node @? { blockchain, node };
 }

@@ -18,9 +18,9 @@ query nm_find_next_configuration_height(
         return max(conf_h, sign_h);
 }
 
-/** Merge content of blockchain_configuration and blockchain_configuration_signers */	
+/** Merge content of blockchain_configuration and blockchain_configuration_signers */
 query nm_get_blockchain_configuration(
-	blockchain_rid: byte_array, 
+	blockchain_rid: byte_array,
 	height: integer
 	): byte_array?
 {
@@ -29,30 +29,30 @@ query nm_get_blockchain_configuration(
      * If conf_h exist, so does signer_h, thus no need to check both
      */
     val conf_h = blockchain_configuration @? { bc , .height <= height } (@sort_desc .height) limit 1;
-    if (conf_h != null) 
+    if (conf_h != null)
         return blockchain_configuration_merge(bc, height, conf_h);
     else
-        return null;		
+        return null;
 }
-	
-//checking that signers.size() is non-zero i done when population blockchain_configuration_signers. Thus, not needed to check here.	
+
+//checking that signers.size() is non-zero i done when population blockchain_configuration_signers. Thus, not needed to check here.
 function blockchain_configuration_merge(blockchain, height: integer, conf_h: integer) : byte_array {
 	val signer_h = blockchain_configuration_signers @ { blockchain , .height <= height } (@sort_desc .height) limit 1;
 	val signers = blockchain_configuration_signers @ {blockchain, .height==signer_h } .signers;
 	val current_config = blockchain_configuration @ { blockchain, .height <= conf_h } (@sort_desc .height, .data) limit 1;
 	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(current_config.data));
-	config_dict["signers"] = gtv.from_bytes(signers);     
+	config_dict["signers"] = gtv.from_bytes(signers);
 	return config_dict.to_gtv().to_bytes();
 }
 
 
-/* Blockchains to launch uses this query. If caller (nod_id) is a signer, return only active bcs. 
- * Inactive bcs should not be launched, to alleviate block building. 
+/* Function getBlockchainsShouldBeLaunched() uses this query. If caller (nod_id) is a signer, return only active bcs.
+ * Inactive bcs should not be launched, to alleviate block building.
  * If caller is a replica node of bc, include inactive bcs as well.
  */
 query nm_compute_blockchain_list(node_id: pubkey): list<byte_array> {
 	val node = node @? { .pubkey == node_id};
-	
+
 	if (exists(node)) {
 		val clusters = cluster_node @* {node} .cluster;
 		val res = list<byte_array>();
@@ -63,7 +63,7 @@ query nm_compute_blockchain_list(node_id: pubkey): list<byte_array> {
 				res.add_all(container_blockchain @* {container, .blockchain.active == true} .blockchain.rid);
 			}
 		}
-		return res;	
+		return res;
 	} else {
 		return [chain_context.blockchain_rid];
 	}
@@ -81,9 +81,9 @@ query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): lis
 		if (empty(bc)) {
 			res.add(list<byte_array>());
 		} else {
-			// note: we include signers in this list because node processing old blocks might 
+			// note: we include signers in this list because node processing old blocks might
 			// want to connect to _current_ signers to get blocks
-			val container = container_blockchain @ {bc} .container; 
+			val container = container_blockchain @ {bc} .container;
 			val signers = set( cluster_node @* { container.cluster } .node.pubkey );
 			signers.add_all(
 				blockchain_replica_node @* { bc } .node.pubkey
@@ -91,12 +91,12 @@ query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): lis
 			res.add(list(signers));
 		}
 	}
-	return res;	
+	return res;
 }
 
 //Function used by  mustSyncUntil (height) pos-146
 query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<integer> {
-	val res = list<integer>();    
+	val res = list<integer>();
     for (brid in blockchain_rids) {
     		val bc = blockchain @? { brid };
     		if (brid == chain_context.blockchain_rid) {
@@ -113,7 +113,7 @@ query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : lis
 }
 
 query nm_get_node_replica_map(): list<list<byte_array>> {
-	return list<list<byte_array>>(); 
+	return list<list<byte_array>>();
 }
 
 query nm_get_container_limits (name) : map<text, integer> {
@@ -149,13 +149,13 @@ query nm_get_containers(pubkey): list<text> {
 }
 
 query nm_get_blockchains_for_container(container_name: text): list<byte_array> {
-	val container = container @? {container_name}; 
+	val container = container @? {container_name};
 	val res = list<byte_array>();
 	if (exists(container)) {
 		val cluster = container.cluster;
 		res.add_all(container_blockchain @* {container, .blockchain.active == true} .blockchain.rid);
 	}
-	return res;	
+	return res;
 }
 
 //Returns a list of brids with corresponding container that this blockchain is dependent on. At the given height.
@@ -167,7 +167,7 @@ query nm_get_blockchain_dependencies(blockchain, height: integer): list<(byte_ar
     	val brids = blockchain_dependency @* {.me == blockchain, conf_h} .dependent_on.rid;
     	for (brid in brids) {
     		res.add((brid, container_blockchain @ { blockchain @{brid}} .container.name));
-    	}	
+    	}
     }
-	return res;	
+	return res;
 }

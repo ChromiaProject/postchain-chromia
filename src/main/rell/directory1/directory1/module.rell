@@ -64,16 +64,3 @@ operation register_provider (me: provider, pubkey, tier: integer) {
 	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
 	add_pubkey_as_provider(pubkey, false, tier, null);
 }
-
-operation add_bc_replica (provider, blockchain, node) {
-	require_provider_auth_with_rl(provider);
-	require( node.provider == provider );			
-	require(empty(blockchain_replica_node @? { blockchain, node }));
-	create blockchain_replica_node ( blockchain, node );
-}
-
-operation remove_bc_replica (provider, blockchain, node) {
-	require_provider_auth_with_rl(provider);
-	require( node.provider == provider );		
-	delete blockchain_replica_node @? { blockchain, node };
-}

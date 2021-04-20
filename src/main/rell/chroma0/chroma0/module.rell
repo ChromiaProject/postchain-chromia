@@ -6,7 +6,7 @@ import ft3_account: ft3.account;
 import ft3_core: ft3.core;
 
 struct module_args {
-    admin: pubkey;
+    initial_provider: pubkey;
 }
 
 entity provider_state {
@@ -17,8 +17,6 @@ entity provider_state {
     mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
 	mutable beneficiary: ft3_account.account; 	 
 }
-
-function require_admin() { 	require(is_signer(chain_context.args.admin)); }
 
 function create_simple_ft3_account(pubkey): ft3_account.account {
 	val account_id = ft3_account.create_account_with_auth(
@@ -32,20 +30,48 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 }
 
 operation init () {
-	require_admin();
+		val tier = 1;
+	require(empty( provider @* {}));
+	create voter_set("SYSTEM", 1);
+	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
+	 * which will run the directory bc.
+	 */
+	val system_voter_set = create voter_set("SYSTEM_P", 0);
+	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
+	add_pubkey_as_provider(chain_context.args.initial_provider, true, tier, system_cluster);
+	val prov = provider @ { chain_context.args.initial_provider};
+	update provider_state @ { prov } ( .active = true );
+	create voter_set_member(system_voter_set, prov);
+	create provider_quota(tier, provider_quota_type.max_actions_per_day, value = 100);
+	create container("system", system_cluster, container_type.naked, system_voter_set);
 	ft3_core.register_asset("CHR", chain_context.blockchain_rid);
-	create_simple_ft3_account(chain_context.args.admin);
+	create_simple_ft3_account(chain_context.args.initial_provider);
 }
 
-operation register_provider (pubkey) {
-	require_admin();
+function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {
+	var enable = false;
+	if (tier == 0) { enable = true; } //low rank providers can be enabled by anyone.
 	val provider = create provider (pubkey);
 	val account = create_simple_ft3_account(pubkey);
-	create provider_state (provider, name="", 
-		active=false,
-		beneficiary=account
-	);
-	create activity_counter (provider);
+		create provider_state (provider, name="",
+			active=enable,
+			system=is_system,
+			tier=tier,
+			beneficiary=account
+		);
+		create activity_counter (provider);
+		create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
+		if (exists(cluster)) {
+			create cluster_provider(cluster, provider);
+		}
+}
+
+//Includes enabling (active = true)
+operation register_provider (me: provider, pubkey, tier: integer) {
+	require_provider_auth_with_rl(me);
+	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
+	add_pubkey_as_provider(pubkey, false, tier, null);
+	val account = create_simple_ft3_account(pubkey);
 }
 
 operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {
@@ -62,104 +88,5 @@ operation update_provider_data (provider, name?, beneficiary_account_id: byte_ar
 	} 
 }
 
-operation add_replica (provider?, blockchain, node) {
-	if (exists(provider)) {
-		require_provider_auth(provider);
-		require( node.provider == provider );		
-	} else {
-		require_admin();			
-	}
-	
-	require(empty(blockchain_signer_node @? { blockchain, node }));
-	require(empty(blockchain_replica_node @? { blockchain, node })); //unnecessary check
-	create blockchain_replica_node ( blockchain, node );
-}
-
-operation remove_replica (provider?, blockchain, node) {
-	if (exists(provider)) {
-		require_provider_auth(provider);
-		require( node.provider == provider );		
-	} else {
-		require_admin();			
-	}
-	delete blockchain_replica_node @ { blockchain, node };
-}
-
-operation enable_provider (provider) {
-	require_admin();
-	update provider_state @ { provider } ( .active = true );
-}
-
-operation disable_provider (provider) {
-	require_admin();
-	update provider_state @ { provider } ( .active = false );
-	update node @* { provider } ( .active = false );
-	for (blockchain in blockchain_signer_node @* { .node.provider == provider } (.blockchain)) {
-		update_configuration(blockchain);
-	}
-	node_list.last_update = op_context.last_block_time;
-	//Delete all replicas of the provider
-    delete blockchain_replica_node @* { .node.provider == provider };
-}
 
 
-
-operation add_blockchain_signers (blockchain, add_signers: list<node>) {
-	require_admin();
-	for (signer in add_signers) {
-		require(signer.active);
-		create blockchain_signer_node(blockchain, signer);
-        //A signer is more than a replica. Cannot be both.
-		delete blockchain_replica_node @? {blockchain, signer};
-	}
-	update_configuration(blockchain);	
-}
-
-operation remove_blockchain_signers (blockchain, remove_signers: list<node>) {
-	require_admin();
-	for (signer in remove_signers) {
-		delete blockchain_signer_node @? {blockchain, signer};
-	}
-	update_configuration(blockchain);
-}
-
-operation add_blockchain ( config_data: byte_array, initial_nodes: list<node> ) {
-	require_admin();
-	require(initial_nodes.size() > 0);
-	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
-	val signers = list<pubkey>();
-	for (node in initial_nodes) {
-		signers.add(node.pubkey);
-	}
-	config["signers"] = signers.to_gtv();
-	val blockchain_rid = config.hash();
-	print("Added blockchain", blockchain_rid);
-	val blockchain = create blockchain ( blockchain_rid );
-	create blockchain_configuration (blockchain, 0, config.to_gtv().to_bytes());
-	for (node in initial_nodes) {
-		create blockchain_signer_node (blockchain, node);
-	}
-	create blockchain_added (blockchain, op_context.transaction);
-}
-
-operation add_configuration (blockchain, config_data: byte_array, height: integer) {
-	require_admin();
-	require(get_last_height(blockchain) < height);
-	require(empty(blockchain_configuration @? { blockchain, .height > height } limit 1));
-	create blockchain_configuration(
-		blockchain,
-		height,
-		data = patch_configuration_signers(blockchain, config_data)
-	);
-}
-
-operation stop_blockchain (blockchain, remove_replicas: boolean) {
-	require_admin();
-	
-	// NOTE: we do not update blockchain configuration, making it possible to 
-	// restart blockchain later. Data such as anchored blocks is not removed.
-	delete blockchain_signer_node @* { blockchain };
-	if (remove_replicas) {
-		delete blockchain_replica_node @* { blockchain };
-	} 
-}

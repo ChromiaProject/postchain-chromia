@@ -42,7 +42,7 @@ query get_blockchain_signers(bc: blockchain) {
         .node.port,
         .node.active,
         .node.last_updated
-    	);	
+    	);
     }
     return return_list;
 }
@@ -79,7 +79,7 @@ query get_blockchains(include_inactive: boolean): list<byte_array> {
 	}
     return blockchain @* { .active == true } .rid;
 }
- 
+
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }
