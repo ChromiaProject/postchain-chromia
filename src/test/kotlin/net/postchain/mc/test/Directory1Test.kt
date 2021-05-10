@@ -11,10 +11,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class Directory1Test : ManagedModeTest() {
 
@@ -256,7 +253,6 @@ class Directory1Test : ManagedModeTest() {
         //create cluster, initial providers added
         doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(newClusterName, providers_list,
                 voterSetSystemP, voterSetSystemP))
-
         assertAdded("get_cluster", "name", GtvString(newClusterName))
     }
 
@@ -265,15 +261,31 @@ class Directory1Test : ManagedModeTest() {
     fun testProposeConfigurationAcceptGtv() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
-                20L, "gtv"))
+                20L, "gtv", false))
         assertNextConfiguration(provConfig, 20L)
+
+        //force == false: only configs for heights > next config height can be added:
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
+                18L, "gtv", false))
+        assertNextConfiguration(provConfig, 20L)
+
+        //force == true: OK to add configs at all heights > current height
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
+                18L, "gtv", true))
+        val conf18Gtv = assertNextConfiguration(provConfig, 18L)
+
+        //force == true: OK to override a configuration
+        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfig1xmlFile,
+                18L, "xml", true))
+        val conf18GXml = assertNextConfiguration(provConfig, 18L)
+        assertNotEquals(conf18Gtv, conf18GXml)
     }
 
     @Test
     fun testProposeConfiguration() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfig1xmlFile,
-                20L, "xml"))
+                20L, "xml", false))
         assertNextConfiguration(provConfig, 20L)
     }
 

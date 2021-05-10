@@ -8,7 +8,10 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "propose new configuration to blockchain at specific height. Change will be applied after voting amongst providers.")
+@Parameters(commandDescription = "propose new configuration to blockchain at specific height. Height must be > current height " +
+        " and > all previously approven configuration heights. " +
+        "Use force flag -f to override previously added configs." +
+        "Change will be applied after voting amongst providers.")
 class CommandProposeConfiguration: CommandBase() {
 
     @Parameter(
@@ -35,11 +38,17 @@ class CommandProposeConfiguration: CommandBase() {
             required = false)
     private var format : String? = null
 
+    @Parameter(
+            names = ["-f", "--force"],
+            description = "Force the addition of blockchain configuration " +
+                    "for a height that already exists or a height < already proposed configuration heights.")
+    private var force = false
+
     override fun key() = "propose-configuration"
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionD1(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format)
+            CliExecutionD1(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format, force)
             Ok("Proposal is registered. Now waiting for approval.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

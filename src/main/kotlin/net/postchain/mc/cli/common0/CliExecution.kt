@@ -450,8 +450,8 @@ open class CliExecution(val config: ClientConfig) {
         sendTxSync(removeNodeAsync(key), "Node removed", "Cannot remove node")
     }
 
-    fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
-        sendTxSync(proposeConfigurationAsync(blockchainRID, blockchainConfigFile, height, format),
+    fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?, force: Boolean) {
+        sendTxSync(proposeConfigurationAsync(blockchainRID, blockchainConfigFile, height, format, force),
                 "proposal of config added", "Cannot add config proposal")
 
     }
@@ -776,14 +776,14 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun proposeConfigurationAsync(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?)
+    fun proposeConfigurationAsync(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?, force: Boolean)
             : GTXTransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         val provider = providerGtv(config.pubKey)
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation("propose_configuration",
-                    arrayOf(blockchain, provider, GtvFactory.gtv(data), GtvFactory.gtv(height)))
+                    arrayOf(blockchain, provider, GtvFactory.gtv(data), GtvFactory.gtv(height), GtvFactory.gtv(force)))
             sign(buildSigMaker())
         }
     }

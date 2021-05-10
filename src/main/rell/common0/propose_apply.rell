@@ -27,6 +27,7 @@ entity pending_conf {
     key proposal;
     blockchain;
 	height: integer;
+	force: boolean;
     data: byte_array;
 }
 
@@ -174,18 +175,20 @@ operation propose_blockchain( me: provider, config_data: byte_array, container) 
 
 //Pubkey used for authorization. Who can propose configuration updates? Container deployers.
 //SYSTEM_P is deployer of system container
-operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer) {
+operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer, force: boolean) {
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
 	require(get_last_height(blockchain) < height);
-	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
-	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
-
+	if (not(force)) {
+		require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
+		require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
+	}
 	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.deployer);
 	create pending_conf(prop,
 		blockchain,
 		height,
+		force,
 		data = config_data
 	);
 	internal_vote(me, prop, true);
@@ -407,13 +410,19 @@ function update_provider_state(provider, active: boolean) {
 function apply_conf(proposal) {
 	val pc = pending_conf @ {proposal};
 	require(get_last_height(pc.blockchain) < pc.height);
-	require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));
-	create blockchain_configuration(
-		pc.blockchain,
-		pc.height,
-		data = pc.data
-	);
-	add_dependencies(pc.data, pc.blockchain.rid, pc.height);
+	if (not(pc.force)) {
+		require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));
+	}
+	if (not(exists(blockchain_configuration @? {pc.blockchain, pc.height} ))) {
+		create blockchain_configuration(
+			pc.blockchain,
+			pc.height,
+			data = pc.data
+		);
+		add_dependencies(pc.data, pc.blockchain.rid, pc.height);
+	} else {
+		update blockchain_configuration @ { pc.blockchain, pc.height }(.data = pc.data);
+	}
 	delete pending_conf @* { proposal };
 }
 

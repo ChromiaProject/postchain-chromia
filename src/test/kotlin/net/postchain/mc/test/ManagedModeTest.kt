@@ -82,7 +82,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertEquals(1, listSigners.size)
     }
 
-    protected fun assertNextConfiguration(config: ClientConfig, expectedHeight: Long) {
+    protected fun assertNextConfiguration(config: ClientConfig, expectedHeight: Long): ByteArray {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
@@ -94,6 +94,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height)).get()
         assertk.assert(bc.asByteArray()).isNotNull()
+        return bc.asByteArray()
     }
 
 
