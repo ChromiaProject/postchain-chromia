@@ -9,17 +9,22 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "create a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it.")
-class CommandProposeContainer: CommandBase() {
+class CommandProposeContainer : CommandBase() {
 
     @Parameter(
             names = ["-n", "--name"],
-            description = "Name of new container",
-            required = true)
-    private var containerName = ""
+            description = "Name of new container. Alphanumerics only")
+    private var name = ""
 
     @Parameter(
-            names = ["-cl", "--cluster"],
-            description = "Name of cluster to put container in",
+            names = ["-a", "--auto-generate-name"],
+            description = "Set if container name should be aoutogenerated")
+    private var autoGenerateContainerName = false
+
+
+    @Parameter(
+            names = ["-c", "--cluster"],
+            description = "Name of cluster to put container in. Must exist in database",
             required = true)
     private var clusterName = ""
 
@@ -32,12 +37,26 @@ class CommandProposeContainer: CommandBase() {
     override fun key(): String = "propose-container"
 
     override fun execute(): CliResult {
+
         return try {
-            CliExecution(loadAppConfig()).proposeContainer(containerName, clusterName, deployerName)
-            Ok("proposal has been added successfully")
+            // Input validation of container name
+            var resName = ""
+            if (name == "") {
+                if (autoGenerateContainerName) {
+                    resName = autoGenerateName()
+                } else {
+                    throw CliError.Companion.CliException("When container name is not given, flag -a must be set to " +
+                            "autogenerate a container name")
+                }
+            } else if (isAlphanumeric(name) and (name.length <= NAME_LENGTH_MAX)) {
+                resName = name
+            } else {
+                throw CliError.Companion.CliException("Invalid container name: $name. Only [0-9A-Za-z] is allowed and max length is $NAME_LENGTH_MAX.")
+            }
+            CliExecution(loadAppConfig()).proposeContainer(resName, clusterName, deployerName)
+            Ok("proposal for container with name $name has been added successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }
     }
-
 }

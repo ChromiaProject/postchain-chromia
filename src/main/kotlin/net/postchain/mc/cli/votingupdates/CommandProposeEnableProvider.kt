@@ -8,8 +8,9 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "propose enabling of provider. Providers can add nodes add vote for different configuration updates, such as new providers, new nodes or new blockchains.")
-class CommandProposeEnableProvider: CommandBase() {
+@Parameters(commandDescription = "propose enabling of provider. Providers can add nodes add vote for different " +
+        "configuration updates, such as new providers, new nodes or new blockchains.")
+class CommandProposeEnableProvider : CommandBase() {
 
     @Parameter(
             names = ["-pk", "--pubkey"],

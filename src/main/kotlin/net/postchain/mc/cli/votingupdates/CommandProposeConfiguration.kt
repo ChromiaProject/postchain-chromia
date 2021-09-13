@@ -9,9 +9,9 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
 @Parameters(commandDescription = "propose new configuration to blockchain at specific height. Height must be > current height " +
-        " and > all previously approven configuration heights. " +
-        "Use force flag -f to override previously added configs." +
-        "Change will be applied after voting amongst providers.")
+        " and > all previously approved configuration heights. " +
+        "Use force flag -f to override previously added configs or to squeeze in a configuration at a height < previously approved config heights." +
+        "Change will be applied after voting.")
 class CommandProposeConfiguration: CommandBase() {
 
     @Parameter(
