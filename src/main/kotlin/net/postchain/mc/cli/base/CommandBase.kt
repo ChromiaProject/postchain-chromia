@@ -17,7 +17,7 @@ abstract class CommandBase : Command {
     }
 
     @Parameter(
-            names = ["-c", "--config"],
+            names = ["-cfg", "--config"],
             description = "cli program config property file path",
             required = true)
     protected var config = ""

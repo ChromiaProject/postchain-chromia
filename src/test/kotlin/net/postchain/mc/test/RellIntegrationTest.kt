@@ -5,7 +5,6 @@ import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -15,6 +14,7 @@ import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
+import net.postchain.rell.utils.RellCliUtils
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
 import java.nio.file.Paths
@@ -93,7 +93,8 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
-        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile)
+        val sourceVersion = RellCliUtils.checkVersion(null)
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, sourceVersion, unitTest = false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         val blockchainConfigsGtv = mutableListOf<Gtv>()
@@ -112,7 +113,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
             </dict>
             </entry>*/
             val bcGtv = chain.configs[0]!!
-            val dict = bcGtv.asDict().toMutableMap()
+            val dict = bcGtv.gtvConfig.asDict().toMutableMap()
             dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.mc.test.SmartOnDemandBlockBuildingStrategy")))
             val moddedGtv = GtvFactory.gtv(dict)
 

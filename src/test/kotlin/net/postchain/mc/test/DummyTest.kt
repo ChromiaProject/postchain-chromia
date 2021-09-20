@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.mc.cli.chromia0.CliExecutionC0
+import org.junit.Ignore
 import org.junit.Test
 
 class DummyTest : RellIntegrationTest() {
@@ -32,6 +33,10 @@ class DummyTest : RellIntegrationTest() {
         """.trimIndent()
     }
 
+    /**
+     * This is to demonstrate how to use the RellIntegrationTest() class. Unfortunately it is broken...
+     */
+    @Ignore
     @Test
     fun testSetup() {
         run("chroma0")
