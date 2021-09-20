@@ -5,8 +5,8 @@
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
-                <app module="enterprise0">
-                <args module="enterprise0">
+                <app module="directory1">
+                <args module="directory1">
                   <arg key="initial_provider"><bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea></arg>
                 </args>
 		</app>

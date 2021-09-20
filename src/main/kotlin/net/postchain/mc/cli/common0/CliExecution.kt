@@ -52,10 +52,10 @@ open class CliExecution(val config: ClientConfig) {
         try {
             todo()
         } catch (e: UserMistake) {
-            logger.error(e.message)
+            logger.error(e) {}
             throw CliError.Companion.CliException(e.message!!)
         } catch (e: Exception) {
-            logger.error(e.message)
+            logger.error(e) {}
             throw CliError.Companion.CliException(e.message!!)
         }
     }
