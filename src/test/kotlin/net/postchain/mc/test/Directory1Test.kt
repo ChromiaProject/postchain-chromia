@@ -101,6 +101,7 @@ class Directory1Test : ManagedModeTest() {
      */
     private fun addSystemProv2() {
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 1L))
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey,"system"))
         doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubKey))
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubKey, true))
         assertProviderData(prov2Config.pubKey, "", true)
@@ -298,10 +299,8 @@ class Directory1Test : ManagedModeTest() {
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
+        //includes prov adds prov2 to system cluster
         addSystemProv2()
-
-        //prov adds prov2 to system cluster
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey, "system"))
 
         // Add node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
@@ -439,13 +438,13 @@ class Directory1Test : ManagedModeTest() {
         // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
         var nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
-        assertTrue(nodeInfo["active"]!!.asBoolean())
+        assertTrue(nodeInfo.get("active")!!.asBoolean())
 
         // Remove node1
         doAndBuildBlocks(provConfig, provExecutor.removeNodeAsync(node1Pubkey))
 
         nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
-        assertFalse(nodeInfo["active"]!!.asBoolean())
+        assertFalse(nodeInfo.get("active")!!.asBoolean())
     }
 
     @Test
@@ -464,13 +463,16 @@ class Directory1Test : ManagedModeTest() {
     }
 
     @Test
-    fun testListBlockchainReplicas() {
+    fun testAddBlockchainReplicas() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
         doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.brid, node1Pubkey), 5)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
+
+        val listBlockchainReplicas = provExecutor.listBlockchainReplicas(provConfig.brid)
+        assertEquals(1, listBlockchainReplicas.size)
     }
 
     @Test

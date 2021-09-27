@@ -29,8 +29,8 @@ object PrintUtils {
         }
     }
 
-    //Used by listBlockchainReplicas and listBlockchainSigners
-    fun printBlockchainNodes(list: List<Gtv>, includeInactive: Boolean = true) {
+    //Used by listBlockchainReplicas
+    fun printBlockchainReplicas(list: List<Gtv>, includeInactive: Boolean = true) {
         list.forEach { item ->
             val isActive = item.get(4).asBoolean()
             if (isActive || includeInactive) {
@@ -40,6 +40,21 @@ object PrintUtils {
                 println("Node port: ${item.get(3).asInteger()}")
                 println("Node active: ${isActive}")
                 println("Node last_update: ${item.get(5).asInteger()}")
+                println("")
+            }
+        }
+    }
+
+    //Used by listBlockchainSigners
+    fun printBlockchainSigners(list: List<Gtv>, includeInactive: Boolean = true) {
+        list.forEach { item ->
+            val isActive = item.get(3).asBoolean()
+            if (isActive || includeInactive) {
+                println("Node pubkey: ${item.get(0).asByteArray().toHex()}")
+                println("Node host: ${item.get(1).asString()}")
+                println("Node port: ${item.get(2).asInteger()}")
+                println("Node active: ${isActive}")
+                println("Node last_update: ${item.get(4).asInteger()}")
                 println("")
             }
         }
