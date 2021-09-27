@@ -119,7 +119,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val executor = cliExecution(configProv)
         executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, clusterName))
         buildAndAwaitBlocks(1)
-        assertAddedNode(configProv, configProv.pubKey, key, host, port)
+        assertAddedNode(configProv.pubKey, key, host, port, clusterName)
     }
 
     /**
@@ -135,15 +135,18 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertk.assert(vs.asInteger()).isGreaterThan(0L)
     }
 
-    fun assertAddedNode(config: ClientConfig, providerPublicKey: String, nodePubkey: String, host: String, port: Long) {
-        val client = getPostchainClient(config)
-        val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(nodePubkey.hexStringToByteArray()))).get().asDict()
-        assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(node["host"]?.asString()).isEqualTo(host)
-        assertk.assert(node["port"]?.asInteger()).isEqualTo(port)
-        Assert.assertArrayEquals(node["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(node["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
+    fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
+        var nodeInfo = provExecutor.getNodeInfo(nodePubkey).asDict()
+        assertk.assert(nodeInfo["active"]?.asBoolean()).isEqualTo(true)
+        assertk.assert(nodeInfo["host"]?.asString()).isEqualTo(host)
+        assertk.assert(nodeInfo["port"]?.asInteger()).isEqualTo(port)
+        Assert.assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        Assert.assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
+        if (cluster != "") {
+            val cls = nodeInfo["cluster"]!!.asArray()
+            val clName = cls[0].asString()
+            assertEquals(clName, cluster)
+        }
     }
 
 
@@ -187,7 +190,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertEquals(host, bc.get(2).asString())
         assertEquals(port, bc.get(3).asInteger())
         assertTrue(bc.get(4).asBoolean())
-        PrintUtils.printBlockchainNodes(listReplicas)
+        PrintUtils.printBlockchainReplicas(listReplicas)
     }
 
     private fun assertNodeInfo(n: Gtv, nodeHost: String, nodePort: Long, nodePubkey: String, providerPubkey: String, b: Boolean) {

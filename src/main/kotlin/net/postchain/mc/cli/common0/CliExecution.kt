@@ -84,8 +84,11 @@ open class CliExecution(val config: ClientConfig) {
         var returnVal: Gtv? = null
         doInTryBlock {
             val info = getPostchainClient().query("get_node_data",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asDict().toMutableMap()
+            val cluster_info = getPostchainClient().query("get_clusters_of_node",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
-            returnVal = info
+            info.set("cluster", cluster_info)
+            returnVal = GtvFactory.gtv(info)
         }
         return returnVal!!
     }
@@ -336,6 +339,19 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val provider = providerGtv(key)
             val list = getPostchainClient().query("get_nodes_by_provider",
+                    GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger())))
+                    .get()
+                    .asArray()
+            returnList.addAll(list.map { it })
+        }
+        return returnList
+    }
+
+    fun listClustersByNode(key: String): List<Gtv> {
+        val returnList = arrayListOf<Gtv>()
+        doInTryBlock {
+            val provider = providerGtv(key)
+            val list = getPostchainClient().query("get_clusters_of_node",
                     GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger())))
                     .get()
                     .asArray()

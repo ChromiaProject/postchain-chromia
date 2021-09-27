@@ -2,8 +2,6 @@ package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
-import net.postchain.gtv.Gtv
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
@@ -31,7 +29,7 @@ class CommandListBlockchainReplicas : CommandBase() {
         return try {
             val list = CliExecution(loadAppConfig()).listBlockchainReplicas(blockchainRID)
             println("Replicas:")
-            PrintUtils.printBlockchainNodes(list, includeInactive)
+            PrintUtils.printBlockchainReplicas(list, includeInactive)
             Ok("Listed blockchain replicas successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

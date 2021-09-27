@@ -2,7 +2,6 @@ package net.postchain.mc.cli.blockchain
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
@@ -31,7 +30,7 @@ class CommandListBlockchainSigners : CommandBase() {
         return try {
             val listSigners = CliExecution(loadAppConfig()).listBlockchainSigners(blockchainRID)
             println("Signers:")
-            PrintUtils.printBlockchainNodes(listSigners, includeInactive)
+            PrintUtils.printBlockchainSigners(listSigners, includeInactive)
             Ok("Listed blockchain signers successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
