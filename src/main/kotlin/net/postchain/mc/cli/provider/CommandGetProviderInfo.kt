@@ -31,6 +31,10 @@ class CommandGetProviderInfo : CommandBase() {
             println("action points: $points")
             println("")
 
+            val clusters = CliExecution(loadAppConfig()).listClustersForProvider(key)
+            println("belongs to cluster/s: $clusters")
+            println("")
+
             Ok("Got provider info successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

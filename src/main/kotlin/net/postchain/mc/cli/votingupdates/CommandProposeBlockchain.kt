@@ -34,7 +34,7 @@ class CommandProposeBlockchain: CommandBase() {
     override fun execute(): CliResult {
         return try {
             CliExecutionD1(loadAppConfig()).proposeBlockchain(blockchainConfigFile, format, container)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Proposal is registered.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }
