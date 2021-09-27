@@ -102,3 +102,8 @@ query get_voter_set_members (name) {
 query get_provider_points(pubkey): integer {
 	return provider_rl_state @ {provider @ { pubkey }} .points;
 }
+
+query get_provider_clusters(pubkey) : list<text> {
+	return cluster_provider @* { provider @ {pubkey} }.cluster.name;
+}
+	

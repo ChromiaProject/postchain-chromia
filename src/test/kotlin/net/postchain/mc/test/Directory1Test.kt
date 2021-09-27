@@ -255,6 +255,9 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(newClusterName, providers_list,
                 voterSetSystemP, voterSetSystemP))
         assertAdded("get_cluster", "name", GtvString(newClusterName))
+
+        val clusters = provExecutor.listClustersForProvider(provConfig.pubKey)
+        println("clusters: $clusters")
     }
 
 

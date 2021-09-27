@@ -209,6 +209,15 @@ open class CliExecution(val config: ClientConfig) {
         return listContainers
     }
 
+    fun listClustersForProvider(key: String): List<String> {
+        val listClusters = arrayListOf<String>()
+        doInTryBlock {
+                val list = getPostchainClient().query("get_provider_clusters", GtvFactory.gtv(
+                        "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+                listClusters.addAll(list.map { it.asString() })
+        }
+        return listClusters
+    }
     /**
      * key - publicKey of node
      */
