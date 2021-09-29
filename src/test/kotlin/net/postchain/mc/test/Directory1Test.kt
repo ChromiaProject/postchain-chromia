@@ -57,6 +57,23 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.initAsync())
     }
 
+    /**
+     * NB This test is only for for the super-provider special solution used only to faciliate the setup in the EU Tender
+     * project. In a real setup, providers should not be able to add more than one node to each cluster. So on branch
+     * directory1, this test should fail.
+     */
+    @Test
+    fun testSuperprovider() {
+        //First provider adds node0 and bc0
+        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
+
+        //First provider adds a second node to system cluster (assert included)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port, "system")
+
+        val nodes = provExecutor.listNodesByProvider(provConfig.pubKey)
+        nodes.forEach { println("providers node: ${it.asDict()}") }
+    }
+
     @Test
     fun testProposeEnableDisableProvider() {
 
