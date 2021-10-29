@@ -6,17 +6,19 @@ query get_provider_data (pubkey) {
     } (
         pubkey = .provider.pubkey,
         name = .name,
-        active = .active
+        active = .active,
+        system = .system,
+        tier = .tier
     );
 }
-
-
 
 query get_all_providers() {
     return provider_state @* {} (
         pubkey = .provider.pubkey,
         name = .name,
-        active = .active
+        active = .active,
+        system = .system,
+        tier = .tier
     );
 }
 
@@ -33,7 +35,7 @@ query get_nodes_with_provider() {
     );
 }
 
-query enterprise_solution_version() = "0.1";
+query directory_solution_version() = "0.1";
 
 //queries used in the voting procedure for configuration updates:
 query get_proposals_since (since: rowid) {

@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
 
-@Parameters(commandDescription = "propose a new blockchain in a specific container. Change will be applied after voting amongst providers.")
+@Parameters(commandDescription = "propose a new blockchain in a specific container. Change will be applied after voting within the deployer voter set of the cluster that the container belongs to.")
 class CommandProposeBlockchain: CommandBase() {
 
     @Parameter(
@@ -29,7 +29,7 @@ class CommandProposeBlockchain: CommandBase() {
             required = true)
     private var container = ""
 
-    override fun key() = "propose-blockchain"
+    override fun key() = "blockchain-propose-add"
 
     override fun execute(): CliResult {
         return try {

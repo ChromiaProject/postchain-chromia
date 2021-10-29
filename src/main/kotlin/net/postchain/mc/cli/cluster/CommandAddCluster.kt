@@ -38,7 +38,7 @@ class CommandAddCluster : CommandBase() {
             required = true)
     private var deployersName = ""
 
-    override fun key(): String = "add-cluster"
+    override fun key(): String = "cluster-add"
 
     override fun execute(): CliResult {
         return try {

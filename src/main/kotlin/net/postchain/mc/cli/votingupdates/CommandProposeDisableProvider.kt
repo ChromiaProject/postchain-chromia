@@ -17,12 +17,12 @@ class CommandProposeDisableProvider: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key() = "propose-disable-provider"
+    override fun key() = "provider-propose-disable"
 
     override fun execute(): CliResult {
         return try {
             CliExecutionD1(loadAppConfig()).proposeDisableProvider(key)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Proposal is registered.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

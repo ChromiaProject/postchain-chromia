@@ -6,7 +6,9 @@
    container_limits,
    cluster_limits,
    cluster_provider,
+   cluster_deployer,
    voter_set_provider,
+   voter_set_governor,
    provider_state,
    provider_is_system,
    bc_pause,
@@ -62,6 +64,18 @@ entity pending_cluster_provider {
 	add: boolean;
 }
 
+entity pending_cluster_deployer {
+	key proposal;
+	key cluster;
+	deployer: voter_set;
+}
+
+entity pending_voter_set_governor{
+	key proposal;
+	key voter_set;
+	governor: voter_set;
+}
+
 entity pending_voter_set_provider {
 	key proposal;
 	key voter_set;
@@ -108,6 +122,26 @@ entity pending_provider_is_system {
 	system: boolean;
 }
 
+//Who can change cluster deployer? Cluster governor.
+operation propose_cluster_deployer(me: provider, cluster, new_deployer: voter_set) {
+	//check that provider authority and that it is in cluster's governor voter set
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_deployer, me, cluster.governance);
+	create pending_cluster_deployer(prop, cluster, new_deployer);
+	internal_vote( me, prop, true );
+}
+
+//Who can change voter set governor? Voter set governor.
+operation propose_voter_set_governor(me: provider, voter_set, new_governor: voter_set) {
+	//check that provider authority and that it is in cluster's governor voter set
+	require_provider_auth_with_rl(me);
+	require_voter_set_governor(voter_set, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.voter_set_governor, me, voter_set_governance @ { voter_set }.governor );
+	create pending_voter_set_governor(prop, voter_set, .governor = new_governor);
+	internal_vote( me, prop, true );
+}
+
 //Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
 operation propose_container(me: provider, cluster, name, deployer: voter_set) {
 	//check that provider authority and that it is cluster's deployer
@@ -140,7 +174,7 @@ operation propose_cluster_limits(me: provider, cluster, ram: integer, cpu: integ
 
 //Who can update voter set's provider list? Voter set's governor.
 operation propose_voter_set_provider(me: provider, voter_set, provider, add: boolean) {
-	//check that provider authority and that it is a cluster governor
+	//check that provider authority and that it is a vs governor
 	require_provider_auth_with_rl(me);
 	require_voter_set_governor(voter_set, me);
 	val governor = voter_set_governance @ { voter_set } .governor;
@@ -149,7 +183,7 @@ operation propose_voter_set_provider(me: provider, voter_set, provider, add: boo
 	internal_vote( me, prop, true );
 }
 
-//Who can update cluster provider list? Cluster governance voter set.
+//Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
 operation propose_cluster_provider(me: provider, cluster, provider, add: boolean) {
 	//check that provider authority and that it is a cluster governor
 	require_provider_auth_with_rl(me);
@@ -281,7 +315,9 @@ function apply_voting_result (prop: proposal) {
 			container_limits  -> apply_container_limits(prop);
 			cluster_limits    -> apply_cluster_limits(prop);
 			cluster_provider  -> apply_cluster_provider(prop);
+			cluster_deployer  -> apply_cluster_deployer(prop);
 			voter_set_provider-> apply_voter_set_provider(prop);
+			voter_set_governor-> apply_voter_set_governor(prop);
 			provider_state    -> apply_provider_state(prop);
 			provider_is_system-> apply_provider_is_system(prop);
 			bc_pause		  -> apply_pause_blockchain(prop);
@@ -300,7 +336,9 @@ function apply_voting_result (prop: proposal) {
 			container_limits  -> delete pending_container_limits @ { prop };
 			cluster_limits    -> delete pending_cluster_limits @ { prop };
 			cluster_provider  -> delete pending_cluster_provider @ { prop };
+			cluster_deployer  -> delete pending_cluster_deployer @ { prop };
 			voter_set_provider-> delete pending_voter_set_provider @ { prop };
+			voter_set_governor-> delete pending_voter_set_governor @ { prop };
 			provider_state    -> delete pending_provider_state @ { prop };
 			provider_is_system-> delete pending_provider_is_system @ { prop };
 			bc_pause		  -> delete pending_pause_blockchain @ { prop };
@@ -340,6 +378,18 @@ function apply_cluster_limits(proposal) {
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
 	delete pending_cluster_limits @ { proposal };
+}
+
+function apply_cluster_deployer(proposal) {
+	val pps = pending_cluster_deployer @ {proposal};
+	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
+	delete pending_cluster_deployer @ { proposal };
+}
+
+function apply_voter_set_governor(proposal) {
+	val pps = pending_voter_set_governor @ {proposal};
+	update voter_set_governance @ {. voter_set == pps.voter_set} (.governor = pps.governor);
+	delete pending_voter_set_governor @ { proposal };
 }
 
 function apply_cluster_provider(proposal) {

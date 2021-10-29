@@ -34,12 +34,12 @@ class CommandCreateVoterSet: CommandBase() {
             description = "Name of another voter set which can update this voter set. Default: voter set is its own governor.")
     private var governorName = ""
 
-    override fun key() = "create-voter-set"
+    override fun key() = "voter-set-create"
 
     override fun execute(): CliResult {
         return try {
             CliExecution(loadAppConfig()).createVoterSet(name, providers, threshold, governorName)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Voter set created")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

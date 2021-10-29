@@ -25,7 +25,7 @@ class CommandListNodes : CommandBase() {
             description = "Include inactive nodes")
     private var includeInactive = false
 
-    override fun key(): String = "list-nodes"
+    override fun key(): String = "nodes-list"
 
     override fun execute(): CliResult {
         return try {

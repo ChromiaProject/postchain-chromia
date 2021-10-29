@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "create a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it.")
+@Parameters(commandDescription = "propose a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it.")
 class CommandProposeContainer : CommandBase() {
 
     @Parameter(
@@ -34,7 +34,7 @@ class CommandProposeContainer : CommandBase() {
             required = true)
     private var deployerName = ""
 
-    override fun key(): String = "propose-container"
+    override fun key(): String = "container-propose-add"
 
     override fun execute(): CliResult {
 

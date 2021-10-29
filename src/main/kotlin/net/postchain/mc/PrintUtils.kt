@@ -68,6 +68,8 @@ object PrintUtils {
                 println("pubkey: ${dict["pubkey"]!!.asByteArray().toHex()}")
                 println("name: ${dict["name"]!!.asString()}")
                 println("active: ${isActive}")
+                println("is system provider: ${dict["system"]!!.asBoolean()}")
+                println("tier: ${dict["tier"]!!.asInteger()}")
                 if (dict.containsKey("beneficiary")) { //Enterprise0 does not have this key.
                     println("beneficiary: ${dict["beneficiary"]!!.asByteArray().toHex()}")
                 }
@@ -76,7 +78,24 @@ object PrintUtils {
         }
     }
 
-    //get_nodes_by_provider has key "active", get_nodes_with_provider has hey "node_active"
+    /**
+     * TODO: Inactivation of clusters is not yet implemented
+      */
+    fun printClusters(clusters: List<Gtv>, includeInactive: Boolean = false) {
+        clusters.forEach {
+            val dict = it.asDict()
+//            val isActive = dict["active"]!!.asBoolean()
+            val isActive = true
+            if (isActive || includeInactive) {
+                println("name: ${dict["name"]!!.asString()}")
+                println("deployer: ${dict["deployer"]!!.asString()}")
+                println("governor: ${dict["governor"]!!.asString()}")
+                println("is operational: ${dict["is_operational"]!!.asBoolean()}")
+                println("")
+            }
+        }
+    }
+    //get_nodes_by_provider has key "active", get_nodes_with_provider has key "node_active"
     private fun active(n: Map<String, Gtv>) : Boolean {
         if (n.containsKey("node_active")) {
             return n["node_active"]!!.asBoolean()

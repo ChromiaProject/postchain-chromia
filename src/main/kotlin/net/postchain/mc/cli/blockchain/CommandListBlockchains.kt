@@ -17,7 +17,7 @@ class CommandListBlockchains : CommandBase() {
             description = "Include inactive blockchains. A blockchain is inactivated with the command pause-blockchain.")
     private var includeInactive = false
 
-    override fun key(): String = "list-blockchains"
+    override fun key(): String = "blockchains-list"
 
     override fun execute(): CliResult {
         return try {

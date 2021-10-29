@@ -18,7 +18,7 @@ class CommandGetNodeInfo : CommandBase() {
     private var key = ""
 
 
-    override fun key(): String = "get-node-info"
+    override fun key(): String = "node-info"
 
     override fun execute(): CliResult {
         return try {
@@ -27,7 +27,7 @@ class CommandGetNodeInfo : CommandBase() {
                 println("Active: ${node["active"]!!.asBoolean()}")
                 println("Host: ${node["host"]!!.asString()}")
                 println("Port: ${node["port"]!!.asInteger()}")
-                println("Clusters: ${node["cluster"]?.asArray()?.forEach { it.asString() }}")
+                println("Clusters: ${node["cluster"]?.asArray()?.map { it.asString() }}")
             }
             Ok("Get node info successfully")
         } catch (e: CliError.Companion.CliException) {

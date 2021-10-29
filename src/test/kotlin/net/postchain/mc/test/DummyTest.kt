@@ -42,7 +42,7 @@ class DummyTest : RellIntegrationTest() {
         run("chroma0")
 
         val adminCliExecution = CliExecutionC0(cliConf(adminKey))
-        adminCliExecution.registerProvider(KeyPairHelper.pubKeyHex(providerKey))
+        adminCliExecution.registerProvider(KeyPairHelper.pubKeyHex(providerKey), 0)
 
         val providerCliExecution = CliExecutionC0(cliConf(providerKey))
         providerCliExecution.addNode(KeyPairHelper.pubKeyHex(blockSignerKey), "localhost", 9999, "")

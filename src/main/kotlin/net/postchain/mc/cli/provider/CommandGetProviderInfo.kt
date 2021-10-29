@@ -19,7 +19,7 @@ class CommandGetProviderInfo : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "get-provider-info"
+    override fun key(): String = "provider-info"
 
     override fun execute(): CliResult {
         return try {

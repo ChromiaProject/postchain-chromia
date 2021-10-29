@@ -25,7 +25,7 @@ class CommandGetBlockchainConfiguration : CommandBase() {
             description = "height of configuration")
     private var height = -1L
 
-    override fun key(): String = "get-blockchain-configuration"
+    override fun key(): String = "blockchain-configuration-get"
 
     override fun execute(): CliResult {
         return try {

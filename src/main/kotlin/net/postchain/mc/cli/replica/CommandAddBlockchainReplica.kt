@@ -23,7 +23,7 @@ class CommandAddBlockchainReplica: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "add-blockchain-replica"
+    override fun key(): String = "blockchain-replica-add"
 
     override fun execute(): CliResult {
         return try {

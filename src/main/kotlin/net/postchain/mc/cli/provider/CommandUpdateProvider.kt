@@ -29,7 +29,7 @@ class CommandUpdateProvider: CommandBase() {
             required = false)
     private var beneficiary = ""
 
-    override fun key() = "update-provider"
+    override fun key() = "provider-update"
 
     override fun execute(): CliResult {
         return try {
