@@ -49,7 +49,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     lateinit var blockchain0ConfigGtv: Gtv
 
+    // Voter sets SYSTEM and SYSTEM_P are created during initialization.
     val voterSetSystemP = "SYSTEM_P"
+    val voterSetSystem = "SYSTEM"
+    val systemClusterName = "system"
+    val systemContainerName = "system"
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
@@ -103,8 +107,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      * system cluster so that it becomes signer.
      */
     protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, configProv: ClientConfig) {
-        addNode0(configProv, "system")
-        addBc(blockchain0ConfigGtv, "system")
+        addNode0(configProv, systemClusterName)
+        addBc(blockchain0ConfigGtv, systemContainerName)
         assertAdded("get_blockchain", "rid", GtvFactory.gtv(configProv.brid.hexStringToByteArray()))
     }
 
@@ -143,9 +147,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         Assert.assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
         Assert.assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
         if (cluster != "") {
-            val cls = nodeInfo["cluster"]!!.asArray()
-            val clName = cls[0].asString()
-            assertEquals(clName, cluster)
+            assertEquals(nodeInfo["cluster"]?.asArray()?.map { it.asString() }, listOf(cluster))
         }
     }
 

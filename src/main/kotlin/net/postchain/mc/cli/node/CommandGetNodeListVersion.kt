@@ -10,7 +10,7 @@ import net.postchain.mc.cli.chromia0.CliExecutionC0
 @Parameters(commandDescription = "Get node list version")
 class CommandGetNodeListVersion : CommandBase() {
 
-    override fun key(): String = "get-node-list-version"
+    override fun key(): String = "node-list-version"
 
     override fun execute(): CliResult {
         return try {

@@ -17,7 +17,7 @@ class CommandListProviders : CommandBase() {
             description = "Include disabled providers")
     private var includeInactive = false
 
-    override fun key(): String = "list-providers"
+    override fun key(): String = "providers-list"
 
     override fun execute(): CliResult {
         return try {

@@ -18,12 +18,12 @@ class CommandProposeDeleteBlockchain: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    override fun key() = "propose-delete-blockchain"
+    override fun key() = "blockchain-propose-delete"
 
     override fun execute(): CliResult {
         return try {
             CliExecutionD1(loadAppConfig()).proposeDeleteBlockchain(blockchainRID)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Proposal is registered.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

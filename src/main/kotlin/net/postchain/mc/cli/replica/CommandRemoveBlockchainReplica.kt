@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "remove replica")
+@Parameters(commandDescription = "remove replica of a blockchain")
 class CommandRemoveBlockchainReplica: CommandBase() {
 
     @Parameter(
@@ -23,7 +23,7 @@ class CommandRemoveBlockchainReplica: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "remove-replica"
+    override fun key(): String = "blockchain-replica-remove"
 
     override fun execute(): CliResult {
         return try {

@@ -1,5 +1,6 @@
 package net.postchain.mc.test
 
+import assertk.assertions.isEqualTo
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
@@ -70,7 +71,7 @@ class Directory1Test : ManagedModeTest() {
 
         // The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster. TODO: Start as
         //  replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)
-        addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port, systemClusterName)
 
         //First provider proposes Disable prov2. Prov2 agrees:
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubKey))
@@ -101,7 +102,7 @@ class Directory1Test : ManagedModeTest() {
      */
     private fun addSystemProv2() {
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 1L))
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey,"system"))
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey,systemClusterName))
         doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubKey))
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubKey, true))
         assertProviderData(prov2Config.pubKey, "", true)
@@ -120,14 +121,14 @@ class Directory1Test : ManagedModeTest() {
         // Prov votes no
         voteNo("provider_is_system")
         val listVoterset = provExecutor.listVoterSetMembers(voterSetSystemP)
-        assertEquals(2, listVoterset.size, "")
+        assertEquals(2, listVoterset.size)
     }
 
     /**
-     * New voter set with two providers and SYSTEM_P as governor
+     * New voter set with two providers and SYSTEM_P as governor. Create and update members. Change governor.
      */
     @Test
-    fun testCreateVoterSet() {
+    fun testVoterSet() {
 
         addSystemProv2()
 
@@ -136,6 +137,30 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.createVoterSetAsync(voterSetName, providers_list, 0,
                 voterSetSystemP))
         assertAdded("get_voter_set", "name", GtvString(voterSetName))
+        val listVotersets = provExecutor.listVoterSets()
+        assertEquals(voterSetName, listVotersets[2].asString())
+        assertEquals(voterSetSystemP, provExecutor.getVoterSetGovernor(voterSetName))
+
+        var members = provExecutor.listVoterSetMembers(voterSetName)
+        assertEquals(listOf(provConfig.pubKey, prov2Config.pubKey), members.map { it.asByteArray().toHex() })
+
+
+        //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
+        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubKey, false))
+        var id = assertProposalTypeAndGetRowid("voter_set_provider")
+        doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
+        members = provExecutor.listVoterSetMembers(voterSetName)
+        assertEquals(listOf(provConfig.pubKey), members.map { it.asByteArray().toHex() })
+
+        //Make Ellen her own governor.
+        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
+        id = assertProposalTypeAndGetRowid("voter_set_governor")
+        doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
+
+        //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
+        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubKey, true))
+        members = provExecutor.listVoterSetMembers(voterSetName)
+        assertEquals(listOf(provConfig.pubKey, prov2Config.pubKey), members.map { it.asByteArray().toHex() })
     }
 
     @Test
@@ -145,7 +170,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val containerName = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP))
         assertAdded("get_container", "name", GtvString(containerName))
 
         val default = provExecutor.listContainerLimits(containerName)
@@ -200,7 +225,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val containerName = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP))
         val containerList = prov2Executor.listContainersForNode(nodes[0].pubKey)
         assertEquals(2, containerList.size)
     }
@@ -210,7 +235,7 @@ class Directory1Test : ManagedModeTest() {
         //add node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        val bclist = prov2Executor.listBlockchainsForContainer("system")
+        val bclist = prov2Executor.listBlockchainsForContainer(systemContainerName)
         assertEquals(1, bclist.size)
         assertEquals(nodes[0].getBlockchainRid(0)!!.toHex(), bclist[0].toHex())
     }
@@ -223,7 +248,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
         assertEquals(2, provExecutor.listBlockchains(false).size)
@@ -245,8 +270,11 @@ class Directory1Test : ManagedModeTest() {
         assertEquals(3, provExecutor.listBlockchains(false).size)
     }
 
+    /**
+     * Includes creating, listing of clusters as well as updating the cluster providers. And updating deployer.
+     */
     @Test
-    fun testCreateCluster() {
+    fun testCluster() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val newClusterName = "Vera"
         val providers_list = provConfig.pubKey
@@ -256,8 +284,24 @@ class Directory1Test : ManagedModeTest() {
                 voterSetSystemP, voterSetSystemP))
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
-        val clusters = provExecutor.listClustersForProvider(provConfig.pubKey)
-        println("clusters: $clusters")
+        var clusters = provExecutor.listClustersForProvider(provConfig.pubKey)
+        assertEquals(listOf(systemClusterName, newClusterName), clusters)
+
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 0))
+        doAndBuildBlocks(provConfig, provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = true))
+        clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
+        assertEquals(listOf(newClusterName), clusters)
+
+        doAndBuildBlocks(provConfig, provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = false))
+        clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
+        assertEquals(listOf(), clusters)
+
+        //change deployer
+        doAndBuildBlocks(provConfig, provExecutor.proposeClusterDeployerAsync(newClusterName, voterSetSystem))
+        val clusterInfo = provExecutor.getClusterInfo(newClusterName)
+        println(clusterInfo.asDict())
+        assertk.assert(clusterInfo["deployer"]?.asString()).isEqualTo(voterSetSystem)
+
     }
 
 
@@ -306,7 +350,7 @@ class Directory1Test : ManagedModeTest() {
         addSystemProv2()
 
         // Add node1 to system cluster
-        addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
         // Get next configuration height after adding new node as blockchain's signer
         // expected next congiguration height = -1 + init + 3*addNode + porposeEnableProv + proposeBlockhain + addprov2toCluster + addNode + 5 = 12 (with vote included in proposal)
@@ -328,7 +372,7 @@ class Directory1Test : ManagedModeTest() {
 
         addSystemProv2()
         // Prov2 adds node1 to system cluster
-        addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = "system")
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
         doAndBuildBlocks(prov2Config, provExecutor.removeNodeAsync(node1Pubkey))
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.brid)
@@ -341,7 +385,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
         //pause new bc
@@ -371,7 +415,7 @@ class Directory1Test : ManagedModeTest() {
 
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, "system", voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
 
         var bcs = provExecutor.listBlockchains(false)
@@ -495,6 +539,9 @@ class Directory1Test : ManagedModeTest() {
         assertEquals(2, listBlockchainSigners.size)
     }
 
+    /**
+     * Includes also test of listClusters
+     */
     @Test
     fun testListContainerReplicas() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
@@ -509,6 +556,9 @@ class Directory1Test : ManagedModeTest() {
                 voterSetSystemP, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterB, providers_list,
                 voterSetSystemP, voterSetSystemP))
+
+        val clusterList = provExecutor.listClusters().map { it.asString() }
+        assertEquals(listOf("system", clusterA, clusterB), clusterList)
 
         //add a container C to cluster A
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, clusterA, voterSetSystemP))

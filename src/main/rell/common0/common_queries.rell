@@ -20,8 +20,24 @@ query get_node_data (pubkey) {
     );
 }
 
-query get_clusters_of_node (pubkey) : list<text> {
+query get_cluster_data (name) {
+	return cluster @ { name} (
+		name = .name,
+     	governor = .governance.name,
+     	deployer = .deployer.name,
+     	is_operational = .operational
+	);
+}
+query list_clusters_of_node (pubkey) : list<text> {
 	return cluster_node @* { node @ {pubkey} }.cluster.name;
+}
+
+query list_clusters () : list<text> {
+	return cluster@* {} .name;
+}
+
+query list_voter_sets () : list<text> {
+	return voter_set@* {} .name;
 }
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
@@ -93,6 +109,11 @@ query is_node (pubkey) : boolean {
 	}
 
 query get_voter_set (name) = voter_set @ { name };
+
+
+query get_voter_set_governor (name) {
+	return voter_set_governance @ { .voter_set == voter_set @ { name } } .governor.name;	
+}
 
 query get_voter_set_members (name) {
 	return voter_set_member @* {voter_set @ {name}} (.provider.pubkey);

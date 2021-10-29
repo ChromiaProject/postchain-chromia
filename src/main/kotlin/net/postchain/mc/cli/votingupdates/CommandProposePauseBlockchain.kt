@@ -18,12 +18,12 @@ class CommandProposePauseBlockchain: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    override fun key() = "propose-pause-blockchain"
+    override fun key() = "blockchain-propose-pause"
 
     override fun execute(): CliResult {
         return try {
             CliExecutionD1(loadAppConfig()).proposePauseBlockchain(blockchainRID)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Proposal is registered.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

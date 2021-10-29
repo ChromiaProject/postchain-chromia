@@ -24,7 +24,7 @@ class CommandListBlockchainSigners : CommandBase() {
             description = "Include inactive signers")
     private var includeInactive = false
 
-    override fun key(): String = "list-blockchain-signers"
+    override fun key(): String = "blockchain-signers-list"
 
     override fun execute(): CliResult {
         return try {

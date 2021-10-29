@@ -23,7 +23,7 @@ class CommandListBlockchainReplicas : CommandBase() {
             description = "Include inactive replicas")
     private var includeInactive = false
 
-    override fun key(): String = "list-blockchain-replicas"
+    override fun key(): String = "blockchain-replicas-list"
 
     override fun execute(): CliResult {
         return try {

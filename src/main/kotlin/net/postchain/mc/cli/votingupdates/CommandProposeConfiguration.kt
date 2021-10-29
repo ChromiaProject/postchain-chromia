@@ -44,12 +44,12 @@ class CommandProposeConfiguration: CommandBase() {
                     "for a height that already exists or a height < already proposed configuration heights.")
     private var force = false
 
-    override fun key() = "propose-configuration"
+    override fun key() = "blockchain-propose-configuration"
 
     override fun execute(): CliResult {
         return try {
             CliExecutionD1(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format, force)
-            Ok("Proposal is registered. Now waiting for approval.")
+            Ok("Proposal is registered.")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }

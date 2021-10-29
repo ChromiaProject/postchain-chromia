@@ -70,6 +70,16 @@ open class CliExecution(val config: ClientConfig) {
         return returnVal!!
     }
 
+    fun getClusterInfo(name: String): Gtv {
+        var returnVal: Gtv? = null
+        doInTryBlock {
+            val info = getPostchainClient().query("get_cluster_data",
+                    GtvFactory.gtv("name" to GtvFactory.gtv(name))).get()
+            returnVal = info
+        }
+        return returnVal!!
+    }
+
     fun listProvidersActionPoints(key: String): Long {
         var returnVal: Gtv? = null
         doInTryBlock {
@@ -85,7 +95,7 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val info = getPostchainClient().query("get_node_data",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asDict().toMutableMap()
-            val cluster_info = getPostchainClient().query("get_clusters_of_node",
+            val cluster_info = getPostchainClient().query("list_clusters_of_node",
                     GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get()
             info.set("cluster", cluster_info)
             returnVal = GtvFactory.gtv(info)
@@ -317,6 +327,30 @@ open class CliExecution(val config: ClientConfig) {
         return returnList
     }
 
+    fun listVoterSets(): List<Gtv> {
+        val returnList = arrayListOf<Gtv>()
+        doInTryBlock {
+            val list = getPostchainClient().query("list_voter_sets",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("list_voter_sets")))
+                    .get()
+                    .asArray()
+            returnList.addAll(list.map { it })
+        }
+        return returnList
+    }
+
+    fun getVoterSetGovernor(name: String): String {
+        var returnValue = ""
+        doInTryBlock {
+            val governorName = getPostchainClient().query("get_voter_set_governor",
+                    GtvFactory.gtv("name" to GtvString(name)))
+                    .get()
+                    .asString()
+            returnValue = governorName
+        }
+        return returnValue
+    }
+
     fun listBlockchainReplicas(blockchainRID: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
@@ -329,6 +363,7 @@ open class CliExecution(val config: ClientConfig) {
         }
         return returnList
     }
+
 
     fun listContainerReplicas(containerName: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
@@ -356,12 +391,11 @@ open class CliExecution(val config: ClientConfig) {
         return returnList
     }
 
-    fun listClustersByNode(key: String): List<Gtv> {
+    fun listClusters(): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val provider = providerGtv(key)
-            val list = getPostchainClient().query("get_clusters_of_node",
-                    GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger())))
+            val list = getPostchainClient().query("list_clusters",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("list_clusters")))
                     .get()
                     .asArray()
             returnList.addAll(list.map { it })
@@ -431,8 +465,8 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun registerProvider(key: String) {
-        sendTxSync(registerProviderAsync(key, 0), "Provider has been registered",
+    fun registerProvider(key: String, tier: Long) {
+        sendTxSync(registerProviderAsync(key, tier), "Provider has been registered",
                 "Cannot register provider")
     }
 
@@ -495,9 +529,29 @@ open class CliExecution(val config: ClientConfig) {
                 "Cannot propose disabling of provider")
     }
 
-    fun proposeClusterLimits(containerName: String, limitMap: Map<String, Long>) {
-        sendTxSync(proposeClusterLimitsAsync(containerName, limitMap),
+    fun proposeClusterLimits(clusterName: String, limitMap: Map<String, Long>) {
+        sendTxSync(proposeClusterLimitsAsync(clusterName, limitMap),
                 "Cluster limits proposed", "Failed proposing new cluster limits")
+    }
+
+    fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
+        sendTxSync(proposeClusterProviderAsync(clusterName, key, add),
+                "Cluster providers update proposed", "Failed proposing cluster providers update")
+    }
+
+    fun proposeClusterDeployer(clusterName: String, key: String) {
+        sendTxSync(proposeClusterDeployerAsync(clusterName, key),
+                "Cluster deployer update proposed", "Failed proposing cluster deployer")
+    }
+
+    fun proposeVoterSetGovernor(name: String, new: String) {
+        sendTxSync(proposeVoterSetGovernorAsync(name, new),
+                "Voter set governor update proposed", "Failed proposing voter set governor")
+    }
+
+    fun proposeVoterSetMember(voterSet: String, member: String, add: Boolean) {
+        sendTxSync(proposeVoterSetMemberAsync(voterSet, member, add),
+                "Voter set member update proposed", "Failed proposing voter set member update")
     }
 
     fun proposeContainerLimits(containerName: String, limitMap: Map<String, Long>) {
@@ -885,4 +939,57 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
+    /**
+     * Propose update of cluster providers
+     * add = true => Add this provider
+     * add = false => Remove this provider from cluster
+     */
+    fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val providerToAddOrRemove = providerGtv(provider)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_cluster_provider",
+                    arrayOf(meProvider, cluster, providerToAddOrRemove, GtvFactory.gtv(add)))
+            sign(buildSigMaker())
+        }
+    }
+
+    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val cluster = clusterGtv(clusterName)
+        val deployer = voterSetGtv(newDeployer)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_cluster_deployer",
+                    arrayOf(meProvider, cluster, deployer))
+            sign(buildSigMaker())
+        }
+    }
+
+    /**
+     * Propose update a voter set's members
+     * add = true => Add this provider as member to voter set
+     * add = false => Remove this member from voter set
+     */
+    fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val voterSetGtv = voterSetGtv(voterSet)
+        val memberToAddOrRemove = providerGtv(member)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_voter_set_provider",
+                    arrayOf(meProvider, voterSetGtv, memberToAddOrRemove, GtvFactory.gtv(add)))
+            sign(buildSigMaker())
+        }
+    }
+
+    fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): GTXTransactionBuilder {
+        val meProvider = providerGtv(config.pubKey)
+        val vs = voterSetGtv(voterSetName)
+        val newGovernorGtv = voterSetGtv(newGovernor)
+        return makeTransactionWithNop().apply {
+            addOperation("propose_voter_set_governor",
+                    arrayOf(meProvider, vs, newGovernorGtv))
+            sign(buildSigMaker())
+        }
+    }
 }

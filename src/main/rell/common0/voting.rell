@@ -11,7 +11,7 @@ entity voter_set {
 // If not defined, it is the voter set itself
 entity voter_set_governance {
 	key voter_set;
-	index governor: voter_set;
+	mutable governor: voter_set;
 }
 
 entity voter_set_member {
@@ -27,6 +27,8 @@ entity voter_set_member {
  	val vs = create voter_set(name, threshold);
  	if (exists(govenor)) {
  		create voter_set_governance(voter_set=vs, governor=govenor);
+ 	} else {
+ 		create voter_set_governance(voter_set=vs, governor=vs);
  	}
  	 if (exists(initials)) {
  		for (prov in initials) {

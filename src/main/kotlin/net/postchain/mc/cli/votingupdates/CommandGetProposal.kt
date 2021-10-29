@@ -19,7 +19,7 @@ class CommandGetProposal: CommandBase() {
             required = true)
     private var idx = 0L
 
-    override fun key() = "get-proposal"
+    override fun key() = "proposal-info"
 
     override fun execute(): CliResult {
         return try {
