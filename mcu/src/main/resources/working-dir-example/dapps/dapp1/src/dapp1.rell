@@ -1,0 +1,10 @@
+module;
+
+entity entity1 {
+    key name;
+}
+
+operation add_entity (name: text) { create entity1 (name); }
+
+query get_entities () { return entity1 @* {}; }
+
