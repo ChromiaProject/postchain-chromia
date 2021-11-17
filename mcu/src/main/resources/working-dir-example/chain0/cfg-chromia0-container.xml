@@ -1,0 +1,962 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dict>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="blockdelay">
+                <int>2000</int>
+            </entry>
+            <entry key="maxblocktime">
+                <int>2000</int>
+            </entry>
+            <entry key="maxblocktransactions">
+                <int>500</int>
+            </entry>
+            <entry key="name">
+                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="configurationfactory">
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="moduleArgs">
+                        <dict>
+                            <entry key="chromia0_containers">
+                                <dict>
+                                    <entry key="admin">
+                                        <bytea>0317C46419945D577BCE8ABBCC4558E9C927F50638B1F1A8C382F6843DD485D7EE</bytea>
+                                    </entry>
+                                </dict>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="modules">
+                        <array>
+                            <string>chromia0_containers</string>
+                        </array>
+                    </entry>
+                    <entry key="sources_v0.10">
+                        <dict>
+                            <entry key="chromia0_containers/activity.rell">
+                                <string>object activity_check {&#13;
+	mutable last_checked: timestamp = 0;&#13;
+}&#13;
+&#13;
+entity activity_counter {&#13;
+	key provider;&#13;
+	mutable count : integer = 0;&#13;
+}&#13;
+&#13;
+operation update_activity_counter () {&#13;
+	if (activity_check.last_checked == 0) {&#13;
+		activity_check.last_checked = op_context.last_block_time;&#13;
+		return;&#13;
+	}&#13;
+	val delta = (op_context.last_block_time - activity_check.last_checked) / 1000;&#13;
+	require(delta &gt;= 86400);&#13;
+	&#13;
+	for (provider in provider_state @* { .active == true } (.provider)) {&#13;
+		// if provider has at least one active node&#13;
+		if (exists(node @? { .provider == provider, .active == true} limit 1)) {&#13;
+			update activity_counter@ { provider} (.count += delta);&#13;
+		}&#13;
+	}&#13;
+	activity_check.last_checked = op_context.last_block_time;	&#13;
+}</string>
+                            </entry>
+                            <entry key="chromia0_containers/anchoring.rell">
+                                <string>entity anchored_block { &#13;
+	key blockchain, height: integer;&#13;
+	key block_rid: byte_array;&#13;
+}&#13;
+&#13;
+entity anchored_block_signer { key anchored_block, node; }&#13;
+&#13;
+struct base_block_header {&#13;
+	blockchain_rid: byte_array;&#13;
+	prev_block_rid: byte_array;&#13;
+	merkle_root_hash: byte_array;&#13;
+	timestamp: timestamp;&#13;
+	height: integer;&#13;
+	dependencies: gtv;&#13;
+	extra: map&lt;text, gtv&gt;;&#13;
+}&#13;
+&#13;
+function find_blockchain_configuration (blockchain, height: integer): blockchain_configuration {&#13;
+    // find configuration height -- the latest height up to given height&#13;
+    return (blockchain_configuration @ { blockchain , .height &lt;= height } &#13;
+     (@sort_desc .height, bc=blockchain_configuration) limit 1).bc;&#13;
+}&#13;
+&#13;
+function signers_from_configuration( blockchain_configuration ): list&lt;pubkey&gt; {&#13;
+	val config_dict = map&lt;text, gtv&gt;.from_gtv(gtv.from_bytes(blockchain_configuration.data));&#13;
+	return list&lt;pubkey&gt;.from_gtv(config_dict["signers"]);&#13;
+}&#13;
+&#13;
+operation anchor_block (header: base_block_header, signers: list&lt;pubkey&gt;, signatures: list&lt;byte_array&gt;) {&#13;
+	val blockchain = blockchain @ { header.blockchain_rid };&#13;
+	val existing_ab = anchored_block @? { blockchain, header.height  };&#13;
+	require(not exists(existing_ab));&#13;
+	&#13;
+	val all_signers = set(signers_from_configuration(&#13;
+		find_blockchain_configuration(blockchain, header.height)&#13;
+	));&#13;
+	&#13;
+	val block_rid = header.hash();&#13;
+	print("block rid", block_rid);&#13;
+	&#13;
+	for (i in range(0, signers.size())) {&#13;
+		require(all_signers.contains(signers[i]));&#13;
+		print("s", signers[i], signatures[i]);&#13;
+		require(verify_signature(block_rid, signers[i], signatures[i]));&#13;
+	}&#13;
+	&#13;
+	val block = create anchored_block ( blockchain, header.height, block_rid );&#13;
+	for (signer in signers) {&#13;
+		create anchored_block_signer(block, node @ { signer });	&#13;
+	}&#13;
+}</string>
+                            </entry>
+                            <entry key="chromia0_containers/compensation.rell">
+                                <string></string>
+                            </entry>
+                            <entry key="chromia0_containers/module.rell">
+                                <string>@mount('')&#13;
+module;&#13;
+&#13;
+import ft3.ft3_basic;&#13;
+import ft3_account: ft3.account;&#13;
+import ft3_core: ft3.core;&#13;
+&#13;
+struct module_args {&#13;
+    admin: pubkey;&#13;
+}&#13;
+&#13;
+entity provider { key pubkey; }&#13;
+&#13;
+entity node {&#13;
+	index provider;&#13;
+	key pubkey;&#13;
+	mutable active: boolean = true;&#13;
+	mutable host: text;&#13;
+	mutable port: integer;&#13;
+	mutable last_updated: timestamp;&#13;
+}&#13;
+&#13;
+object node_list {&#13;
+	mutable last_update: timestamp = 0;&#13;
+}&#13;
+&#13;
+entity provider_state {&#13;
+	key provider;&#13;
+	mutable name: text;&#13;
+	mutable active: boolean;&#13;
+	mutable beneficiary: ft3_account.account; 	 &#13;
+}&#13;
+&#13;
+entity blockchain { key rid: byte_array; }&#13;
+&#13;
+entity blockchain_added { key blockchain; key transaction; }&#13;
+&#13;
+entity blockchain_configuration {&#13;
+	key blockchain, height: integer;&#13;
+	data: byte_array;&#13;
+}&#13;
+&#13;
+entity blockchain_signer_node { key blockchain, node; }&#13;
+entity blockchain_replica_node { key blockchain, node; }&#13;
+&#13;
+function require_admin() { 	require(is_signer(chain_context.args.admin)); }&#13;
+&#13;
+function create_simple_ft3_account(pubkey): ft3_account.account {&#13;
+	val account_id = ft3_account.create_account_with_auth(&#13;
+		ft3_account.auth_descriptor(&#13;
+			"C",&#13;
+			[pubkey],&#13;
+			[pubkey.to_gtv()]&#13;
+		)	&#13;
+	);&#13;
+	return ft3_account.account @ { account_id };&#13;
+}&#13;
+&#13;
+operation init () {&#13;
+	require_admin();&#13;
+	ft3_core.register_asset("CHR", chain_context.blockchain_rid);&#13;
+	create_simple_ft3_account(chain_context.args.admin);&#13;
+}&#13;
+&#13;
+&#13;
+operation register_provider (pubkey) {&#13;
+	require_admin();&#13;
+	val provider = create provider (pubkey);&#13;
+	val account = create_simple_ft3_account(pubkey);&#13;
+	create provider_state (provider, name="", &#13;
+		active=false,&#13;
+		beneficiary=account&#13;
+	);&#13;
+	create activity_counter (provider);&#13;
+}&#13;
+&#13;
+function require_provider_auth (provider) { require( is_signer(provider.pubkey)); }&#13;
+&#13;
+operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {&#13;
+	require_provider_auth(provider);&#13;
+	if (exists(name)) {&#13;
+		update provider_state @ {provider} (&#13;
+			.name = name&#13;
+		);		&#13;
+	}&#13;
+	if (exists(beneficiary_account_id)) {&#13;
+		update provider_state @ {provider} (&#13;
+			.beneficiary = ft3_account.account @ { .id == beneficiary_account_id }&#13;
+		);&#13;
+	} &#13;
+}&#13;
+&#13;
+operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {&#13;
+	require_provider_auth(provider);&#13;
+	val existing_node = node @? { node_pubkey }; &#13;
+	if (exists(existing_node)) {&#13;
+		require(existing_node.provider == provider);&#13;
+		update existing_node (&#13;
+			.active = true,&#13;
+			.host = host, &#13;
+			.port = port,&#13;
+			.last_updated = op_context.last_block_time&#13;
+		);&#13;
+	} else {&#13;
+		create node (provider, node_pubkey, host, port,&#13;
+			last_updated = op_context.last_block_time&#13;
+		);&#13;
+	}&#13;
+	node_list.last_update = op_context.last_block_time;&#13;
+}&#13;
+&#13;
+operation add_replica (provider?, blockchain, node) {&#13;
+	if (exists(provider)) {&#13;
+		require_provider_auth(provider);&#13;
+		require( node.provider == provider );		&#13;
+	} else {&#13;
+		require_admin();			&#13;
+	}&#13;
+	&#13;
+	require(empty(blockchain_signer_node @? { blockchain, node }));&#13;
+	require(empty(blockchain_replica_node @? { blockchain, node }));&#13;
+	create blockchain_replica_node ( blockchain, node );&#13;
+}&#13;
+&#13;
+operation remove_replica (provider?, blockchain, node) {&#13;
+	if (exists(provider)) {&#13;
+		require_provider_auth(provider);&#13;
+		require( node.provider == provider );		&#13;
+	} else {&#13;
+		require_admin();			&#13;
+	}&#13;
+	delete blockchain_replica_node @ { blockchain, node };&#13;
+}&#13;
+&#13;
+&#13;
+operation remove_node (provider, node_pubkey: pubkey) {&#13;
+	require_provider_auth(provider);&#13;
+	val node_to_remove = node @ { node_pubkey };&#13;
+	node_to_remove.active = false;&#13;
+	for (blockchain in blockchain_signer_node @* { .node == node_to_remove } .blockchain) {&#13;
+		update_configuration(blockchain);&#13;
+	}&#13;
+	node_list.last_update = op_context.last_block_time;&#13;
+}&#13;
+&#13;
+operation enable_provider (provider) {&#13;
+	require_admin();&#13;
+	update provider_state @ { provider } ( .active = true );&#13;
+}&#13;
+&#13;
+operation disable_provider (provider) {&#13;
+	require_admin();&#13;
+	update provider_state @ { provider } ( .active = false );&#13;
+	update node @* { provider } ( .active = false );&#13;
+	for (blockchain in blockchain_signer_node @* { .node.provider == provider } (.blockchain)) {&#13;
+		update_configuration(blockchain);&#13;
+	}&#13;
+	node_list.last_update = op_context.last_block_time;&#13;
+}&#13;
+&#13;
+function get_last_height (blockchain): integer {&#13;
+	if (blockchain.rid == chain_context.blockchain_rid) {&#13;
+		return (block @? {} (@sort_desc .block_height) limit 1) ?: -1;&#13;
+	} else {&#13;
+		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;&#13;
+	}&#13;
+}&#13;
+&#13;
+function patch_configuration_signers(blockchain, data: byte_array): byte_array {&#13;
+    val config_dict = map&lt;text, gtv&gt;.from_gtv(gtv.from_bytes(data));&#13;
+	val signers = blockchain_signer_node @* { blockchain } (@sort .node.pubkey);&#13;
+	require(signers.size() &gt; 0);&#13;
+	// do not write new configuration when size is 0 since it's impossible to recover&#13;
+	// from that&#13;
+    config_dict["signers"] = signers.to_gtv();     &#13;
+	return config_dict.to_gtv().to_bytes();&#13;
+}&#13;
+&#13;
+function update_configuration (blockchain) {&#13;
+    update_configuration_delay(blockchain, 5);&#13;
+}&#13;
+&#13;
+function update_configuration_delay (blockchain, heightDelay: integer) {&#13;
+	val last_config = blockchain_configuration @ { blockchain } (@sort_desc .height, .data) limit 1;&#13;
+    delete blockchain_signer_node @* { blockchain, .node.active == false};&#13;
+    val last_height = get_last_height(blockchain);&#13;
+    val updated_config = patch_configuration_signers( blockchain, last_config.data );&#13;
+    &#13;
+    create blockchain_configuration (&#13;
+        blockchain,&#13;
+        height = last_height + heightDelay,&#13;
+        data = updated_config&#13;
+    );&#13;
+}&#13;
+&#13;
+operation add_blockchain_signers (blockchain, add_signers: list&lt;node&gt;, heightDelay: integer) {&#13;
+	require_admin();&#13;
+	for (signer in add_signers) {&#13;
+		require(signer.active);&#13;
+		create blockchain_signer_node(blockchain, signer);&#13;
+	}&#13;
+	update_configuration_delay(blockchain, heightDelay);&#13;
+}&#13;
+&#13;
+operation remove_blockchain_signers (blockchain, remove_signers: list&lt;node&gt;) {&#13;
+	require_admin();&#13;
+	for (signer in remove_signers) {&#13;
+		delete blockchain_signer_node @? {blockchain, signer};&#13;
+	}&#13;
+	update_configuration(blockchain);&#13;
+}&#13;
+&#13;
+operation add_blockchain ( config_data: byte_array, initial_nodes: list&lt;node&gt; ) {&#13;
+	require_admin();&#13;
+	require(initial_nodes.size() &gt; 0);&#13;
+	val config = map&lt;text, gtv&gt;.from_gtv(gtv.from_bytes(config_data));&#13;
+	val signers = list&lt;pubkey&gt;();&#13;
+	for (node in initial_nodes) {&#13;
+		signers.add(node.pubkey);&#13;
+	}&#13;
+	config["signers"] = signers.to_gtv();&#13;
+	val blockchain_rid = config.hash();&#13;
+	print("Added blockchain", blockchain_rid);&#13;
+	val blockchain = create blockchain ( blockchain_rid );&#13;
+	create blockchain_configuration (blockchain, 0, config.to_gtv().to_bytes());&#13;
+	for (node in initial_nodes) {&#13;
+		create blockchain_signer_node (blockchain, node);&#13;
+	}&#13;
+	create blockchain_added (blockchain, op_context.transaction);&#13;
+}&#13;
+&#13;
+operation add_configuration (blockchain, config_data: byte_array, height: integer) {&#13;
+	require_admin();&#13;
+	require(get_last_height(blockchain) &lt; height);&#13;
+	require(empty(blockchain_configuration @? { blockchain, .height &gt; height } limit 1));&#13;
+	create blockchain_configuration(&#13;
+		blockchain,&#13;
+		height,&#13;
+		data = patch_configuration_signers(blockchain, config_data)&#13;
+	);&#13;
+}&#13;
+&#13;
+operation stop_blockchain (blockchain, remove_replicas: boolean) {&#13;
+	require_admin();&#13;
+	&#13;
+	// NOTE: we do not update blockchain configuration, making it possible to &#13;
+	// restart blockchain later. Data such as anchored blocks is not removed.&#13;
+	delete blockchain_signer_node @* { blockchain };&#13;
+	if (remove_replicas) {&#13;
+		delete blockchain_replica_node @* { blockchain };&#13;
+	} &#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="chromia0_containers/nm_api.rell">
+                                <string>&#13;
+query nm_get_peer_list_version() = node_list.last_update;&#13;
+&#13;
+query nm_find_next_configuration_height(&#13;
+	blockchain_rid: byte_array,&#13;
+	height: integer&#13;
+	): integer?&#13;
+{&#13;
+		val bc = blockchain @? { blockchain_rid };&#13;
+    	if (bc == null) return null;&#13;
+    	return blockchain_configuration @? { bc!!, .height &gt; height }&#13;
+        	(@sort .height) limit 1;&#13;
+		&#13;
+}&#13;
+	&#13;
+query nm_get_blockchain_configuration(&#13;
+	blockchain_rid: byte_array, &#13;
+	height: integer&#13;
+	): byte_array?&#13;
+{&#13;
+	val bc = blockchain @ { blockchain_rid };&#13;
+    // find configuration height -- the latest height up to given height&#13;
+    val ch = blockchain_configuration @? { bc , .height &lt;= height } (@sort_desc .height) limit 1;&#13;
+    if (ch != null) &#13;
+        return blockchain_configuration @ { .blockchain == bc, .height == ch } .data;&#13;
+    else&#13;
+        return null;		&#13;
+}&#13;
+&#13;
+query nm_get_blockchain_configurations(blockchain_rid: byte_array): map&lt;integer, byte_array&gt; {&#13;
+    val res = map&lt;integer, byte_array&gt;();&#13;
+    val bc = blockchain @ { blockchain_rid };&#13;
+    val configs = blockchain_configuration @* { bc };&#13;
+    for (config in configs) {&#13;
+        res[config.height] = config.data;&#13;
+    }&#13;
+    return res;&#13;
+}&#13;
+		&#13;
+query nm_compute_blockchain_list(node_id: pubkey): list&lt;byte_array&gt;&#13;
+{&#13;
+	val node = node @? { .pubkey == node_id};&#13;
+	&#13;
+	if (exists(node)) {&#13;
+		val bc_set = set(blockchain_signer_node @* { node!! } (.blockchain.rid));&#13;
+		bc_set.add_all(blockchain_replica_node @* { node!! } (.blockchain.rid));&#13;
+		bc_set.add(chain_context.blockchain_rid);&#13;
+		return list(bc_set);		&#13;
+	} else {&#13;
+		return [chain_context.blockchain_rid];&#13;
+	}&#13;
+}&#13;
+&#13;
+// note -- API expects array, so we need suppress naming&#13;
+query nm_get_peer_infos () = node @* {} (_ = .host,_ = .port,_ = .pubkey,_ = .last_updated);&#13;
+&#13;
+query nm_api_version () = 1;&#13;
+&#13;
+query nm_get_blockchain_replica_node_map(blockchain_rids: list&lt;byte_array&gt;): list&lt;list&lt;byte_array&gt;&gt; {&#13;
+	val res = list&lt;list&lt;byte_array&gt;&gt;();&#13;
+	for (brid in blockchain_rids) {&#13;
+		val bc = blockchain @? { brid };&#13;
+		if (brid == chain_context.blockchain_rid) {&#13;
+			// for the chain0 include all nodes, this makes sure that replicas &#13;
+			// are connected&#13;
+			res.add( node @* { .active == true } .pubkey );&#13;
+		} else if (empty(bc)) {&#13;
+			res.add(list&lt;byte_array&gt;());&#13;
+		} else {&#13;
+			// note: we include signers in this list because node processing old blocks might &#13;
+			// want to connect to _current_ signers to get blocks &#13;
+			val signers = set( blockchain_signer_node @* { bc!! } .node.pubkey );&#13;
+			signers.add_all(&#13;
+				blockchain_replica_node @* { bc!! } .node.pubkey&#13;
+			);&#13;
+			res.add(list(signers));&#13;
+		}&#13;
+	}&#13;
+	return res;	&#13;
+}&#13;
+&#13;
+query nm_get_node_replica_map(): list&lt;list&lt;byte_array&gt;&gt; {&#13;
+	return list&lt;list&lt;byte_array&gt;&gt;(); &#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="chromia0_containers/queries.rell">
+                                <string>query get_provider (pubkey) = provider @ { pubkey };&#13;
+&#13;
+query get_provider_data (pubkey) {&#13;
+    return provider_state @ {&#13;
+        provider @ { pubkey }&#13;
+    } (&#13;
+        pubkey = .provider.pubkey,&#13;
+        name = .name,&#13;
+        active = .active,&#13;
+        beneficiary = .beneficiary.id&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_all_providers() {&#13;
+    return provider_state @* {} (&#13;
+        pubkey = .provider.pubkey,&#13;
+        name = .name,&#13;
+        active = .active,&#13;
+        beneficiary = .beneficiary.id&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_node (pubkey) = node @ { pubkey };&#13;
+&#13;
+query get_node_data (pubkey) {&#13;
+    return node @ {&#13;
+        pubkey&#13;
+    } (&#13;
+        provider = .provider.pubkey,&#13;
+        pubkey = .pubkey,&#13;
+        active = .active,&#13;
+        host = .host,&#13;
+        port = .port,&#13;
+        last_updated = .last_updated&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_blockchain (rid: byte_array) = blockchain @ { rid };&#13;
+&#13;
+query get_active_blockchains (): list&lt;byte_array&gt; {&#13;
+    val blockchain_set = set(&#13;
+        (blockchain, blockchain_signer_node) @* {&#13;
+            blockchain_signer_node.blockchain == blockchain&#13;
+        } (.rid)&#13;
+    );&#13;
+    return list(blockchain_set);&#13;
+}&#13;
+&#13;
+query get_nodes_with_provider() {&#13;
+    return (node, provider_state) @* { node.provider == provider_state.provider } (&#13;
+        pubkey = .pubkey,&#13;
+        node_active = node.active,&#13;
+        host = .host,&#13;
+        port = .port,&#13;
+        last_updated = .last_updated,&#13;
+        name = .name,&#13;
+        provider_active = provider_state.active,&#13;
+        beneficiary = .beneficiary.id,&#13;
+        provider = node.provider.pubkey&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_all_blockchains(): list&lt;byte_array&gt; {&#13;
+    return blockchain @* {} .rid;&#13;
+}&#13;
+&#13;
+query get_nodes_by_provider(provider) {&#13;
+    return node @* { provider } (&#13;
+        .pubkey,&#13;
+        .active,&#13;
+        .host,&#13;
+        .port,&#13;
+        .last_updated&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_blockchain_signers(blockchain) {&#13;
+    return blockchain_signer_node @* { blockchain } (&#13;
+        .blockchain.rid,&#13;
+        @sort .node.pubkey,&#13;
+        .node.host,&#13;
+        .node.port,&#13;
+        .node.active,&#13;
+        .node.last_updated&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_blockchain_replicas(blockchain) {&#13;
+    return blockchain_replica_node @* { blockchain} (&#13;
+        .blockchain.rid,&#13;
+        @sort .node.pubkey,&#13;
+        .node.host,&#13;
+        .node.port,&#13;
+        .node.active,&#13;
+        .node.last_updated&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_blockchain_last_height(blockchain) = get_last_height(blockchain);&#13;
+&#13;
+query get_added_blockchain_rid(tx_rid: byte_array) {&#13;
+	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;&#13;
+}&#13;
+&#13;
+query chromia_version() = "0.1";&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/account/auth_basic.rell">
+                                <string>// Auth type:&#13;
+&#13;
+// "S" - single-sig&#13;
+// "M" - multi-sig&#13;
+&#13;
+struct single_sig_args {&#13;
+       flags: set&lt;text&gt;;&#13;
+       pubkey;&#13;
+}&#13;
+&#13;
+struct multi_sig_args {&#13;
+       flags: set&lt;text&gt;;&#13;
+       signatures_required: integer;&#13;
+       pubkeys: list&lt;pubkey&gt;;&#13;
+}&#13;
+&#13;
+function check_single_sig_auth(args: byte_array, participants: list&lt;byte_array&gt;, required_flags: list&lt;text&gt;): boolean {&#13;
+    require(participants.size() == 1);&#13;
+    val ss_args = single_sig_args.from_bytes(args);&#13;
+    return&#13;
+          ss_args.flags.contains_all(required_flags)&#13;
+            and&#13;
+          is_signer(participants[0]);&#13;
+}&#13;
+&#13;
+function check_multi_sig_auth(args: byte_array, participants: list&lt;byte_array&gt;, required_flags: list&lt;text&gt;): boolean {&#13;
+   val multi_sign_args = multi_sig_args.from_bytes(args);&#13;
+   if (not (multi_sign_args.flags.contains_all(required_flags))) return false;&#13;
+   var num_sign = multi_sign_args.signatures_required;&#13;
+   for(s in participants) {&#13;
+      if(is_signer(s)) {&#13;
+          num_sign -= 1;&#13;
+          if(num_sign &lt; 1) {return true;}&#13;
+      }&#13;
+   }&#13;
+   return false;&#13;
+}&#13;
+&#13;
+function check_auth_args (a_t: text, args: byte_array, participants: list&lt;byte_array&gt;, required_flags: list&lt;text&gt;): boolean {&#13;
+    return when (a_t) {&#13;
+        "S" -&gt; check_single_sig_auth(args, participants, required_flags);&#13;
+        "M" -&gt; check_multi_sig_auth(args, participants, required_flags);&#13;
+        else -&gt; false;&#13;
+    };&#13;
+}&#13;
+&#13;
+&#13;
+function require_auth (account, descriptor_id: byte_array, required_flags: list&lt;text&gt;) {&#13;
+   val account_auth_descriptor = account_auth_descriptor @ {&#13;
+     account,&#13;
+     .descriptor_id == descriptor_id&#13;
+   };&#13;
+   require(&#13;
+      check_auth_args(&#13;
+       account_auth_descriptor.auth_type,&#13;
+       account_auth_descriptor.args,&#13;
+       auth_descriptor_participant @* { account_auth_descriptor } ( .id ),&#13;
+       required_flags&#13;
+       )&#13;
+   );&#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/account/module.rell">
+                                <string>@mount('ft3')&#13;
+module;&#13;
+&#13;
+struct auth_descriptor {&#13;
+    auth_type: text;&#13;
+    participants: list&lt;byte_array&gt;;&#13;
+    args: list&lt;gtv&gt;;&#13;
+}&#13;
+&#13;
+entity account {&#13;
+    key id: byte_array;&#13;
+}&#13;
+&#13;
+entity account_meta {&#13;
+    meta_key: text;&#13;
+    value: byte_array;&#13;
+    index account, meta_key;&#13;
+    index meta_key, value;&#13;
+}&#13;
+&#13;
+entity account_auth_descriptor {&#13;
+     descriptor_id: byte_array;&#13;
+     key account, descriptor_id;&#13;
+     index descriptor_id;&#13;
+     auth_type: text;&#13;
+     args: byte_array;&#13;
+}&#13;
+&#13;
+entity auth_descriptor_participant {&#13;
+    key account_auth_descriptor, id: byte_array;&#13;
+}&#13;
+&#13;
+function _add_auth_descriptor (account, auth_descriptor) {&#13;
+     val descriptor_id = auth_descriptor.hash();&#13;
+     val account_auth_descriptor = create account_auth_descriptor (&#13;
+        account, descriptor_id,&#13;
+        auth_descriptor.auth_type,&#13;
+        args = auth_descriptor.args.to_gtv().to_bytes()&#13;
+     );&#13;
+     for (participant in auth_descriptor.participants) {&#13;
+        create auth_descriptor_participant(account_auth_descriptor, id = participant);&#13;
+     }&#13;
+}&#13;
+&#13;
+function create_account_with_auth (auth_descriptor): byte_array {&#13;
+    print(auth_descriptor);&#13;
+     val id = auth_descriptor.hash();&#13;
+     val acc = create account (id);&#13;
+     _add_auth_descriptor(&#13;
+        acc, auth_descriptor&#13;
+     );&#13;
+     return id;&#13;
+}&#13;
+&#13;
+operation delete_auth_descriptor (account_id: byte_array, auth_descriptor_id: byte_array, delete_descriptor_id: byte_array) {&#13;
+      val account = account @ { .id == account_id };&#13;
+      require_auth(account, auth_descriptor_id, ["A"]);&#13;
+      delete account_auth_descriptor @ {&#13;
+         .account == account,&#13;
+         .descriptor_id == delete_descriptor_id&#13;
+      };&#13;
+}&#13;
+&#13;
+operation delete_all_auth_descriptors_exclude(account_id: byte_array, auth_descriptor_id: byte_array) {&#13;
+    val account = account @ { .id == account_id };&#13;
+    require_auth(account, auth_descriptor_id, ["A"]);&#13;
+&#13;
+    delete (adp: auth_descriptor_participant, ad: account_auth_descriptor) @* {&#13;
+        ad.account == account and ad.descriptor_id != auth_descriptor_id and adp.account_auth_descriptor == ad&#13;
+    };&#13;
+&#13;
+    delete account_auth_descriptor @* {&#13;
+       .account == account,&#13;
+       .descriptor_id != auth_descriptor_id&#13;
+    };&#13;
+}&#13;
+&#13;
+operation add_auth_descriptor (account_id: byte_array, auth_id: byte_array, new_desc: auth_descriptor) {&#13;
+      val account = account @ { .id == account_id };&#13;
+      require_auth(account, auth_id, ["A"]);&#13;
+      _add_auth_descriptor(account, new_desc);&#13;
+}&#13;
+&#13;
+query get_account_auth_descriptors(id: byte_array) {&#13;
+    return account_auth_descriptor @* {&#13;
+        .account.id == id&#13;
+    } (&#13;
+        id = .descriptor_id,&#13;
+        type = .auth_type,&#13;
+        args = .args&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_account_by_id(id: byte_array) {&#13;
+    return account @? { id } ( .id );&#13;
+}&#13;
+&#13;
+query get_account_by_auth_descriptor(auth_descriptor) {&#13;
+    return account @? { .id == auth_descriptor.hash() } ( .id );&#13;
+}&#13;
+&#13;
+query get_accounts_by_participant_id(id: byte_array) {&#13;
+    return auth_descriptor_participant @* { id } ( .account_auth_descriptor.account.id );&#13;
+}&#13;
+&#13;
+query get_accounts_by_auth_descriptor_id(descriptor_id: byte_array) {&#13;
+    return account_auth_descriptor @* { descriptor_id } ( .account.id );&#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/core/asset.rell">
+                                <string>import acc: ^.account;&#13;
+&#13;
+entity asset {&#13;
+    id: byte_array;&#13;
+    key id;&#13;
+    key name;&#13;
+    issuing_chain_rid: byte_array;&#13;
+}&#13;
+&#13;
+entity balance {&#13;
+    key acc.account, asset;&#13;
+    mutable amount: integer = 0;&#13;
+}&#13;
+&#13;
+function ensure_balance(acc.account, asset): balance {&#13;
+    val balance = balance @? {asset, account};&#13;
+    if (balance != null) {&#13;
+       return balance;&#13;
+    }&#13;
+    else return create balance(account, asset, amount = 0);&#13;
+}&#13;
+&#13;
+function register_asset (name, issuing_chain_rid: byte_array): asset {&#13;
+   val id = (name, issuing_chain_rid).hash();&#13;
+   return create asset (id, name, issuing_chain_rid);&#13;
+}&#13;
+&#13;
+function _get_asset_balances(account_id: byte_array): list&lt;(id:byte_array,name:text,amount:integer,chain_id:byte_array)&gt; {&#13;
+    return balance @* { .account.id == account_id } (&#13;
+      id = .asset.id,&#13;
+      name = .asset.name,&#13;
+      amount = .amount,&#13;
+      chain_id = .asset.issuing_chain_rid&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_asset_balances(account_id: byte_array) {&#13;
+    return _get_asset_balances(account_id);&#13;
+}&#13;
+&#13;
+query get_asset_balance(account_id: byte_array, asset_id: byte_array) {&#13;
+    return balance @? {&#13;
+        .account.id == account_id,&#13;
+        .asset.id == asset_id&#13;
+    } (&#13;
+        id = .asset.id,&#13;
+        name = .asset.name,&#13;
+        amount = .amount,&#13;
+        chain_id = .asset.issuing_chain_rid&#13;
+    );&#13;
+}&#13;
+&#13;
+query get_asset_by_name(name) {&#13;
+    return asset @* { name } (&#13;
+        .id,&#13;
+        .name,&#13;
+        .issuing_chain_rid&#13;
+    );&#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/core/history.rell">
+                                <string>import acc: ^.account;&#13;
+&#13;
+@log entity payment_history_entry {&#13;
+    index acc.account, asset;&#13;
+    delta: integer;&#13;
+&#13;
+    // helps to locate exact position of payment entry in transaction&#13;
+    op_index: integer;&#13;
+    is_input: boolean;&#13;
+    entry_index: integer;&#13;
+}&#13;
+&#13;
+query get_payment_history(account_id: byte_array, after_block: integer) {&#13;
+    return payment_history_entry @* {&#13;
+        acc.account @ { account_id },&#13;
+        .transaction.block.block_height &gt; after_block&#13;
+    } (&#13;
+        delta = .delta,&#13;
+        asset = .asset.name,&#13;
+        asset_id = .asset.id,&#13;
+        is_input = .is_input,&#13;
+        timestamp = .transaction.block.timestamp,&#13;
+        block_height = .transaction.block.block_height,&#13;
+        entry_index = .entry_index,&#13;
+        tx_rid = .transaction.tx_rid,&#13;
+        tx_data = .transaction.tx_data&#13;
+    );&#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/core/module.rell">
+                                <string>@mount('ft3')&#13;
+module;&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/core/transfer.rell">
+                                <string>import acc: ^.account;&#13;
+&#13;
+struct xfer_input {&#13;
+   account_id: byte_array;&#13;
+   asset_id: byte_array;&#13;
+   auth_descriptor_id: byte_array;&#13;
+   amount: integer;&#13;
+   extra: map&lt;text, gtv&gt;;&#13;
+}&#13;
+&#13;
+struct xfer_output {&#13;
+   account_id: byte_array;&#13;
+   asset_id: byte_array;&#13;
+   amount: integer;&#13;
+   extra: map&lt;text, gtv&gt;;&#13;
+}&#13;
+&#13;
+function deduct_balance (acc.account, asset, d_amount: integer) {&#13;
+    val b = balance @ { account, asset };&#13;
+    require( b.amount &gt;= d_amount, "Balance is too low");&#13;
+    update b (amount -= d_amount);&#13;
+}&#13;
+&#13;
+function consume_input (i: xfer_input, idx: integer, assets: map&lt;asset, integer&gt;): payment_history_entry {&#13;
+      val asset = asset @ { .id == i.asset_id };&#13;
+      val account = acc.account @ {.id == i.account_id };&#13;
+      acc.require_auth( account, i.auth_descriptor_id, ["T"] );&#13;
+      require( i.amount &gt;= 0, "Amount should be positive." );&#13;
+&#13;
+      deduct_balance(account, asset, i.amount);&#13;
+      assets[asset] = i.amount + if (asset in assets) assets[asset] else 0;&#13;
+      return create payment_history_entry (&#13;
+        account,&#13;
+        asset,&#13;
+        .delta = i.amount,&#13;
+        .op_index = 0, //op_context ???&#13;
+        .is_input = true,&#13;
+        .entry_index = idx&#13;
+      );&#13;
+}&#13;
+&#13;
+function process_transfer_output (o: xfer_output, idx: integer, available_assets: map&lt;asset, integer&gt;): payment_history_entry {&#13;
+      if (o.extra.contains("reg_auth_desc")) {&#13;
+          val auth_desc = acc.auth_descriptor.from_gtv(o.extra["reg_auth_desc"]);&#13;
+          require(o.account_id&#13;
+           == acc.create_account_with_auth(auth_desc));&#13;
+      }&#13;
+&#13;
+      val target_account = acc.account @ { .id == o.account_id };&#13;
+      val asset = asset @ { .id == o.asset_id };&#13;
+      require( available_assets[asset] &gt;= o.amount );&#13;
+      available_assets[asset] -= o.amount;&#13;
+      require(available_assets[asset] &gt;= 0);&#13;
+      val balance = ensure_balance(target_account, asset);&#13;
+      balance.amount += o.amount;&#13;
+&#13;
+      return create payment_history_entry (&#13;
+        .account = target_account,&#13;
+        asset,&#13;
+        .delta = o.amount,&#13;
+&#13;
+        .op_index = 0, // something from op_context,&#13;
+        .is_input = false,&#13;
+        .entry_index = idx&#13;
+      );&#13;
+}&#13;
+&#13;
+function _transfer (inputs: list&lt;xfer_input&gt;, outputs: list&lt;xfer_output&gt;) {&#13;
+   val sum_inputs = map&lt;asset, integer&gt;();&#13;
+   var idx = 0;&#13;
+   for (i in inputs) {&#13;
+      consume_input(i, idx, sum_inputs);&#13;
+      idx += 1;&#13;
+   }&#13;
+&#13;
+   idx = 0;&#13;
+   for (o in outputs) {&#13;
+      process_transfer_output(o, idx, sum_inputs);&#13;
+      idx += 1;&#13;
+   }&#13;
+}&#13;
+&#13;
+operation transfer (inputs: list&lt;xfer_input&gt;, outputs: list&lt;xfer_output&gt;) {&#13;
+    _transfer(inputs, outputs);&#13;
+}&#13;
+</string>
+                            </entry>
+                            <entry key="ft3/ft3_basic.rell">
+                                <string>module;&#13;
+&#13;
+import ^.account;&#13;
+import ^.core;&#13;
+</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="signers">
+        <array>
+            <bytea>020CCD8A16F1CA7433D2EA5880D727AB8563B25F33CAA2201E7691AB373FBABFCF</bytea>
+        </array>
+    </entry>
+</dict>
