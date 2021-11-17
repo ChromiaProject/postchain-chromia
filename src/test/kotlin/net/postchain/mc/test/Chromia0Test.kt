@@ -12,14 +12,13 @@ import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Before
-import org.junit.Test
-import java.nio.file.Paths
 import org.junit.Ignore
+import org.junit.Test
 import kotlin.test.*
 
 class Chromia0Test() : ManagedModeTest() {
 
-    override fun chainConfSnippet(): String{
+    override fun chainConfSnippet(): String {
         val module = "chroma0"
 
         return """
@@ -90,11 +89,17 @@ class Chromia0Test() : ManagedModeTest() {
         addNode(prov2Config, node2Pubkey, node2Host, node2Port)
 
         // make node1 a signer of bc0
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
 
         //make node2 a replica of bc0
         doAndBuildBlocks(prov2Config, prov2Executor.addReplicaInternal(clientConfig.brid, node2Pubkey))
-        assertBlockchainReplica(clientConfig, node2Pubkey,node2Host, node2Port)
+        assertBlockchainReplica(clientConfig, node2Pubkey, node2Host, node2Port)
 
         //disable second provider
         doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(prov2Config.pubKey))
@@ -151,7 +156,13 @@ class Chromia0Test() : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // Add node1 as blockchain's signer
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
         // Get next configuration height after adding new node as blockchain's signer
         // expected next congiguration height = -1 + registerProvider + enableProvider + 2*addNode + addBlockhain + addSigners + 5 = 10
         assertNextConfiguration(clientConfig, expectedHeight = 10L)
@@ -191,7 +202,13 @@ class Chromia0Test() : ManagedModeTest() {
 
         // Add node1 as blockchain's signer
         val signers_list = "$node1Pubkey,$node2Pubkey"
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                signers_list,
+                -1L
+            )
+        )
         // Get next configuration height after adding new node as blockchain's signer
         // expected next congiguration height = -1 + registerProvider + enableProvider + 3*addNode + addBlockhain + addSigners + 5 = 11
         assertNextConfiguration(clientConfig, 11L)
@@ -232,7 +249,13 @@ class Chromia0Test() : ManagedModeTest() {
 
         // Add node1 as blockchain's signer
         val signers_list = "$node1Pubkey,$node2Pubkey"
-        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                signers_list,
+                -1L
+            )
+        )
         doAndBuildBlocks(clientConfig, adminExecutor.removeBlockchainSignersInternal(clientConfig.brid, signers_list))
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(1, listBlockchainSigners.size)
@@ -242,8 +265,12 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testAddConfiguration() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
-                20L, "xml"))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfig1xmlFile,
+                20L, "xml"
+            )
+        )
         assertNextConfiguration(clientConfig, 20L)
     }
 
@@ -260,8 +287,12 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testAddSignerToFutureConfig() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
-                20L, "xml"))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfig1xmlFile,
+                20L, "xml"
+            )
+        )
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
         addBcSigners(node1Pubkey)
         val futureConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 20L)
@@ -284,7 +315,10 @@ class Chromia0Test() : ManagedModeTest() {
         assertEquals(1, initSigners.size)
         assertEquals(currentGtx, initGtx)
 
-        assertTrue(currentSigners contentEquals futureSignersArray, "Future configurations are not updated with the new signer")
+        assertTrue(
+            currentSigners contentEquals futureSignersArray,
+            "Future configurations are not updated with the new signer"
+        )
         assertNotEquals(futureConf, currentConf, "future conf is applied too early")
         assertNotEquals(initConf, currentConf, "comparing with wrong current conf")
     }
@@ -292,8 +326,12 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testAddConfigurationAcceptGtv() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfigGtvFile,
-                20L, "gtv"))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfigGtvFile,
+                20L, "gtv"
+            )
+        )
         assertNextConfiguration(clientConfig, 20L)
     }
 
@@ -306,7 +344,6 @@ class Chromia0Test() : ManagedModeTest() {
         listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
         assertEquals(0, listBlockchains.size)
     }
-
 
 
     @Test
@@ -357,10 +394,10 @@ class Chromia0Test() : ManagedModeTest() {
     @Test
     fun testListBlockchainReplicas() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-        addNode(provConfig,node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey),5)
+        doAndBuildBlocks(provConfig, provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey), 5)
         assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
     }
 
@@ -372,7 +409,13 @@ class Chromia0Test() : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
         // Add node1 as blockchain's signer
-        doAndBuildBlocks(clientConfig,adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
         val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
         assertEquals(2, listBlockchainSigners.size)
         PrintUtils.printBlockchainNodes(listBlockchainSigners, false)
@@ -456,7 +499,13 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     override fun addBcSigners(nodeList: String) {
-        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, nodeList))
+        adminExecutor.sendTxUnconfirmed(
+            adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                nodeList,
+                -1L
+            )
+        )
         buildAndAwaitBlocks(1)
     }
 
