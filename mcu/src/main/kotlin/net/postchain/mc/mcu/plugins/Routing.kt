@@ -4,7 +4,9 @@ import io.ktor.application.*
 import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
+import net.postchain.common.toHex
 import net.postchain.mc.mcu.Context
+import kotlin.random.Random
 
 fun Application.configureRouting(ctx: Context) {
 
@@ -51,9 +53,21 @@ fun Application.configureRouting(ctx: Context) {
             }
         }
 
+        post("/actions/tx/{dappName}/{opName}") {
+            val dappName = call.parameters["dappName"]
+            val opName = call.parameters["opName"]
+            log.info("post tx [$opName(...)] to $dappName")
+            if (dappName != null && opName != null) {
+                val blobName = Random.Default.nextBytes(64).toHex()
+                val blob = Random.Default.nextBytes(1_000_000)
+                ctx.postchain.postTx(dappName, opName, blobName, blob)
+            }
+        }
+
         // Static plugin. Try to access `/static/index.html`
         static("/static") {
             resources("static")
         }
     }
+
 }

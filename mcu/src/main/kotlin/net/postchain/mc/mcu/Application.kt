@@ -10,7 +10,7 @@ import net.postchain.mc.mcu.plugins.configureSerialization
 import net.postchain.mc.mcu.plugins.configureTemplating
 import net.postchain.mc.mcu.ps.Postchain
 import java.io.File
-import kotlin.io.path.Path
+import java.nio.file.Paths
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
@@ -52,7 +52,7 @@ private fun makeDappsConfig(path: String) {
 
     File(path).listFiles().forEach {
         if (it.isDirectory) {
-            val deepPath = Path(path, it.name, "target", "blockchains", "0")
+            val deepPath = Paths.get(path, it.name, "target", "blockchains", "0")
             val dapp = Dapp(
                 it.name,
                 deepPath.resolve("brid.txt").toFile().readText(),

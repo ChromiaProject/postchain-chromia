@@ -1,5 +1,7 @@
 package net.postchain.mc.mcu.ps
 
+import mu.KLogging
+import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.config.app.ClientConfig
@@ -9,6 +11,8 @@ import java.io.File
 
 class Postchain(val config: Config) {
 
+    companion object : KLogging()
+
     fun initDevnet() {
         try {
             // Add provider0
@@ -16,18 +20,21 @@ class Postchain(val config: Config) {
             onAdminConfig {
                 it.registerProvider(config.providerPubKey)
             }
+            pause()
 
             // Update provider0
             // ./pmc.sh update-provider -cfg cfg-provider.properties -k 03EFA243CAF1D442125029578850882B10157A4AAC1794DFEF2AB78D0E82E1954C --name provider0
             onProviderConfig {
                 it.updateProvider(config.providerPubKey, "provider0", "")
             }
+            pause()
 
             // Enable provider0
             // ./pmc.sh enable-provider -cfg cfg-admin.properties -k 03EFA243CAF1D442125029578850882B10157A4AAC1794DFEF2AB78D0E82E1954C
             onAdminConfig {
                 it.enableProvider(config.providerPubKey)
             }
+            pause()
 
             // Add (self) node0
             // ./pmc.sh add-node -cfg cfg-provider.properties -h 172.26.32.1 -p 9870 -k 020CCD8A16F1CA7433D2EA5880D727AB8563B25F33CAA2201E7691AB373FBABFCF
@@ -35,6 +42,7 @@ class Postchain(val config: Config) {
                 val node0 = config.nodes.first()
                 it.addNode(node0.key, node0.host, node0.port)
             }
+            pause()
 
             // Add blockchain chromia0
             // ./pmc.sh add-blockchain -cfg cfg-admin.properties -bc cfg-chromia0-container.xml -n 020CCD8A16F1CA7433D2EA5880D727AB8563B25F33CAA2201E7691AB373FBABFCF -fmt xml
@@ -45,7 +53,10 @@ class Postchain(val config: Config) {
         } catch (e: CliError.Companion.CliException) {
             println("Error occurred: " + e.message)
         }
+    }
 
+    private fun pause() {
+        Thread.sleep(2000L)
     }
 
     fun launchBlockchain(dappName: String) {
@@ -103,6 +114,19 @@ class Postchain(val config: Config) {
         }
     }
 
+    fun postTx(dappName: String, opName: String, key: String, value: ByteArray) {
+        executeAsAdmin(dappName) { dapp, cli ->
+            cli.sendTxUnconfirmed { txBuilder ->
+                txBuilder.addOperation(
+                        opName,
+                        arrayOf(
+                                GtvFactory.gtv(key),
+                                GtvFactory.gtv(value)
+                        ))
+            }
+        }
+    }
+
     private fun onAdminConfig(action: (CliExecutionC0) -> Unit) {
         val config = object : ClientConfig {
             override val apiURL: String = config.nodes.first().apiUrl
@@ -123,12 +147,30 @@ class Postchain(val config: Config) {
         action(CliExecutionC0(config))
     }
 
-    // TODO: Merger 'forDapp' and 'onAdminConfig' into single onContext(dapp, config) method.
+    // TODO: Merger 'forDapp' and 'onAdminConfig' into single onContext(dapp, config) method. (See below.)
     private fun forDapp(dappName: String, action: (dapp: Dapp) -> Unit) {
         val dapp = config.dapps.firstOrNull { it.name == dappName }
         if (dapp != null) {
             action(dapp)
         }
+    }
+
+    private fun executeAsAdmin(dappName: String, action: (dapp: Dapp, cli: CliExecutionC0) -> Unit) {
+        val dapp = config.dapps.firstOrNull { it.name == dappName }
+        if (dapp == null) {
+            logger.error { "Can't find dapp: $dappName" }
+            return
+        }
+
+        val config = object : ClientConfig {
+            override val apiURL: String = config.nodes.first().apiUrl
+            override val brid: String = dapp.brid
+            override val privKey: String = config.adminPrivKey
+            override val pubKey: String = config.adminPubKey
+        }
+        val cli = CliExecutionC0(config)
+
+        action(dapp, cli)
     }
 
     private fun getSigners(): String {

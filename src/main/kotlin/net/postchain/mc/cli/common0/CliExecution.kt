@@ -31,8 +31,8 @@ open class CliExecution(val config: ClientConfig) {
         }
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(
-            config.pubKey.hexStringToByteArray(),
-            config.privKey.hexStringToByteArray()
+                config.pubKey.hexStringToByteArray(),
+                config.privKey.hexStringToByteArray()
         )
         val defaultSigner = DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray())
         return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), defaultSigner)
@@ -58,11 +58,11 @@ open class CliExecution(val config: ClientConfig) {
         val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation(
-                "add_node",
-                arrayOf(
-                    provider,
-                    GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)
-                )
+                    "add_node",
+                    arrayOf(
+                            provider,
+                            GtvFactory.gtv(key.hexStringToByteArray()), GtvFactory.gtv(host), GtvFactory.gtv(port)
+                    )
             )
             sign(buildSigMaker())
         }
@@ -84,8 +84,8 @@ open class CliExecution(val config: ClientConfig) {
         var returnVal: Gtv? = null
         doInTryBlock {
             val info = getPostchainClient().query(
-                "get_provider_data",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
+                    "get_provider_data",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
             ).get()
             returnVal = info
         }
@@ -96,8 +96,8 @@ open class CliExecution(val config: ClientConfig) {
         var returnVal: Gtv? = null
         doInTryBlock {
             val info = getPostchainClient().query(
-                "get_node_data",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
+                    "get_node_data",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
             ).get()
             returnVal = info
         }
@@ -113,11 +113,11 @@ open class CliExecution(val config: ClientConfig) {
                 heightConfiguration = getBlockchainLastHeight(blockchainRID)
             }
             val conf = getPostchainClient().query(
-                "nm_get_blockchain_configuration",
-                GtvFactory.gtv(
-                    "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
-                    "height" to GtvFactory.gtv(heightConfiguration)
-                )
+                    "nm_get_blockchain_configuration",
+                    GtvFactory.gtv(
+                            "blockchain_rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()),
+                            "height" to GtvFactory.gtv(heightConfiguration)
+                    )
             ).get().asByteArray()
             returnVal = conf
         }
@@ -129,8 +129,8 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
             val height = getPostchainClient().query(
-                "get_blockchain_last_height",
-                GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
+                    "get_blockchain_last_height",
+                    GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
             ).get().asInteger()
             returnVal = height
         }
@@ -141,8 +141,8 @@ open class CliExecution(val config: ClientConfig) {
         var returnVal = 0L
         doInTryBlock {
             val version = getPostchainClient().query(
-                "nm_get_peer_list_version",
-                GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))
+                    "nm_get_peer_list_version",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_list_version"))
             ).get().asInteger()
             returnVal = version
         }
@@ -153,11 +153,11 @@ open class CliExecution(val config: ClientConfig) {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
             val list = getPostchainClient().query(
-                "nm_get_peer_infos",
-                GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))
+                    "nm_get_peer_infos",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("nm_get_peer_infos"))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
@@ -167,11 +167,11 @@ open class CliExecution(val config: ClientConfig) {
         val nodeList = arrayListOf<Gtv>()
         doInTryBlock {
             val nList = getPostchainClient().query(
-                "get_nodes_with_provider",
-                GtvFactory.gtv("type" to GtvFactory.gtv("get_nodes_with_provider"))
+                    "get_nodes_with_provider",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("get_nodes_with_provider"))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             nodeList.addAll(nList.map { it })
         }
         return nodeList
@@ -181,11 +181,11 @@ open class CliExecution(val config: ClientConfig) {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
             val list = getPostchainClient().query(
-                "get_all_providers",
-                GtvFactory.gtv("type" to GtvFactory.gtv("get_all_providers"))
+                    "get_all_providers",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("get_all_providers"))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
@@ -198,14 +198,14 @@ open class CliExecution(val config: ClientConfig) {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
             val isNode = getPostchainClient().query(
-                "is_node",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
+                    "is_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
             ).get().asBoolean()
             if (isNode) {
                 val list = getPostchainClient().query(
-                    "nm_compute_blockchain_list", GtvFactory.gtv(
+                        "nm_compute_blockchain_list", GtvFactory.gtv(
                         "node_id" to GtvFactory.gtv(key.hexStringToByteArray())
-                    )
+                )
                 ).get().asArray()
                 listBlockChain.addAll(list.map { it.asByteArray() })
             }
@@ -217,11 +217,11 @@ open class CliExecution(val config: ClientConfig) {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
             val list = getPostchainClient().query(
-                "get_all_blockchains",
-                GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains"))
+                    "get_all_blockchains",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("get_all_blockchains"))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             listBlockChain.addAll(list.map { it.asByteArray() })
         }
         return listBlockChain
@@ -231,11 +231,11 @@ open class CliExecution(val config: ClientConfig) {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
             val list = getPostchainClient().query(
-                "get_active_blockchains",
-                GtvFactory.gtv("type" to GtvFactory.gtv("get_active_blockchains"))
+                    "get_active_blockchains",
+                    GtvFactory.gtv("type" to GtvFactory.gtv("get_active_blockchains"))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             listBlockChain.addAll(list.map { it.asByteArray() })
         }
         return listBlockChain
@@ -246,11 +246,11 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
             val list = getPostchainClient().query(
-                "get_blockchain_signers",
-                GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
+                    "get_blockchain_signers",
+                    GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
@@ -261,11 +261,11 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
             val list = getPostchainClient().query(
-                "get_blockchain_replicas",
-                GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
+                    "get_blockchain_replicas",
+                    GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
@@ -276,11 +276,11 @@ open class CliExecution(val config: ClientConfig) {
         doInTryBlock {
             val provider = providerGtv(key)
             val list = getPostchainClient().query(
-                "get_nodes_by_provider",
-                GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger()))
+                    "get_nodes_by_provider",
+                    GtvFactory.gtv("provider" to GtvFactory.gtv(provider.asInteger()))
             )
-                .get()
-                .asArray()
+                    .get()
+                    .asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
@@ -302,6 +302,14 @@ open class CliExecution(val config: ClientConfig) {
             data = getEncodedGtxValueFromFile(blockchainConfigFile)
         }
         return data
+    }
+
+    fun sendTxUnconfirmed(txBuilder: (GTXTransactionBuilder) -> Unit): TransactionResult {
+        val tx = makeTransactionWithNop().also {
+            txBuilder(it)
+            it.sign(buildSigMaker())
+        }
+        return tx.postSync(ConfirmationLevel.NO_WAIT)
     }
 
     fun sendTxUnconfirmed(tx: GTXTransactionBuilder): TransactionResult {
@@ -329,8 +337,8 @@ open class CliExecution(val config: ClientConfig) {
     fun registerProviderInternal(key: String): GTXTransactionBuilder {
         return makeTransactionWithNop().apply {
             addOperation(
-                "register_provider",
-                arrayOf(GtvFactory.gtv(key.hexStringToByteArray()))
+                    "register_provider",
+                    arrayOf(GtvFactory.gtv(key.hexStringToByteArray()))
             )
             sign(buildSigMaker())
         }
@@ -358,13 +366,13 @@ open class CliExecution(val config: ClientConfig) {
         return makeTransactionWithNop().apply {
             if (heightDelay == -1L) {
                 addOperation(
-                    "add_blockchain_signers",
-                    arrayOf(blockchain, GtvFactory.gtv(nodeList))
+                        "add_blockchain_signers",
+                        arrayOf(blockchain, GtvFactory.gtv(nodeList))
                 )
             } else {
                 addOperation(
-                    "add_blockchain_signers",
-                    arrayOf(blockchain, GtvFactory.gtv(nodeList), GtvFactory.gtv(heightDelay))
+                        "add_blockchain_signers",
+                        arrayOf(blockchain, GtvFactory.gtv(nodeList), GtvFactory.gtv(heightDelay))
                 )
             }
             sign(buildSigMaker())
@@ -395,8 +403,8 @@ open class CliExecution(val config: ClientConfig) {
         val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation(
-                "remove_node",
-                arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()))
+                    "remove_node",
+                    arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray()))
             )
             sign(buildSigMaker())
         }
@@ -413,8 +421,8 @@ open class CliExecution(val config: ClientConfig) {
 
     fun removeReplica(blockchainRID: String, key: String) {
         sendTxSync(
-            removeReplicaInternal(blockchainRID, key), "Replica removed",
-            "Cannot remove replica node"
+                removeReplicaInternal(blockchainRID, key), "Replica removed",
+                "Cannot remove replica node"
         )
     }
 
@@ -426,25 +434,25 @@ open class CliExecution(val config: ClientConfig) {
 
     fun providerGtv(key: String): Gtv {
         val provider = getPostchainClient().query(
-            "get_provider", GtvFactory.gtv(
+                "get_provider", GtvFactory.gtv(
                 "pubkey" to GtvFactory.gtv(key.hexStringToByteArray())
-            )
+        )
         ).get()
         return provider
     }
 
     fun nodeGtv(key: String): Gtv {
         val node = getPostchainClient().query(
-            "get_node",
-            GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
+                "get_node",
+                GtvFactory.gtv("pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))
         ).get()
         return node
     }
 
     fun blockchainGtv(blockchainRID: String): Gtv {
         val blockchain = getPostchainClient().query(
-            "get_blockchain",
-            GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))
+                "get_blockchain",
+                GtvFactory.gtv("rid" to GtvFactory.gtv(blockchainRID.hexStringToByteArray()))
         ).get()
         return blockchain
     }

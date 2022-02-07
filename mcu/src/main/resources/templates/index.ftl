@@ -10,7 +10,7 @@
 <style>
     .column {
         float: left;
-        width: 20%;
+        width: 25%;
         /*font-size: 12px;*/
     }
 
@@ -74,9 +74,16 @@
                 .replaceAll("035802732616AD88DC3B9EC770920FB0947C3346756F946E0131968C1A613DEC99", "node5")
                 .replaceAll("020EE9063CED9B47CC60EB931443C01F3FD7A0DAB4B2D0505D3A2FAAD4FA9ABF13", "node6")
 
-                .replaceAll("A6C7AF5D5E5989AEB0A783D5AEEA91B88693009E56A7DCF607FC323FE2CB4835", "chromia0")
+                .replaceAll("956AB6DB267A1DB47BDBBA4D423A162D8BA4596BA0F97152C4DD5D1E4B7C17DF", "chromia0")
                 .replaceAll("F4BFBB70A9F0A91540AC57F4F1F9DF9E19AA46CB4DE3DA3F86F2E925DB883016", "cities")
                 .replaceAll("1332F03A3E0AF426C810970C74FABDC5188D4C8D8FDC9417E47099D7399AC522", "books")
+                .replaceAll("D0704BF76D892AA161F74AB9092A2131D7F3CA96A66FEAC6C0EB3C9207C029FD", "dapp0")
+                .replaceAll("323ECC017DB717DBE1A6CF48095C5D795A5C05274B38DB81066DDF6DB2A98945", "dapp1")
+                .replaceAll("A9599992088B7E32FB365FD484C87227A83DF387CC99A88AE47948A9EC4F8CD8", "dapp2")
+                .replaceAll("86E2043D539F37F58292531DDD59FAC7C0F3DD3A87F4CDA074F0DA72AFF8F03F", "dapp3")
+                .replaceAll("EB7387FDEF741ED8B672336BD5B1EDE7370191736ADBE87C032AC13407E97861", "dapp4")
+                .replaceAll("94F295781F900902DF5EE3F8225D957FA46178F8C7CBC92818DA1BFA77576165", "dapp5")
+                .replaceAll("0B942264C7E60D1921C31DCCCDD5A05BAAF4CB6487688C24220CD970A03768BE", "dapp6")
 
                 .replaceAll("ValidatorWorker", "signer")
                 .replaceAll("ReadOnlyWorker", "replica")
@@ -113,6 +120,10 @@
         $.post("/actions/configure/" + dappName + "/" + configName);
     }
 
+    function postTx_1mb_blob(dappName) {
+        $.post("/actions/tx/" + dappName + "/add_blob");
+    }
+
 </script>
 
 
@@ -130,6 +141,7 @@
         <a href="#" onclick="configure('${chain0Name}', 'c1')">c1</a>
         <a href="#" onclick="configure('${chain0Name}', 'c2')">c2</a>
     </div>
+    <div class="column-dapp-actions"></div>
 </div>
 
 <div class="row">
@@ -140,6 +152,7 @@
         <a href="#" onclick="pause('${dapp0.name}')">pause</a>
         <a href="#" onclick="resume('${dapp0.name}')">resume</a>
     </div>
+    <div class="column-dapp-actions"></div>
     <div class="column-dapp-actions"></div>
 </div>
 
@@ -152,6 +165,7 @@
         <a href="#" onclick="resume('${dapp1.name}')">resume</a>
     </div>
     <div class="column-dapp-actions"></div>
+    <div class="column-dapp-actions"></div>
 </div>
 
 <div class="row">
@@ -163,6 +177,9 @@
         <a href="#" onclick="resume('${dapp2.name}')">resume</a>
     </div>
     <div class="column-dapp-actions"></div>
+    <div class="column-dapp-actions">
+        <a href="#" onclick="postTx_1mb_blob('${dapp2.name}')">post_1mb_blob</a>
+    </div>
 </div>
 
 <div class="row">
@@ -173,6 +190,7 @@
         <a href="#" onclick="pause('${dapp3.name}')">pause</a>
         <a href="#" onclick="resume('${dapp3.name}')">resume</a>
     </div>
+    <div class="column-dapp-actions"></div>
     <div class="column-dapp-actions"></div>
 </div>
 
@@ -185,6 +203,7 @@
         <a href="#" onclick="resume('${dapp4.name}')">resume</a>
     </div>
     <div class="column-dapp-actions"></div>
+    <div class="column-dapp-actions"></div>
 </div>
 
 <div class="row">
@@ -195,6 +214,7 @@
         <a href="#" onclick="pause('${dapp5.name}')">pause</a>
         <a href="#" onclick="resume('${dapp5.name}')">resume</a>
     </div>
+    <div class="column-dapp-actions"></div>
     <div class="column-dapp-actions"></div>
 </div>
 
@@ -207,6 +227,7 @@
         <a href="#" onclick="resume('${dapp6.name}')">resume</a>
     </div>
     <div class="column-dapp-actions"></div>
+    <div class="column-dapp-actions"></div>
 </div>
 
 <div class="row">
@@ -218,6 +239,7 @@
         <a href="#" onclick="resume('${dapp7.name}')">resume</a>
     </div>
     <div class="column-dapp-actions"></div>
+    <div class="column-dapp-actions"></div>
 </div>
 
 <div class="row">
@@ -228,6 +250,7 @@
         <a href="#" onclick="pause('${dapp8.name}')">pause</a>
         <a href="#" onclick="resume('${dapp8.name}')">resume</a>
     </div>
+    <div class="column-dapp-actions"></div>
     <div class="column-dapp-actions"></div>
 </div>
 
@@ -243,16 +266,13 @@
         <pre><b>${node0.name}</b></pre>
     </div>
     <div class="column">
-        <pre><b>nodeX</b></pre>
+        <pre><b>node1</b></pre>
     </div>
     <div class="column">
-        <pre><b>nodeX</b></pre>
+        <pre><b>node2</b></pre>
     </div>
     <div class="column">
-        <pre><b>nodeX</b></pre>
-    </div>
-    <div class="column">
-        <pre><b>nodeX</b></pre>
+        <pre><b>node3</b></pre>
     </div>
 </div>
 <div class="row">
@@ -267,9 +287,6 @@
     </div>
     <div class="column">
         <pre id="div-3"></pre>
-    </div>
-    <div class="column">
-        <pre id="div-4"></pre>
     </div>
 </div>
 
