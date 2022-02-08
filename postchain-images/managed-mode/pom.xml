@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>postchain-distribution</artifactId>
+        <artifactId>postchain-images</artifactId>
         <groupId>net.postchain</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
@@ -14,5 +14,58 @@
     <properties>
         <image.name>postchain-managed-mode</image.name>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>dapp</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>build-test-image</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <environmentVariables>
+                                <DOCKER_BUILDKIT>1</DOCKER_BUILDKIT>
+                            </environmentVariables>
+                            <executable>docker</executable>
+                            <arguments>
+                                <argument>build</argument>
+                                <argument>--tag</argument>
+                                <argument>chromaway/${image.name}:latest</argument>
+                                <argument>${project.basedir}/.</argument>
+                                <argument>--load</argument>
+                                <argument>--build-arg</argument>
+                                <argument>postchain_version=latest</argument>
+                                <!--argument>-cache-to</argument>
+                                <argument>type=docker,dest=${docker.cache}/docker.tar</argument-->
+                                <argument>--cache-from</argument>
+                                <argument>type=local,src=${docker.cache}:cache</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
