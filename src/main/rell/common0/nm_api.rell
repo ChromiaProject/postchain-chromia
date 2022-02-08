@@ -44,7 +44,7 @@ query nm_compute_blockchain_list(node_id: pubkey): list<byte_array>
 // note -- API expects array, so we need suppress naming
 query nm_get_peer_infos () = node @* {} (_ = .host,_ = .port,_ = .pubkey,_ = .last_updated);
 
-query nm_api_version () = 1;
+query nm_api_version () = 2;
 
 query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): list<list<byte_array>> {
 	val res = list<list<byte_array>>();
