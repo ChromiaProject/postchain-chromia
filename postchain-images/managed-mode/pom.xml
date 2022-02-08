@@ -36,36 +36,65 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>build-test-image</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <environmentVariables>
-                                <DOCKER_BUILDKIT>1</DOCKER_BUILDKIT>
-                            </environmentVariables>
-                            <executable>docker</executable>
-                            <arguments>
-                                <argument>build</argument>
-                                <argument>--tag</argument>
-                                <argument>chromaway/${image.name}:latest</argument>
-                                <argument>${project.basedir}/.</argument>
-                                <argument>--load</argument>
-                                <argument>--build-arg</argument>
-                                <argument>postchain_version=latest</argument>
-                                <!--argument>-cache-to</argument>
-                                <argument>type=docker,dest=${docker.cache}/docker.tar</argument-->
-                                <argument>--cache-from</argument>
-                                <argument>type=local,src=${docker.cache}:cache</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>chromaway/${image.name}:latest</name>
+                            <build>
+                                <args>
+                                    <postchain_version>latest</postchain_version>
+                                </args>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>gitlab-registry</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>docker</executable>
+                                    <arguments>
+                                        <argument>buildx</argument>
+                                        <argument>build</argument>
+                                        <argument>--platform</argument>
+                                        <argument>linux/amd64,linux/arm64</argument>
+                                        <argument>--tag</argument>
+                                        <argument>${gitlab.registry}/chromaway/${image.name}:${project.version}</argument>
+                                        <argument>${project.basedir}/.</argument>
+                                        <argument>--push</argument>
+                                        <argument>--build-arg</argument>
+                                        <argument>postchain_image=${gitlab.registry}/chromaway/postchain-dapp</argument>
+                                        <argument>--build-arg</argument>
+                                        <argument>postchain_version=${project.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
