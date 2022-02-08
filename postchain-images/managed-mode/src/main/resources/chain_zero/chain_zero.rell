@@ -65,6 +65,8 @@ operation add_blockchain_configuration (brid: byte_array, height: integer, data:
     create blockchain_configuration (blockchain, height, data);
 }
 
+query nm_api_version () = 1;
+
 query nm_get_peer_infos () = peer_info @* {} (_ = .host, _ = .port, _ = .pubkey/*, _=.last_updated*/);
 query nm_get_peer_list_version () = peer_list_version.n;
 
