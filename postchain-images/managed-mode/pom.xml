@@ -12,7 +12,7 @@
     <artifactId>managed-mode</artifactId>
 
     <properties>
-        <image.name>postchain-managed-mode</image.name>
+        <image.name>chromaway/postchain-managed-mode</image.name>
     </properties>
 
     <dependencies>
@@ -43,7 +43,7 @@
                 <configuration>
                     <images>
                         <image>
-                            <name>chromaway/${image.name}:latest</name>
+                            <name>${image.name}:latest</name>
                             <build>
                                 <args>
                                     <postchain_version>latest</postchain_version>
@@ -80,7 +80,7 @@
                                         <argument>--platform</argument>
                                         <argument>linux/amd64,linux/arm64</argument>
                                         <argument>--tag</argument>
-                                        <argument>${gitlab.registry}/chromaway/${image.name}:${project.version}</argument>
+                                        <argument>${gitlab.registry}/${image.name}:${project.version}</argument>
                                         <argument>${project.basedir}/.</argument>
                                         <argument>--push</argument>
                                         <argument>--build-arg</argument>
