@@ -3,37 +3,16 @@
 
 set -eu
 
-ls
+echo "Generating Blockchain Configuration for chain0"
+sh multigen.sh --source-dir=$RELL_SRC --output-dir=$RELL_OUT $RELL_CONF
 
-pwd
+if [ $WIPE_DB = true ]; then
+  echo "Deleting the database..."
+  sh postchain.sh wipe-db --node-config $RELL_OUT/node-config.properties
 
-# Seting env-s
-export NODE=${ENV_NODE:-node1}
-
-if [ $NODE = "node1" ]
-then
-  export NODE_HOST=127.0.0.1
-  export NODE_PORT=9871
-  export NODE_PUBKEY=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+  echo "Adding my peer-info..."
+  sh postchain.sh peerinfo-add --node-config $RELL_OUT/node-config.properties --host $NODE_HOST --port $NODE_PORT --pub-key $NODE_PUBKEY
 fi
 
-if [ $NODE = "node2" ]
-then
-  export NODE_HOST=127.0.0.1
-  export NODE_PORT=9872
-  export NODE_PUBKEY=02B99A05912B01B7797D84D6660E9ED35FAEE078BD5BDF40026E0CC6E0CB2EF50C
-fi
-
-if [ $NODE = "node3" ]
-then
-  export NODE_HOST=127.0.0.1
-  export NODE_PORT=9873
-  export NODE_PUBKEY=02839DDE1D2121CE72794E54180F5F5C3AD23543D419CB4C3640A854ACB1ADA9E6
-fi
-
-
-# Deploying chain-zero dapp
-sh ./deploy.sh
-
-# Launching a node
-sh ./run.sh WIPE_DB
+echo "Starting node"
+sh postchain.sh $1 -d $RELL_OUT

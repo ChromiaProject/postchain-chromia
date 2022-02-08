@@ -34,6 +34,10 @@ internal class ManagedModeExampleIT {
                 .withNetworkAliases("node1")
                 .withClasspathResourceMapping("${resourceFolder}/node1", "${PostchainContainer.POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+                .withEnv("NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
+                .withEnv("NODE_HOST", "node1")
+                .withEnv("NODE_PORT", "9871")
+                .withEnv("WIPE_DB", "true")
                 .withFixedExposedPort(9871, 9871)
 
         @JvmStatic
