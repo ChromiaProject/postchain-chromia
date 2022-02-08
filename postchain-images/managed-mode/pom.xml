@@ -18,7 +18,15 @@
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postgres</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>dapp</artifactId>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
             <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
