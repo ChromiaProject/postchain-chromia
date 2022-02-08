@@ -49,10 +49,6 @@ operation add_peer_replica (peerPubkey: pubkey, host: text, port: integer, peerR
     peer_list_version.n += 1;
 }
 
-operation nop (arg: text) {
-    
-}
-
 operation remove_peer (pubkey) {
     require_admin();
     delete peer_info @ {pubkey};
@@ -90,14 +86,14 @@ query nm_compute_blockchain_list (node_id: byte_array): list<byte_array> {
 query nm_find_next_configuration_height (blockchain_rid: byte_array, height: integer) {
     val bc = blockchain @? { blockchain_rid };
     if (bc == null) return null;
-    return blockchain_configuration @? { bc!!, .height > height }
-        (sort .height) limit 1;
+    return blockchain_configuration @? { bc, .height > height }
+        (@sort .height) limit 1;
 }
 
 query nm_get_blockchain_configuration (blockchain_rid: byte_array, height: integer): byte_array? {
     val bc = blockchain @ { blockchain_rid };
     // find configuration height -- the latest height up to given height
-    val ch = blockchain_configuration @? { bc , .height <= height } (-sort .height) limit 1;
+    val ch = blockchain_configuration @? { bc , .height <= height } (@sort_desc .height) limit 1;
     if (ch != null) 
         return blockchain_configuration @ { .blockchain == bc, .height == ch } .data;
     else
