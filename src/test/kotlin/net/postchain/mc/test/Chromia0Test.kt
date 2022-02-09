@@ -1,5 +1,7 @@
 package net.postchain.mc.test
 
+import assertk.assert
+import assertk.assertions.contains
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -472,7 +474,7 @@ class Chromia0Test() : ManagedModeTest() {
             val data = provExecutor.getProviderInfo(wrongProviderPublicKey).asDict()
             fail("Fail test for get provider error reporting")
         } catch (e: CliError.Companion.CliException) {
-            assertEquals("Can not make query_gtx api call", e.message.trim())
+            assert(e.message).contains("Can not make query_gtx api call")
         }
     }
 
@@ -484,7 +486,7 @@ class Chromia0Test() : ManagedModeTest() {
             provExecutor.getNodeInfo(wrongNode).asDict()
             fail("Fail test for get node info error reporting")
         } catch (e: CliError.Companion.CliException) {
-            assertEquals("Can not make query_gtx api call", e.message.trim())
+            assert(e.message).contains("Can not make query_gtx api call")
         }
     }
 
