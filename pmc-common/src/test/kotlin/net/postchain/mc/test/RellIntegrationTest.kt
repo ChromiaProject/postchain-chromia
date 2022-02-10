@@ -5,7 +5,6 @@ import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -114,7 +113,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
             </entry>*/
             val bcGtv = chain.configs[0]!!
             val dict = bcGtv.gtvConfig.asDict().toMutableMap()
-            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv("net.postchain.mc.test.SmartOnDemandBlockBuildingStrategy")))
+            dict["blockstrategy"] = GtvFactory.gtv(mapOf("name" to GtvFactory.gtv(SmartOnDemandBlockBuildingStrategy::class.java.name.toString())))
             val moddedGtv = GtvFactory.gtv(dict)
 
             val bs = BlockchainSetupFactory.buildFromGtv(0, moddedGtv)
