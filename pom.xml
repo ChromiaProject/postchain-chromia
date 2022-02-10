@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain-mc</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>3.4.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Postchain Management Console</name>
@@ -15,14 +15,13 @@
     <properties>
         <main-class>net.postchain.mc.AppKt</main-class>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <postchain.version>3.4.0-SNAPSHOT</postchain.version>
-        <rellr.version>0.10.7</rellr.version>
-        <kotlin.version>1.3.41</kotlin.version>
-        <junit.version>4.12</junit.version>
-        <assertk.version>0.10</assertk.version>
+        <postchain.version>${project.version}</postchain.version>
+        <rellr.version>0.10.8</rellr.version>
+        <kotlin.version>1.6.10</kotlin.version>
+        <junit.version>5.8.2</junit.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
+        <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
@@ -30,6 +29,25 @@
         <executable-classifier>jar-with-dependencies</executable-classifier>
         <dist-classifier>dist</dist-classifier>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain</artifactId>
+                <version>${postchain.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -42,26 +60,21 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
-            <version>${postchain.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-devtools</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rellr</artifactId>
             <version>${rellr.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
-            <version>${postchain.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-devtools</artifactId>
-            <version>${postchain.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -74,29 +87,26 @@
 
         <!-- testing -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.10.1</version>
+            <version>2.13.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit</artifactId>
-            <version>${kotlin.version}</version>
+            <artifactId>kotlin-test-junit5</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
-            <version>${assertk.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -222,4 +232,30 @@
 
         </plugins>
     </build>
+
+    <repositories>
+        <repository>
+            <id>postchain</id>
+            <name>Postchain GitLab Registry</name>
+            <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
+        </repository>
+        <repository>
+            <id>rell</id>
+            <name>Rell Registry</name>
+            <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>gitlab-maven</id>
+            <!--suppress UnresolvedMavenProperty -->
+            <url>https://gitlab.com/api/v4/projects/33481005/packages/maven</url>
+        </repository>
+        <snapshotRepository>
+            <id>gitlab-maven</id>
+            <!--suppress UnresolvedMavenProperty -->
+            <url>https://gitlab.com/api/v4/projects/33481005/packages/maven</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>

@@ -16,7 +16,7 @@ entity provider_state {
 	mutable beneficiary: ft3_account.account; 	 
 }
 
-function require_admin() { 	require(is_signer(chain_context.args.admin)); }
+function require_admin() { 	require(op_context.is_signer(chain_context.args.admin)); }
 
 function create_simple_ft3_account(pubkey): ft3_account.account {
 	val account_id = ft3_account.create_account_with_auth(

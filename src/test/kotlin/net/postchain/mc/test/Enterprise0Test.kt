@@ -10,9 +10,10 @@ import net.postchain.mc.cli.enterprise0.CliExecutionE0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Before
-import org.junit.Test
-import java.nio.file.Paths
+import org.awaitility.core.ConditionTimeoutException
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -56,7 +57,7 @@ class Enterprise0Test : ManagedModeTest() {
     * node, running the rell code in `rellSourceDir`. Operation init() registers and enables the module argument
     * `initial_provider` as provider. So that we have an initial voter.
     * */
-    @Before
+    @BeforeEach
     fun setup() {
         blockchain0ConfigGtv = run("enterprise0")
         doAndBuildBlocks(provConfig, provExecutor.initInternal())
@@ -148,7 +149,7 @@ class Enterprise0Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.voteInternal(id, false))
     }
 
-    @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
+    @Test
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
@@ -169,9 +170,11 @@ class Enterprise0Test : ManagedModeTest() {
         buildAndAwaitBlocks(2)
 
         // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
-        Awaitility.await().atMost(Duration.ONE_SECOND).until {
-            doAndBuildBlocks(provConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
-            true
+        assertThrows<ConditionTimeoutException> {
+            Awaitility.await().atMost(Duration.ONE_SECOND).until {
+                doAndBuildBlocks(provConfig, provExecutor.proposeProviderInternal(prov2Config.pubKey))
+                true
+            }
         }
     }
 

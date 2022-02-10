@@ -20,7 +20,7 @@ function check_single_sig_auth(args: byte_array, participants: list<byte_array>,
     return
           ss_args.flags.contains_all(required_flags)
             and
-          is_signer(participants[0]);
+          op_context.is_signer(participants[0]);
 }
 
 function check_multi_sig_auth(args: byte_array, participants: list<byte_array>, required_flags: list<text>): boolean {
@@ -28,7 +28,7 @@ function check_multi_sig_auth(args: byte_array, participants: list<byte_array>, 
    if (not (multi_sign_args.flags.contains_all(required_flags))) return false;
    var num_sign = multi_sign_args.signatures_required;
    for(s in participants) {
-      if(is_signer(s)) {
+      if(op_context.is_signer(s)) {
           num_sign -= 1;
           if(num_sign < 1) {return true;}
       }
