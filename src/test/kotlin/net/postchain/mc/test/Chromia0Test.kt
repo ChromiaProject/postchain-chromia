@@ -13,9 +13,11 @@ import net.postchain.mc.cli.chromia0.CliExecutionC0
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.awaitility.core.ConditionTimeoutException
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
 
 class Chromia0Test() : ManagedModeTest() {
@@ -54,7 +56,7 @@ class Chromia0Test() : ManagedModeTest() {
     * enabling it. These steps are therefore put in the pre-step.
     * For testing of these two operations (register_provider and enable_provider), a second provider is introduced.
     * */
-    @Before
+    @BeforeEach
     fun setup() {
         // start node and add the provider
         blockchain0ConfigGtv = run("chroma0")
@@ -146,7 +148,7 @@ class Chromia0Test() : ManagedModeTest() {
     }
 
     @Test
-    @Ignore //Ignoring, since a second test nod is not yet implemented.
+    @Disabled //Ignoring, since a second test nod is not yet implemented.
     fun testAddBlockchainSigners() {
         // Creating node0
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
@@ -194,7 +196,7 @@ class Chromia0Test() : ManagedModeTest() {
         }
     }
 
-    @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
+    @Test
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
         addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
@@ -219,9 +221,11 @@ class Chromia0Test() : ManagedModeTest() {
         buildAndAwaitBlocks(3)
 
         // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
-        Awaitility.await().atMost(Duration.ONE_SECOND).until {
-            doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-            true
+        assertThrows<ConditionTimeoutException> {
+            Awaitility.await().atMost(Duration.ONE_SECOND).until {
+                doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+                true
+            }
         }
     }
 
