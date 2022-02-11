@@ -38,8 +38,8 @@ open class CliExecution(val config: ClientConfig) {
         return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), defaultSigner)
     }
 
-    protected fun getEncodedGtxValueFromFile(blockchainConfigFile: String): ByteArray {
-        val gtv = GtvMLParser.parseGtvML(File(blockchainConfigFile).readText())
+    protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
+        val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
         return GtvEncoder.encodeGtv(gtv)
     }
 
@@ -286,16 +286,14 @@ open class CliExecution(val config: ClientConfig) {
         return returnList
     }
 
-
-    protected fun readConfigurationFile(blockchainConfigFile: String, format: String?): ByteArray {
-        val configFile = File(blockchainConfigFile)
+    protected fun readConfigurationFile(blockchainConfigFile: File, format: String?): ByteArray {
         var fmt = format
         if (fmt == null) {
-            fmt = if (configFile.extension == "gtv") "gtv" else "xml"
+            fmt = if (blockchainConfigFile.extension == "gtv") "gtv" else "xml"
         }
         var data: ByteArray
         if (fmt == "gtv") {
-            data = configFile.readBytes()
+            data = blockchainConfigFile.readBytes()
             // try to decode to ensure data is valid
             GtvFactory.decodeGtv(data)
         } else {
