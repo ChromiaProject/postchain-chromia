@@ -12,6 +12,7 @@
     <artifactId>pmc-chromia</artifactId>
 
     <properties>
+        <main-class>net.postchain.mc.Chromia0Kt</main-class>
     </properties>
 
     <dependencies>
@@ -54,4 +55,17 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>distro</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

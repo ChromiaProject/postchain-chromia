@@ -8,7 +8,7 @@ import net.postchain.mc.cli.base.Command
 class Cli: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandKeygen()
-    ).map { it.key() to it }.toMap()
+    ).associateBy { it.key() }
 
     init {
         jCommander = with(JCommander.newBuilder()) {
