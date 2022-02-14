@@ -1,17 +1,20 @@
 package net.postchain.mc.cli.chromia0
 
-import net.postchain.client.core.*
+import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
 class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
 
-
     private fun addBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
-        val nodeList = nodes.split(",").map { getPostchainClient().query("get_node",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get() }
+        val nodeList = nodes.split(",").map {
+            getPostchainClient().query("get_node",
+                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
+        }
         return makeTransactionWithNop().apply {
             addOperation("add_blockchain",
                     arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
@@ -37,6 +40,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         sendTxSync(updateProviderAsync(key, name, beneficiary), "Provider data has been updated",
                 "Cannot update provider")
     }
+
     fun updateProviderAsync(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)

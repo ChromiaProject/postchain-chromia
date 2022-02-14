@@ -12,149 +12,161 @@ import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Before
-import org.junit.Test
 import org.junit.Ignore
+import org.junit.Test
 import kotlin.test.*
 
 /*
 class Chromia0Test() : ManagedModeTest() {
 
-override fun chainConfSnippet(): String{
-    val module = "chroma0"
+    override fun chainConfSnippet(): String {
+        val module = "chroma0"
 
-    return """
-        <chains>
-            <chain name="manager" iid="0">
-                <config height="0" add-dependencies="false">
-                    <app module="${module}">
-                        <args module="${module}">
-                            <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(adminKey)}</bytea></arg>
-                        </args>
-                    </app>
-                    <gtv path="signers">
-                        <array>
-                            <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
-                        </array>
-                    </gtv>
-                </config>
-            </chain>
-        </chains>
-    """.trimIndent()
-}
+        return """
+            <chains>
+                <chain name="manager" iid="0">
+                    <config height="0" add-dependencies="false">
+                        <app module="${module}">
+                            <args module="${module}">
+                                <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(adminKey)}</bytea></arg>
+                            </args>
+                        </app>
+                        <gtv path="signers">
+                            <array>
+                                <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
+                            </array>
+                        </gtv> 
+                    </config>
+                </chain>
+            </chains>
+        """.trimIndent()
+    }
 
-override val adminExecutor = CliExecutionC0(clientConfig)
-override val provExecutor = CliExecutionC0(provConfig)
-override val prov2Executor = CliExecutionC0(prov2Config)
+    override val adminExecutor = CliExecutionC0(clientConfig)
+    override val provExecutor = CliExecutionC0(provConfig)
+    override val prov2Executor = CliExecutionC0(prov2Config)
 
 
-/*
-*  The pre-step includes starting a single
-* node, running the rell code in `rellSourceDir`. A majority of the tests starts with adding a first provider and
-* enabling it. These steps are therefore put in the pre-step.
-* For testing of these two operations (register_provider and enable_provider), a second provider is introduced.
-* */
-@Before
-fun setup() {
-    // start node and add the provider
-    blockchain0ConfigGtv = run("chroma0")
-    doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(provConfig.pubKey))
-    doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
-}
+    /*
+    *  The pre-step includes starting a single
+    * node, running the rell code in `rellSourceDir`. A majority of the tests starts with adding a first provider and
+    * enabling it. These steps are therefore put in the pre-step.
+    * For testing of these two operations (register_provider and enable_provider), a second provider is introduced.
+    * */
+    @Before
+    fun setup() {
+        // start node and add the provider
+        blockchain0ConfigGtv = run("chroma0")
+        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(provConfig.pubKey))
+        doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
+    }
 
-@Test
-fun testRegisterProvider() {
-    doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-    assertProviderData(prov2Config.pubKey, "", false)
-}
+    @Test
+    fun testRegisterProvider() {
+        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        assertProviderData(prov2Config.pubKey, "", false)
+    }
 
-@Test
-fun testUpdateProviderName() {
-    assertProviderData(provConfig.pubKey, name = "", isActive = true)
-    val newName = "chromia"
-    doAndBuildBlocks(provConfig, provExecutor.updateProviderInternal(provConfig.pubKey, newName, ""))
-    assertProviderData(provConfig.pubKey, name = newName, isActive = true)
-}
+    @Test
+    fun testUpdateProviderName() {
+        assertProviderData(provConfig.pubKey, name = "", isActive = true)
+        val newName = "chromia"
+        doAndBuildBlocks(provConfig, provExecutor.updateProviderInternal(provConfig.pubKey, newName, ""))
+        assertProviderData(provConfig.pubKey, name = newName, isActive = true)
+    }
 
-@Test
-fun testDisableEnableProvider() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+    @Test
+    fun testDisableEnableProvider() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-    // add second provider
-    doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-    doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(prov2Config.pubKey))
-    // provider active status should be true after calling enable
-    assertProviderEnabled(prov2Config.pubKey)
+        // add second provider
+        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(prov2Config.pubKey))
+        // provider active status should be true after calling enable
+        assertProviderEnabled(prov2Config.pubKey)
 
-    // The new provider adds node 1 and node 2
-    addNode(prov2Config, node1Pubkey, node1Host, node1Port, cluster = null)
-    addNode(prov2Config, node2Pubkey, node2Host, node2Port, cluster = null)
+        // The new provider adds node 1 and node 2
+        addNode(prov2Config, node1Pubkey, node1Host, node1Port)
+        addNode(prov2Config, node2Pubkey, node2Host, node2Port)
 
-    // make node1 a signer of bc0
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
+        // make node1 a signer of bc0
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
 
-    //make node2 a replica of bc0
-    doAndBuildBlocks(prov2Config, prov2Executor.addReplicaInternal(clientConfig.brid, node2Pubkey))
-    assertBlockchainReplica(clientConfig, node2Pubkey,node2Host, node2Port)
+        //make node2 a replica of bc0
+        doAndBuildBlocks(prov2Config, prov2Executor.addReplicaInternal(clientConfig.brid, node2Pubkey))
+        assertBlockchainReplica(clientConfig, node2Pubkey, node2Host, node2Port)
 
-    //disable second provider
-    doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(prov2Config.pubKey))
-    // provider active status should be false after calling disable. Blockchain replicas list  and blockchain signers
-    // list should also be updated accordingly.
-    assertProviderDisabled(prov2Config.pubKey)
-}
+        //disable second provider
+        doAndBuildBlocks(clientConfig, adminExecutor.disableProviderInternal(prov2Config.pubKey))
+        // provider active status should be false after calling disable. Blockchain replicas list  and blockchain signers
+        // list should also be updated accordingly.
+        assertProviderDisabled(prov2Config.pubKey)
+    }
 
-@Test
-fun testAddNode() {
-    addNode0(provConfig, cluster = null)
-}
+    @Test
+    fun testAddNode() {
+        addNode0(provConfig)
+    }
 
-@Test
-fun testAddBlockchain() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-}
+    @Test
+    fun testAddBlockchain() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+    }
 
-@Test
-fun testAddBlockchainAcceptGtv() {
-    // still need that for creating node test due to IntegrateTest expect xml to create node config
-    // for testing only
-    // Creating node0
-    addNode0(provConfig, cluster = "system")
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfigGtvFile, nodes[0].pubKey, "gtv"))
-    awaitBlockchainReload()
-    val listBlockchains = adminExecutor.listAllBlockchains()
-    assertBcAdded(clientConfig, listBlockchains[0])
-}
+    @Test
+    fun testAddBlockchainAcceptGtv() {
+        // still need that for creating node test due to IntegrateTest expect xml to create node config
+        // for testing only
+        // Creating node0
+        addNode0(provConfig)
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfigGtvFile, nodes[0].pubKey, "gtv"))
+        awaitBlockchainReload()
+        val listBlockchains = adminExecutor.listAllBlockchains()
+        assertBcAdded(clientConfig, listBlockchains[0])
+    }
 
-@Test
-fun testAddBlockchainXml() {
+    @Test
+    fun testAddBlockchainXml() {
 //        val configFileName = "/net/postchain/mc/test/config/blockchain_config.xml"
 //        // Creating node0
-    addNode0(provConfig, cluster = null)
+        addNode0(provConfig)
 //        val confFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources" + configFileName
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfig1xmlFile, nodes[0].pubKey, "xml"))
-    awaitBlockchainReload()
+        doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainInternal(bcConfig1xmlFile, nodes[0].pubKey, "xml"))
+        awaitBlockchainReload()
 
-    val listBlockchains = adminExecutor.listAllBlockchains()
-    assertBcAdded(clientConfig, listBlockchains[0])
-}
+        val listBlockchains = adminExecutor.listAllBlockchains()
+        assertBcAdded(clientConfig, listBlockchains[0])
+    }
 
-@Test
-@Ignore //Ignoring, since a second test nod is not yet implemented.
-fun testAddBlockchainSigners() {
-    // Creating node0
+    @Test
+    @Ignore //Ignoring, since a second test nod is not yet implemented.
+    fun testAddBlockchainSigners() {
+        // Creating node0
 //        createNode(0, 2, NODE0_CONFIG_FILE, configFileName)
 //
 
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-    // Add node1 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, "system")
+        // Add node1 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
-    // Add node1 as blockchain's signer
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
-    // Get next configuration height after adding new node as blockchain's signer
-    // expected next congiguration height = -1 + registerProvider + enableProvider + 2*addNode + addBlockhain + addSigners + 5 = 10
-    assertNextConfiguration(clientConfig, expectedHeight = 10L)
+        // Add node1 as blockchain's signer
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
+        // Get next configuration height after adding new node as blockchain's signer
+        // expected next congiguration height = -1 + registerProvider + enableProvider + 2*addNode + addBlockhain + addSigners + 5 = 10
+        assertNextConfiguration(clientConfig, expectedHeight = 10L)
 
 //        Thread.sleep(120000)
 
@@ -170,296 +182,333 @@ fun testAddBlockchainSigners() {
 //        for ()
 //        buildBlockAndCommit(nodes[0])
 
-    //Build blocks until new configuration is enabled
-    buildAndAwaitBlocks(3)
+        //Build blocks until new configuration is enabled
+        buildAndAwaitBlocks(3)
 
-    // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
-    Awaitility.await().atMost(Duration.ONE_SECOND).until {
-        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-        assertProviderData(prov2Config.pubKey, "", false)
-        true
+        // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
+        Awaitility.await().atMost(Duration.ONE_SECOND).until {
+            doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+            assertProviderData(prov2Config.pubKey, "", false)
+            true
+        }
     }
-}
 
+    @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
+    fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-@Test(expected = org.awaitility.core.ConditionTimeoutException::class)
-fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        // Add node1 & 2 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
 
-    // Add node1 & 2 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    addNode(provConfig, node2Pubkey, node2Host, node2Port, )
+        // Add node1 as blockchain's signer
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                signers_list,
+                -1L
+            )
+        )
+        // Get next configuration height after adding new node as blockchain's signer
+        // expected next congiguration height = -1 + registerProvider + enableProvider + 3*addNode + addBlockhain + addSigners + 5 = 11
+        assertNextConfiguration(clientConfig, 11L)
 
-    // Add node1 as blockchain's signer
-    val signers_list = "$node1Pubkey,$node2Pubkey"
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
-    // Get next configuration height after adding new node as blockchain's signer
-    // expected next congiguration height = -1 + registerProvider + enableProvider + 3*addNode + addBlockhain + addSigners + 5 = 11
-    assertNextConfiguration(clientConfig, 11L)
+        //Build blocks until new configuration is enabled
+        buildAndAwaitBlocks(3)
 
-    //Build blocks until new configuration is enabled
-    buildAndAwaitBlocks(3)
-
-    // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
-    Awaitility.await().atMost(Duration.ONE_SECOND).until {
-        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
-        true
+        // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
+        Awaitility.await().atMost(Duration.ONE_SECOND).until {
+            doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+            true
+        }
     }
-}
 
-@Test
-fun testRemoveNode() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+    @Test
+    fun testRemoveNode() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-    // Add node1
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    var nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
-    assertTrue(nodeInfo["active"]!!.asBoolean())
+        // Add node1
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        var nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertTrue(nodeInfo["active"]!!.asBoolean())
 
-    // Remove node1
-    doAndBuildBlocks(clientConfig, provExecutor.removeNodeInternal(node1Pubkey))
+        // Remove node1
+        doAndBuildBlocks(clientConfig, provExecutor.removeNodeInternal(node1Pubkey))
 
-    nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
-    assertFalse(nodeInfo["active"]!!.asBoolean())
-}
+        nodeInfo = adminExecutor.getNodeInfo(node1Pubkey).asDict()
+        assertFalse(nodeInfo["active"]!!.asBoolean())
+    }
 
-@Test
-fun testRemoveBlockchainSigners() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+    @Test
+    fun testRemoveBlockchainSigners() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
 
-    // Add node1 & 2 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    addNode(provConfig, node2Pubkey, node2Host, node2Port, )
+        // Add node1 & 2 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addNode(provConfig, node2Pubkey, node2Host, node2Port)
 
-    // Add node1 as blockchain's signer
-    val signers_list = "$node1Pubkey,$node2Pubkey"
-    doAndBuildBlocks(clientConfig, adminExecutor.addBlockchainSignersInternal(clientConfig.brid, signers_list))
-    doAndBuildBlocks(clientConfig, adminExecutor.removeBlockchainSignersInternal(clientConfig.brid, signers_list))
-    val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
-    assertEquals(1, listBlockchainSigners.size)
-}
-
-
-@Test
-fun testAddConfiguration() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
-            20L, "xml"))
-    assertNextConfiguration(clientConfig, 20L)
-}
-
-/*
-* 1.  A new configurations is added att height 20 (future height = 20)
-* 2.  A new signer is added at height 6 (current height = 6+5 = 11)
-*    The new config should not be applied at height 11.
-*    The new configuration should be updated with the new signer.
-* => initGtx == currentGTx
-*    current Signer list == future signer list
-*    currentGtx != future Gtx
-*    current config has two signers (init config has one signer)
-* */
-@Test
-fun testAddSignerToFutureConfig() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfig1xmlFile,
-            20L, "xml"))
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    addBcSigners(node1Pubkey)
-    val futureConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 20L)
-    val signers = GtvDecoder.decodeGtv(futureConf).asDict()["signers"]
-    assertNotNull(signers)
-    val futureSignersArray = signers.asArray()
-    assertEquals(2, futureSignersArray.size)
-
-    //current is not really current, but current +5: h+5 = 6+5 = 11
-    val currentConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 11L)
-    val currentDict = GtvDecoder.decodeGtv(currentConf).asDict()
-    val currentSigners = currentDict["signers"]!!.asArray()
-    val currentGtx = currentDict["gtx"]!!.asDict()
-    assertEquals(2, currentSigners.size)
-
-    val initConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
-    val initDict = GtvDecoder.decodeGtv(initConf).asDict()
-    val initSigners = initDict["signers"]!!.asArray()
-    val initGtx = initDict["gtx"]!!.asDict()
-    assertEquals(1, initSigners.size)
-    assertEquals(currentGtx, initGtx)
-
-    assertTrue(currentSigners contentEquals futureSignersArray, "Future configurations are not updated with the new signer")
-    assertNotEquals(futureConf, currentConf, "future conf is applied too early")
-    assertNotEquals(initConf, currentConf, "comparing with wrong current conf")
-}
-
-@Test
-fun testAddConfigurationAcceptGtv() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    doAndBuildBlocks(clientConfig, adminExecutor.addConfigurationInternal(clientConfig.brid, bcConfigGtvFile,
-            20L, "gtv"))
-    assertNextConfiguration(clientConfig, 20L)
-}
-
-@Test
-fun testListBlockchainsForNode() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    var listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
-    assertEquals(1, listBlockchains.size)
-
-    listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
-    assertEquals(0, listBlockchains.size)
-}
+        // Add node1 as blockchain's signer
+        val signers_list = "$node1Pubkey,$node2Pubkey"
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                signers_list,
+                -1L
+            )
+        )
+        doAndBuildBlocks(clientConfig, adminExecutor.removeBlockchainSignersInternal(clientConfig.brid, signers_list))
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(1, listBlockchainSigners.size)
+    }
 
 
+    @Test
+    fun testAddConfiguration() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfig1xmlFile,
+                20L, "xml"
+            )
+        )
+        assertNextConfiguration(clientConfig, 20L)
+    }
 
-@Test
-fun testGetBlockchainConfiguration() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    val blockchain = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
-    assert(blockchain.isNotEmpty())
-    val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
-    assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
-}
+    /*
+    * 1.  A new configurations is added att height 20 (future height = 20)
+    * 2.  A new signer is added at height 6 (current height = 6+5 = 11)
+    *    The new config should not be applied at height 11.
+    *    The new configuration should be updated with the new signer.
+    * => initGtx == currentGTx
+    *    current Signer list == future signer list
+    *    currentGtx != future Gtx
+    *    current config has two signers (init config has one signer)
+    * */
+    @Test
+    fun testAddSignerToFutureConfig() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfig1xmlFile,
+                20L, "xml"
+            )
+        )
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        addBcSigners(node1Pubkey)
+        val futureConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 20L)
+        val signers = GtvDecoder.decodeGtv(futureConf).asDict()["signers"]
+        assertNotNull(signers)
+        val futureSignersArray = signers.asArray()
+        assertEquals(2, futureSignersArray.size)
 
-@Test
-fun testGetNodeListVersion() {
-    addNode0(provConfig, )
-    val version = provExecutor.getNodeListVersion()
-    assertTrue(version > 0)
-}
+        //current is not really current, but current +5: h+5 = 6+5 = 11
+        val currentConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 11L)
+        val currentDict = GtvDecoder.decodeGtv(currentConf).asDict()
+        val currentSigners = currentDict["signers"]!!.asArray()
+        val currentGtx = currentDict["gtx"]!!.asDict()
+        assertEquals(2, currentSigners.size)
 
-@Test
-fun testGeBlockchainLastHeight() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    val h = provExecutor.getBlockchainLastHeight(clientConfig.brid)
-    //Expected height = -1 + registerProvider + enableProvider + addNode + addBlockhain = 3
-    assertEquals(3, h)
-}
+        val initConf = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
+        val initDict = GtvDecoder.decodeGtv(initConf).asDict()
+        val initSigners = initDict["signers"]!!.asArray()
+        val initGtx = initDict["gtx"]!!.asDict()
+        assertEquals(1, initSigners.size)
+        assertEquals(currentGtx, initGtx)
 
-@Test
-fun testListNodes() {
-    addNode0(provConfig, )
-    // Add node1 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    assertListNodes()
-}
+        assertTrue(
+            currentSigners contentEquals futureSignersArray,
+            "Future configurations are not updated with the new signer"
+        )
+        assertNotEquals(futureConf, currentConf, "future conf is applied too early")
+        assertNotEquals(initConf, currentConf, "comparing with wrong current conf")
+    }
 
-@Test
-fun testListNodesWithProvider() {
-    addNode0(provConfig, )
-    assertListNodesNode0(provConfig)
-}
+    @Test
+    fun testAddConfigurationAcceptGtv() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addConfigurationInternal(
+                clientConfig.brid, bcConfigGtvFile,
+                20L, "gtv"
+            )
+        )
+        assertNextConfiguration(clientConfig, 20L)
+    }
 
-@Test
-fun testListBlockchains() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    val listBlockchains = adminExecutor.listAllBlockchains()
-    assertEquals(1, listBlockchains.size)
-}
+    @Test
+    fun testListBlockchainsForNode() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        var listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
+        assertEquals(1, listBlockchains.size)
 
-@Test
-fun testListBlockchainReplicas() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
+        listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
+        assertEquals(0, listBlockchains.size)
+    }
 
-    // add node 1 as replica
-    doAndBuildBlocks(provConfig, provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey),5)
-    assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
-}
 
-@Test
-fun testListBlockchainSigners() {
-    addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+    @Test
+    fun testGetBlockchainConfiguration() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val blockchain = adminExecutor.getBlockchainConfiguration(clientConfig.brid, 0L)
+        assert(blockchain.isNotEmpty())
+        val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
+        assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
+    }
 
-    // Add node1 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
+    @Test
+    fun testGetNodeListVersion() {
+        addNode0(provConfig)
+        val version = provExecutor.getNodeListVersion()
+        assertTrue(version > 0)
+    }
 
-    // Add node1 as blockchain's signer
-    doAndBuildBlocks(clientConfig,adminExecutor.addBlockchainSignersInternal(clientConfig.brid, node1Pubkey))
-    val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
-    assertEquals(2, listBlockchainSigners.size)
-    PrintUtils.printBlockchainNodes(listBlockchainSigners, false)
-}
+    @Test
+    fun testGeBlockchainLastHeight() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val h = provExecutor.getBlockchainLastHeight(clientConfig.brid)
+        //Expected height = -1 + registerProvider + enableProvider + addNode + addBlockhain = 3
+        assertEquals(3, h)
+    }
 
-@Test
-fun testStopBlockchain() {
-    initAndNode1Replica()
+    @Test
+    fun testListNodes() {
+        addNode0(provConfig)
+        // Add node1 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        assertListNodes()
+    }
 
-    doAndBuildBlocks(clientConfig, adminExecutor.stopBlockchainInternal(clientConfig.brid, true))
-    // query replicas again to ensure it was deleted after stop blockchain
-    val replicas = adminExecutor.listBlockchainReplicas(clientConfig.brid)
-    assertEquals(0, replicas.size)
+    @Test
+    fun testListNodesWithProvider() {
+        addNode0(provConfig)
+        assertListNodesNode0(provConfig)
+    }
 
-    // query signers again to ensure it was deleted after stop blockchain
-    val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
-    assertEquals(0, listBlockchainSigners.size)
-}
+    @Test
+    fun testListBlockchains() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        val listBlockchains = adminExecutor.listAllBlockchains()
+        assertEquals(1, listBlockchains.size)
+    }
 
-@Test
-fun testListNodesByProvider() {
-    addNode0(provConfig, )
+    @Test
+    fun testListBlockchainReplicas() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
 
-    // Add node1 to managed blockchain
-    addNode(provConfig, node1Pubkey, node1Host, node1Port, )
-    assertListNodesByProvider()
-}
+        // add node 1 as replica
+        doAndBuildBlocks(provConfig, provExecutor.addReplicaInternal(clientConfig.brid, node1Pubkey), 5)
+        assertBlockchainReplica(clientConfig, node1Pubkey, node1Host, node1Port)
+    }
 
-@Test
-fun testListProviders() {
-    addNode0(provConfig, )
+    @Test
+    fun testListBlockchainSigners() {
+        addNode0AndBc0(blockchain0ConfigGtv, clientConfig, provConfig)
+
+        // Add node1 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+
+        // Add node1 as blockchain's signer
+        doAndBuildBlocks(
+            clientConfig, adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                node1Pubkey,
+                -1L
+            )
+        )
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(2, listBlockchainSigners.size)
+        PrintUtils.printBlockchainNodes(listBlockchainSigners, false)
+    }
+
+    @Test
+    fun testStopBlockchain() {
+        initAndNode1Replica()
+
+        doAndBuildBlocks(clientConfig, adminExecutor.stopBlockchainInternal(clientConfig.brid, true))
+        // query replicas again to ensure it was deleted after stop blockchain
+        val replicas = adminExecutor.listBlockchainReplicas(clientConfig.brid)
+        assertEquals(0, replicas.size)
+
+        // query signers again to ensure it was deleted after stop blockchain
+        val listBlockchainSigners = adminExecutor.listBlockchainSigners(clientConfig.brid)
+        assertEquals(0, listBlockchainSigners.size)
+    }
+
+    @Test
+    fun testListNodesByProvider() {
+        addNode0(provConfig)
+
+        // Add node1 to managed blockchain
+        addNode(provConfig, node1Pubkey, node1Host, node1Port)
+        assertListNodesByProvider()
+    }
+
+    @Test
+    fun testListProviders() {
+        addNode0(provConfig)
 
 //        add a second provider
-    doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
+        doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(prov2Config.pubKey))
 
-    val providers = adminExecutor.listProviders()
-    assertEquals(2, providers.size)
-    val provider1 = providers.get(0).asDict()
-    assertEquals(provConfig.pubKey, provider1["pubkey"]!!.asByteArray().toHex())
-    assertEquals(true, provider1["active"]!!.asBoolean())
+        val providers = adminExecutor.listProviders()
+        assertEquals(2, providers.size)
+        val provider1 = providers.get(0).asDict()
+        assertEquals(provConfig.pubKey, provider1["pubkey"]!!.asByteArray().toHex())
+        assertEquals(true, provider1["active"]!!.asBoolean())
 
-    val provider2 = providers.get(1).asDict()
-    assertEquals(prov2Config.pubKey, provider2["pubkey"]!!.asByteArray().toHex())
-    assertEquals(false, provider2["active"]!!.asBoolean())
-    PrintUtils.printProviders(providers)
-}
-
-
-@Test
-fun testGetProviderInfoErrorReporting() {
-    addNode0(provConfig, )
-    val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
-    try {
-        val data = provExecutor.getProviderInfo(wrongProviderPublicKey).asDict()
-        fail("Fail test for get provider error reporting")
-    } catch (e: CliError.Companion.CliException) {
-        assertEquals("Can not make query_gtx api call", e.message.trim())
+        val provider2 = providers.get(1).asDict()
+        assertEquals(prov2Config.pubKey, provider2["pubkey"]!!.asByteArray().toHex())
+        assertEquals(false, provider2["active"]!!.asBoolean())
+        PrintUtils.printProviders(providers)
     }
-}
 
-@Test
-fun testGetNodeInfoErrorReporting() {
-    addNode0(provConfig, )
-    val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
-    try {
-        provExecutor.getNodeInfo(wrongNode).asDict()
-        fail("Fail test for get node info error reporting")
-    } catch (e: CliError.Companion.CliException) {
-        assertEquals("Can not make query_gtx api call", e.message.trim())
+
+    @Test
+    fun testGetProviderInfoErrorReporting() {
+        addNode0(provConfig)
+        val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
+        try {
+            val data = provExecutor.getProviderInfo(wrongProviderPublicKey).asDict()
+            fail("Fail test for get provider error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
     }
-}
 
-override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
-    return net.postchain.mc.cli.enterprise0.CliExecutionE0(cliConfig)
-}
+    @Test
+    fun testGetNodeInfoErrorReporting() {
+        addNode0(provConfig)
+        val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
+        try {
+            provExecutor.getNodeInfo(wrongNode).asDict()
+            fail("Fail test for get node info error reporting")
+        } catch (e: CliError.Companion.CliException) {
+            assertEquals("Can not make query_gtx api call", e.message.trim())
+        }
+    }
 
-override fun addBc(blockchain0ConfigGtv: Gtv, container: String) {
-    adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
-    buildAndAwaitBlocks(1)
+    override fun cliExecution(cliConfig: ClientConfig): net.postchain.mc.cli.common0.CliExecution {
+        return net.postchain.mc.cli.enterprise0.CliExecutionE0(cliConfig)
+    }
 
-}
+    override fun addBc(blockchain0ConfigGtv: Gtv) {
+        adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainGtvInternal(blockchain0ConfigGtv, nodes[0].pubKey))
+        buildAndAwaitBlocks(1)
 
-override fun addBcSigners(nodeList: String) {
-    adminExecutor.sendTxUnconfirmed(adminExecutor.addBlockchainSignersInternal(clientConfig.brid, nodeList))
-    buildAndAwaitBlocks(1)
-}
+    }
+
+    override fun addBcSigners(nodeList: String) {
+        adminExecutor.sendTxUnconfirmed(
+            adminExecutor.addBlockchainSignersInternal(
+                clientConfig.brid,
+                nodeList,
+                -1L
+            )
+        )
+        buildAndAwaitBlocks(1)
+    }
 
     //Test not needed. Functionality already tested in addNode0()
     @Test

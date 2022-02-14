@@ -13,8 +13,8 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
+import net.postchain.rell.model.R_LangVersion
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.rell.utils.RellCliUtils
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
 import java.nio.file.Paths
@@ -41,24 +41,24 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     /**
      * Override this method with a chain conf snippet. For example:
      *
-       """
-       <chains>
-            <chain name="manager" iid="0">
-                <config height="0" add-dependencies="false">
-                    <app module="myModule">
-                        <args module="myModule">
-                            <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(7)}</bytea></arg>
-                        </args>
-                    </app>
-                    <gtv path="signers">
-                        <array>
-                            <bytea>${KeyPairHelper.pubKeyHex(7)}</bytea>
-                        </array>
-                    </gtv>
-                </config>
-            </chain>
-        </chains>
-        """
+    """
+    <chains>
+        <chain name="manager" iid="0">
+            <config height="0" add-dependencies="false">
+                <app module="myModule">
+                    <args module="myModule">
+                        <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(7)}</bytea></arg>
+                    </args>
+                </app>
+                <gtv path="signers">
+                    <array>
+                        <bytea>${KeyPairHelper.pubKeyHex(7)}</bytea>
+                    </array>
+                </gtv>
+            </config>
+        </chain>
+    </chains>
+    """
      *
      */
     protected abstract fun chainConfSnippet(): String
@@ -93,8 +93,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
-        val sourceVersion = RellCliUtils.checkVersion(null)
-        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, sourceVersion, unitTest = false)
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.7"), false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         val blockchainConfigsGtv = mutableListOf<Gtv>()
@@ -147,6 +146,7 @@ class SmartOnDemandBlockBuildingStrategy(
 
     @Volatile
     var upToHeight: Long = -1
+
     @Volatile
     var committedHeight = blockQueries.getBestHeight().get().toInt()
     val blocks = LinkedBlockingQueue<BlockData>()

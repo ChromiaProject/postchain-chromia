@@ -3,7 +3,7 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient

@@ -1,11 +1,11 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
 import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
@@ -22,6 +22,7 @@ open class CliExecution(val config: ClientConfig) {
     companion object : KLogging()
 
     protected val cryptoSystem = SECP256K1CryptoSystem()
+
     protected fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {
             throw UserMistake("Missing required parameters: brid | pub-key | priv-key")
@@ -222,12 +223,13 @@ open class CliExecution(val config: ClientConfig) {
     fun listClustersForProvider(key: String): List<String> {
         val listClusters = arrayListOf<String>()
         doInTryBlock {
-                val list = getPostchainClient().query("get_provider_clusters", GtvFactory.gtv(
-                        "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
-                listClusters.addAll(list.map { it.asString() })
+            val list = getPostchainClient().query("get_provider_clusters", GtvFactory.gtv(
+                    "pubkey" to GtvFactory.gtv(key.hexStringToByteArray()))).get().asArray()
+            listClusters.addAll(list.map { it.asString() })
         }
         return listClusters
     }
+
     /**
      * key - publicKey of node
      */
@@ -252,9 +254,9 @@ open class CliExecution(val config: ClientConfig) {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
             val container = containerGtv(name)
-                val list = getPostchainClient().query("nm_get_blockchains_for_container", GtvFactory.gtv(
-                        "container_name" to GtvString(name))).get().asArray()
-                listBlockChain.addAll(list.map { it.asByteArray() })
+            val list = getPostchainClient().query("nm_get_blockchains_for_container", GtvFactory.gtv(
+                    "container_name" to GtvString(name))).get().asArray()
+            listBlockChain.addAll(list.map { it.asByteArray() })
         }
         return listBlockChain
     }
@@ -265,7 +267,7 @@ open class CliExecution(val config: ClientConfig) {
             val blockchain = blockchainGtv(blockchainRID)
             val list = getPostchainClient().query("nm_get_blockchain_dependencies",
                     GtvFactory.gtv("blockchain" to GtvFactory.gtv(blockchain.asInteger()),
-                                            "height" to GtvInteger(height)))
+                            "height" to GtvInteger(height)))
                     .get()
                     .asArray()
             list.forEach {

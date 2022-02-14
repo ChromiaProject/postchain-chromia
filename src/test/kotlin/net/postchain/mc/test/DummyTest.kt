@@ -10,7 +10,7 @@ class DummyTest : RellIntegrationTest() {
     val blockSignerKey = 0
     val adminKey = 1
     val providerKey = 2
-    override fun chainConfSnippet(): String{
+    override fun chainConfSnippet(): String {
         val module = "chroma0"
 
         return """
