@@ -6,10 +6,10 @@ import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
-import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "register new provider with given pubkey. default tier = 0. Tier-0 providers are enabled automatically, higher order tiers need voting to be enabled.")
-class CommandRegisterProvider: CommandBase() {
+class CommandRegisterProvider : CommandBase() {
 
     @Parameter(
             names = ["-k", "--key"],
@@ -27,7 +27,7 @@ class CommandRegisterProvider: CommandBase() {
 
     override fun execute(): CliResult {
         return try {
-            CliExecutionC0(loadAppConfig()).registerProvider(key, tier)
+            CliExecution(loadAppConfig()).registerProvider(key, tier)
             Ok("Provider has been registered successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)

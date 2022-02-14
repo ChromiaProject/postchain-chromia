@@ -8,8 +8,8 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
-@Parameters(commandDescription = "update provider data (name, beneficiary,...")
-class CommandUpdateProvider : CommandBase() {
+@Parameters(commandDescription = "transfer some of your action points to another provider")
+class CommandTransferActionPoints : CommandBase() {
 
     @Parameter(
             names = ["-k", "--key"],
@@ -18,26 +18,19 @@ class CommandUpdateProvider : CommandBase() {
     private var key = ""
 
     @Parameter(
-            names = ["-n", "--name"],
-            description = "provider's name",
-            required = false)
-    private var name = ""
+            names = ["-a", "--amount"],
+            description = "number of points to transfer",
+            required = true)
+    private var amount = 0L
 
-    @Parameter(
-            names = ["-b", "--beneficiary"],
-            description = "provider's beneficiary account id",
-            required = false)
-    private var beneficiary = ""
-
-    override fun key() = "provider-update"
+    override fun key(): String = "action-points-transfer"
 
     override fun execute(): CliResult {
         return try {
-            CliExecution(loadAppConfig()).updateProvider(key, name, beneficiary)
-            Ok("Provider has been updated successfully")
+            CliExecution(loadAppConfig()).transferActionPoints(key, amount)
+            Ok("Action points have been transferred successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
         }
     }
-
 }

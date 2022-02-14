@@ -9,7 +9,7 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "add replica of a blockchain. The node is verifying but not building blocks.")
-class CommandAddBlockchainReplica: CommandBase() {
+class CommandAddBlockchainReplica : CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],

@@ -20,7 +20,6 @@ import java.io.File
 import java.nio.file.Paths
 import java.util.concurrent.LinkedBlockingQueue
 
-
 abstract class RellIntegrationTest : IntegrationTestSetup() {
 
     companion object : KLogging()

@@ -472,6 +472,30 @@ open class CliExecution(val config: ClientConfig) {
                 "Cannot register provider")
     }
 
+    fun updateProvider(key: String, name: String, beneficiary: String) {
+        sendTxSync(updateProviderAsync(key, name, beneficiary), "Provider data has been updated",
+                "Cannot update provider")
+    }
+
+    fun updateProviderAsync(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
+        val provider = providerGtv(key)
+        var data: Array<Gtv> = arrayOf(provider)
+        if (name.isNotEmpty()) {
+            data = data.plus(GtvFactory.gtv(name))
+        } else {
+            data = data.plus(GtvNull)
+        }
+        if (beneficiary.isNotEmpty()) {
+            data = data.plus(GtvFactory.gtv(beneficiary))
+        } else {
+            data = data.plus(GtvNull)
+        }
+        return makeTransactionWithNop().apply {
+            addOperation("update_provider_data", data)
+            sign(buildSigMaker())
+        }
+    }
+
     fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String) {
         sendTxSync(createVoterSetAsync(name, providers, threshold, governorName), "voter set created",
                 "Cannot create voter set")
@@ -514,7 +538,6 @@ open class CliExecution(val config: ClientConfig) {
     fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?, force: Boolean) {
         sendTxSync(proposeConfigurationAsync(blockchainRID, blockchainConfigFile, height, format, force),
                 "proposal of config added", "Cannot add config proposal")
-
     }
 
     fun vote(rowid: Long, yes: Boolean) {

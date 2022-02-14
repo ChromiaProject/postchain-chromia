@@ -9,7 +9,7 @@ import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
 
 @Parameters(commandDescription = "remove replica of a blockchain")
-class CommandRemoveBlockchainReplica: CommandBase() {
+class CommandRemoveBlockchainReplica : CommandBase() {
 
     @Parameter(
             names = ["-brid", "--blockchain-rid"],

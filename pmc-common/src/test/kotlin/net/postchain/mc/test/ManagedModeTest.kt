@@ -3,13 +3,13 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
-import net.postchain.core.BlockchainRid
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -17,6 +17,7 @@ import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import java.io.File
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -54,6 +55,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val voterSetSystem = "SYSTEM"
     val systemClusterName = "system"
     val systemContainerName = "system"
+
+    companion object {
+        val bcConfig1xmlFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1.xml")
+        val bcConfig1xmlDependencyFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
+        val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc/test/config/0.gtv")
+
+        private fun getFileFromClasspath(path: String): File {
+            val tempFile = File.createTempFile("managed-mode-test", "")
+            val inputStream = Companion::class.java.getResourceAsStream(path)!!
+            tempFile.writeBytes(inputStream.readAllBytes())
+            return tempFile
+        }
+    }
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
@@ -144,8 +158,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertk.assert(nodeInfo["active"]?.asBoolean()).isEqualTo(true)
         assertk.assert(nodeInfo["host"]?.asString()).isEqualTo(host)
         assertk.assert(nodeInfo["port"]?.asInteger()).isEqualTo(port)
-        Assert.assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        Assert.assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
+        assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+        assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
         if (cluster != "") {
             assertEquals(nodeInfo["cluster"]?.asArray()?.map { it.asString() }, listOf(cluster))
         }
