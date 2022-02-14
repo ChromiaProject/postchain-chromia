@@ -17,6 +17,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <postchain.version>${project.version}</postchain.version>
         <rellr.version>0.10.8</rellr.version>
+        <kotlin.version>1.6.10</kotlin.version>
         <junit.version>4.13.2</junit.version>
         <assertk.version>0.10</assertk.version>
 
@@ -46,6 +47,7 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
+            <version>${kotlin.version}</version>
         </dependency>
 
         <!-- Postchain -->
@@ -112,6 +114,7 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
                 <executions>
                     <execution>
                         <id>compile</id>
