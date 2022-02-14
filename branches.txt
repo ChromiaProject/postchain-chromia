@@ -1,0 +1,21 @@
+Diff between origin/directory1 and origin/d1_superprovider
+2022.02.14
+
+This file can be deleted later
+
+origin/d1_superprovider
+122ef243	Implemented more functionality according to google doc Postchain Directory1. The reason for changing all the command key strings is to group ↲ them better when they are listed with  ./pmc-d1.sh . To help user to get an overview of what functionality that exists on e.g. clusters or voter sets. ↲ Existing scripts will break of course (sorry for that), but better to do this change sooner than later.	Linnéa Rosenbaum	2021-10-29 17:44
+// origin/directory1: 57588ff31459bbe14322f9ced5fe40fbaa4384bb 
+
+95d34383	added test of super-provider. NB this test should fail on directory1 branch. In general, more than one node per provider and cluster is not allowed.	Linnéa Rosenbaum	2021-09-29 11:32
+// test added
+
+69f2bcd5	get provider info includes cluster information	Linnéa Rosenbaum	2021-09-27 14:49
+// origin/directory1: cee0fe260b8481cd94e80bddbd88779a53bd16ba
+
+4f2f7b81	bug fix in listBlockchainSigners, mage nodeInfo include also cluster belongings	Linnéa Rosenbaum	2021-09-27 11:45
+// origin/directory1: 3ecfcc184eabfd30bfb1f3952c7d673f91e16040
+
+6dd4fb1a	allowing more than one node per provider. NB only for testing on e.g. EPIC	Linnéa Rosenbaum	2021-09-22 15:51
+// rell changes  
+
