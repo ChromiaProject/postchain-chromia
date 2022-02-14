@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -66,7 +66,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
         val data = provExecutor.getProviderInfo(provPubkey).asDict()
-        Assert.assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
+        assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
         assertk.assert(data["name"]?.asString()).isEqualTo(name)
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(isActive)
     }
