@@ -29,7 +29,7 @@ entity blockchain_configuration_signers {
 
 entity blockchain_replica_node { key blockchain, node; }
 
-function require_provider_auth (provider) { require( is_signer(provider.pubkey)); }
+function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey)); }
 
 operation add_node (provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
 	require_provider_auth_with_rl(provider);

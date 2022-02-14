@@ -16,6 +16,7 @@ import net.postchain.mc.config.app.DelegatingClientConfig
 import net.postchain.rell.model.R_LangVersion
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.apache.commons.configuration2.MapConfiguration
+import org.junit.After
 import java.io.File
 import java.nio.file.Paths
 import java.util.concurrent.LinkedBlockingQueue
@@ -24,6 +25,11 @@ import java.util.concurrent.LinkedBlockingQueue
 abstract class RellIntegrationTest : IntegrationTestSetup() {
 
     companion object : KLogging()
+
+    @After
+    override fun tearDown() {
+        super.tearDown()
+    }
 
     protected fun runXml(): String {
         return """
