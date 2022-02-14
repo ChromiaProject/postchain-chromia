@@ -4,6 +4,7 @@ import com.beust.jcommander.JCommander
 import com.beust.jcommander.MissingCommandException
 import com.beust.jcommander.ParameterException
 import net.postchain.mc.Cli
+import org.spongycastle.asn1.x500.style.RFC4519Style.name
 import java.sql.SQLException
 
 abstract class CliBase: Cli {
@@ -30,8 +31,7 @@ abstract class CliBase: Cli {
     }
 
     override fun parse(input: String) {
-        jCommander.parse(*input.split(Regex("\\s+")).toTypedArray())
-        commands[jCommander.parsedCommand]?.execute()
+        parse(input.split(Regex("\\s+")).toTypedArray())
     }
 
     override fun usage() {
@@ -39,20 +39,15 @@ abstract class CliBase: Cli {
     }
 
     override fun usage(command: String) {
-        jCommander.usage(command)
+        jCommander.commands[command]?.usage()
     }
 
     override fun usageCommands() {
-        val usage = jCommander.commands.keys
-                .asSequence()
-                .sorted()
-                .map { cmd ->
-                    "${cmd.padEnd(35, ' ')}${jCommander.getCommandDescription(cmd)}"
-                }.joinToString(
-                        separator = "\n  ",
-                        prefix = "Commands:\n  "
-                )
-
-        println(usage)
+        println("Commands:")
+        jCommander.commands
+                .toSortedMap()
+                .forEach { (_, cmd) ->
+                    cmd.usage()
+                }
     }
 }
