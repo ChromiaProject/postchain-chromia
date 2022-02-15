@@ -1,5 +1,4 @@
 
-
 query get_provider_data (pubkey) {
     return provider_state @ {
         provider @ { pubkey }
