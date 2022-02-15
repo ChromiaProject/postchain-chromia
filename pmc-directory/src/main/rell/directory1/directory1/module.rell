@@ -5,13 +5,6 @@ struct module_args {
     initial_provider: pubkey;
 }
 
-entity provider_state {
-	key provider;
-	mutable name: text;
-	mutable active: boolean;
-	mutable system: boolean; // NEW. System provider has extra permissions.
-    mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
-}
 
 // This operation will check that provider table is empty and if so add the provider supplied as module argument. And
 // enable this first system provider.
@@ -64,3 +57,6 @@ operation register_provider (me: provider, pubkey, tier: integer) {
 	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
 	add_pubkey_as_provider(pubkey, false, tier, null);
 }
+
+
+

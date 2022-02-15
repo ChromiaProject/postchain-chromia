@@ -18,7 +18,6 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
-import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -44,10 +43,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val prov2Config = cliConf(providerKey2)
     open val provExecutor = cliExecution(provConfig)
     open val prov2Executor = cliExecution(prov2Config)
-    val bcConfig1xmlFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1.xml"
-    val bcConfig1xmlDependencyFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/blockchain_config_1_dependency.xml"
-    val bcConfigGtvFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/net/postchain/mc/test/config/0.gtv"
-
     lateinit var blockchain0ConfigGtv: Gtv
 
     // Voter sets SYSTEM and SYSTEM_P are created during initialization.
@@ -58,8 +53,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     companion object {
         val bcConfig1xmlFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1.xml")
-        val bcConfig1xmlDependencyFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
-        val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc/test/config/0.gtv")
+        val bcConfig1xmlDependencyFile =
+            getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
+        val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc//test/config/0.gtv")
 
         private fun getFileFromClasspath(path: String): File {
             val tempFile = File.createTempFile("managed-mode-test", "")
@@ -71,7 +67,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
-        val sigMaker = cryptoSystem.buildSigMaker(appConfig.pubKey.hexStringToByteArray(), appConfig.privKey.hexStringToByteArray())
+        val sigMaker = cryptoSystem.buildSigMaker(
+            appConfig.pubKey.hexStringToByteArray(),
+            appConfig.privKey.hexStringToByteArray()
+        )
         val defaultSigner = DefaultSigner(sigMaker, appConfig.pubKey.hexStringToByteArray())
         return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), defaultSigner)
     }
@@ -104,13 +103,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L))).get()
+        val height = client.query(
+            "nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L)
+            )
+        ).get()
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height)).get()
+        val bc = client.query(
+            "nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height
+            )
+        ).get()
         assertk.assert(bc.asByteArray()).isNotNull()
         return bc.asByteArray()
     }
@@ -209,7 +214,14 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         PrintUtils.printBlockchainReplicas(listReplicas)
     }
 
-    private fun assertNodeInfo(n: Gtv, nodeHost: String, nodePort: Long, nodePubkey: String, providerPubkey: String, b: Boolean) {
+    private fun assertNodeInfo(
+        n: Gtv,
+        nodeHost: String,
+        nodePort: Long,
+        nodePubkey: String,
+        providerPubkey: String,
+        b: Boolean
+    ) {
         val nodeDict = n.asDict()
         assertEquals(nodeHost, nodeDict["host"]!!.asString())
         assertEquals(nodePort, nodeDict["port"]!!.asInteger())

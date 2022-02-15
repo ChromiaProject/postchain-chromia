@@ -92,7 +92,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
-        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.7"), false)
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.8"), false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         val blockchainConfigsGtv = mutableListOf<Gtv>()

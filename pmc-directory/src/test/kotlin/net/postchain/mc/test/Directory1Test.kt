@@ -25,8 +25,8 @@ class Directory1Test : ManagedModeTest() {
             <chains>
                 <chain name="manager" iid="0">
                     <config height="0" add-dependencies="false">
-                        <app module="${module}">
-                            <args module="${module}">
+                        <app module="$module">
+                            <args module="$module">
                                 <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
                             </args>
                         </app>
@@ -47,7 +47,6 @@ class Directory1Test : ManagedModeTest() {
 
     override val provExecutor = CliExecutionD1(provConfig)
     override val prov2Executor = CliExecutionD1(prov2Config)
-
 
     /*
     * The pre-step includes starting a single
@@ -136,8 +135,12 @@ class Directory1Test : ManagedModeTest() {
 
         val voterSetName = "Ellen"
         val providers_list = "${provConfig.pubKey},${prov2Config.pubKey}"
-        doAndBuildBlocks(provConfig, provExecutor.createVoterSetAsync(voterSetName, providers_list, 0,
-                voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig, provExecutor.createVoterSetAsync(
+                voterSetName, providers_list, 0,
+                voterSetSystemP
+            )
+        )
         assertAdded("get_voter_set", "name", GtvString(voterSetName))
         val listVotersets = provExecutor.listVoterSets()
         assertEquals(voterSetName, listVotersets[2].asString())
@@ -172,22 +175,37 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val containerName = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig,
+            provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
+        )
         assertAdded("get_container", "name", GtvString(containerName))
 
         val default = provExecutor.listContainerLimits(containerName)
         assertEquals(3, default.size)
 
         //Now updated container resource limits and check result
-        proposeAndAssertContainerLimits(containerName, mapOf("ramm" to 123L), mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L))
+        proposeAndAssertContainerLimits(
+            containerName,
+            mapOf("ramm" to 123L),
+            mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L)
+        )
 
-        proposeAndAssertContainerLimits(containerName, mapOf("ram" to 123L), mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L))
+        proposeAndAssertContainerLimits(
+            containerName,
+            mapOf("ram" to 123L),
+            mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L)
+        )
 
         val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
         proposeAndAssertContainerLimits(containerName, limits, limits)
     }
 
-    private fun proposeAndAssertContainerLimits(containerName: String, limits: Map<String, Long>, expected: Map<String, Long>) {
+    private fun proposeAndAssertContainerLimits(
+        containerName: String,
+        limits: Map<String, Long>,
+        expected: Map<String, Long>
+    ) {
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
         var updated = provExecutor.listContainerLimits(containerName)
         assertEquals(expected, updated)
@@ -199,8 +217,12 @@ class Directory1Test : ManagedModeTest() {
         val clusterName = "Vera"
         val providers_list = provConfig.pubKey
         //create cluster, initial providers added
-        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterName, providers_list,
-                voterSetSystemP, voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig, provExecutor.createClusterAsync(
+                clusterName, providers_list,
+                voterSetSystemP, voterSetSystemP
+            )
+        )
 
         var limits = mapOf("ramm" to 123L)
         var expected = mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L)
@@ -214,7 +236,11 @@ class Directory1Test : ManagedModeTest() {
         proposeAndAssertClusterLimits(clusterName, limits, limits)
     }
 
-    private fun proposeAndAssertClusterLimits(clusterName: String, limits: Map<String, Long>, expected: Map<String, Long>) {
+    private fun proposeAndAssertClusterLimits(
+        clusterName: String,
+        limits: Map<String, Long>,
+        expected: Map<String, Long>
+    ) {
         doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
         var updated = provExecutor.listClusterLimits(clusterName)
         assertEquals(expected, updated)
@@ -227,7 +253,10 @@ class Directory1Test : ManagedModeTest() {
 
         //add new container to system cluster
         val containerName = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig,
+            provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
+        )
         val containerList = prov2Executor.listContainersForNode(nodes[0].pubKey)
         assertEquals(2, containerList.size)
     }
@@ -282,19 +311,29 @@ class Directory1Test : ManagedModeTest() {
         val providers_list = provConfig.pubKey
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
         //create cluster, initial providers added
-        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(newClusterName, providers_list,
-                voterSetSystemP, voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig, provExecutor.createClusterAsync(
+                newClusterName, providers_list,
+                voterSetSystemP, voterSetSystemP
+            )
+        )
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
         var clusters = provExecutor.listClustersForProvider(provConfig.pubKey)
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 0))
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = true))
+        doAndBuildBlocks(
+            provConfig,
+            provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = true)
+        )
         clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
         assertEquals(listOf(newClusterName), clusters)
 
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = false))
+        doAndBuildBlocks(
+            provConfig,
+            provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = false)
+        )
         clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
         assertEquals(listOf(), clusters)
 
@@ -306,27 +345,42 @@ class Directory1Test : ManagedModeTest() {
 
     }
 
-
     @Test
     fun testProposeConfigurationAcceptGtv() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
-                20L, "gtv", false))
+        doAndBuildBlocks(
+            provConfig, provExecutor.proposeConfigurationAsync(
+                provConfig.brid, bcConfigGtvFile,
+                20L, "gtv", false
+            )
+        )
         assertNextConfiguration(provConfig, 20L)
 
         //force == false: only configs for heights > next config height can be added:
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
-                18L, "gtv", false))
+        doAndBuildBlocks(
+            provConfig, provExecutor.proposeConfigurationAsync(
+                provConfig.brid, bcConfigGtvFile,
+                18L, "gtv", false
+            )
+        )
         assertNextConfiguration(provConfig, 20L)
 
         //force == true: OK to add configs at all heights > current height
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfigGtvFile,
-                18L, "gtv", true))
+        doAndBuildBlocks(
+            provConfig, provExecutor.proposeConfigurationAsync(
+                provConfig.brid, bcConfigGtvFile,
+                18L, "gtv", true
+            )
+        )
         val conf18Gtv = assertNextConfiguration(provConfig, 18L)
 
         //force == true: OK to override a configuration
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfig1xmlFile,
-                18L, "xml", true))
+        doAndBuildBlocks(
+            provConfig, provExecutor.proposeConfigurationAsync(
+                provConfig.brid, bcConfig1xmlFile,
+                18L, "xml", true
+            )
+        )
         val conf18GXml = assertNextConfiguration(provConfig, 18L)
         assertNotEquals(conf18Gtv, conf18GXml)
     }
@@ -334,8 +388,12 @@ class Directory1Test : ManagedModeTest() {
     @Test
     fun testProposeConfiguration() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        doAndBuildBlocks(provConfig, provExecutor.proposeConfigurationAsync(provConfig.brid, bcConfig1xmlFile,
-                20L, "xml", false))
+        doAndBuildBlocks(
+            provConfig, provExecutor.proposeConfigurationAsync(
+                provConfig.brid, bcConfig1xmlFile,
+                20L, "xml", false
+            )
+        )
         assertNextConfiguration(provConfig, 20L)
     }
 
@@ -439,7 +497,7 @@ class Directory1Test : ManagedModeTest() {
         var buildFailed = false
         try {
             buildBlock(100, 2)
-        } catch (e: TypeCastException) {
+        } catch (e: Exception) {
             buildFailed = true
         }
         assertTrue(buildFailed)
@@ -556,10 +614,18 @@ class Directory1Test : ManagedModeTest() {
         val containerName = "C"
         val providers_list = provConfig.pubKey
         //create two new clusters with initial provider added
-        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterA, providers_list,
-                voterSetSystemP, voterSetSystemP))
-        doAndBuildBlocks(provConfig, provExecutor.createClusterAsync(clusterB, providers_list,
-                voterSetSystemP, voterSetSystemP))
+        doAndBuildBlocks(
+            provConfig, provExecutor.createClusterAsync(
+                clusterA, providers_list,
+                voterSetSystemP, voterSetSystemP
+            )
+        )
+        doAndBuildBlocks(
+            provConfig, provExecutor.createClusterAsync(
+                clusterB, providers_list,
+                voterSetSystemP, voterSetSystemP
+            )
+        )
 
         val clusterList = provExecutor.listClusters().map { it.asString() }
         assertEquals(listOf("system", clusterA, clusterB), clusterList)

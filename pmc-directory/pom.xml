@@ -26,6 +26,10 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-base</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
