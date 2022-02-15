@@ -38,6 +38,12 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         """.trimIndent()
     }
 
+    protected fun runXmlFile(): File {
+        return File.createTempFile("run", ".xml").apply {
+                bufferedWriter().use { out -> out.write(runXml()) }
+        }
+    }
+
     /**
      * Override this method with a chain conf snippet. For example:
      *
@@ -84,16 +90,12 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     protected fun run(rellSourceDir: String): Gtv {
         // Create blockchain config file
         val resourceDirectory = Paths.get("src", "main", "rell", rellSourceDir)
-        val rellSourceDir = resourceDirectory.toFile()
 
-        val tempRunXml = File.createTempFile("run", ".xml")
-        tempRunXml.bufferedWriter().use { out -> out.write(runXml()) }
-
-        return run(tempRunXml, rellSourceDir)
+        return run(runXmlFile(), resourceDirectory.toFile())
     }
 
-    private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
-        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.7"), false)
+    protected fun run(runConfigFile: File, rellSourceDir: File): Gtv {
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.8"), false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         val blockchainConfigsGtv = mutableListOf<Gtv>()

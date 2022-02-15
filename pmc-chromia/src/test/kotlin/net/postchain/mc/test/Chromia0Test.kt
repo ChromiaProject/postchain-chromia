@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.io.File
+import java.nio.file.Paths
 import kotlin.test.*
 
 class Chromia0Test() : ManagedModeTest() {
@@ -59,8 +61,10 @@ class Chromia0Test() : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
+        val resourceDirectory = Paths.get("target", "chromia0", "rell")
+
         // start node and add the provider
-        blockchain0ConfigGtv = run("chroma0")
+        blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
         doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(provConfig.pubKey))
         doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
     }
