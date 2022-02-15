@@ -32,7 +32,7 @@ internal class ManagedModeExampleIT {
         private val node1 = PostchainContainer(imageName)
                 .withNetwork(network)
                 .withNetworkAliases("node1")
-                .withClasspathResourceMapping("${resourceFolder}/node1", "${PostchainContainer.POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("$resourceFolder/node1", "${PostchainContainer.POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("NODE_HOST", "node1")
@@ -57,7 +57,7 @@ internal class ManagedModeExampleIT {
     @Test
     fun `Chain0 dapp is deployed`() {
         assert(
-                node1.execInContainer("ls", "/opt/chromaway/postchain/chain_zero/chain_zero.rell").exitCode
+                node1.execInContainer("ls", "/opt/chromaway/postchain/chain0-generated/blockchains/0").exitCode
         ).isZero()
     }
 

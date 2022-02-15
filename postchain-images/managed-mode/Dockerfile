@@ -5,7 +5,8 @@ ARG postchain_version
 FROM $postchain_image:$postchain_version AS postchain
 
 ARG postchain_dir=/opt/chromaway/postchain
-COPY src/main/resources/chain_zero $postchain_dir/chain_zero
+COPY target/chromia0/rell $postchain_dir/chain_zero
+COPY src/main/resources/chain_zero/run-chromia0.xml $postchain_dir/chain_zero/manifest.xml
 COPY src/main/docker/entrypoint.sh $postchain_dir/entrypoint.sh
 
 ENV RELL_SRC=$postchain_dir/chain_zero

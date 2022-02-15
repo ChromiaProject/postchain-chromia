@@ -46,5 +46,5 @@ fi
 #then
 #  rm -rf rte-city
 #  mkdir rte-city
-#  bash ./postchain-node/multigen.sh -d config/node1/city -o rte-city config/node1/city/manifest.xml
+#  bash ./postchain-node/multigen.sh -d config/node1/city -o rte-city config/node1/city/run-chromia0.xml
 #fi
