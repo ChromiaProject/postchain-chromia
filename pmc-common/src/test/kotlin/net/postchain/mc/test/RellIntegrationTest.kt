@@ -84,16 +84,8 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     /**
-     * Create a node running the rell source in rellSourceDir, which is
-     * relative to the folder src/main/rell
+     * Create a node running the rell source in rellSourceDir
      */
-    protected fun run(rellSourceDir: String): Gtv {
-        // Create blockchain config file
-        val resourceDirectory = Paths.get("src", "main", "rell", rellSourceDir)
-
-        return run(runXmlFile(), resourceDirectory.toFile())
-    }
-
     protected fun run(runConfigFile: File, rellSourceDir: File): Gtv {
         val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.8"), false)
 
