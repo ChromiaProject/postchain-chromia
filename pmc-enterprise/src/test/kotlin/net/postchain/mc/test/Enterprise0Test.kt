@@ -14,6 +14,7 @@ import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -59,7 +60,8 @@ class Enterprise0Test : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
-        blockchain0ConfigGtv = run("enterprise0")
+        val resourceDirectory = Paths.get("target", "enterprise0", "rell")
+        blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
         doAndBuildBlocks(provConfig, provExecutor.initInternal())
     }
 
