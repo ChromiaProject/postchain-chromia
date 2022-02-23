@@ -7,7 +7,7 @@
             <config height="0" add-dependencies="false">
                 <app module="chroma0">
                     <args module="chroma0">
-                        <arg key="admin"><bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea></arg>
+                        <arg key="admin"><bytea>030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653</bytea></arg>
                     </args>
                 </app>
                 <gtv path="signers">
