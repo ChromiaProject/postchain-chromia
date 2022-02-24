@@ -12,6 +12,11 @@ if [ $WIPE_DB = true ]; then
 
   echo "Adding my peer-info..."
   sh postchain.sh peerinfo-add --node-config $RELL_OUT/node-config.properties --host $NODE_HOST --port $NODE_PORT --pub-key $NODE_PUBKEY
+
+  if [ ! -z "$BOOTSTRAP_NODE_HOST" ]; then
+    echo "Adding bootstrap peer-info..."
+    sh postchain.sh peerinfo-add --node-config $RELL_OUT/node-config.properties --host $BOOTSTRAP_NODE_HOST --port $BOOTSTRAP_NODE_PORT --pub-key $BOOTSTRAP_NODE_PUBKEY
+  fi
 fi
 
 echo "Starting node"
