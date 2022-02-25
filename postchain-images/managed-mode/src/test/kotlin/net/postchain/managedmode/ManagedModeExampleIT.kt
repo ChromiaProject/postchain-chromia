@@ -1,7 +1,6 @@
 package net.postchain.managedmode
 
 import assertk.assert
-import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
@@ -161,7 +160,8 @@ internal class ManagedModeExampleIT {
             }
             val c0 = client.query("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0)))).get()
             node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
-            node1Db.awaitNewBlock()
+            // Adding signers will update the blockchain configuration after 5 blocks
+            node1Db.awaitBlockHeight(node1Db.getHeight() + 5)
             val heightWithSigners = node1Db.getHeight()
             node2Db.awaitBlockHeight(heightWithSigners)
             node3Db.awaitBlockHeight(heightWithSigners)
@@ -172,7 +172,6 @@ internal class ManagedModeExampleIT {
     }
 
     @Test
-    @Disabled
     @Order(6)
     fun `deploy test-dapp to the network`() {
         val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
@@ -185,21 +184,16 @@ internal class ManagedModeExampleIT {
             listOf(node1, node2, node3).map { client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get() }
         }
 
-        assert(rellConfig.config.chains).hasSize(1)
         rellConfig.config.chains.flatMap { it.configs.values }.forEach { chain ->
             println("adding dapp blockchain")
             node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chain.gtvConfig)), gtv(nodeGtvs))
         }
-        Array(5) {
-            node2Db.awaitNewBlock()
-        }
-
-        //node2Db.awaitNewBlock() // Dapp is deployed
-        //node2Db.awaitNewBlock() // Dapp is started
+        node2Db.awaitNewBlock() // Dapp is deployed
+        node2Db.awaitNewBlock() // Make sure dapp table has been created
         val heightWithDappDeployed = node2Db.getHeight()
-        println(heightWithDappDeployed)
         node1Db.awaitBlockHeight(heightWithDappDeployed)
         node3Db.awaitBlockHeight(heightWithDappDeployed)
+        postgres.createChainDatabaseCommunicator(100, node2.appConfig.databaseSchema).awaitBlockHeight(1)
         assert(node1.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
         assert(node2.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
         assert(node3.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)

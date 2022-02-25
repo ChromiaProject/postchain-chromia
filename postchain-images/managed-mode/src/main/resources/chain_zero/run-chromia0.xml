@@ -5,6 +5,7 @@
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
+                <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="chroma0">
                     <args module="chroma0">
                         <arg key="admin"><bytea>030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653</bytea></arg>
