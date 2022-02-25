@@ -1,6 +1,7 @@
 package net.postchain.managedmode
 
 import assertk.assert
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
@@ -9,9 +10,12 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
+import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -45,8 +49,6 @@ internal class ManagedModeExampleIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withFixedExposedPort(9871, 9871)
-                .withEnv("JAVA_OPTS", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005")
 
         private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node2/node-config.properties")!!.file))
                 .withNetwork(network)
@@ -61,7 +63,6 @@ internal class ManagedModeExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withFixedExposedPort(9872, 9872)
 
         private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node3/node-config.properties")!!.file))
                 .withNetwork(network)
@@ -76,7 +77,6 @@ internal class ManagedModeExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withFixedExposedPort(9873, 9873)
 
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
@@ -169,6 +169,40 @@ internal class ManagedModeExampleIT {
             assert(node2.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
             assert(node3.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
         }
+    }
+
+    @Test
+    @Disabled
+    @Order(6)
+    fun `deploy test-dapp to the network`() {
+        val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
+        val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
+        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+            RellRunConfigGenerator.buildFiles(this.config)
+        }
+
+        val nodeGtvs = node1.client(0).let { client ->
+            listOf(node1, node2, node3).map { client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get() }
+        }
+
+        assert(rellConfig.config.chains).hasSize(1)
+        rellConfig.config.chains.flatMap { it.configs.values }.forEach { chain ->
+            println("adding dapp blockchain")
+            node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chain.gtvConfig)), gtv(nodeGtvs))
+        }
+        Array(5) {
+            node2Db.awaitNewBlock()
+        }
+
+        //node2Db.awaitNewBlock() // Dapp is deployed
+        //node2Db.awaitNewBlock() // Dapp is started
+        val heightWithDappDeployed = node2Db.getHeight()
+        println(heightWithDappDeployed)
+        node1Db.awaitBlockHeight(heightWithDappDeployed)
+        node3Db.awaitBlockHeight(heightWithDappDeployed)
+        assert(node1.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
+        assert(node2.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
+        assert(node3.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
     }
 }
 
