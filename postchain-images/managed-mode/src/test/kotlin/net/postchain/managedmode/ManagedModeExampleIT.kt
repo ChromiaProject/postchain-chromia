@@ -1,11 +1,13 @@
 package net.postchain.managedmode
 
 import assertk.assert
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockchainRid
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
@@ -161,8 +163,8 @@ internal class ManagedModeExampleIT {
             val c0 = client.query("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0)))).get()
             node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
             // Adding signers will update the blockchain configuration after 5 blocks
-            node1Db.awaitBlockHeight(node1Db.getHeight() + 5)
-            val heightWithSigners = node1Db.getHeight()
+            val heightWithSigners = node1Db.getHeight() + 5
+            node1Db.awaitBlockHeight(heightWithSigners)
             node2Db.awaitBlockHeight(heightWithSigners)
             node3Db.awaitBlockHeight(heightWithSigners)
             assert(client.getBlockChainSigners(c0).size).isEqualTo(3)
@@ -171,32 +173,73 @@ internal class ManagedModeExampleIT {
         }
     }
 
-    @Test
-    @Order(6)
-    fun `deploy test-dapp to the network`() {
-        val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
-        val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
-            RellRunConfigGenerator.buildFiles(this.config)
+    @Nested
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+    @DisplayName("Deployment of new Dapp tests")
+    inner class DappDeployment {
+
+        val dappId = 100L
+        lateinit var node2DappDb: ChainDatabaseCommunicator
+        val dappToBrid = mutableMapOf<Long, BlockchainRid>()
+
+        @BeforeAll
+        fun `deploy test-dapp to the network`() {
+            listOf(node1, node2, node3).forEach { node ->
+                Assumptions.assumeTrue {
+                    node.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size == 1
+                }
+            }
+            val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
+            val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
+            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+                RellRunConfigGenerator.buildFiles(this.config)
+            }
+
+            val nodeGtvs = node1.client(0).let { client ->
+                listOf(node1, node2, node3).map { client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get() }
+            }
+
+            rellConfig.config.chains.forEach { chain ->
+                println("Adding test dapp ${chain.iid}")
+                chain.configs.forEach { (height, chainHeightConfig) ->
+                    println("On height $height")
+                    val txId = node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
+                    dappToBrid[chain.iid] = node2.client(0)
+                            .query("get_added_blockchain_rid", gtv("tx_rid" to gtv(txId.data))).get()
+                            .asByteArray()
+                            .let { BlockchainRid(it) }
+                            .also { println("With blockchain ID ${it.toShortHex()}") }
+                }
+            }
+            node2Db.awaitNewBlock() // Dapp is deployed and dapp db-table has been created
+            val heightWithDappDeployed = node2Db.getHeight()
+            node1Db.awaitBlockHeight(heightWithDappDeployed)
+            node3Db.awaitBlockHeight(heightWithDappDeployed)
+            node2DappDb = postgres.createChainDatabaseCommunicator(dappId, node2.appConfig.databaseSchema).apply {
+                awaitBlockHeight(0)
+            }
         }
 
-        val nodeGtvs = node1.client(0).let { client ->
-            listOf(node1, node2, node3).map { client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get() }
+        @Test
+        @Order(6)
+        fun `Dapp is deployed`() {
+            listOf(node1, node2, node3).forEach { node ->
+                assert(node.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
+            }
         }
 
-        rellConfig.config.chains.flatMap { it.configs.values }.forEach { chain ->
-            println("adding dapp blockchain")
-            node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chain.gtvConfig)), gtv(nodeGtvs))
+        @Test
+        @Order(7)
+        fun `Transactions can be sent to newly deployed dapp`() {
+            Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
+            val testCity = "uppsala"
+            node2.tx(dappToBrid[dappId]!!, "add_city", gtv(testCity))
+            node2DappDb.awaitNewBlock()
+            listOf(node1, node2, node3).forEach { node ->
+                assert(node.client(dappToBrid[dappId]!!).query("get_cities", gtv(mapOf())).get().asArray().map { it.asString() })
+                        .containsExactly(testCity)
+            }
         }
-        node2Db.awaitNewBlock() // Dapp is deployed
-        node2Db.awaitNewBlock() // Make sure dapp table has been created
-        val heightWithDappDeployed = node2Db.getHeight()
-        node1Db.awaitBlockHeight(heightWithDappDeployed)
-        node3Db.awaitBlockHeight(heightWithDappDeployed)
-        postgres.createChainDatabaseCommunicator(100, node2.appConfig.databaseSchema).awaitBlockHeight(1)
-        assert(node1.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
-        assert(node2.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
-        assert(node3.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
     }
 }
 
