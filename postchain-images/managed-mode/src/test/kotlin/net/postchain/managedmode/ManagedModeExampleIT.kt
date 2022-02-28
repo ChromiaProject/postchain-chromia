@@ -123,6 +123,11 @@ internal class ManagedModeExampleIT {
         println("Enabling provider")
         node1.tx(0, "enable_provider", provider)
         node1Db.awaitNewBlock()
+        node1.client(0).query("get_provider_data", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get().asDict().let {
+            assert(it["active"]!!.asBoolean(),
+                    name = "Provider is activated")
+                    .isTrue()
+        }
     }
 
     @Test
@@ -130,7 +135,7 @@ internal class ManagedModeExampleIT {
     fun `Add node to the network`() {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
 
-        println("Adding node")
+        println("Adding node 1 to its own network")
         node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
         assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
@@ -155,7 +160,9 @@ internal class ManagedModeExampleIT {
         node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
-            assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
+            assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean(),
+                    name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
+            ).isTrue()
         }
 
         println("Adding node 2 and 3 as signers of c0")
@@ -199,7 +206,10 @@ internal class ManagedModeExampleIT {
             }
 
             val nodeGtvs = node1.client(0).let { client ->
-                listOf(node1, node2, node3).map { client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get() }
+                listOf(node1, node2, node3).map {
+                    println("Querying node id for ${it.nodeHost} on ${it.pubKey}")
+                    client.query("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray()))).get()
+                }
             }
 
             rellConfig.config.chains.forEach { chain ->
