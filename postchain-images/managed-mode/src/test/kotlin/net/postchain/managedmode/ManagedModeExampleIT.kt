@@ -8,6 +8,7 @@ import assertk.assertions.isZero
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
@@ -23,6 +24,7 @@ import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
+import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
@@ -33,7 +35,14 @@ import java.nio.file.Files
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class ManagedModeExampleIT {
 
+
     companion object {
+        private val logger = KotlinLogging.logger {}
+
+        private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
+        private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
+        private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
+
         private val imageName = DockerImageName.parse("chromaway/postchain-managed-mode:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "managed-mode-example"
@@ -53,6 +62,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withLogConsumer(node1Logger)
 
         private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node2/node-config.properties")!!.file))
                 .withNetwork(network)
@@ -67,6 +77,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withLogConsumer(node2Logger)
 
         private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node3/node-config.properties")!!.file))
                 .withNetwork(network)
@@ -81,6 +92,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withLogConsumer(node3Logger)
 
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
