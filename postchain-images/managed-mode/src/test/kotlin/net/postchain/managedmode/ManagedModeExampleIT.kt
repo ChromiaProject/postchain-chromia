@@ -5,6 +5,9 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
@@ -128,7 +131,7 @@ internal class ManagedModeExampleIT {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
 
         println("Adding node")
-        node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv("node1"), gtv(9871))
+        node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
         assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
         val nodeGtv = node1.client(0).query("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
@@ -148,8 +151,8 @@ internal class ManagedModeExampleIT {
     fun `Make node 2 and 3 signers of c0`() {
         println("Adding nodes 2 and 3 to node 1")
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
-        node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv("node2"), gtv(9872))
-        node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv("node3"), gtv(9873))
+        node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
+        node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
             assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
@@ -164,9 +167,9 @@ internal class ManagedModeExampleIT {
             node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
             // Adding signers will update the blockchain configuration after 5 blocks
             val heightWithSigners = node1Db.getHeight() + 5
-            node1Db.awaitBlockHeight(heightWithSigners)
-            node2Db.awaitBlockHeight(heightWithSigners)
-            node3Db.awaitBlockHeight(heightWithSigners)
+            runAsync(node1Db, node2Db, node3Db) {
+                it.awaitBlockHeight(heightWithSigners)
+            }
             assert(client.getBlockChainSigners(c0).size).isEqualTo(3)
             assert(node2.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
             assert(node3.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
@@ -183,7 +186,7 @@ internal class ManagedModeExampleIT {
         val dappToBrid = mutableMapOf<Long, BlockchainRid>()
 
         @BeforeAll
-        fun `deploy test-dapp to the network`() {
+        fun `Deploy test-dapp to the network`() {
             listOf(node1, node2, node3).forEach { node ->
                 Assumptions.assumeTrue {
                     node.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size == 1
@@ -211,13 +214,12 @@ internal class ManagedModeExampleIT {
                             .also { println("With blockchain ID ${it.toShortHex()}") }
                 }
             }
-            node2Db.awaitNewBlock() // Dapp is deployed and dapp db-table has been created
-            val heightWithDappDeployed = node2Db.getHeight()
-            node1Db.awaitBlockHeight(heightWithDappDeployed)
-            node3Db.awaitBlockHeight(heightWithDappDeployed)
-            node2DappDb = postgres.createChainDatabaseCommunicator(dappId, node2.appConfig.databaseSchema).apply {
-                awaitBlockHeight(0)
+            val heightWithDappDeployed = node2Db.getHeight() + 1// Dapp is deployed and dapp db-table has been created
+            runAsync(node1Db, node2Db, node3Db) {
+                it.awaitBlockHeight(heightWithDappDeployed)
             }
+            node2DappDb = postgres.createChainDatabaseCommunicator(dappId, node2.appConfig.databaseSchema)
+                    .apply { awaitBlockHeight(0) }
         }
 
         @Test
@@ -238,6 +240,16 @@ internal class ManagedModeExampleIT {
             listOf(node1, node2, node3).forEach { node ->
                 assert(node.client(dappToBrid[dappId]!!).query("get_cities", gtv(mapOf())).get().asArray().map { it.asString() })
                         .containsExactly(testCity)
+            }
+        }
+    }
+
+    fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
+        runBlocking {
+            withContext(coroutineContext) {
+                obj.asList().forEach {
+                    launch { action(it) }
+                }
             }
         }
     }
