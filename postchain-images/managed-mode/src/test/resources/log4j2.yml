@@ -16,7 +16,7 @@ Configuration:
     RollingFile:
       name: FileAppender
       fileName: "logs/${filename}"
-      filePattern: "${logs}/${filename}-%d{yyyy-MM-dd-HH-mm}.%i.${fileExt}.gz"
+      filePattern: "logs/${filename}-%d{yyyy-MM-dd-HH-mm}.%i.${fileExt}.gz"
       Policies:
         TimeBasedTriggeringPolicy:
           interval: 60

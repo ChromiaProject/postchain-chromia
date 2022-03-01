@@ -1,23 +1,23 @@
 #!/bin/sh
-# Copyright (c) 2017 ChromaWay Inc. See README for license information.
+# Copyright (c) 2022 ChromaWay Inc. See README for license information.
 
 set -eu
 
 echo "Generating Blockchain Configuration for chain0"
-sh multigen.sh --source-dir=$RELL_SRC --output-dir=$RELL_OUT $RELL_CONF
+sh multigen.sh "$CHAIN_CONF" --source-dir="$RELL_SRC" --output-dir="$RELL_OUT"
 
-if [ $WIPE_DB = true ]; then
+if [ "$WIPE_DB" = true ]; then
   echo "Deleting the database..."
-  sh postchain.sh wipe-db --node-config $RELL_OUT/node-config.properties
+  sh postchain.sh wipe-db --node-config "$RELL_OUT"/node-config.properties
 
   echo "Adding my peer-info..."
-  sh postchain.sh peerinfo-add --node-config $RELL_OUT/node-config.properties --host $NODE_HOST --port $NODE_PORT --pub-key $NODE_PUBKEY
+  sh postchain.sh peerinfo-add --node-config "$RELL_OUT"/node-config.properties --host "$NODE_HOST" --port "$NODE_PORT" --pub-key "$NODE_PUBKEY"
 
-  if [ ! -z "$BOOTSTRAP_NODE_HOST" ]; then
+  if [ -n "$BOOTSTRAP_NODE_HOST" ]; then
     echo "Adding bootstrap peer-info..."
-    sh postchain.sh peerinfo-add --node-config $RELL_OUT/node-config.properties --host $BOOTSTRAP_NODE_HOST --port $BOOTSTRAP_NODE_PORT --pub-key $BOOTSTRAP_NODE_PUBKEY
+    sh postchain.sh peerinfo-add --node-config "$RELL_OUT"/node-config.properties --host "$BOOTSTRAP_NODE_HOST" --port "$BOOTSTRAP_NODE_PORT" --pub-key "$BOOTSTRAP_NODE_PUBKEY"
   fi
 fi
 
 echo "Starting node"
-sh postchain.sh $1 -d $RELL_OUT
+sh postchain.sh "$1" --directory "$RELL_OUT"
