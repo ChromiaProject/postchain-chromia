@@ -52,7 +52,7 @@ internal class ManagedModeExampleIT {
         private val postgres = ChromaWayPostgresContainer()
                 .withNetwork(network)
 
-        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node1/node-config.properties")!!.file))
+        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node1/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node1")
                 .withClasspathResourceMapping("$resourceFolder/node1", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -65,7 +65,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node1Logger)
 
-        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node2/node-config.properties")!!.file))
+        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node2/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node2")
                 .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -81,7 +81,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node3/node-config.properties")!!.file))
+        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node3/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
