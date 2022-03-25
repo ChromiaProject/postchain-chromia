@@ -6,7 +6,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.common0.CliExecution
@@ -39,13 +39,13 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         val nodeList = nodes.split(",").map {
             getPostchainClient().query(
                 "get_node",
-                GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))
+                gtv("pubkey" to gtv(it.hexStringToByteArray()))
             ).get()
         }
         return makeTransactionWithNop().apply {
             addOperation(
                 "add_blockchain",
-                arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList))
+                gtv(data), gtv(nodeList)
             )
             sign(buildSigMaker())
         }
@@ -63,7 +63,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         return makeTransactionWithNop().apply {
             addOperation(
                 "stop_blockchain",
-                arrayOf(blockchain, GtvFactory.gtv(removeReplicas))
+                blockchain, gtv(removeReplicas)
             )
             sign(buildSigMaker())
         }
@@ -83,7 +83,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         return makeTransactionWithNop().apply {
             addOperation(
                 "add_configuration",
-                arrayOf(blockchain, GtvFactory.gtv(data), GtvFactory.gtv(height))
+                blockchain, gtv(data), gtv(height)
             )
             sign(buildSigMaker())
         }
@@ -108,7 +108,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         val nodeList = signers.split(",").map { nodeGtv(it) }
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
-            addOperation("remove_blockchain_signers", arrayOf(blockchain, GtvFactory.gtv(nodeList)))
+            addOperation("remove_blockchain_signers", blockchain, gtv(nodeList))
             sign(buildSigMaker())
         }
     }
@@ -142,17 +142,17 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         if (name.isNotEmpty()) {
-            data = data.plus(GtvFactory.gtv(name))
+            data = data.plus(gtv(name))
         } else {
             data = data.plus(GtvNull)
         }
         if (beneficiary.isNotEmpty()) {
-            data = data.plus(GtvFactory.gtv(beneficiary))
+            data = data.plus(gtv(beneficiary))
         } else {
             data = data.plus(GtvNull)
         }
         return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", data)
+            addOperation("update_provider_data", *data)
             sign(buildSigMaker())
         }
     }
