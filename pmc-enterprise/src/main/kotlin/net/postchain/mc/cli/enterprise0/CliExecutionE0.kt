@@ -5,7 +5,7 @@ import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
@@ -22,7 +22,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation("propose_configuration",
-                    arrayOf(blockchain, provider, GtvFactory.gtv(data), GtvFactory.gtv(height)))
+                    blockchain, provider, gtv(data), gtv(height))
             sign(buildSigMaker())
         }
     }
@@ -41,7 +41,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation("propose_provider",
-                    arrayOf(provider, GtvFactory.gtv(key.hexStringToByteArray())))
+                    provider, gtv(key.hexStringToByteArray()))
             sign(buildSigMaker())
         }
     }
@@ -54,7 +54,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation("make_vote",
-                    arrayOf(provider, GtvFactory.gtv(rowid), GtvFactory.gtv((yes))))
+                    provider, gtv(rowid), gtv((yes)))
             sign(buildSigMaker())
         }
     }
@@ -66,7 +66,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val meProvider = providerGtv(config.pubKey)
         val providerToBeEnabled = providerGtv(key)
         return makeTransactionWithNop().apply {
-            addOperation("propose_enable_provider", arrayOf(meProvider, providerToBeEnabled))
+            addOperation("propose_enable_provider", meProvider, providerToBeEnabled)
             sign(buildSigMaker())
         }
     }
@@ -96,7 +96,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val nodeList = nodes.split(",").map { nodeGtv(it) }
         return makeTransactionWithNop().apply {
             addOperation("propose_blockchain",
-                    arrayOf(meProvider, GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+                    meProvider, gtv(data), gtv(nodeList))
             sign(buildSigMaker())
         }
     }
@@ -105,7 +105,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val meProvider = providerGtv(config.pubKey)
         val providerToBeDisabled = providerGtv(key)
         return makeTransactionWithNop().apply {
-            addOperation("propose_disable_provider", arrayOf(meProvider, providerToBeDisabled))
+            addOperation("propose_disable_provider", meProvider, providerToBeDisabled)
             sign(buildSigMaker())
         }
     }
@@ -120,7 +120,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val nodeList = signers.split(",").map { nodeGtv(it) }
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
-            addOperation("propose_add_blockchain_signers", arrayOf(meProvider, blockchain, GtvFactory.gtv(nodeList)))
+            addOperation("propose_add_blockchain_signers", meProvider, blockchain, gtv(nodeList))
             sign(buildSigMaker())
         }
     }
@@ -135,7 +135,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation("propose_stop_blockchain",
-                    arrayOf(meProvider, blockchain, GtvFactory.gtv(removeReplicas)))
+                    meProvider, blockchain, gtv(removeReplicas))
             sign(buildSigMaker())
         }
     }
@@ -152,7 +152,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation("propose_remove_blockchain_signers",
-                    arrayOf(meProvider, blockchain, GtvFactory.gtv(nodeList)))
+                    meProvider, blockchain, gtv(nodeList))
             sign(buildSigMaker())
         }
     }
@@ -172,7 +172,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
      */
     fun initInternal() : GTXTransactionBuilder {
         return makeTransactionWithNop().apply {
-            addOperation("init", arrayOf<Gtv>())
+            addOperation("init")
             sign(buildSigMaker())
         }
     }
@@ -192,12 +192,12 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         if (name.isNotEmpty()) {
-            data = data.plus(GtvFactory.gtv(name))
+            data = data.plus(gtv(name))
         } else {
             data = data.plus(GtvNull)
         }
         return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", data)
+            addOperation("update_provider_data", *data)
             sign(buildSigMaker())
         }
     }
@@ -205,8 +205,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     fun listProposalsSince(rowid: Long) : List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val list =  getPostchainClient().query("get_proposals_since", GtvFactory.gtv(
-                    "since" to GtvFactory.gtv(rowid)))
+            val list =  getPostchainClient().query("get_proposals_since", gtv(
+                    "since" to gtv(rowid)))
                     .get()
                     .asArray()
             returnList.addAll(list.map { it })
@@ -217,8 +217,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     fun getProposal(rowid: Long) : Gtv {
         var returnValue : Gtv? = null
         doInTryBlock {
-            val prop =  getPostchainClient().query("get_proposal", GtvFactory.gtv(
-                    "rowid" to GtvFactory.gtv(rowid)))
+            val prop =  getPostchainClient().query("get_proposal", gtv(
+                    "rowid" to gtv(rowid)))
                     .get()
             returnValue = prop
         }
