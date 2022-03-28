@@ -17,7 +17,7 @@ class CommandProposeDisableProvider: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key() = "provider-propose-disable"
+    override fun key() = "propose-disable-provider"
 
     override fun execute(): CliResult {
         return try {

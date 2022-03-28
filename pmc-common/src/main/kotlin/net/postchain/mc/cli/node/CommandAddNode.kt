@@ -34,7 +34,7 @@ class CommandAddNode: CommandBase() {
             description = "Specify which cluster node should belong to. Can be several.")
     private var clusterName = ""
 
-    override fun key(): String = "node-add"
+    override fun key(): String = "add-node"
 
     override fun execute(): CliResult {
         return try {

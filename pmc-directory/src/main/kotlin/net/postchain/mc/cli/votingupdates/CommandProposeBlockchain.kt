@@ -29,7 +29,7 @@ class CommandProposeBlockchain: CommandBase() {
             required = true)
     private var container = ""
 
-    override fun key() = "blockchain-propose-add"
+    override fun key() = "propose-blockchain"
 
     override fun execute(): CliResult {
         return try {

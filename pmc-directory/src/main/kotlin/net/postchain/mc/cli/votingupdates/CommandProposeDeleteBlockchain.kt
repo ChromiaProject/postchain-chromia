@@ -18,7 +18,7 @@ class CommandProposeDeleteBlockchain: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    override fun key() = "blockchain-propose-delete"
+    override fun key() = "propose-delete-blockchain"
 
     override fun execute(): CliResult {
         return try {

@@ -29,7 +29,7 @@ class CommandProposeVoterSetMember : CommandBase() {
             required = true)
     private var add = true
 
-    override fun key(): String = "voter-set-propose-member"
+    override fun key(): String = "propose-voter-set-member"
 
     override fun execute(): CliResult {
 

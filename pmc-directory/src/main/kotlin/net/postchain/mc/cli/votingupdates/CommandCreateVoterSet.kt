@@ -34,7 +34,7 @@ class CommandCreateVoterSet: CommandBase() {
             description = "Name of another voter set which can update this voter set. Default: voter set is its own governor.")
     private var governorName = ""
 
-    override fun key() = "voter-set-create"
+    override fun key() = "create-voter-set"
 
     override fun execute(): CliResult {
         return try {

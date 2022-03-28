@@ -23,7 +23,7 @@ class CommandRemoveBlockchainReplica : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "blockchain-replica-remove"
+    override fun key(): String = "remove-blockchain-replica"
 
     override fun execute(): CliResult {
         return try {

@@ -44,7 +44,7 @@ class CommandProposeConfiguration: CommandBase() {
                     "for a height that already exists or a height < already proposed configuration heights.")
     private var force = false
 
-    override fun key() = "blockchain-propose-configuration"
+    override fun key() = "propose-blockchain-configuration"
 
     override fun execute(): CliResult {
         return try {

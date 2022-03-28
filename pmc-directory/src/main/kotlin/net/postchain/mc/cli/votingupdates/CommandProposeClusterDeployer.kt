@@ -23,7 +23,7 @@ class CommandProposeClusterDeployer : CommandBase() {
             required = true)
     private var clusterName = ""
 
-    override fun key(): String = "cluster-propose-deployer"
+    override fun key(): String = "propose-cluster-deployer"
 
     override fun execute(): CliResult {
 

@@ -18,7 +18,7 @@ class CommandListBlockchainsForNode : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "blockchains-for-node-list"
+    override fun key(): String = "list-blockchains-for-node"
 
     override fun execute(): CliResult {
         return try {

@@ -29,7 +29,7 @@ class CommandProposeClusterProvider : CommandBase() {
             required = true)
     private var add = true
 
-    override fun key(): String = "cluster-propose-provider"
+    override fun key(): String = "propose-cluster-provider"
 
     override fun execute(): CliResult {
 

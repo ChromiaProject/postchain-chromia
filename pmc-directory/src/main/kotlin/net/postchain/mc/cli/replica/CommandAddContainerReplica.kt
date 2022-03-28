@@ -23,7 +23,7 @@ class CommandAddContainerReplica: CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "cluster-add-container-replica"
+    override fun key(): String = "add-container-replica"
 
     override fun execute(): CliResult {
         return try {

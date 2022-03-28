@@ -16,7 +16,7 @@ class CommandListClusters : CommandBase() {
             description = "Include disabled/removed clusters (not implemented yet)")
     private var includeInactive = false
 
-    override fun key() = "clusters-list"
+    override fun key() = "list-clusters"
 
     override fun execute(): CliResult {
         return try {

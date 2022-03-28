@@ -23,7 +23,7 @@ class CommandTransferActionPoints : CommandBase() {
             required = true)
     private var amount = 0L
 
-    override fun key(): String = "action-points-transfer"
+    override fun key(): String = "transfer-action-points"
 
     override fun execute(): CliResult {
         return try {

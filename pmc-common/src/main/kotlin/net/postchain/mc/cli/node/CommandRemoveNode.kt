@@ -17,7 +17,7 @@ class CommandRemoveNode : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key(): String = "node-remove"
+    override fun key(): String = "remove-node"
 
     override fun execute(): CliResult {
         return try {
