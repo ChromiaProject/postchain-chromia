@@ -2,7 +2,7 @@ package net.postchain.mc.cli.chromia0
 
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
@@ -11,11 +11,12 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
     private fun addBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
         val nodeList = nodes.split(",").map {
             getPostchainClient().query("get_node",
-                    GtvFactory.gtv("pubkey" to GtvFactory.gtv(it.hexStringToByteArray()))).get()
+                    gtv("pubkey" to gtv(it.hexStringToByteArray()))).get()
         }
         return makeTransactionWithNop().apply {
-            addOperation("add_blockchain",
-                    arrayOf(GtvFactory.gtv(data), GtvFactory.gtv(nodeList)))
+            addOperation(
+                    "add_blockchain",
+                    gtv(data), gtv(nodeList))
             sign(buildSigMaker())
         }
     }
@@ -28,8 +29,9 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
     fun stopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean): GTXTransactionBuilder {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
-            addOperation("stop_blockchain",
-                    arrayOf(blockchain, GtvFactory.gtv(removeReplicas)))
+            addOperation(
+                    "stop_blockchain",
+                    blockchain, gtv(removeReplicas))
             sign(buildSigMaker())
         }
     }

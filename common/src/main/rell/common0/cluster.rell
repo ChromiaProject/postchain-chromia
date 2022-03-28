@@ -83,7 +83,7 @@ function add_node_to_cluster_internal(provider, node, cluster) {
 	if (exists( cluster_provider @* {cluster, provider})) {
 		val nodes = cluster_node @* {cluster} .node;
 		for (n in nodes) {
-			require(n.provider != provider);
+		    require(n.provider != provider);
 		}
 		create cluster_node(cluster, node);
 		update_configuration_signers (cluster);
