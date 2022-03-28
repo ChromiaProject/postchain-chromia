@@ -23,7 +23,7 @@ class CommandRegisterProvider : CommandBase() {
             required = false)
     private var tier = 0L
 
-    override fun key(): String = "provider-register"
+    override fun key(): String = "register-provider"
 
     override fun execute(): CliResult {
         return try {

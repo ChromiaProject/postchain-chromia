@@ -18,7 +18,7 @@ class CommandProposeEnableProvider : CommandBase() {
             required = true)
     private var key = ""
 
-    override fun key() = "provider-propose-enable"
+    override fun key() = "propose-enable-provider"
 
     override fun execute(): CliResult {
         return try {

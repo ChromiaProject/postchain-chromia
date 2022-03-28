@@ -17,7 +17,7 @@ class CommandListProposalsSince: CommandBase() {
             required = false)
     private var idx = 0L
 
-    override fun key() = "proposals-list-since"
+    override fun key() = "list-proposals-since"
 
     override fun execute(): CliResult {
         return try {

@@ -16,7 +16,7 @@ class CommandListVoterSets : CommandBase() {
             description = "Include disabled/removed voter sets (not implemented yet)")
     private var includeInactive = false
 
-    override fun key() = "voter-sets-list"
+    override fun key() = "list-voter-sets"
 
     override fun execute(): CliResult {
         return try {

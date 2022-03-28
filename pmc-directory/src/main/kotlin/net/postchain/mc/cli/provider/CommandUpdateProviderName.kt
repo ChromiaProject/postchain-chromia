@@ -23,7 +23,7 @@ class CommandUpdateProviderName: CommandBase() {
             required = false)
     private var name = ""
 
-    override fun key() = "provider-name-update"
+    override fun key() = "update-provider-name"
 
     override fun execute(): CliResult {
         return try {

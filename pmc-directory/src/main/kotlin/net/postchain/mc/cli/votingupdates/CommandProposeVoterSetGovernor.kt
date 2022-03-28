@@ -23,7 +23,7 @@ class CommandProposeVoterSetGovernor : CommandBase() {
             required = true)
     private var voterSet = ""
 
-    override fun key(): String = "voter-set-propose-governor"
+    override fun key(): String = "propose-voter-set-governor"
 
     override fun execute(): CliResult {
 

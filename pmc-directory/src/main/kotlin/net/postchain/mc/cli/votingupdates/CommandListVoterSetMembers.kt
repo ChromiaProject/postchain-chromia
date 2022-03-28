@@ -18,7 +18,7 @@ class CommandListVoterSetMembers: CommandBase() {
             required = true)
     private var name = ""
 
-    override fun key() = "voter-set-list-members"
+    override fun key() = "list-voter-set-members"
 
     override fun execute(): CliResult {
         return try {

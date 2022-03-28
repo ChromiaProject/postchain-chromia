@@ -23,7 +23,7 @@ class CommandRemoveContainerReplica: CommandBase() {
             required = true)
     private var containerName = ""
 
-    override fun key(): String = "container-replica-remove"
+    override fun key(): String = "remove-container-replica"
 
     override fun execute(): CliResult {
         return try {

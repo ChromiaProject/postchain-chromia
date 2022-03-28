@@ -18,7 +18,7 @@ class CommandProposeUnPauseBlockchain: CommandBase() {
             required = true)
     private var blockchainRID = ""
 
-    override fun key() = "blockchain-propose-unpause"
+    override fun key() = "propose-unpause-blockchain"
 
     override fun execute(): CliResult {
         return try {

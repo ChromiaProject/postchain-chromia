@@ -33,10 +33,10 @@ class CommandProposeContainerResourceLimits: CommandBase() {
             description = "ram limit")
     private var storage: Long? = null
 
-    override fun key(): String = "container-propose-limits"
+    override fun key(): String = "propose-container-limits"
 
     override fun execute(): CliResult {
-        var limitMap = mutableMapOf<String, Long>()
+        val limitMap = mutableMapOf<String, Long>()
         ram?.let { limitMap.put("ram", it) }
         cpu?.let { limitMap.put("cpu", it) }
         storage?.let { limitMap.put("storage", it) }

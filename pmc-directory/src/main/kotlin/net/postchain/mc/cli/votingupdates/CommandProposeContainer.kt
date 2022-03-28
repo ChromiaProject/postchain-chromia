@@ -34,7 +34,7 @@ class CommandProposeContainer : CommandBase() {
             required = true)
     private var deployerName = ""
 
-    override fun key(): String = "container-propose-add"
+    override fun key(): String = "propose-container"
 
     override fun execute(): CliResult {
 
