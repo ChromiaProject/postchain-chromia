@@ -18,6 +18,10 @@
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>pmc-common</artifactId>
         </dependency>
         <dependency>
@@ -28,7 +32,11 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
         </dependency>
     </dependencies>
 
@@ -37,6 +45,24 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>directory1</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

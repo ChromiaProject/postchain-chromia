@@ -37,14 +37,14 @@
 
 /**Adding a node to a cluster automatically makes it signer of all bc in this cluster. Only one node per provider and cluster.
  * TODO: Start as replica; once it is in sync, it will become signer.
- * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node. 
+ * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node.
  * */
 operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
 	require_provider_auth_with_rl(provider);
 	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
 	//make_node_a_replica_in_cluster(cluster, node_pubkey);
 	//check if cluster now is operational, if so update the flag:
-	check_operational(cluster);	
+	check_operational(cluster);
 }
 
 
@@ -129,7 +129,7 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 	create cluster_resource_limit(cl, resource_limit_type.storage , 100);
 	if (exists(initials)) {
 		for (prov in initials) {
-		create cluster_provider(cl, prov);			
+		create cluster_provider(cl, prov);
 		}
 	}
 }
@@ -138,17 +138,17 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 
  //Defines which container a blockchain belongs to
  entity container_blockchain { key container, blockchain; }
- 
+
  // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
  entity cluster_container_replica { key cluster, container; }
- 
+
  /*
-  * For blockchain dependency tracking. Blockhain A (me) might be dependent on 
-  * blockchain B (dependent_on). Dependency is not static; 
+  * For blockchain dependency tracking. Blockhain A (me) might be dependent on
+  * blockchain B (dependent_on). Dependency is not static;
   * a bc can be different dependencies at different heights.
   */
  entity blockchain_dependency { key me: blockchain, height: integer, dependent_on: blockchain; }
- 
+
  function add_dependencies(data: byte_array, me_brid: byte_array, height: integer) {
  	val config_map = map<text, gtv>.from_gtv(gtv.from_bytes(data));
 	if (config_map.contains("dependencies")) {
@@ -157,17 +157,16 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 			val dependent_on = blockchain @? { dep };
 			if (exists(dependent_on)) {
 				require(me_brid != dep);
-				create blockchain_dependency( 
-					me = blockchain @ {me_brid}, 
+				create blockchain_dependency(
+					me = blockchain @ {me_brid},
 					dependent_on,
-					height = height);	
+					height = height);
 			}
 		}
 	}
 }
 
  function require_no_dependenices_on_me(blockchain) {
-	require ( empty ( blockchain_dependency @* { .dependent_on == blockchain}));	
+	require ( empty ( blockchain_dependency @* { .dependent_on == blockchain}));
 }
- 
- 
+

@@ -42,20 +42,20 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
      *
     """
     <chains>
-        <chain name="manager" iid="0">
-            <config height="0" add-dependencies="false">
-                <app module="myModule">
-                    <args module="myModule">
-                        <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(7)}</bytea></arg>
-                    </args>
-                </app>
-                <gtv path="signers">
-                    <array>
-                        <bytea>${KeyPairHelper.pubKeyHex(7)}</bytea>
-                    </array>
-                </gtv>
-            </config>
-        </chain>
+    <chain name="manager" iid="0">
+    <config height="0" add-dependencies="false">
+    <app module="myModule">
+    <args module="myModule">
+    <arg key="admin"><bytea>${KeyPairHelper.pubKeyHex(7)}</bytea></arg>
+    </args>
+    </app>
+    <gtv path="signers">
+    <array>
+    <bytea>${KeyPairHelper.pubKeyHex(7)}</bytea>
+    </array>
+    </gtv>
+    </config>
+    </chain>
     </chains>
     """
      *
@@ -77,12 +77,12 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     /**
-     * Create a node running the rell source in rellSourceDir, which is
-     * relative to the folder src/main/rell
+     * Create a node running the rell module in rellModuleDir, which is
+     * relative to the folder ./target dir
      */
-    protected fun run(rellSourceDir: String): Gtv {
+    protected fun run(rellModuleDir: String): Gtv {
         // Create blockchain config file
-        val resourceDirectory = Paths.get("src", "main", "rell", rellSourceDir)
+        val resourceDirectory = Paths.get("target", rellModuleDir, "rell")
         val rellSourceDir = resourceDirectory.toFile()
 
         val tempRunXml = File.createTempFile("run", ".xml")

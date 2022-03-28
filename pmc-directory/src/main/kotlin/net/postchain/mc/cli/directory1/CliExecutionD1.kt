@@ -18,7 +18,7 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
      */
     fun initAsync() : GTXTransactionBuilder {
         return makeTransactionWithNop().apply {
-            addOperation("init", arrayOf<Gtv>())
+            addOperation("init")
             sign(buildSigMaker())
         }
     }
@@ -43,7 +43,7 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
             data = data.plus(GtvNull)
         }
         return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", data)
+            addOperation("update_provider_data", *data)
             sign(buildSigMaker())
         }
     }

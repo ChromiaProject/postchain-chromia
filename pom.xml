@@ -14,13 +14,16 @@
         <module>pmc-common</module>
         <module>pmc-chromia</module>
         <module>pmc-directory</module>
+        <module>common</module>
+        <module>chromia0</module>
+        <module>directory1</module>
     </modules>
     <packaging>pom</packaging>
 
     <properties>
         <postchain.version>${project.version}</postchain.version>
         <rellr.version>0.10.8-SNAPSHOT</rellr.version>
-        <kotlin.version>1.4.30</kotlin.version>
+        <kotlin.version>1.6.10</kotlin.version>
         <junit.version>5.8.2</junit.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
