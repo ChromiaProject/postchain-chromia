@@ -125,6 +125,7 @@ internal class Chromia0ExampleIT {
         assert(
                 node1.execInContainer("ls", "/opt/chromaway/postchain/chain0-generated/blockchains/0").exitCode
         ).isZero()
+        node1Db.awaitBlockHeight(0)
     }
 
     @Test
@@ -132,12 +133,10 @@ internal class Chromia0ExampleIT {
     fun `Make admin a provider for the network`() {
         println("Registering provider")
         node1.tx(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
-        node1Db.awaitNewBlock()
 
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
         println("Enabling provider")
         node1.tx(0, "enable_provider", provider)
-        node1Db.awaitNewBlock()
         node1.client(0).querySync("get_provider_data", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).asDict().let {
             assert(it["active"]!!.asBoolean(),
                     name = "Provider is activated")
@@ -162,7 +161,6 @@ internal class Chromia0ExampleIT {
     @Order(4)
     fun `Make chain0 aware of itself`() {
         node1.addChain0()
-        node1Db.awaitNewBlock()
         assert(node1.client(0).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(1)
     }
 
@@ -262,7 +260,6 @@ internal class Chromia0ExampleIT {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
             node2.tx(dappToBrid[dappId]!!, "add_city", gtv(testCity))
-            node2DappDb.awaitNewBlock()
             listOf(node1, node2, node3).forEach { node ->
                 assert(node.client(dappToBrid[dappId]!!).querySync("get_cities", gtv(mapOf())).asArray().map { it.asString() })
                         .containsExactly(testCity)
