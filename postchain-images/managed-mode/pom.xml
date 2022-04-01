@@ -4,144 +4,108 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>postchain-images</artifactId>
-        <groupId>net.postchain</groupId>
+        <groupId>net.postchain.images</groupId>
         <version>3.4.2-SNAPSHOT</version>
     </parent>
+    <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
+    <modules>
+        <module>chromia0</module>
+    </modules>
 
     <artifactId>managed-mode</artifactId>
 
     <properties>
-        <image.name>chromaway/postchain-managed-mode</image.name>
+        <dockerfile>${project.parent.basedir}/src/main/docker/Dockerfile</dockerfile>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postgres</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>dapp</artifactId>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlinx</groupId>
-            <artifactId>kotlinx-coroutines-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility-kotlin</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>chromia0</artifactId>
-            <version>3.4.2-SNAPSHOT</version>
-            <classifier>sources</classifier>
-            <scope>provided</scope>
-            <type>tar.gz</type>
-        </dependency>
-    </dependencies>
-
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <classifier>sources</classifier>
-                            <includeArtifactIds>chromia0</includeArtifactIds>
-                            <includeTypes>tar.gz</includeTypes>
-                            <outputDirectory>${project.build.directory}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-maven-plugin</artifactId>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>${image.name}:latest</name>
-                            <build>
-                                <args>
-                                    <postchain_version>latest</postchain_version>
-                                </args>
-                            </build>
-                        </image>
-                    </images>
-                </configuration>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <phase>generate-resources</phase>
+                            <goals>
+                                <goal>unpack-dependencies</goal>
+                            </goals>
+                            <configuration>
+                                <classifier>sources</classifier>
+                                <includeArtifactIds>chromia0</includeArtifactIds>
+                                <includeTypes>tar.gz</includeTypes>
+                                <outputDirectory>${project.build.directory}</outputDirectory>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <configuration>
+                        <images>
+                            <image>
+                                <name>${image.name}:latest</name>
+                                <build>
+                                    <dockerFile>${dockerfile}</dockerFile>
+                                    <args>
+                                        <postchain_version>latest</postchain_version>
+                                        <chain0_source>${chain0.source}</chain0_source>
+                                    </args>
+                                </build>
+                            </image>
+                        </images>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <profiles>
         <profile>
             <id>gitlab-registry</id>
             <build>
-                <plugins>
-                    <plugin>
-                        <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>build-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <executable>docker</executable>
-                                    <arguments>
-                                        <argument>buildx</argument>
-                                        <argument>build</argument>
-                                        <argument>--platform</argument>
-                                        <argument>linux/amd64,linux/arm64</argument>
-                                        <argument>--tag</argument>
-                                        <argument>${gitlab.registry}/${image.name}:${project.version}</argument>
-                                        <argument>${project.basedir}/.</argument>
-                                        <argument>--push</argument>
-                                        <argument>--build-arg</argument>
-                                        <argument>postchain_image=${gitlab.registry}/chromaway/postchain-dapp</argument>
-                                        <argument>--build-arg</argument>
-                                        <argument>postchain_version=${project.version}</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>exec-maven-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>build-image</id>
+                                    <phase>package</phase>
+                                    <goals>
+                                        <goal>exec</goal>
+                                    </goals>
+                                    <configuration>
+                                        <executable>docker</executable>
+                                        <arguments>
+                                            <argument>buildx</argument>
+                                            <argument>build</argument>
+                                            <argument>--platform</argument>
+                                            <argument>linux/amd64,linux/arm64</argument>
+                                            <argument>--tag</argument>
+                                            <argument>${gitlab.registry}/${image.name}:${project.version}</argument>
+                                            <argument>--file</argument>
+                                            <argument>${dockerfile}</argument>
+                                            <argument>${project.basedir}/.</argument>
+                                            <argument>--push</argument>
+                                            <argument>--build-arg</argument>
+                                            <argument>postchain_image=${gitlab.registry}/chromaway/postchain-dapp
+                                            </argument>
+                                            <argument>--build-arg</argument>
+                                            <argument>postchain_version=${project.version}</argument>
+                                            <argument>--build-arg</argument>
+                                            <argument>chain0_source=${chain0.source}</argument>
+                                        </arguments>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
             </build>
         </profile>
     </profiles>

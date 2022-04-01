@@ -43,7 +43,7 @@ internal class ManagedModeExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
-        private val imageName = DockerImageName.parse("chromaway/postchain-managed-mode:latest")
+        private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "managed-mode-example"
         private val network: Network = Network.newNetwork()
