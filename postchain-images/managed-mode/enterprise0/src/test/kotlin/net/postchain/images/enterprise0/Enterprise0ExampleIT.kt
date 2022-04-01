@@ -36,6 +36,12 @@ import org.testcontainers.utility.DockerImageName
 import java.io.File
 import java.nio.file.Files
 
+/**
+ * This test proves the functionality of enterprise0 dapp and the minimal needed configuration.
+ *
+ * We only use a single provider, which is configured in run.xml to be the initial provider and [adminPubKey].
+ * This means that a single provider owns the entire network and is done to keep the voting steps simple.
+ */
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Enterprise0ExampleIT {
@@ -192,6 +198,9 @@ internal class Enterprise0ExampleIT {
         runAsync(node1Db, node2Db, node3Db) {
             it.awaitBlockHeight(heightWithSigners)
         }
+        assert(node1.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
+        assert(node2.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
+        assert(node3.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
     }
 
     @Nested
