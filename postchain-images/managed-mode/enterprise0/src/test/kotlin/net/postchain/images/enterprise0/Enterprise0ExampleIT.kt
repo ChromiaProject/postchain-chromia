@@ -179,7 +179,9 @@ internal class Enterprise0ExampleIT {
         println("Adding nodes 2 and 3 to node 1")
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
         node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
+        node1Db.awaitNewBlock()
         node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
+        node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
             assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean(),
                     name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
