@@ -106,8 +106,6 @@ internal class Enterprise0ExampleIT {
         private lateinit var node2Db: ChainDatabaseCommunicator
         private lateinit var node3Db: ChainDatabaseCommunicator
 
-        private var latestProposalRow = 0L
-
         // Here, adminPubKey is the same as we have in "initial_provider" module arg
         private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
@@ -163,10 +161,8 @@ internal class Enterprise0ExampleIT {
     fun `Make chain0 aware of itself`() {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
         node1.proposeChain0(provider)
-        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(latestProposalRow))).asArray().first().also {
-            latestProposalRow = it.asDict()["rowid"]!!.asInteger()
-        }
-        node1.tx(0, "make_vote", provider, gtv(latestProposalRow), gtv(true))
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0))).asArray().first()
+        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
 
         assert(node1.client(0).querySync("get_all_blockchains").asArray().size).isEqualTo(1)
     }
