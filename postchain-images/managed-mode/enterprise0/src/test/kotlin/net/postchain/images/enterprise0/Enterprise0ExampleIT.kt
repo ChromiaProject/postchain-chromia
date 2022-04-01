@@ -1,6 +1,7 @@
-package net.postchain.enterprise0
+package net.postchain.images.enterprise0
 
 import assertk.assert
+import assertk.assertions.isEqualTo
 import assertk.assertions.isZero
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -11,6 +12,7 @@ import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.dapp.parseConfig
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import org.junit.jupiter.api.AfterAll
@@ -120,8 +122,15 @@ internal class Enterprise0ExampleIT {
         assert(
                 node1.execInContainer("ls", "/opt/chromaway/postchain/chain0-generated/blockchains/0").exitCode
         ).isZero()
+        node1Db.awaitBlockHeight(0)
     }
 
+    @Test
+    @Order(2)
+    fun `Initialize network with provider 1`() {
+        node1.tx(0, "init")
+        assert(node1.client(0).querySync("get_all_providers").asArray().size).isEqualTo(1)
+    }   
 
     fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
         runBlocking {
