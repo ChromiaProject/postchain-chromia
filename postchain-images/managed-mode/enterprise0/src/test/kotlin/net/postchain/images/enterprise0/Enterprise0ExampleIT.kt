@@ -2,13 +2,16 @@ package net.postchain.images.enterprise0
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import assertk.assertions.isZero
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
+import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
+import net.postchain.dapp.adminPubKey
 import net.postchain.dapp.parseConfig
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -130,7 +133,21 @@ internal class Enterprise0ExampleIT {
     fun `Initialize network with provider 1`() {
         node1.tx(0, "init")
         assert(node1.client(0).querySync("get_all_providers").asArray().size).isEqualTo(1)
-    }   
+    }
+
+    @Test
+    @Order(3)
+    fun `Add node 1 to its own network`() {
+        // Here, adminPubKey is the same as wa have in "initial_privider" module arg
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
+
+        println("Adding node 1 to its own network")
+        node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
+        node1Db.awaitNewBlock()
+        assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
+        val nodeGtv = node1.client(0).query("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
+        assert(nodeGtv.asDict()["active"]!!.asInteger()).isEqualTo(1L)
+    }
 
     fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
         runBlocking {
