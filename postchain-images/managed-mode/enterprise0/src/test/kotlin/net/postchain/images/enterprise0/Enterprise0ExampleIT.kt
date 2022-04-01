@@ -15,6 +15,7 @@ import net.postchain.dapp.adminPubKey
 import net.postchain.dapp.parseConfig
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -30,6 +31,8 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.io.File
+import java.nio.file.Files
 
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -101,6 +104,8 @@ internal class Enterprise0ExampleIT {
         private lateinit var node2Db: ChainDatabaseCommunicator
         private lateinit var node3Db: ChainDatabaseCommunicator
 
+        private var latestProposalRow = 0L
+
         @JvmStatic
         @BeforeAll
         fun setup() {
@@ -149,6 +154,17 @@ internal class Enterprise0ExampleIT {
         assert(nodeGtv.asDict()["active"]!!.asInteger()).isEqualTo(1L)
     }
 
+    @Test
+    @Order(4)
+    fun `Make chain0 aware of itself`() {
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
+        node1.proposeChain0(provider)
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(latestProposalRow++))).asArray().first()
+        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
+
+        assert(node1.client(0).querySync("get_all_blockchains").asArray().size).isEqualTo(1)
+    }
+
     fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
         runBlocking {
             withContext(coroutineContext) {
@@ -158,4 +174,14 @@ internal class Enterprise0ExampleIT {
             }
         }
     }
+}
+
+
+fun PostchainContainer.proposeChain0(provider: Gtv) { // This has to be done inside the container if we want to be able to use this container in production.
+    val dir = Files.createTempDirectory("")
+    val tmpPath = dir.toAbsolutePath().toString() + "0.gtv"
+    copyFileFromContainer("${envMap["RELL_OUT"] ?: "${PostchainContainer.RELL_PATH}/out"}/blockchains/0/0.gtv", tmpPath)
+
+    val nodeGtv = client(0).query("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray()))).get()
+    tx(0, "propose_blockchain", provider, gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
 }
