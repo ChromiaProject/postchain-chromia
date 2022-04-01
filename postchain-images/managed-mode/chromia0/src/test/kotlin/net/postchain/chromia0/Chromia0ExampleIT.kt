@@ -1,4 +1,4 @@
-package net.postchain.managedmode
+package net.postchain.chromia0
 
 import assertk.assert
 import assertk.assertions.containsExactly
@@ -33,7 +33,7 @@ import java.nio.file.Files
 
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-internal class ManagedModeExampleIT {
+internal class Chromia0ExampleIT {
 
 
     companion object {
@@ -43,16 +43,16 @@ internal class ManagedModeExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
-        private val imageName = DockerImageName.parse("chromaway/postchain-managed-mode:latest")
+        private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
-        private const val resourceFolder = "managed-mode-example"
+        private const val resourceFolder = "chromia0-example"
         private val network: Network = Network.newNetwork()
 
         @Container
         private val postgres = ChromaWayPostgresContainer()
                 .withNetwork(network)
 
-        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node1/node-config.properties")!!))
+        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node1/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node1")
                 .withClasspathResourceMapping("$resourceFolder/node1", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -65,7 +65,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node1Logger)
 
-        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node2/node-config.properties")!!))
+        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node2/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node2")
                 .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -81,7 +81,7 @@ internal class ManagedModeExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/managed-mode-example/node3/node-config.properties")!!))
+        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
