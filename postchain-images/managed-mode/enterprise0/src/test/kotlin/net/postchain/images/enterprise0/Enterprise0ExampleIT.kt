@@ -8,6 +8,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
+import net.postchain.client.core.ConfirmationLevel
+import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
@@ -106,6 +108,9 @@ internal class Enterprise0ExampleIT {
 
         private var latestProposalRow = 0L
 
+        // Here, adminPubKey is the same as we have in "initial_provider" module arg
+        private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
+
         @JvmStatic
         @BeforeAll
         fun setup() {
@@ -143,8 +148,7 @@ internal class Enterprise0ExampleIT {
     @Test
     @Order(3)
     fun `Add node 1 to its own network`() {
-        // Here, adminPubKey is the same as wa have in "initial_privider" module arg
-        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
 
         println("Adding node 1 to its own network")
         node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
@@ -157,15 +161,44 @@ internal class Enterprise0ExampleIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).get()
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
         node1.proposeChain0(provider)
-        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(latestProposalRow++))).asArray().first()
-        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(latestProposalRow))).asArray().first().also {
+            latestProposalRow = it.asDict()["rowid"]!!.asInteger()
+        }
+        node1.tx(0, "make_vote", provider, gtv(latestProposalRow), gtv(true))
 
         assert(node1.client(0).querySync("get_all_blockchains").asArray().size).isEqualTo(1)
     }
 
-    fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
+    @Test
+    @Order(5)
+    fun `Make node 2 and 3 signers of c0`() {
+        println("Adding nodes 2 and 3 to node 1")
+        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
+        node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
+        node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
+        listOf(node2, node3).forEach { addedNode ->
+            assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean(),
+                    name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
+            ).isTrue()
+        }
+        val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
+        val newSignerNodes = listOf(node2, node3).map { node ->
+            node1.client(0).query("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray()))).get()
+        }
+        node1.tx(0, "propose_add_blockchain_signers", provider, c0, gtv(newSignerNodes))
+        node1.tx(0, "propose_add_blockchain_signers", provider, c0, gtv(newSignerNodes)) // Apparently you have to run this twice because otherwise they are stuck in a "pending"-state and the proposal is not created.
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first()
+        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
+        // Adding signers will update the blockchain configuration after 5 blocks
+        val heightWithSigners = node1Db.getHeight() + 5
+        runAsync(node1Db, node2Db, node3Db) {
+            it.awaitBlockHeight(heightWithSigners)
+        }
+    }
+
+    private fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
         runBlocking {
             withContext(coroutineContext) {
                 obj.asList().forEach {
@@ -174,6 +207,10 @@ internal class Enterprise0ExampleIT {
             }
         }
     }
+}
+
+fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
+    return query("get_blockchain_signers", gtv("blockchain" to blockChain)).get().asArray()
 }
 
 

@@ -270,7 +270,7 @@ internal class Chromia0ExampleIT {
         }
     }
 
-    fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
+    private fun <T> runAsync(vararg obj: T, action: (T) -> Unit) {
         runBlocking {
             withContext(coroutineContext) {
                 obj.asList().forEach {
