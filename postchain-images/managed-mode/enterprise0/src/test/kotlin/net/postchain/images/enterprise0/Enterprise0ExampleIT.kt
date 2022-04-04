@@ -1,4 +1,4 @@
-package net.postchain.chromia0
+package net.postchain.images.enterprise0
 
 import assertk.assert
 import assertk.assertions.containsExactly
@@ -9,11 +9,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
+import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
-import net.postchain.dapp.*
+import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
+import net.postchain.dapp.adminPubKey
+import net.postchain.dapp.parseConfig
+import net.postchain.dapp.startContainers
+import net.postchain.dapp.stopContainers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -31,9 +36,15 @@ import org.testcontainers.utility.DockerImageName
 import java.io.File
 import java.nio.file.Files
 
+/**
+ * This test proves the functionality of enterprise0 dapp and the minimal needed configuration.
+ *
+ * We only use a single provider, which is configured in run.xml to be the initial provider and [adminPubKey].
+ * This means that a single provider owns the entire network and is done to keep the voting steps simple.
+ */
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-internal class Chromia0ExampleIT {
+internal class Enterprise0ExampleIT {
 
 
     companion object {
@@ -43,20 +54,20 @@ internal class Chromia0ExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
-        private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
+        private val imageName = DockerImageName.parse("chromaway/postchain-enterprise0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
-        private const val resourceFolder = "chromia0-example"
+        private const val resourceFolder = "enterprise0-example"
         private val network: Network = Network.newNetwork()
 
         @Container
         private val postgres = ChromaWayPostgresContainer()
                 .withNetwork(network)
 
-        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node1/node-config.properties")!!))
+        private val node1 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/enterprise0-example/node1/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node1")
                 .withClasspathResourceMapping("$resourceFolder/node1", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
-                .withClasspathResourceMapping("chain_zero/run-chromia0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("chain_zero/run-enterprise0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("NODE_HOST", "node1")
@@ -65,11 +76,11 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node1Logger)
 
-        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node2/node-config.properties")!!))
+        private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/enterprise0-example/node2/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node2")
                 .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
-                .withClasspathResourceMapping("chain_zero/run-chromia0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("chain_zero/run-enterprise0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("NODE_PUBKEY", "02B99A05912B01B7797D84D6660E9ED35FAEE078BD5BDF40026E0CC6E0CB2EF50C")
                 .withEnv("NODE_HOST", "node2")
@@ -81,11 +92,11 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
+        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/enterprise0-example/node3/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
-                .withClasspathResourceMapping("chain_zero/run-chromia0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("chain_zero/run-enterprise0.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("NODE_PUBKEY", "02839DDE1D2121CE72794E54180F5F5C3AD23543D419CB4C3640A854ACB1ADA9E6")
                 .withEnv("NODE_HOST", "node3")
@@ -100,6 +111,9 @@ internal class Chromia0ExampleIT {
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
         private lateinit var node3Db: ChainDatabaseCommunicator
+
+        // Here, adminPubKey is the same as we have in "initial_provider" module arg
+        private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
         @JvmStatic
         @BeforeAll
@@ -130,71 +144,64 @@ internal class Chromia0ExampleIT {
 
     @Test
     @Order(2)
-    fun `Make admin a provider for the network`() {
-        println("Registering provider")
-        node1.tx(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
-
-        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
-        println("Enabling provider")
-        node1.tx(0, "enable_provider", provider)
-        node1.client(0).querySync("get_provider_data", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).asDict().let {
-            assert(it["active"]!!.asBoolean(),
-                    name = "Provider is activated")
-                    .isTrue()
-        }
+    fun `Initialize network with provider 1`() {
+        node1.tx(0, "init")
+        assert(node1.client(0).querySync("get_all_providers").asArray().size).isEqualTo(1)
     }
 
     @Test
     @Order(3)
-    fun `Add node to the network`() {
-        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
+    fun `Add node 1 to its own network`() {
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
 
         println("Adding node 1 to its own network")
         node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
-        assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).asBoolean()).isTrue()
-        val nodeGtv = node1.client(0).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray())))
+        assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
+        val nodeGtv = node1.client(0).query("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
         assert(nodeGtv.asDict()["active"]!!.asInteger()).isEqualTo(1L)
     }
 
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        node1.addChain0()
-        assert(node1.client(0).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(1)
+        val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+        node1.proposeChain0(provider)
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0))).asArray().first()
+        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
+
+        assert(node1.client(0).querySync("get_all_blockchains").asArray().size).isEqualTo(1)
     }
 
     @Test
     @Order(5)
     fun `Make node 2 and 3 signers of c0`() {
         println("Adding nodes 2 and 3 to node 1")
-        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
+        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
         node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
         node1Db.awaitNewBlock()
         node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
-            assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).asBoolean(),
+            assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).get().asBoolean(),
                     name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
             ).isTrue()
         }
-
-        println("Adding node 2 and 3 as signers of c0")
-        node1.client(0).also { client ->
-            val newSignerNodes = listOf(node2, node3).map { node ->
-                client.querySync("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray())))
-            }
-            val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
-            node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
-            // Adding signers will update the blockchain configuration after 5 blocks
-            val heightWithSigners = node1Db.getHeight() + 5
-            runAsync(node1Db, node2Db, node3Db) {
-                it.awaitBlockHeight(heightWithSigners)
-            }
-            assert(client.getBlockChainSigners(c0).size).isEqualTo(3)
-            assert(node2.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
-            assert(node3.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
+        val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
+        val newSignerNodes = listOf(node2, node3).map { node ->
+            node1.client(0).query("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray()))).get()
         }
+        node1.tx(0, "propose_add_blockchain_signers", provider, c0, gtv(newSignerNodes))
+        val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first()
+        node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
+        // Adding signers will update the blockchain configuration after 5 blocks
+        val heightWithSigners = node1Db.getHeight() + 5
+        runAsync(node1Db, node2Db, node3Db) {
+            it.awaitBlockHeight(heightWithSigners)
+        }
+        assert(node1.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
+        assert(node2.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
+        assert(node3.client(0).getBlockChainSigners(c0).size).isEqualTo(3)
     }
 
     @Nested
@@ -226,11 +233,14 @@ internal class Chromia0ExampleIT {
                 }
             }
 
+            val provider = node2.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
             rellConfig.config.chains.forEach { chain ->
                 println("Adding test dapp ${chain.iid}")
                 chain.configs.forEach { (height, chainHeightConfig) ->
                     println("On height $height")
-                    val txId = node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
+                    node2.tx(0, "propose_blockchain", provider, gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
+                    val addChain0Proposal = node2.client(0).querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first()
+                    val txId = node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
                     dappToBrid[chain.iid] = node2.client(0)
                             .querySync("get_added_blockchain_rid", gtv("tx_rid" to gtv(txId.data)))
                             .asByteArray()
@@ -247,21 +257,22 @@ internal class Chromia0ExampleIT {
         }
 
         @Test
-        @Order(6)
+        @Order(1)
         fun `Dapp is deployed`() {
             listOf(node1, node2, node3).forEach { node ->
-                assert(node.client(0).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(2)
+                assert(node.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
             }
         }
 
         @Test
-        @Order(7)
+        @Order(2)
         fun `Transactions can be sent to newly deployed dapp`() {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
             node2.tx(dappToBrid[dappId]!!, "add_city", gtv(testCity))
+            node2DappDb.awaitNewBlock()
             listOf(node1, node2, node3).forEach { node ->
-                assert(node.client(dappToBrid[dappId]!!).querySync("get_cities", gtv(mapOf())).asArray().map { it.asString() })
+                assert(node.client(dappToBrid[dappId]!!).query("get_cities", gtv(mapOf())).get().asArray().map { it.asString() })
                         .containsExactly(testCity)
             }
         }
@@ -279,14 +290,15 @@ internal class Chromia0ExampleIT {
 }
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
-    return querySync("get_blockchain_signers", gtv("blockchain" to blockChain)).asArray()
+    return query("get_blockchain_signers", gtv("blockchain" to blockChain)).get().asArray()
 }
 
-fun PostchainContainer.addChain0() { // This has to be done inside the container if we want to be able to use this container in production.
+
+fun PostchainContainer.proposeChain0(provider: Gtv) { // This has to be done inside the container if we want to be able to use this container in production.
     val dir = Files.createTempDirectory("")
     val tmpPath = dir.toAbsolutePath().toString() + "0.gtv"
     copyFileFromContainer("${envMap["RELL_OUT"] ?: "${PostchainContainer.RELL_PATH}/out"}/blockchains/0/0.gtv", tmpPath)
 
-    val nodeGtv = client(0).querySync("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray())))
-    tx(0, "add_blockchain", gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
+    val nodeGtv = client(0).query("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray()))).get()
+    tx(0, "propose_blockchain", provider, gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
 }
