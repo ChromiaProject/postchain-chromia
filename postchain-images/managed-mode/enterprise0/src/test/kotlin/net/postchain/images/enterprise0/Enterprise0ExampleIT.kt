@@ -192,7 +192,6 @@ internal class Enterprise0ExampleIT {
             node1.client(0).query("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray()))).get()
         }
         node1.tx(0, "propose_add_blockchain_signers", provider, c0, gtv(newSignerNodes))
-        node1.tx(0, "propose_add_blockchain_signers", provider, c0, gtv(newSignerNodes)) // Apparently you have to run this twice because otherwise they are stuck in a "pending"-state and the proposal is not created.
         val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first()
         node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
         // Adding signers will update the blockchain configuration after 5 blocks
