@@ -11,8 +11,10 @@ import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
+import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.dapp.*
+import net.postchain.dapp.PostchainContainer.Companion.MOUNTABLE_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -29,6 +31,8 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.io.File
+import java.net.URI
+import java.net.URL
 import java.nio.file.Files
 
 @Testcontainers
@@ -38,11 +42,6 @@ internal class Chromia0ExampleIT {
 
     companion object {
         private val logger = KotlinLogging.logger {}
-
-        // Path that is OK to use on your local machine, so host machine can mount subnode config
-        private val MOUNTABLE_DIR = System.getenv("TEST_MOUNT_DIRECTORY") ?: "/tmp/chromaway/postchain"
-        // Install location of docker socket
-        private val DOCKER_SOCKET = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
@@ -86,7 +85,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
+        private val node3 = PostchainContainer(imageName, setupMasterNodeConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -101,9 +100,20 @@ internal class Chromia0ExampleIT {
                 .withEnv("RELL_OUT", "${MOUNTABLE_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
                 .withFixedExposedPort(9874, 9874)
-                .withFileSystemBind(DOCKER_SOCKET, DOCKER_SOCKET)
-                .withFileSystemBind(MOUNTABLE_DIR, MOUNTABLE_DIR)
+                .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
+
+        private fun setupMasterNodeConfig(resource: URL): AppConfig {
+            return if (System.getenv("DOCKER_HOST") != null) {
+                val configOverrides = mapOf(
+                    "containerChains.masterHost" to System.getenv("POSTCHAIN_TEST_MASTER_HOST"),
+                    "containerChains.slaveHost" to URI(System.getenv("DOCKER_HOST")).host,
+                )
+                parseConfig(resource, configOverrides)
+            } else {
+                parseConfig(resource)
+            }
+        }
 
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
