@@ -39,6 +39,11 @@ internal class Chromia0ExampleIT {
     companion object {
         private val logger = KotlinLogging.logger {}
 
+        // Path that is OK to use on your local machine, so host machine can mount subnode config
+        private val MOUNTABLE_DIR = System.getenv("TEST_MOUNT_DIRECTORY") ?: "/tmp/chromaway/postchain"
+        // Install location of docker socket
+        private val DOCKER_SOCKET = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
+
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
@@ -93,8 +98,11 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
+                .withEnv("RELL_OUT", "${MOUNTABLE_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withFixedExposedPort(9874, 9874)
+                .withFileSystemBind(DOCKER_SOCKET, DOCKER_SOCKET)
+                .withFileSystemBind(MOUNTABLE_DIR, MOUNTABLE_DIR)
                 .withLogConsumer(node3Logger)
 
         private lateinit var node1Db: ChainDatabaseCommunicator

@@ -18,6 +18,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.postchain.images</groupId>
+            <artifactId>subnode</artifactId>
+            <scope>tests</scope>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>chromia0</artifactId>
             <version>${project.version}</version>
