@@ -5,6 +5,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
+import com.spotify.docker.client.DockerClient
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -12,6 +13,7 @@ import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.MOUNTABLE_DIR
@@ -34,7 +36,13 @@ import java.io.File
 import java.net.URI
 import java.net.URL
 import java.nio.file.Files
+import kotlin.test.assertEquals
 
+/**
+ * NOTE:
+ * node1 & node2 runs regular managed mode
+ * node3 runs as a master node
+ */
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
@@ -97,7 +105,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${MOUNTABLE_DIR}/chain0-generated")
+                .withEnv("RELL_OUT", "${getMasterNodeOutputDir()}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
                 .withFixedExposedPort(9874, 9874)
                 .withMasterDockerConfig()
@@ -108,6 +116,7 @@ internal class Chromia0ExampleIT {
                 val configOverrides = mapOf(
                     "containerChains.masterHost" to System.getenv("POSTCHAIN_TEST_MASTER_HOST"),
                     "containerChains.slaveHost" to URI(System.getenv("DOCKER_HOST")).host,
+                    "config.dir" to getMasterNodeOutputDir()
                 )
                 parseConfig(resource, configOverrides)
             } else {
@@ -115,14 +124,25 @@ internal class Chromia0ExampleIT {
             }
         }
 
+        private fun getMasterNodeOutputDir(): String {
+            return if (System.getenv("DOCKER_HOST") == null) {
+                MOUNTABLE_DIR
+            } else {
+                POSTCHAIN_PATH
+            }
+        }
+
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
         private lateinit var node3Db: ChainDatabaseCommunicator
+
+        private val dockerClient: DockerClient = DockerClientFactory.create()
 
         @JvmStatic
         @BeforeAll
         fun setup() {
             println("Starting nodes...")
+            removeSubnodeContainers()
             startContainers(node1, node2, node3)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
             node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
@@ -134,6 +154,17 @@ internal class Chromia0ExampleIT {
         @AfterAll
         fun breakdown() {
             stopContainers(node1, node2, node3)
+            removeSubnodeContainers()
+        }
+
+        fun removeSubnodeContainers() {
+            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+            all.forEach {
+                if (it.image().contains(Regex("postchain-subnode"))) {
+                    dockerClient.stopContainer(it.id(), 0)
+                    dockerClient.removeContainer(it.id())
+                }
+            }
         }
     }
 
@@ -274,6 +305,13 @@ internal class Chromia0ExampleIT {
 
         @Test
         @Order(7)
+        fun `Subnode container has been launched`() {
+            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+            assertEquals(1, all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size)
+        }
+
+        @Test
+        @Order(8)
         fun `Transactions can be sent to newly deployed dapp`() {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
