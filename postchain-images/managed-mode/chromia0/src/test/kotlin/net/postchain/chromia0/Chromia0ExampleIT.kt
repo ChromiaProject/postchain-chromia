@@ -105,7 +105,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${getMasterNodeOutputDir()}/chain0-generated")
+                .withEnv("RELL_OUT", "${MOUNTABLE_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
                 .withFixedExposedPort(9874, 9874)
                 .withMasterDockerConfig()
@@ -116,19 +116,11 @@ internal class Chromia0ExampleIT {
                 val configOverrides = mapOf(
                     "containerChains.masterHost" to System.getenv("POSTCHAIN_TEST_MASTER_HOST"),
                     "containerChains.slaveHost" to URI(System.getenv("DOCKER_HOST")).host,
-                    "config.dir" to getMasterNodeOutputDir()
+                    "config.dir" to MOUNTABLE_DIR
                 )
                 parseConfig(resource, configOverrides)
             } else {
                 parseConfig(resource)
-            }
-        }
-
-        private fun getMasterNodeOutputDir(): String {
-            return if (System.getenv("DOCKER_HOST") == null) {
-                MOUNTABLE_DIR
-            } else {
-                POSTCHAIN_PATH
             }
         }
 
