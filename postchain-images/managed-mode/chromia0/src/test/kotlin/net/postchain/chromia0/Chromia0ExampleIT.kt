@@ -107,7 +107,6 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${CONTAINER_MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withEnv("DOCKER_HOST", System.getenv("DOCKER_HOST"))
                 .withFixedExposedPort(9874, 9874)
                 .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
