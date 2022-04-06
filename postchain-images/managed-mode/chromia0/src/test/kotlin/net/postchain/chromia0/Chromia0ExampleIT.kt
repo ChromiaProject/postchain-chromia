@@ -33,6 +33,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.io.File
+import java.net.InetAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Files
@@ -55,6 +56,7 @@ internal class Chromia0ExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
+        private val resolvedDockerHost = getResolvedDockerHost()
         private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "chromia0-example"
@@ -107,6 +109,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${CONTAINER_MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DOCKER_HOST", resolvedDockerHost)
                 .withFixedExposedPort(9874, 9874)
                 .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
@@ -114,13 +117,23 @@ internal class Chromia0ExampleIT {
         private fun setupMasterNodeConfig(resource: URL): AppConfig {
             return if (System.getenv("DOCKER_HOST") != null) {
                 val configOverrides = mapOf(
-                    "containerChains.masterHost" to System.getenv("POSTCHAIN_TEST_MASTER_HOST"),
-                    "containerChains.slaveHost" to URI(System.getenv("DOCKER_HOST")).host,
+                    "containerChains.masterHost" to resolvedDockerHost,
+                    "containerChains.slaveHost" to resolvedDockerHost,
                     "config.dir" to CONTAINER_MOUNT_DIR
                 )
                 parseConfig(resource, configOverrides)
             } else {
                 parseConfig(resource)
+            }
+        }
+
+        private fun getResolvedDockerHost(): String? {
+            return if (System.getenv("DOCKER_HOST") != null) {
+                val dockerUri = URI(System.getenv("DOCKER_HOST"))
+                // Pass docker host to master container with hostname resolved
+                "${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}"
+            } else {
+                null
             }
         }
 
