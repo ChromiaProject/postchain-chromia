@@ -297,7 +297,7 @@ internal class Chromia0ExampleIT {
                 it.awaitBlockHeight(heightWithDappDeployed)
             }
             node2DappDb = postgres.createChainDatabaseCommunicator(dappId, node2.appConfig.databaseSchema)
-                    .apply { awaitBlockHeight(0) }
+                    .apply { awaitBlockHeight(0, action = ::printSubnodeLogs) }
         }
 
         @Test
@@ -335,6 +335,19 @@ internal class Chromia0ExampleIT {
                     launch { action(it) }
                 }
             }
+        }
+    }
+
+    private fun printSubnodeLogs() {
+        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        val subnodeContainer = all.find { it.image().contains("postchain-subnode") && it.state() == "running" }
+        if (subnodeContainer != null) {
+            println("------------------------- CONTAINER LOGS ---------------------")
+            println()
+            println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.tail(50))
+                    .readFully())
+            println()
+            println("------------------------- END OF CONTAINER LOGS --------------")
         }
     }
 }
