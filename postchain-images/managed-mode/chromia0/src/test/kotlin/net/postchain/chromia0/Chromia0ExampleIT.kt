@@ -344,7 +344,7 @@ internal class Chromia0ExampleIT {
         if (subnodeContainer != null) {
             println("------------------------- CONTAINER LOGS ---------------------")
             println()
-            println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.tail(50))
+            println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(50))
                     .readFully())
             println()
             println("------------------------- END OF CONTAINER LOGS --------------")
