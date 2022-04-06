@@ -109,7 +109,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${CONTAINER_MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withEnv("DOCKER_HOST", resolvedDockerHost)
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .withFixedExposedPort(9874, 9874)
                 .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
@@ -117,8 +117,8 @@ internal class Chromia0ExampleIT {
         private fun setupMasterNodeConfig(resource: URL): AppConfig {
             return if (System.getenv("DOCKER_HOST") != null) {
                 val configOverrides = mapOf(
-                    "containerChains.masterHost" to resolvedDockerHost,
-                    "containerChains.slaveHost" to resolvedDockerHost,
+                    "containerChains.masterHost" to resolvedDockerHost?.host,
+                    "containerChains.slaveHost" to resolvedDockerHost?.host,
                     "config.dir" to CONTAINER_MOUNT_DIR
                 )
                 parseConfig(resource, configOverrides)
@@ -127,11 +127,11 @@ internal class Chromia0ExampleIT {
             }
         }
 
-        private fun getResolvedDockerHost(): String? {
+        private fun getResolvedDockerHost(): URI? {
             return if (System.getenv("DOCKER_HOST") != null) {
                 val dockerUri = URI(System.getenv("DOCKER_HOST"))
                 // Pass docker host to master container with hostname resolved
-                "${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}"
+                URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
             } else {
                 null
             }
@@ -165,7 +165,7 @@ internal class Chromia0ExampleIT {
         fun removeSubnodeContainers() {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             all.forEach {
-                if (it.image().contains(Regex("postchain-subnode"))) {
+                if (it.image().contains("postchain-subnode")) {
                     dockerClient.stopContainer(it.id(), 0)
                     dockerClient.removeContainer(it.id())
                 }
