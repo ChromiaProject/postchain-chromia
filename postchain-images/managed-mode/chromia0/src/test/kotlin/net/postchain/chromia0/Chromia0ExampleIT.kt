@@ -340,7 +340,7 @@ internal class Chromia0ExampleIT {
 
     private fun printSubnodeLogs() {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        val subnodeContainer = all.find { it.image().contains("postchain-subnode") && it.state() == "running" }
+        val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
         if (subnodeContainer != null) {
             println("------------------------- CONTAINER LOGS ---------------------")
             println()
@@ -348,6 +348,8 @@ internal class Chromia0ExampleIT {
                     .readFully())
             println()
             println("------------------------- END OF CONTAINER LOGS --------------")
+        } else {
+            println("No subcontainer is launched")
         }
     }
 }
