@@ -16,7 +16,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.dapp.*
-import net.postchain.dapp.PostchainContainer.Companion.CONTAINER_MOUNT_DIR
+import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -107,7 +107,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${CONTAINER_MOUNT_DIR}/chain0-generated")
+                .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
                 .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .withFixedExposedPort(9874, 9874)
@@ -119,7 +119,7 @@ internal class Chromia0ExampleIT {
                 val configOverrides = mapOf(
                     "containerChains.masterHost" to resolvedDockerHost?.host,
                     "containerChains.slaveHost" to resolvedDockerHost?.host,
-                    "configDir" to CONTAINER_MOUNT_DIR
+                    "configDir" to MOUNT_DIR
                 )
                 parseConfig(resource, configOverrides)
             } else {
