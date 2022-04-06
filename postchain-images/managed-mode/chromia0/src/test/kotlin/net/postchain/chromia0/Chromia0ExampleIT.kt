@@ -119,7 +119,7 @@ internal class Chromia0ExampleIT {
                 val configOverrides = mapOf(
                     "containerChains.masterHost" to resolvedDockerHost?.host,
                     "containerChains.slaveHost" to resolvedDockerHost?.host,
-                    "config.dir" to CONTAINER_MOUNT_DIR
+                    "configDir" to CONTAINER_MOUNT_DIR
                 )
                 parseConfig(resource, configOverrides)
             } else {
