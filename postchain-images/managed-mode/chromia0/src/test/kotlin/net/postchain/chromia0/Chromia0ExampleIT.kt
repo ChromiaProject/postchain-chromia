@@ -297,7 +297,7 @@ internal class Chromia0ExampleIT {
                 it.awaitBlockHeight(heightWithDappDeployed)
             }
             node2DappDb = postgres.createChainDatabaseCommunicator(dappId, node2.appConfig.databaseSchema)
-                    .apply { awaitBlockHeight(0, action = ::printSubnodeLogs) }
+                    .apply { awaitBlockHeight(0) }
         }
 
         @Test
