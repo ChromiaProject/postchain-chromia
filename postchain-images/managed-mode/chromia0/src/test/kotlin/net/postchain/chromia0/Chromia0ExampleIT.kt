@@ -162,7 +162,7 @@ internal class Chromia0ExampleIT {
             removeSubnodeContainers()
         }
 
-        fun removeSubnodeContainers() {
+        private fun removeSubnodeContainers() {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             all.forEach {
                 if (it.image().contains("postchain-subnode")) {
@@ -338,6 +338,7 @@ internal class Chromia0ExampleIT {
         }
     }
 
+    // Keeping this for future debugging purposes
     private fun printSubnodeLogs() {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
