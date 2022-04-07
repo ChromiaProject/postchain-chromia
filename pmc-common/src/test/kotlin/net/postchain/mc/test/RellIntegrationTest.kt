@@ -117,7 +117,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         }
 
         val systemSetup = SystemSetupFactory.buildSystemSetup(blockchainSetups)
-        systemSetup.nodeConfProvider = "legacy" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
+        systemSetup.nodeConfProvider = "net.postchain.devtools.utils.configuration.TestNodeConfigurationProvider" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
         systemSetup.confInfrastructure = "net.postchain.managed.ManagedEBFTInfrastructureFactory"
         systemSetup.chainConfProvider = "managed"
         systemSetup.needRestApi = true
