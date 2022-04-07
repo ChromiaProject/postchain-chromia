@@ -5,14 +5,18 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
+import com.spotify.docker.client.DockerClient
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
+import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.dapp.*
+import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -29,8 +33,16 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.io.File
+import java.net.InetAddress
+import java.net.URI
+import java.net.URL
 import java.nio.file.Files
 
+/**
+ * NOTE:
+ * node1 & node2 runs regular managed mode
+ * node3 runs as a master node
+ */
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
@@ -43,6 +55,7 @@ internal class Chromia0ExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
+        private val resolvedDockerHost = getResolvedDockerHost()
         private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "chromia0-example"
@@ -81,7 +94,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
+        private val node3 = PostchainContainer(imageName, setupMasterNodeConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!, resolvedDockerHost))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -93,18 +106,24 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
+                .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
 
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
         private lateinit var node3Db: ChainDatabaseCommunicator
 
+        private val dockerClient: DockerClient = DockerClientFactory.create()
+
         @JvmStatic
         @BeforeAll
         fun setup() {
             println("Starting nodes...")
+            removeSubnodeContainers()
             startContainers(node1, node2, node3)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
             node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
@@ -116,6 +135,16 @@ internal class Chromia0ExampleIT {
         @AfterAll
         fun breakdown() {
             stopContainers(node1, node2, node3)
+            removeSubnodeContainers()
+        }
+
+        private fun removeSubnodeContainers() {
+            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
+                if (it.image().contains("postchain-subnode")) {
+                    dockerClient.stopContainer(it.id(), 0)
+                    dockerClient.removeContainer(it.id())
+                }
+            }
         }
     }
 
@@ -256,6 +285,13 @@ internal class Chromia0ExampleIT {
 
         @Test
         @Order(7)
+        fun `Subnode container has been launched`() {
+            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+            assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
+        }
+
+        @Test
+        @Order(8)
         fun `Transactions can be sent to newly deployed dapp`() {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
@@ -276,6 +312,22 @@ internal class Chromia0ExampleIT {
             }
         }
     }
+
+    // Keeping this for future debugging purposes
+    private fun printSubnodeLogs() {
+        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
+        if (subnodeContainer != null) {
+            println("------------------------- CONTAINER LOGS ---------------------")
+            println()
+            println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(50))
+                    .readFully())
+            println()
+            println("------------------------- END OF CONTAINER LOGS --------------")
+        } else {
+            println("No subcontainer is launched")
+        }
+    }
 }
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
@@ -289,4 +341,27 @@ fun PostchainContainer.addChain0() { // This has to be done inside the container
 
     val nodeGtv = client(0).querySync("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray())))
     tx(0, "add_blockchain", gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
+}
+
+fun setupMasterNodeConfig(resource: URL, resolvedDockerHost: URI?): AppConfig {
+    return if (resolvedDockerHost != null) {
+        val configOverrides = mapOf(
+                "containerChains.masterHost" to resolvedDockerHost.host,
+                "containerChains.slaveHost" to resolvedDockerHost.host,
+                "configDir" to MOUNT_DIR
+        )
+        parseConfig(resource, configOverrides)
+    } else {
+        parseConfig(resource)
+    }
+}
+
+fun getResolvedDockerHost(): URI? {
+    return if (System.getenv("DOCKER_HOST") != null) {
+        val dockerUri = URI(System.getenv("DOCKER_HOST"))
+        // Pass docker host to master container with hostname resolved
+        URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
+    } else {
+        null
+    }
 }
