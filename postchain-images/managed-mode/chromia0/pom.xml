@@ -21,6 +21,7 @@
             <groupId>net.postchain.images</groupId>
             <artifactId>subnode</artifactId>
             <scope>tests</scope>
+            <type>pom</type>
             <version>${project.version}</version>
         </dependency>
         <dependency>

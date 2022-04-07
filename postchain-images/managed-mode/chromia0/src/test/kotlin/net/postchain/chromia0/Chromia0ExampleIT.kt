@@ -37,7 +37,6 @@ import java.net.InetAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Files
-import kotlin.test.assertEquals
 
 /**
  * NOTE:
@@ -95,7 +94,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, setupMasterNodeConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
+        private val node3 = PostchainContainer(imageName, setupMasterNodeConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!, resolvedDockerHost))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -110,32 +109,9 @@ internal class Chromia0ExampleIT {
                 .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
                 .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874)
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
                 .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
-
-        private fun setupMasterNodeConfig(resource: URL): AppConfig {
-            return if (System.getenv("DOCKER_HOST") != null) {
-                val configOverrides = mapOf(
-                    "containerChains.masterHost" to resolvedDockerHost?.host,
-                    "containerChains.slaveHost" to resolvedDockerHost?.host,
-                    "configDir" to MOUNT_DIR
-                )
-                parseConfig(resource, configOverrides)
-            } else {
-                parseConfig(resource)
-            }
-        }
-
-        private fun getResolvedDockerHost(): URI? {
-            return if (System.getenv("DOCKER_HOST") != null) {
-                val dockerUri = URI(System.getenv("DOCKER_HOST"))
-                // Pass docker host to master container with hostname resolved
-                URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
-            } else {
-                null
-            }
-        }
 
         private lateinit var node1Db: ChainDatabaseCommunicator
         private lateinit var node2Db: ChainDatabaseCommunicator
@@ -163,8 +139,7 @@ internal class Chromia0ExampleIT {
         }
 
         private fun removeSubnodeContainers() {
-            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            all.forEach {
+            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
                 if (it.image().contains("postchain-subnode")) {
                     dockerClient.stopContainer(it.id(), 0)
                     dockerClient.removeContainer(it.id())
@@ -312,7 +287,7 @@ internal class Chromia0ExampleIT {
         @Order(7)
         fun `Subnode container has been launched`() {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            assertEquals(1, all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size)
+            assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
         }
 
         @Test
@@ -366,4 +341,27 @@ fun PostchainContainer.addChain0() { // This has to be done inside the container
 
     val nodeGtv = client(0).querySync("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray())))
     tx(0, "add_blockchain", gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
+}
+
+fun setupMasterNodeConfig(resource: URL, resolvedDockerHost: URI?): AppConfig {
+    return if (resolvedDockerHost != null) {
+        val configOverrides = mapOf(
+                "containerChains.masterHost" to resolvedDockerHost.host,
+                "containerChains.slaveHost" to resolvedDockerHost.host,
+                "configDir" to MOUNT_DIR
+        )
+        parseConfig(resource, configOverrides)
+    } else {
+        parseConfig(resource)
+    }
+}
+
+fun getResolvedDockerHost(): URI? {
+    return if (System.getenv("DOCKER_HOST") != null) {
+        val dockerUri = URI(System.getenv("DOCKER_HOST"))
+        // Pass docker host to master container with hostname resolved
+        URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
+    } else {
+        null
+    }
 }
