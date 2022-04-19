@@ -1,8 +1,8 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.SigMaker
+import net.postchain.crypto.SECP256K1CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid

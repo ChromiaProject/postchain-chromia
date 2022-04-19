@@ -131,7 +131,6 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
         configData: BaseBlockchainConfigurationData,
-        val blockchainConfiguration: BlockchainConfiguration,
         blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
