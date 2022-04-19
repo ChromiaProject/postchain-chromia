@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.io.File
+import java.nio.file.Paths
 import kotlin.test.*
 
 */
@@ -62,8 +64,10 @@ class Chromia0Test() : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
+        val resourceDirectory = Paths.get("target", "chromia0", "rell")
+
         // start node and add the provider
-        blockchain0ConfigGtv = run("chroma0")
+        blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
         doAndBuildBlocks(clientConfig, adminExecutor.registerProviderInternal(provConfig.pubKey))
         doAndBuildBlocks(clientConfig, adminExecutor.enableProviderInternal(provConfig.pubKey))
     }
@@ -478,11 +482,8 @@ class Chromia0Test() : ManagedModeTest() {
     fun testGetProviderInfoErrorReporting() {
         addNode0(provConfig)
         val wrongProviderPublicKey = "03962AB49BC8D056C56A405DEFDA2448DE3A6AF65E6EA84019EE551A3526D0ADB1"
-        try {
-            val data = provExecutor.getProviderInfo(wrongProviderPublicKey).asDict()
-            fail("Fail test for get provider error reporting")
-        } catch (e: CliError.Companion.CliException) {
-            assert(e.message).contains("Can not make query_gtx api call")
+        assertThrows<CliError.Companion.CliException>("Query 'get_provider_data' failed: No records found") {
+            provExecutor.getProviderInfo(wrongProviderPublicKey)
         }
     }
 
@@ -490,11 +491,8 @@ class Chromia0Test() : ManagedModeTest() {
     fun testGetNodeInfoErrorReporting() {
         addNode0(provConfig)
         val wrongNode = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f58"
-        try {
-            provExecutor.getNodeInfo(wrongNode).asDict()
-            fail("Fail test for get node info error reporting")
-        } catch (e: CliError.Companion.CliException) {
-            assert(e.message).contains("Can not make query_gtx api call")
+        assertThrows<CliError.Companion.CliException>("Query 'get_node_data' failed: No records found") {
+            provExecutor.getNodeInfo(wrongNode)
         }
     }
 

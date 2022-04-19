@@ -17,7 +17,6 @@ import net.postchain.rell.model.R_LangVersion
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
-import java.nio.file.Paths
 import java.util.concurrent.LinkedBlockingQueue
 
 abstract class RellIntegrationTest : IntegrationTestSetup() {
@@ -35,6 +34,12 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
                 ${chainConfSnippet()}
             </run>
         """.trimIndent()
+    }
+
+    protected fun runXmlFile(): File {
+        return File.createTempFile("run", ".xml").apply {
+            bufferedWriter().use { out -> out.write(runXml()) }
+        }
     }
 
     /**
@@ -77,21 +82,9 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
     }
 
     /**
-     * Create a node running the rell module in rellModuleDir, which is
-     * relative to the folder ./target dir
+     * Create a node running the rell source in rellSourceDir
      */
-    protected fun run(rellModuleDir: String): Gtv {
-        // Create blockchain config file
-        val resourceDirectory = Paths.get("target", rellModuleDir, "rell")
-        val rellSourceDir = resourceDirectory.toFile()
-
-        val tempRunXml = File.createTempFile("run", ".xml")
-        tempRunXml.bufferedWriter().use { out -> out.write(runXml()) }
-
-        return run(tempRunXml, rellSourceDir)
-    }
-
-    private fun run(runConfigFile: File, rellSourceDir: File): Gtv {
+    protected fun run(runConfigFile: File, rellSourceDir: File): Gtv {
         val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.8"), false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
@@ -122,7 +115,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
         }
 
         val systemSetup = SystemSetupFactory.buildSystemSetup(blockchainSetups)
-        systemSetup.nodeConfProvider = "legacy" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
+        systemSetup.nodeConfProvider = "net.postchain.devtools.utils.configuration.TestNodeConfigurationProvider" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
         systemSetup.confInfrastructure = "net.postchain.managed.ManagedEBFTInfrastructureFactory"
         systemSetup.chainConfProvider = "managed"
         systemSetup.needRestApi = true
@@ -136,7 +129,6 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
         configData: BaseBlockchainConfigurationData,
-        val blockchainConfiguration: BlockchainConfiguration,
         blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
