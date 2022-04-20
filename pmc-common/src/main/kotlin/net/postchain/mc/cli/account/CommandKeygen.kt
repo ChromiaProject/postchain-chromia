@@ -2,8 +2,8 @@ package net.postchain.mc.cli.account
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.secp256k1_derivePubKey
+import net.postchain.crypto.SECP256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
