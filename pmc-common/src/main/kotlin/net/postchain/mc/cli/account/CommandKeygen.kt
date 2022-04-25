@@ -2,9 +2,9 @@ package net.postchain.mc.cli.account
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.crypto.SECP256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.base.CliResult
 import net.postchain.mc.cli.base.Command
@@ -47,7 +47,7 @@ class CommandKeygen: Command {
         var mnemonic: String
         val mnemonicInstance = MnemonicCode.INSTANCE
         if (wordList.isEmpty()) {
-            val cs = SECP256K1CryptoSystem()
+            val cs = Secp256K1CryptoSystem()
             privKey = cs.getRandomBytes(32)
             mnemonic = mnemonicInstance.toMnemonic(privKey).joinToString(" ")
         } else {

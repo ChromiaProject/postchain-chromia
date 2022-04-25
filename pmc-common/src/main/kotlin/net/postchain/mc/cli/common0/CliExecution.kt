@@ -1,13 +1,13 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.crypto.SECP256K1CryptoSystem
-import net.postchain.crypto.SigMaker
 import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -22,7 +22,7 @@ open class CliExecution(val config: ClientConfig) {
 
     companion object : KLogging()
 
-    protected val cryptoSystem = SECP256K1CryptoSystem()
+    protected val cryptoSystem = Secp256K1CryptoSystem()
 
     protected fun getPostchainClient(): PostchainClient {
         if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {

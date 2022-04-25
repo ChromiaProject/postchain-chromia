@@ -1,7 +1,8 @@
 package net.postchain.mc.test
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
@@ -128,7 +129,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
-        configData: BaseBlockchainConfigurationData,
+        configData: BaseBlockBuildingStrategyConfigurationData,
         blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
