@@ -1,7 +1,8 @@
 package net.postchain.mc.test
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
@@ -17,7 +18,6 @@ import net.postchain.rell.model.R_LangVersion
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
-import java.nio.file.Paths
 import java.util.concurrent.LinkedBlockingQueue
 
 
@@ -130,7 +130,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
-        configData: BaseBlockchainConfigurationData,
+        configData: BaseBlockBuildingStrategyConfigurationData,
         blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
