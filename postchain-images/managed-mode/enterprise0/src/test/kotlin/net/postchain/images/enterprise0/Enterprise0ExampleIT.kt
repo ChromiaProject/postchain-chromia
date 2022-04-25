@@ -12,7 +12,7 @@ import mu.KotlinLogging
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.dapp.adminPubKey
