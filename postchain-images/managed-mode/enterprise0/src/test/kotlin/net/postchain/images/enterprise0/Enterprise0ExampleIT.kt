@@ -13,12 +13,8 @@ import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.dapp.PostchainContainer
+import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
-import net.postchain.dapp.adminPubKey
-import net.postchain.dapp.parseConfig
-import net.postchain.dapp.startContainers
-import net.postchain.dapp.stopContainers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -74,6 +70,8 @@ internal class Enterprise0ExampleIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("POSTCHAIN_CLIENT_PRIVKEY", adminPrivKey) // Sign transactions via postchain-client with this key
+                .withEnv("POSTCHAIN_CLIENT_PUBKEY", adminPubKey)   // Could also be added to properties file of this node
                 .withLogConsumer(node1Logger)
 
         private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/enterprise0-example/node2/node-config.properties")!!))
@@ -167,6 +165,7 @@ internal class Enterprise0ExampleIT {
     fun `Make chain0 aware of itself`() {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
         node1.proposeChain0(provider)
+        node1Db.awaitNewBlock()
         val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0))).asArray().first()
         node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
 
@@ -260,7 +259,7 @@ internal class Enterprise0ExampleIT {
         @Order(1)
         fun `Dapp is deployed`() {
             listOf(node1, node2, node3).forEach { node ->
-                assert(node.client(0).query("get_all_blockchains", gtv(mapOf())).get().asArray().size).isEqualTo(2)
+                assert(node.client(0).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(2)
             }
         }
 
@@ -290,15 +289,11 @@ internal class Enterprise0ExampleIT {
 }
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
-    return query("get_blockchain_signers", gtv("blockchain" to blockChain)).get().asArray()
+    return querySync("get_blockchain_signers", gtv("blockchain" to blockChain)).asArray()
 }
 
 
-fun PostchainContainer.proposeChain0(provider: Gtv) { // This has to be done inside the container if we want to be able to use this container in production.
-    val dir = Files.createTempDirectory("")
-    val tmpPath = dir.toAbsolutePath().toString() + "0.gtv"
-    copyFileFromContainer("${envMap["RELL_OUT"] ?: "${PostchainContainer.RELL_PATH}/out"}/blockchains/0/0.gtv", tmpPath)
-
+fun PostchainContainer.proposeChain0(provider: Gtv) {
     val nodeGtv = client(0).query("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray()))).get()
-    tx(0, "propose_blockchain", provider, gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
+    execInContainer("sh", "propose_blockchain.sh", provider.asInteger().toString(), nodeGtv.asInteger().toString())
 }
