@@ -3,8 +3,8 @@ package net.postchain.mc.cli.common0
 import mu.KLogging
 import net.postchain.crypto.SigMaker
 import net.postchain.client.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus
 import net.postchain.core.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem

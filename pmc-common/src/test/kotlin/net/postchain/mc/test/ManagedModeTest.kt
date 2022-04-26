@@ -3,11 +3,11 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
-import net.postchain.core.BlockchainRid
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
@@ -18,7 +18,6 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
-import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
