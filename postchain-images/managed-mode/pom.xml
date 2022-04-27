@@ -73,7 +73,7 @@
                         <configuration>
                             <classifier>dist</classifier>
                             <includeArtifactIds>postchain-client</includeArtifactIds>
-                            <outputDirectory>${pom.build.directory}/client</outputDirectory>
+                            <outputDirectory>${project.build.directory}/client</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
