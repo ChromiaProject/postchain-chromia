@@ -165,8 +165,7 @@ internal class Enterprise0ExampleIT {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
         val nodeGtv = node1.client(0).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
         val res = node1.execInContainer("sh", "propose_blockchain.sh", provider.asInteger().toString(), nodeGtv.asInteger().toString())
-        consoleLogger.info { res.stdout + if (res.exitCode != 0) res.stderr else "" }
-        consoleLogger.info { res.stderr }
+        consoleLogger.info { if (res.exitCode != 0) res.stderr else res.stdout }
         node1Db.awaitNewBlock()
         val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0))).asArray().first()
         node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
