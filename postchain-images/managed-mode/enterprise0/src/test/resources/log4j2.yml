@@ -9,10 +9,14 @@ Configuration:
 
   Appenders:
     Console:
-      name: ConsoleAppender
-      target: SYSTEM_OUT
-      PatternLayout:
-        pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: ConsoleAppender
+        target: SYSTEM_OUT
+        PatternLayout:
+          pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: TestAppender
+        target: SYSTEM_OUT
+        PatternLayout:
+          pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
     RollingFile:
       name: FileAppender
       fileName: "logs/${filename}"
@@ -42,3 +46,9 @@ Configuration:
       additivity: false
       AppenderRef:
         - ref: FileAppender
+    - name: TestLogger
+      level: info
+      additivity: false
+      AppenderRef:
+        - ref: FileAppender
+        - ref: TestAppender

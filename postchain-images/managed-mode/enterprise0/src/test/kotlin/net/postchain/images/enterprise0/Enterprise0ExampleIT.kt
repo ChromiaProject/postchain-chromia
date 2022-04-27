@@ -9,7 +9,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
-import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
@@ -30,7 +29,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.io.File
-import java.nio.file.Files
 
 /**
  * This test proves the functionality of enterprise0 dapp and the minimal needed configuration.
@@ -44,6 +42,7 @@ internal class Enterprise0ExampleIT {
 
 
     companion object {
+        val consoleLogger = KotlinLogging.logger("TestLogger")
         private val logger = KotlinLogging.logger {}
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
@@ -116,7 +115,7 @@ internal class Enterprise0ExampleIT {
         @JvmStatic
         @BeforeAll
         fun setup() {
-            println("Starting nodes...")
+            consoleLogger.info { "Starting nodes..." }
             startContainers(node1, node2, node3)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
             node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
@@ -152,7 +151,7 @@ internal class Enterprise0ExampleIT {
     fun `Add node 1 to its own network`() {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
 
-        println("Adding node 1 to its own network")
+        consoleLogger.info { "Adding node 1 to its own network" }
         node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
         assert(node1.client(0).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get().asBoolean()).isTrue()
@@ -164,7 +163,10 @@ internal class Enterprise0ExampleIT {
     @Order(4)
     fun `Make chain0 aware of itself`() {
         val provider = node1.client(0).query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
-        node1.proposeChain0(provider)
+        val nodeGtv = node1.client(0).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
+        val res = node1.execInContainer("sh", "propose_blockchain.sh", provider.asInteger().toString(), nodeGtv.asInteger().toString())
+        consoleLogger.info { res.stdout + if (res.exitCode != 0) res.stderr else "" }
+        consoleLogger.info { res.stderr }
         node1Db.awaitNewBlock()
         val addChain0Proposal = node1.client(0).querySync("get_proposals_since", gtv("since" to gtv(0))).asArray().first()
         node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
@@ -175,7 +177,7 @@ internal class Enterprise0ExampleIT {
     @Test
     @Order(5)
     fun `Make node 2 and 3 signers of c0`() {
-        println("Adding nodes 2 and 3 to node 1")
+        consoleLogger.info { "Adding node2 and node3 to node1" }
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
         node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
         node1Db.awaitNewBlock()
@@ -227,16 +229,16 @@ internal class Enterprise0ExampleIT {
 
             val nodeGtvs = node1.client(0).let { client ->
                 listOf(node1, node2, node3).map {
-                    println("Querying node id for ${it.nodeHost} on ${it.pubKey}")
+                    consoleLogger.info { "Querying node id for ${it.nodeHost} on ${it.pubKey}" }
                     client.querySync("get_node", gtv("pubkey" to gtv(it.pubKey.hexStringToByteArray())))
                 }
             }
 
             val provider = node2.client(0).querySync("get_provider", gtv("pubkey" to gtv(initialProviderPubKey)))
             rellConfig.config.chains.forEach { chain ->
-                println("Adding test dapp ${chain.iid}")
+                consoleLogger.info { "Adding test dapp ${chain.iid}" }
                 chain.configs.forEach { (height, chainHeightConfig) ->
-                    println("On height $height")
+                    consoleLogger.info { "On height $height" }
                     node2.tx(0, "propose_blockchain", provider, gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
                     val addChain0Proposal = node2.client(0).querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first()
                     val txId = node1.tx(0, "make_vote", provider, addChain0Proposal.asDict()["rowid"]!!, gtv(true))
@@ -244,7 +246,7 @@ internal class Enterprise0ExampleIT {
                             .querySync("get_added_blockchain_rid", gtv("tx_rid" to gtv(txId.data)))
                             .asByteArray()
                             .let { BlockchainRid(it) }
-                            .also { println("With blockchain ID ${it.toShortHex()}") }
+                            .also { consoleLogger.info { "With blockchain ID ${it.toShortHex()}" } }
                 }
             }
             val heightWithDappDeployed = node2Db.getHeight() + 1// Dapp is deployed and dapp db-table has been created
@@ -290,10 +292,4 @@ internal class Enterprise0ExampleIT {
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
     return querySync("get_blockchain_signers", gtv("blockchain" to blockChain)).asArray()
-}
-
-
-fun PostchainContainer.proposeChain0(provider: Gtv) {
-    val nodeGtv = client(0).query("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray()))).get()
-    execInContainer("sh", "propose_blockchain.sh", provider.asInteger().toString(), nodeGtv.asInteger().toString())
 }
