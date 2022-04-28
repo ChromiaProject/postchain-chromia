@@ -24,7 +24,6 @@
         <dependency>
             <groupId>net.postchain.distribution</groupId>
             <artifactId>postchain-client</artifactId>
-            <version>3.4.2-SNAPSHOT</version>
             <classifier>dist</classifier>
             <type>tar.gz</type>
         </dependency>
