@@ -9,36 +9,59 @@ Configuration:
 
   Appenders:
     Console:
-      name: ConsoleAppender
-      target: SYSTEM_OUT
-      PatternLayout:
-        pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: ConsoleAppender
+        target: SYSTEM_OUT
+        PatternLayout:
+          pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: TestAppender
+        target: SYSTEM_OUT
+        PatternLayout:
+          pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
     RollingFile:
-      name: FileAppender
-      fileName: "logs/${filename}"
-      filePattern: "logs/${filename}-%d{yyyy-MM-dd-HH-mm}.%i.${fileExt}.gz"
-      Policies:
-        TimeBasedTriggeringPolicy:
-          interval: 60
-          modulate: true
-        SizeBasedTriggeringPolicy:
-          size: 10 MB
-      DefaultRollOverStrategy:
-        max: 100
-      PatternLayout:
-        pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: FileAppender
+        fileName: "logs/${filename}"
+        filePattern: "logs/${filename}-%d{yyyy-MM-dd-HH-mm}.%i.${fileExt}.gz"
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 60
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: 10 MB
+        DefaultRollOverStrategy:
+          max: 100
+        PatternLayout:
+          pattern: "%X{node} %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+      - name: TestFileAppender
+        fileName: "logs/${filename}"
+        filePattern: "logs/${filename}-%d{yyyy-MM-dd-HH-mm}.%i.${fileExt}.gz"
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 60
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: 10 MB
+        DefaultRollOverStrategy:
+          max: 100
+        PatternLayout:
+          pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
 
   Loggers:
 
     Root:
       level: warn
       AppenderRef:
-      - ref: FileAppender
+        - ref: FileAppender
 
     Logger:
 
-    - name: net.postchain
-      level: debug
-      additivity: false
-      AppenderRef:
-        - ref: FileAppender
+      - name: net.postchain
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: FileAppender
+      - name: TestLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TestFileAppender
+          - ref: TestAppender
