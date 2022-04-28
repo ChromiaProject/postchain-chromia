@@ -22,6 +22,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.postchain.distribution</groupId>
+            <artifactId>postchain-client</artifactId>
+            <classifier>dist</classifier>
+            <type>tar.gz</type>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.images</groupId>
             <artifactId>postgres</artifactId>
             <scope>test</scope>
@@ -52,6 +58,26 @@
     </dependencies>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>postchain-client</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>dist</classifier>
+                            <includeArtifactIds>postchain-client</includeArtifactIds>
+                            <outputDirectory>${project.build.directory}/client</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

@@ -6,7 +6,8 @@ FROM $postchain_image:$postchain_version
 ARG postchain_dir=/opt/chromaway/postchain
 ARG chain0_source
 COPY $chain0_source $postchain_dir/chain_zero
-COPY src/main/docker/entrypoint.sh $postchain_dir/entrypoint.sh
+COPY target/client/postchain-client/ $postchain_dir/
+COPY src/main/docker/ $postchain_dir/
 
 ENV RELL_SRC=$postchain_dir/chain_zero
 ENV RELL_OUT=$postchain_dir/chain0-generated

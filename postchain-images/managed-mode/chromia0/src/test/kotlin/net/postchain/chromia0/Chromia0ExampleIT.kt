@@ -1,10 +1,7 @@
 package net.postchain.chromia0
 
 import assertk.assert
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import assertk.assertions.isTrue
-import assertk.assertions.isZero
+import assertk.assertions.*
 import com.spotify.docker.client.DockerClient
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -39,6 +36,11 @@ import java.net.URL
 import java.nio.file.Files
 
 /**
+ * This test proves the functionality of chromia0 dapp and the minimal needed configuration.
+ *
+ * The admin adds itself as the only provider for the network. The admin is the only one who can add providers,
+ * and providers can do a subset of all chain0 operations. This is done to make the test simpler.
+ *
  * NOTE:
  * node1 & node2 runs regular managed mode
  * node3 runs as a master node
@@ -49,6 +51,7 @@ internal class Chromia0ExampleIT {
 
 
     companion object {
+        val consoleLogger = KotlinLogging.logger("TestLogger")
         private val logger = KotlinLogging.logger {}
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
@@ -76,6 +79,8 @@ internal class Chromia0ExampleIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("POSTCHAIN_CLIENT_PRIVKEY", adminPrivKey) // Sign transactions via postchain-client with this key
+                .withEnv("POSTCHAIN_CLIENT_PUBKEY", adminPubKey)   // Could also be added to properties file of this node
                 .withLogConsumer(node1Logger)
 
         private val node2 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node2/node-config.properties")!!))
@@ -122,7 +127,7 @@ internal class Chromia0ExampleIT {
         @JvmStatic
         @BeforeAll
         fun setup() {
-            println("Starting nodes...")
+            consoleLogger.info { "Starting nodes..." }
             removeSubnodeContainers()
             startContainers(node1, node2, node3)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
@@ -189,7 +194,10 @@ internal class Chromia0ExampleIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        node1.addChain0()
+        val nodeGtv = node1.client(0).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
+        val res = node1.execInContainer("sh", "add_blockchain.sh", nodeGtv.asInteger().toString())
+        consoleLogger.info { if (res.exitCode != 0) res.stderr else "chain0 has been added" }
+        assert(res.stderr).isEmpty()
         assert(node1.client(0).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(1)
     }
 
@@ -332,15 +340,6 @@ internal class Chromia0ExampleIT {
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
     return querySync("get_blockchain_signers", gtv("blockchain" to blockChain)).asArray()
-}
-
-fun PostchainContainer.addChain0() { // This has to be done inside the container if we want to be able to use this container in production.
-    val dir = Files.createTempDirectory("")
-    val tmpPath = dir.toAbsolutePath().toString() + "0.gtv"
-    copyFileFromContainer("${envMap["RELL_OUT"] ?: "${PostchainContainer.RELL_PATH}/out"}/blockchains/0/0.gtv", tmpPath)
-
-    val nodeGtv = client(0).querySync("get_node", gtv("pubkey" to gtv(pubKey.hexStringToByteArray())))
-    tx(0, "add_blockchain", gtv(File(tmpPath).readBytes()), gtv(listOf(nodeGtv)))
 }
 
 fun setupMasterNodeConfig(resource: URL, resolvedDockerHost: URI?): AppConfig {
