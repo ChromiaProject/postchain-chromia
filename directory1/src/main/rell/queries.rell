@@ -37,8 +37,8 @@ query get_nodes_with_provider() {
 query directory_solution_version() = "0.1";
 
 //queries used in the voting procedure for configuration updates:
-query get_proposals_since (since: rowid) {
-  return proposal @* {  .rowid > since } (.rowid, .proposal_type) limit 10;
+query get_proposals_since(since: rowid) {
+  return proposal @* { .rowid >= since } (.rowid, .proposal_type) limit 10;
 }
 
 query get_proposal (rowid) {

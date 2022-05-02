@@ -7,9 +7,9 @@ import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -54,7 +54,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     companion object {
         val bcConfig1xmlFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1.xml")
         val bcConfig1xmlDependencyFile =
-            getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
+                getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
         val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc//test/config/0.gtv")
 
         private fun getFileFromClasspath(path: String): File {
@@ -68,8 +68,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
         val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
         val sigMaker = cryptoSystem.buildSigMaker(
-            appConfig.pubKey.hexStringToByteArray(),
-            appConfig.privKey.hexStringToByteArray()
+                appConfig.pubKey.hexStringToByteArray(),
+                appConfig.privKey.hexStringToByteArray()
         )
         val defaultSigner = DefaultSigner(sigMaker, appConfig.pubKey.hexStringToByteArray())
         return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), defaultSigner)
@@ -104,17 +104,17 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
         val height = client.query(
-            "nm_find_next_configuration_height", GtvFactory.gtv(
+                "nm_find_next_configuration_height", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L)
-            )
+        )
         ).get()
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
 
         // Get next configuration
         val bc = client.query(
-            "nm_get_blockchain_configuration", GtvFactory.gtv(
+                "nm_get_blockchain_configuration", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height
-            )
+        )
         ).get()
         assertk.assert(bc.asByteArray()).isNotNull()
         return bc.asByteArray()
@@ -215,12 +215,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     private fun assertNodeInfo(
-        n: Gtv,
-        nodeHost: String,
-        nodePort: Long,
-        nodePubkey: String,
-        providerPubkey: String,
-        b: Boolean
+            n: Gtv,
+            nodeHost: String,
+            nodePort: Long,
+            nodePubkey: String,
+            providerPubkey: String,
+            b: Boolean
     ) {
         val nodeDict = n.asDict()
         assertEquals(nodeHost, nodeDict["host"]!!.asString())
