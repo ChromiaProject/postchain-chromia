@@ -4,19 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.postchain</groupId>
     <artifactId>postchain-mc</artifactId>
+    <groupId>net.postchain</groupId>
     <version>3.4.2-SNAPSHOT</version>
-    <name>Postchain Management Console</name>
-    <url>http://postchain.org</url>
+    <name>postchain-mc</name>
+    <description>Postchain Management Console</description>
+    <url>http://postchain.net</url>
 
     <modules>
-        <module>pmc-common</module>
-        <module>pmc-chromia</module>
-        <module>pmc-directory</module>
-        <module>common</module>
-        <module>chromia0</module>
-        <module>directory1</module>
+        <module>directory</module>
+        <module>enterprise</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -109,7 +106,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.13.1</version>
         </dependency>
 
         <dependency>
