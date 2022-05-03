@@ -1,0 +1,51 @@
+
+
+query get_provider_data (pubkey) {
+    return provider_state @ {
+        provider @ { pubkey }
+    } (
+        pubkey = .provider.pubkey,
+        name = .name,
+        active = .active
+    );
+}
+
+
+
+query get_all_providers() {
+    return provider_state @* {} (
+        pubkey = .provider.pubkey,
+        name = .name,
+        active = .active
+    );
+}
+
+query get_nodes_with_provider() {
+    return (node, provider_state) @* { node.provider == provider_state.provider } (
+        pubkey = .pubkey,
+        node_active = node.active,
+        host = .host,
+        port = .port,
+        last_updated = .last_updated,
+        name = .name,
+        provider_active = provider_state.active,
+        provider = node.provider.pubkey
+    );
+}
+
+query enterprise_solution_version() = "0.1";
+
+//queries used in the voting procedure for configuration updates:
+query get_proposals_since (since: rowid) {
+  return proposal @* {  .rowid > since } (.rowid, .proposal_type) limit 10;
+}
+
+query get_proposal (rowid) {
+  return proposal @{  rowid }
+  (
+        proposed_by = .proposed_by.pubkey,
+        timestamp = .timestamp,
+        proposal_type = .proposal_type,
+        rowid = .rowid
+    );
+}

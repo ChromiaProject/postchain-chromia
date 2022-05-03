@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>enterprise</artifactId>
-    <groupId>net.postchain.directory</groupId>
+    <groupId>net.postchain.enterprise</groupId>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -18,11 +18,11 @@
     </properties>
 
     <modules>
-        <!--        <module>pmc-common</module>-->
-        <!--        <module>pmc-chromia</module>-->
-        <!--        <module>pmc-directory</module>-->
-        <!--        <module>chromia0</module>-->
-        <!--        <module>directory1</module>-->
+        <module>pmc-common</module>
+        <module>pmc-chromia</module>
+        <module>pmc-enterprise</module>
+        <module>chromia0</module>
+        <module>enterprise0</module>
     </modules>
     <packaging>pom</packaging>
 

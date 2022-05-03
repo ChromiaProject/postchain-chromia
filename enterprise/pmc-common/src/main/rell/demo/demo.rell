@@ -1,0 +1,7 @@
+module;
+
+entity city { key name; }
+
+operation insert_city (name) {
+    create city (name);
+}

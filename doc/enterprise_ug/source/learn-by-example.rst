@@ -60,13 +60,6 @@ The hosts for the four nodes are:
 * 10.240.0.57
 * 10.240.0.58
 
-Update prov.cfg
-===============
-Update your prov.cfg file with rest-API ulr and brid (by adding the following lines and replacing brid with the one in blockchains/0/brid.txt.)::
-
-    api.url=http://localhost:5001
-    brid=9C1F485A1A3157CC29698F046DB804712FF7C385C5194A7F0D619DEE85153A41
-
 
 Run your first node
 ===================
@@ -112,7 +105,7 @@ Problems? Check that ``brid``  in your prov.cfg is the same as in ``/blockchains
 
 To add management of a blockchain, at least one managed node is needed. Therefore first add a managed node, making enterprise0 (bc0) aware of the Node0.  The provider of the node does (NB: If you are not the initial provider, the initial provider must first propose and enable you)::
 
-    ./pmc-e0.sh add-node -cfg ../postchain-node/prov.cfg -p 5000 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h 10.240.0.55
+    ./pmc-c0.sh add-node -cfg ../postchain-node/prov.cfg -p 5000 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h 10.240.0.55
     (./pmc-e0.sh add-node -cfg ../postchain-node/prov.cfg -p 5000 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost)
 
 Now we can add management of bc0, so that bc0 becomes aware of itself::
@@ -134,16 +127,16 @@ Initial provider first registers ai-se-2 as provider and enables the new provide
 
     ./pmc-e0.sh propose-provider -cfg ../postchain-node/prov.cfg -pk 036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
 
-Get proposal index (index is an identifier of the proposal) by calling::
+Get proposal index::
 
     ./pmc-e0.sh list-proposals-since  -cfg ../postchain-node/prov.cfg
 
-Vote with the index ID you got from list-propsals-since::
+Vote::
 
-    ./pmc-e0.sh vote -idx index-from-proposal-listing -cfg ../postchain-node/prov.cfg
+    ./pmc-e0.sh vote -idx index -cfg ../postchain-node/prov.cfg
     ./pmc-e0.sh propose-enable-provider -cfg ../postchain-node/prov.cfg -pk 036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
     ./pmc-e0.sh list-proposals-since  -cfg ../postchain-node/prov.cfg
-    ./pmc-e0.sh vote -idx index-from-proposal-listing -cfg ../postchain-node/prov.cfg
+    ./pmc-e0.sh vote -idx index -cfg ../postchain-node/prov.cfg
 
 Note that with two active (enabled) providers, NP=2, we need NP/2 + 1 = 2 approval votes. So both providers must vote yes on future proposals, before they take on effect.
 
