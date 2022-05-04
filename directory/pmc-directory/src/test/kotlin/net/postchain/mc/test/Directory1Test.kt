@@ -63,14 +63,12 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeEnableDisableProvider() {
-
         //First provider adds node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubKey)
-
 
         // The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster. TODO: Start as
         //  replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)

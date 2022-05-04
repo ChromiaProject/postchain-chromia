@@ -53,12 +53,8 @@ operation update_provider_data (provider, name?) {
 }
 
 //Includes enabling (active = true)
-operation register_provider (me: provider, pubkey, tier: integer, cluster?) {
+operation register_provider (me: provider, pubkey, tier: integer) {
 	require_provider_auth_with_rl(me);
 	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
-	add_pubkey_as_provider(pubkey, false, tier, cluster);
-	if (not(exists(provider_quota @? { .tier == tier }))) {
-		create provider_quota(tier, provider_quota_type.max_actions_per_day, value = 100);
-	}
+	add_pubkey_as_provider(pubkey, false, tier, null);
 }
-

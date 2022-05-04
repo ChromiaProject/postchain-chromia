@@ -159,17 +159,18 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
-        var nodeInfo = provExecutor.getNodeInfo(nodePubkey).asDict()
-        assertk.assert(nodeInfo["active"]?.asBoolean()).isEqualTo(true)
-        assertk.assert(nodeInfo["host"]?.asString()).isEqualTo(host)
-        assertk.assert(nodeInfo["port"]?.asInteger()).isEqualTo(port)
-        assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-        assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
-        if (cluster != "") {
-            assertEquals(nodeInfo["cluster"]?.asArray()?.map { it.asString() }, listOf(cluster))
+        awaitUntilAsserted {
+            var nodeInfo = provExecutor.getNodeInfo(nodePubkey).asDict()
+            assertk.assert(nodeInfo["active"]?.asBoolean()).isEqualTo(true)
+            assertk.assert(nodeInfo["host"]?.asString()).isEqualTo(host)
+            assertk.assert(nodeInfo["port"]?.asInteger()).isEqualTo(port)
+            assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
+            assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
+            if (cluster != "") {
+                assertEquals(nodeInfo["cluster"]?.asArray()?.map { it.asString() }, listOf(cluster))
+            }
         }
     }
-
 
     /** Initialization function that adds node0 with configuration from  config.properties. It also adds blockchain (This is
      * function addNode0AndBlockchain). Finally, node1 is added as replica for bc0.
