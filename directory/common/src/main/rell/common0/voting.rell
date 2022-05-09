@@ -1,0 +1,97 @@
+entity voter_set {
+    key name;
+    mutable threshold: integer = 0;
+	// special values for threshold:
+	// 	0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
+	// -1: simple majority
+	// positive number: that many voters
+}
+
+// Who is allowed to change a voter set?
+// If not defined, it is the voter set itself
+entity voter_set_governance {
+	key voter_set;
+	mutable governor: voter_set;
+}
+
+entity voter_set_member {
+    key voter_set, provider;
+}
+/* Governance semantics:
+ *
+ * Anybody can create a new voter_set directly, but it consumes an action point.
+ * voter_set can be updated. if voter_set_goverance is defined, it will control voter set, otherwise, it is the voter set itself
+ * */
+ operation create_voter_set(me: provider, name, threshold: integer, initials: list<provider>?, govenor: voter_set?) {
+ 	require_provider_auth_with_rl(me);
+ 	val vs = create voter_set(name, threshold);
+ 	if (exists(govenor)) {
+ 		create voter_set_governance(voter_set=vs, governor=govenor);
+ 	} else {
+ 		create voter_set_governance(voter_set=vs, governor=vs);
+ 	}
+ 	 if (exists(initials)) {
+ 		for (prov in initials) {
+ 			create voter_set_member(voter_set=vs, prov);	
+ 	 	}
+ 	}
+ }
+
+entity vote {
+    key proposal, provider;
+	ok: boolean; //here we see if the signer voted yes or no
+}
+
+//NB: check authority before calling this function
+function internal_vote (provider, prop: proposal, ok: boolean) {
+	create vote(prop, provider, ok);
+	print("vote added");
+	apply_voting_result(prop);
+}
+
+//Pubkey used for authorization
+operation make_vote(provider, prop: proposal, ok: boolean) {
+	require_provider_auth_with_rl(provider);
+	require(not(empty(voter_set_member @* {prop.voter_set, provider})));
+	print("vote authorization OK");
+	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
+	internal_vote( provider, prop, ok);
+}
+
+
+function max_votes(voter_set) { return voter_set_member @* { voter_set } (@sum 1) limit 1;}
+function positive_votes(proposal) { return vote @* {proposal, .ok == true }; }
+function negative_votes(proposal) { return vote @* {proposal, .ok == false }; }
+
+function needed_votes(voter_set) {
+	val n = max_votes(voter_set);
+	print("max votes:", n);
+	var needed_votes = voter_set.threshold;
+	//Two special cases (0 and -1):
+	when (voter_set.threshold) {
+		0  -> needed_votes = n[0] - (n[0]-1)/3;
+	 	-1 -> needed_votes = n[0]/2+1;	 		
+	 }
+	 print("needed votes:", needed_votes);
+	 return needed_votes;
+}
+
+function consensus_achieved (proposal) {
+	if (exists(positive_votes(proposal))) {
+		val nof_votes = vote @* { .proposal == proposal, .ok == true} ( @sum 1 );
+		print("positive votes:", nof_votes);
+		return ((nof_votes[0] >= needed_votes(proposal.voter_set)));
+	}
+	print("No positive votes");
+	return false; 
+}
+
+function proposal_rejected (proposal) {
+	if (exists(negative_votes(proposal))) {		
+		val nof_votes = vote @* { .proposal == proposal, .ok == false} ( @sum 1 );
+		print("negative votes:", nof_votes);
+		return ((nof_votes[0] >= needed_votes(proposal.voter_set)));
+	}
+	print("No negative votes");
+	return false;	
+}
