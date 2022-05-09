@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>chromia0</artifactId>
+    <artifactId>chromia1</artifactId>
 
     <properties>
         <rell.directory>${project.basedir}/src/main/rell</rell.directory>

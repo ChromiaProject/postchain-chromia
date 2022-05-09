@@ -158,7 +158,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     }
     fun proposeRemoveBlockchainSigners(blockchainRID: String, signers: String) {
         sendTxSync(proposeRemoveBlockchainSignersInternal(blockchainRID, signers),
-                "Proposal on removing singers added",
+                "Proposal on removing signers added",
                 "Cannot ad proposal of removing signers from blockchain")
     }
 

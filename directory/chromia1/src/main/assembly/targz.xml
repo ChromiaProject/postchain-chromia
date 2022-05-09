@@ -6,7 +6,7 @@
         <format>dir</format>
     </formats>
 
-    <baseDirectory>chromia0</baseDirectory>
+    <baseDirectory>chromia1</baseDirectory>
     <fileSets>
         <fileSet>
             <directory>${rell.directory}</directory>
@@ -14,7 +14,7 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/../common/src/main/rell/common0</directory>
-            <outputDirectory>./rell/chroma0</outputDirectory>
+            <outputDirectory>./rell/chroma1</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>

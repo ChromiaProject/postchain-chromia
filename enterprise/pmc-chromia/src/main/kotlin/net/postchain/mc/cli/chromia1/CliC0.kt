@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.chromia0
+package net.postchain.mc.cli.chromia1
 
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.blockchain.CommandAddBlockchain

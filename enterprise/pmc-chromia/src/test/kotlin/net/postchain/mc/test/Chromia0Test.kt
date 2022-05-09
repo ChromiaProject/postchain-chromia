@@ -1,7 +1,6 @@
 package net.postchain.mc.test
 
 import assertk.assert
-import assertk.assertions.contains
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -9,7 +8,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.chromia0.CliExecutionC0
+import net.postchain.mc.cli.chromia1.CliExecutionC0
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.io.File
 import java.nio.file.Paths
 import kotlin.test.*
 

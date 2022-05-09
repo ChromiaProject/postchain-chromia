@@ -90,7 +90,7 @@ function get_last_height (blockchain): integer {
 	}
 }
 
-//Use this to update singers after a change in cluster_node table. TODO: +5 or not?
+//Use this to update signers after a change in cluster_node table. TODO: +5 or not?
 function update_configuration_signers (cluster) {
 	val bcs = container_blockchain @*{ .container.cluster == cluster} .blockchain;
 	for (blockchain in bcs) {

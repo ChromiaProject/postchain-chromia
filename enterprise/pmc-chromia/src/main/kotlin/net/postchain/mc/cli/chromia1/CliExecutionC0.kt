@@ -1,9 +1,9 @@
-package net.postchain.mc.cli.chromia0
+package net.postchain.mc.cli.chromia1
 
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv

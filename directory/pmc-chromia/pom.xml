@@ -12,7 +12,7 @@
     <artifactId>pmc-chromia</artifactId>
 
     <properties>
-        <main-class>net.postchain.mc.Chromia0Kt</main-class>
+        <main-class>net.postchain.mc.Chromia1Kt</main-class>
     </properties>
 
     <dependencies>
@@ -30,7 +30,7 @@
         </dependency>
         <dependency>
             <groupId>net.postchain.directory</groupId>
-            <artifactId>chromia0</artifactId>
+            <artifactId>chromia1</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
             <scope>provided</scope>
@@ -55,7 +55,7 @@
                         </goals>
                         <configuration>
                             <classifier>sources</classifier>
-                            <includeArtifactIds>chromia0</includeArtifactIds>
+                            <includeArtifactIds>chromia1</includeArtifactIds>
                             <includeTypes>tar.gz</includeTypes>
                             <outputDirectory>${project.build.directory}</outputDirectory>
                         </configuration>
