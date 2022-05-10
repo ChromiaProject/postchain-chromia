@@ -29,7 +29,7 @@ NODE_PUBKEYS[1]=035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fb
 run_cmd () {
     CMD=$1
     shift
-    $POSTCHAIN_SH "$CMD" -nc config/config."$NODE_ID".properties "$@"
+    sh "$POSTCHAIN_DIR"/postchain.sh "$CMD" -nc config/config."$NODE_ID".properties "$@"
 }
 
 case $COMMAND in
@@ -43,6 +43,9 @@ case $COMMAND in
         ;;
     run)
         run_cmd run-node -cid 0
+        ;;
+    start)
+        run_cmd run-node-auto
         ;;
 esac
 
