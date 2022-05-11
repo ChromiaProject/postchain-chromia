@@ -1,4 +1,7 @@
 <run wipe-db="false">
+    <nodes>
+        <config>#</config>
+    </nodes>
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
