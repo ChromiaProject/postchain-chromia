@@ -19,10 +19,6 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
 
@@ -69,37 +65,7 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>make-archive</id>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>pmc-common/src/main/assembly/targz.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                </executions>
-
-            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>distro</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

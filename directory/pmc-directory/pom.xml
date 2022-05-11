@@ -17,10 +17,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-        </dependency>
-        <dependency>
             <groupId>net.postchain.directory</groupId>
             <artifactId>pmc-common</artifactId>
             <version>${project.version}</version>

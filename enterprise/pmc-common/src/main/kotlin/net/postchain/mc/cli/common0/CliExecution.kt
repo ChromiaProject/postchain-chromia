@@ -5,8 +5,8 @@ import net.postchain.crypto.SigMaker
 import net.postchain.client.core.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.core.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
