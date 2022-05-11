@@ -30,7 +30,7 @@
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
-            <directory>./runxml</directory>
+            <directory>./config</directory>
             <outputDirectory>./config</outputDirectory>
             <includes>
                 <include>*.xml</include>
