@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>managed-mode-examples</artifactId>
+        <groupId>net.postchain</groupId>
+        <version>3.4.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+
+    <artifactId>enterprise0-example</artifactId>
+
+    <properties>
+        <assembly.path>../assembly/targz.xml</assembly.path>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.postchain.enterprise</groupId>
+            <artifactId>enterprise0</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <type>tar.gz</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.enterprise</groupId>
+            <artifactId>pmc-enterprise</artifactId>
+            <version>${project.version}</version>
+            <classifier>dist</classifier>
+            <type>tar.gz</type>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>distro</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

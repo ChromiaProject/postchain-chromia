@@ -11,6 +11,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>chromia0-example</module>
+        <module>enterprise0-example</module>
     </modules>
 
     <artifactId>managed-mode-examples</artifactId>

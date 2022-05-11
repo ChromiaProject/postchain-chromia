@@ -6,7 +6,7 @@
         <format>dir</format>
     </formats>
 
-    <baseDirectory>chromia0</baseDirectory>
+    <baseDirectory>managed-mode-example</baseDirectory>
 
     <dependencySets>
         <dependencySet>
@@ -20,6 +20,15 @@
     </dependencySets>
 
     <fileSets>
+        <fileSet>
+            <directory>./scripts</directory>
+            <outputDirectory>./</outputDirectory>
+            <includes>
+                <include>*.sh</include>
+            </includes>
+            <fileMode>0755</fileMode>
+            <filtered>true</filtered>
+        </fileSet>
         <fileSet>
             <directory>./runxml</directory>
             <outputDirectory>./config</outputDirectory>
