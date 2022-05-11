@@ -14,6 +14,7 @@
     <modules>
         <module>directory</module>
         <module>enterprise</module>
+        <module>managed-mode-examples</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -32,7 +33,7 @@
         <maven.compiler.target>11</maven.compiler.target>
 
         <!-- Distribution -->
-        <executable-classifier>jar-with-dependencies</executable-classifier>
+        <assembly.path>${project.basedir}/src/main/assembly/targz.xml</assembly.path>
     </properties>
 
     <dependencyManagement>
@@ -234,7 +235,7 @@
                                     </goals>
                                     <configuration>
                                         <descriptors>
-                                            <descriptor>${project.basedir}/src/main/assembly/targz.xml</descriptor>
+                                            <descriptor>${assembly.path}</descriptor>
                                         </descriptors>
                                     </configuration>
                                 </execution>
