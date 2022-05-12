@@ -11,6 +11,7 @@ target
 *.log.lck
 postchain.pid
 examples/out
+_build
 
 postchain-node
 bc-target
