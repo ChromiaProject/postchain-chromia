@@ -1,10 +1,11 @@
 <run wipe-db="false">
     <nodes>
-        <config>#</config>
+        <config add-signers="false" >#</config>
     </nodes>
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
+                <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="enterprise0">
                     <args module="enterprise0">
                         <arg key="initial_provider">

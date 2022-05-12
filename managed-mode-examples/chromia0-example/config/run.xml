@@ -1,15 +1,14 @@
 <run wipe-db="false">
     <nodes>
-        <config>#</config>
+        <config add-signers="false" >#</config>
     </nodes>
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
+                <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="chroma0">
                     <args module="chroma0">
-                        <arg key="admin">
-                            <bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea>
-                        </arg>
+                        <arg key="admin"><bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea></arg>
                     </args>
                 </app>
                 <gtv path="signers">
@@ -21,6 +20,3 @@
         </chain>
     </chains>
 </run>
-
-
-
