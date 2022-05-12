@@ -2,14 +2,14 @@ package net.postchain.images.directory1
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import assertk.assertions.isZero
 import mu.KLogging
 import mu.KotlinLogging
-import net.postchain.dapp.PostchainContainer
+import net.postchain.common.hexStringToByteArray
+import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
-import net.postchain.dapp.parseConfig
-import net.postchain.dapp.startContainers
-import net.postchain.dapp.stopContainers
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import org.junit.jupiter.api.*
@@ -26,6 +26,8 @@ internal class Directory1DeploymentIT {
 
     companion object : KLogging() {
         val consoleLogger = KotlinLogging.logger("TestLogger")
+
+        private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
 
@@ -83,6 +85,50 @@ internal class Directory1DeploymentIT {
     fun `Initialize network with provider 1`() {
         node1.tx(0, "init")
         node1.client(0).querySync("get_all_providers").also {
+            assert(it.asArray().size).isEqualTo(1)
+        }
+    }
+
+    @Test
+    @Order(3)
+    fun `Add node 1 to its own network`() {
+        consoleLogger.info("Adding node 1 to its own network")
+
+        val provider = node1.client(0).query(
+                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+        val cluster = node1.client(0).query(
+                "get_cluster", gtv("name" to gtv("system"))).get()
+
+        node1.tx(0, "add_node",
+                provider,
+                gtv(node1.pubKeyByteArray),
+                gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
+                cluster
+        )
+        node1Db.awaitNewBlock()
+        node1.client(0).query(
+                "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+        ).also {
+            assert(it.get().asBoolean()).isTrue()
+        }
+
+        node1.client(0).query(
+                "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+        ).also {
+            assert(it.get().asDict()["active"]!!.asInteger()).isEqualTo(1L)
+        }
+    }
+
+    @Test
+    @Order(4)
+    fun `Make chain0 aware of itself`() {
+        val provider = node1.client(0).query(
+                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+        node1.proposeChain0(provider)
+        node1Db.awaitNewBlock()
+        node1.client(0).querySync(
+                "get_blockchains", gtv("include_inactive" to gtv(true))
+        ).also {
             assert(it.asArray().size).isEqualTo(1)
         }
     }
