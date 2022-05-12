@@ -5,7 +5,7 @@ deploy:
   only:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,distro deploy
 
 build:
   stage: build
