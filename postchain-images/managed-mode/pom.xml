@@ -12,6 +12,7 @@
     <modules>
         <module>chromia0</module>
         <module>enterprise0</module>
+        <module>directory1</module>
     </modules>
 
     <artifactId>managed-mode</artifactId>
