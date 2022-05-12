@@ -13,7 +13,7 @@ if [ "$#" -ne 2 ]; then
     exit 2
 fi
 
-[[ -z ${DEBUG+x} ]] && POSTCHAIN_SH='./postchain.sh' || POSTCHAIN_SH="./postchain-debug.sh"
+[[ -z ${DEBUG+x} ]] && POSTCHAIN_SH='postchain.sh' || POSTCHAIN_SH="postchain-debug.sh"
 NODE_ID=$1
 COMMAND=$2
 
@@ -32,7 +32,7 @@ NODE_PUBKEYS[3]=03ef3f5be98d499b048ba28b247036b611a1ced7fcf87c17c8b5ca3b3ce1ee23
 run_cmd () {
     CMD=$1
     shift
-    bash "$POSTCHAIN_DIR"/postchain.sh "$CMD" -nc config/config."$NODE_ID".properties "$@"
+    bash "$POSTCHAIN_DIR"/"$POSTCHAIN_SH" "$CMD" --debug -nc config/config."$NODE_ID".properties "$@"
 }
 
 case $COMMAND in
