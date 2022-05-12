@@ -32,7 +32,7 @@ NODE_PUBKEYS[3]=03ef3f5be98d499b048ba28b247036b611a1ced7fcf87c17c8b5ca3b3ce1ee23
 run_cmd () {
     CMD=$1
     shift
-    bash "$POSTCHAIN_DIR"/postchain.sh "$CMD" --debug -nc ../config/config."$NODE_ID".properties "$@"
+    bash "$POSTCHAIN_DIR"/postchain.sh "$CMD" -nc config/config."$NODE_ID".properties "$@"
 }
 
 case $COMMAND in

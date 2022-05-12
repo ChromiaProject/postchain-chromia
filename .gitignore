@@ -10,7 +10,7 @@ target
 *.log.*
 *.log.lck
 postchain.pid
-out
+examples/out
 
 postchain-node
 bc-target
