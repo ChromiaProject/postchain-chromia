@@ -4,39 +4,40 @@ Introduction
 
 We start with a few concepts that are useful to know:
 
+Dapp
+   A distributed application where the back-end running on nodes and the front end on some client software.
+
+Management chain (bc0)
+    Dapp for managing settings/configurations for all blockchains in the network. This is convenient because it will help to synchronize configuration changes between nodes (where manual synchronization would be time consuming). `bc0` is managing all blockchains in the network, including itself.
+    Comes in a few flavors; Chromia0, Enterprise0 and Directory1.
+
 Postchain-MC
-   A command line tool which submits transactions to the Enterprise0 directory chain.
+   A command line tool which submits transactions to the management chain chain.
 
-Enterprise0 (bc0)
-   Defines code for the 'mama' blockchain which manages settings/configuration for all blockchains in the network. Using a 'mama' chain is convenient because it will help to synchronize configuration changes between nodes (where manual synchronization would be time consuming). Mama is managing all blockchains in the network, including herself.
-
-Nodes
-   Machines running Chromia or Enterprise Dapps.
+Node
+   Machine running bc0 dapp.
 
 Providers
    Private persons or organizations responsible for the nodes.
 
-Dapps
-   A distiduted application where the back-end running on nodes and the front end on some client software).
-
-Blockchains
+Blockchain
    The data the "dapps" use are stored in "blockchains" that are
      hosted by the "nodes".
 
    Example: The  dapp 'HorseDapp' use the blockchain 'HorseBC' to store its data,
      but also reads from the blockchain 'AllSpeciesRepo' that is managed by a different dapp.
 
-Bblockchain blocks
-   The blocks hold the actual data of the blockchain. Eack block depend on the previous one and thereby create a chain of blocks.
+Blockchain block
+   The blocks hold the actual data of the blockchain. Each block depend on the previous one and thereby create a chain of blocks.
 
 Blockchain configuration
    The blockchain configuration fully defines the blockchain's behavior. Both signer nodes and replica nodes need to know the configuration to create and verify blocks.
 
-Signers
-   Nodes responsible for verifying and creating data blocks.
+Signer
+   Node responsible for verifying and creating data blocks.
 
-Replicas
-   Nodes that verifies data blocks, but do not create blocks.
+Replica
+   Node that verifies data blocks, but do not create blocks.
 
 Blockchain RID (brid)
    Global reference ID for a blockchain, common for all nodes.
@@ -45,8 +46,7 @@ Chain ID
    Local blockchain ID. Can be different on different nodes.
 
 
-One common situation is when a provider wants to add one node
-to the set of allowed nodes on the Chromia network
+One common situation is when a provider wants to add a node to the set of allowed nodes on the network
 (after this action, the node will be available for running dapps and blockchains).
 We do this using the ``./pmc-c0.sh add-node`` command.
 
@@ -54,7 +54,7 @@ We do this using the ``./pmc-c0.sh add-node`` command.
 Node manager API
 ================
 
-When postchain is run in managed mode (as always is the case in Enterprise0), it requires that the module in chain 0, bc0, fulfills a certain API. This API is responsible for providing postchain with information about which blockchains to run, blockchain configurations and node configurations.
+When postchain is run in managed mode (as it always does with a management chain), it requires that the module in chain 0, bc0, fulfills a certain API. This API is responsible for providing postchain with information about which blockchains to run, blockchain configurations and node configurations.
 
 Any postchain module that fulfills this API may serve as bc0. It is totally up to the module to decide how to answer these queries. The module is typically written in Rell where blockchains and nodes are managed through consensus voting, for example >50% of bc0 signers must agree on a new blockchain before it gets visible through nm_api. Another valid approach might be to have a designated admin that adds blockchains and configurations, but that comes with some centralization, of course.
 
@@ -84,24 +84,6 @@ nm_get_node_replica_map
   For making a node a full clone of another node.
 
 GTXManagedNodeDataSource is the class responsible for fetching blockchain configurations and node configurations from the database.
-
-
-
-The providers have the power
-============================
-
-In Enterprise0, it is the providers that together hold the power. With a voting system they agree on various configuration updates of the network. Providers propose updates. Before they can be applied, they need approval from a majority of the providers. Providers vote on the different proposals. There are six types of updates that need approval before they are applied.
-
-=================    =======================================================
-Proposal type        Description
-=================    =======================================================
-conf                 New blockchain configuration for a specific height.
-bc                   New blockchain, starting at height 0.
-register_provider    New provider.
-provider_state       Enable/disable a registered provider.
-bc_signers           Update which nodes that should be signers for a bc
-bc_stop              Stop building blocks for a given blockchain.
-=================    =======================================================
 
 
 Bootstrapping
