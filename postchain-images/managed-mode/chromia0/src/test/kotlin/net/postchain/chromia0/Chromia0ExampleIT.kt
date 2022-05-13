@@ -33,7 +33,6 @@ import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
-import java.nio.file.Files
 
 /**
  * This test proves the functionality of chromia0 dapp and the minimal needed configuration.
@@ -221,7 +220,7 @@ internal class Chromia0ExampleIT {
             val newSignerNodes = listOf(node2, node3).map { node ->
                 client.querySync("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray())))
             }
-            val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
+            val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRidStr(0))))
             node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
             // Adding signers will update the blockchain configuration after 5 blocks
             val heightWithSigners = node1Db.getHeight() + 5

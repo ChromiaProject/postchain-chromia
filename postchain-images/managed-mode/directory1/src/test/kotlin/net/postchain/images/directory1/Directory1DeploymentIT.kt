@@ -30,6 +30,7 @@ internal class Directory1DeploymentIT {
         private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
+        private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
 
         private val imageName = DockerImageName.parse("chromaway/postchain-directory1:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
@@ -54,20 +55,37 @@ internal class Directory1DeploymentIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node1Logger)
 
+        private val appConfig2 = parseConfig(this::class.java.getResource("/directory1-deployment/node2/node-config.properties")!!)
+        private val node2 = PostchainContainer(imageName, appConfig2)
+                .withNetwork(network)
+                .withNetworkAliases("node2")
+                .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+                .withEnv("NODE_PUBKEY", "02B99A05912B01B7797D84D6660E9ED35FAEE078BD5BDF40026E0CC6E0CB2EF50C")
+                .withEnv("NODE_HOST", "node2")
+                .withEnv("NODE_PORT", "9872")
+                .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
+                .withEnv("BOOTSTRAP_NODE_HOST", "node1")
+                .withEnv("BOOTSTRAP_NODE_PORT", "9871")
+                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
+                .withEnv("WIPE_DB", "true")
+                .withLogConsumer(node2Logger)
+
         private lateinit var node1Db: ChainDatabaseCommunicator
 
         @JvmStatic
         @BeforeAll
         fun setup() {
             consoleLogger.info { "Starting nodes..." }
-            startContainers(node1)
+            startContainers(node1, node2)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
         }
 
         @JvmStatic
         @AfterAll
         fun breakdown() {
-            stopContainers(node1)
+            stopContainers(node1, node2)
         }
     }
 
@@ -132,4 +150,29 @@ internal class Directory1DeploymentIT {
             assert(it.asArray().size).isEqualTo(1)
         }
     }
+
+    @Test
+    @Order(5)
+    fun `Make node 2 signers of c0`() {
+        consoleLogger.info("Adding node 2 to node 1")
+        val brid0 = node1.getBlockchainRid(0)
+        val provider1 = node1.client(0).query(
+                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+        val cluster = node1.client(0).query("get_cluster", gtv("name" to gtv("system"))).get()
+
+        consoleLogger.info("Registering provider2")
+        val provider2 = Context(node1, node1Db, provider1)
+                .registerNodeAsProvider(cluster, node2)
+
+        consoleLogger.info("Adding node2 to [node1] network")
+        addNode(node2, provider2, cluster, brid0, node1)
+
+        // Asserting that node2 is signers of chain0
+        awaitUntilAsserted {
+            val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
+            assert(node1.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
+            assert(node2.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
+        }
+    }
+
 }

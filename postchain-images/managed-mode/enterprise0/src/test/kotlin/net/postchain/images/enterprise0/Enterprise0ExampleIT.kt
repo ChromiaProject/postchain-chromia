@@ -184,7 +184,7 @@ internal class Enterprise0ExampleIT {
                     name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
             ).isTrue()
         }
-        val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
+        val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRidStr(0))))
         val newSignerNodes = listOf(node2, node3).map { node ->
             node1.client(0).query("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray()))).get()
         }
