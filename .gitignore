@@ -12,6 +12,7 @@ target
 postchain.pid
 examples/out
 _build
+_doc
 
 postchain-node
 bc-target
