@@ -6,9 +6,19 @@ image: maven:3.8.4-jdk-11
   git config user.email build_user@chromaway.com
 
 stages:
+  - docs
   - build
   - deploy
   - release
+
+docs:
+  image: python
+  stage: docs
+  before_script:
+    - pip install sphinx sphinx-rtd-theme
+  script:
+    - sphinx-build -c doc/enterprise0 -b html doc/source managed-mode-examples/enterprise0-example/doc
+    - sphinx-build -c doc/chromia0 -b html doc/source managed-mode-examples/chromia0-example/doc
 
 deploy:
   stage: deploy
