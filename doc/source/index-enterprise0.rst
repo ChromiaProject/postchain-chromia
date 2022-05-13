@@ -3,19 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Chromia0
+Enterprise0
 ========================================
 
-The Chromia0 dapp is an management chain for running multiple chains in a structured fashion
+The Enterprise0 is an enterprise level solution for organizations or companies that want to run their own blockchain network. 
 
-Postchain MC is used to issue commands to an entire group of Chromia nodes.
+Postchain MC is used to issue commands to an entire group of Chromia/Enterprise0/Postchain nodes.
+
+
+
+
+
 
 .. toctree::
    :hidden:
    :maxdepth: 2
    :caption: Contents:
 
-   ../introduction.rst
-   ../learn-by-example.rst
-   ../queries.rst
-   ../q-and-a.rst
+   introduction.rst
+   enterprise0/learn-by-example.rst
+   queries.rst
+   q-and-a.rst
