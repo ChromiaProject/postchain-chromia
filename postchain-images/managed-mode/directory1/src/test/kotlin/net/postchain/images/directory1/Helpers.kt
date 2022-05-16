@@ -24,7 +24,7 @@ internal fun PostchainContainer.proposeChain0(provider: Gtv) {
     val containerGtv = client(0).query(
             "get_container", GtvFactory.gtv("name" to GtvFactory.gtv("system"))).get()
 
-    tx(0, "propose_blockchain", provider, configGtv, containerGtv)
+    txAsAdmin(0, "propose_blockchain", provider, configGtv, containerGtv)
 }
 
 data class Context(
@@ -34,19 +34,19 @@ data class Context(
 )
 
 internal fun Context.registerNodeAsProvider(cluster: Gtv, newNode: PostchainContainer): Gtv {
-    node.tx(0, "register_provider", provider, gtv(newNode.pubKeyByteArray), gtv(1L))
+    node.txAsAdmin(0, "register_provider", provider, gtv(newNode.pubKeyByteArray), gtv(1L))
     db.awaitNewBlock()
     val newProvider = awaitQueryResult {
         node.client(0).querySync("get_provider", gtv("pubkey" to gtv(newNode.pubKeyByteArray)))
     }!!
 
-    node.tx(0, "add_provider_to_cluster", provider, newProvider, cluster)
+    node.txAsAdmin(0, "add_provider_to_cluster", provider, newProvider, cluster)
     db.awaitNewBlock()
 
-    node.tx(0, "propose_enable_provider", provider, newProvider)
+    node.txAsAdmin(0, "propose_enable_provider", provider, newProvider)
     db.awaitNewBlock()
 
-    node.tx(0, "propose_provider_is_system", provider, newProvider, gtv(true))
+    node.txAsAdmin(0, "propose_provider_is_system", provider, newProvider, gtv(true))
 
     // Asserting: provider2 is added correctly
     val newProviderData = awaitQueryResult {
@@ -63,6 +63,32 @@ internal fun PostchainClient.getBlockchainSigners(blockchain: Gtv): Array<out Gt
     return query("get_blockchain_signers", GtvFactory.gtv("bc" to blockchain)).get().asArray()
 }
 
+internal fun PostchainClient.getProvider1(): Gtv {
+    return query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+}
+
+internal fun PostchainContainer.getProvider(): Gtv {
+    return client(0).query("get_provider", gtv("pubkey" to gtv(pubKeyByteArray))).get()
+}
+
+internal fun PostchainClient.getSystemCluster(): Gtv {
+    return query("get_cluster", gtv("name" to gtv("system"))).get()
+}
+
+internal fun PostchainClient.getSystemContainer(): Gtv {
+    return query("get_container", gtv("name" to gtv("system"))).get()
+}
+
+internal fun PostchainClient.getAllBlockchains(): Gtv {
+    return query("get_blockchains", gtv("include_inactive" to gtv(true))).get()
+}
+
+internal fun PostchainClient.getProposal(): Gtv {
+    return query("get_proposals_since", gtv("since" to gtv(0L))).get().asArray().first()
+            .asDict()["rowid"]!!
+}
+
+
 internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid, sendTxTo: PostchainContainer) {
     TxBuilder(brid0, newNode.sigMaker).tx("add_node",
             newNodeProvider,
@@ -72,9 +98,8 @@ internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster:
     ).also {
         sendTxTo.tx(it)
     }
-    awaitUntilAsserted {
+    awaitQueryResult {
         val isNode = sendTxTo.client(0).querySync("is_node", gtv("pubkey" to gtv(newNode.pubKeyByteArray)))
         assert(isNode.asBoolean(), "${newNode.nodeHost} is added to ${sendTxTo.nodeHost}").isTrue()
     }
 }
-

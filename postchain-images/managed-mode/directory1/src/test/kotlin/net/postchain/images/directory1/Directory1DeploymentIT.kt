@@ -9,9 +9,12 @@ import mu.KotlinLogging
 import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
+import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -19,6 +22,9 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.io.File
+
+internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -26,8 +32,6 @@ internal class Directory1DeploymentIT {
 
     companion object : KLogging() {
         val consoleLogger = KotlinLogging.logger("TestLogger")
-
-        private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
@@ -48,6 +52,7 @@ internal class Directory1DeploymentIT {
                 .withClasspathResourceMapping("$resourceFolder/node1", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
                 .withEnv("NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("NODE_HOST", "node1")
                 .withEnv("NODE_PORT", "9871")
@@ -62,6 +67,7 @@ internal class Directory1DeploymentIT {
                 .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
                 .withEnv("NODE_PUBKEY", "02B99A05912B01B7797D84D6660E9ED35FAEE078BD5BDF40026E0CC6E0CB2EF50C")
                 .withEnv("NODE_HOST", "node2")
                 .withEnv("NODE_PORT", "9872")
@@ -79,7 +85,17 @@ internal class Directory1DeploymentIT {
         fun setup() {
             consoleLogger.info { "Starting nodes..." }
             startContainers(node1, node2)
+
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
+            /*
+            val localDbConfig = DatabaseConfig(
+                    "org.postgresql.Driver",
+                    "jdbc:postgresql://localhost:5432/postchain",
+                    "postchain",
+                    "postchain"
+            )
+            node1Db = ChainDatabaseCommunicator(0, node1.appConfig.databaseSchema, localDbConfig)
+             */
         }
 
         @JvmStatic
@@ -101,7 +117,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(2)
     fun `Initialize network with provider 1`() {
-        node1.tx(0, "init")
+        node1.txAsAdmin(0, "init")
         node1.client(0).querySync("get_all_providers").also {
             assert(it.asArray().size).isEqualTo(1)
         }
@@ -112,12 +128,10 @@ internal class Directory1DeploymentIT {
     fun `Add node 1 to its own network`() {
         consoleLogger.info("Adding node 1 to its own network")
 
-        val provider = node1.client(0).query(
-                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
-        val cluster = node1.client(0).query(
-                "get_cluster", gtv("name" to gtv("system"))).get()
+        val provider = node1.client(0).getProvider1()
+        val cluster = node1.client(0).getSystemCluster()
 
-        node1.tx(0, "add_node",
+        node1.txAsAdmin(0, "add_node",
                 provider,
                 gtv(node1.pubKeyByteArray),
                 gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
@@ -140,8 +154,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        val provider = node1.client(0).query(
-                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+        val provider = node1.client(0).getProvider1()
         node1.proposeChain0(provider)
         node1Db.awaitNewBlock()
         node1.client(0).querySync(
@@ -156,9 +169,8 @@ internal class Directory1DeploymentIT {
     fun `Make node 2 signers of c0`() {
         consoleLogger.info("Adding node 2 to node 1")
         val brid0 = node1.getBlockchainRid(0)
-        val provider1 = node1.client(0).query(
-                "get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
-        val cluster = node1.client(0).query("get_cluster", gtv("name" to gtv("system"))).get()
+        val provider1 = node1.client(0).getProvider1()
+        val cluster = node1.client(0).getSystemCluster()
 
         consoleLogger.info("Registering provider2")
         val provider2 = Context(node1, node1Db, provider1)
@@ -168,10 +180,50 @@ internal class Directory1DeploymentIT {
         addNode(node2, provider2, cluster, brid0, node1)
 
         // Asserting that node2 is signers of chain0
+        val c0 = awaitQueryResult {
+            node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
+        }!!
         awaitUntilAsserted {
-            val c0 = node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
             assert(node1.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
             assert(node2.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
+        }
+    }
+
+    @Test
+    @Order(6)
+    fun `Deploy new dapp`() {
+        listOf(node1, node2).forEach { node ->
+            Assumptions.assumeTrue {
+                node.client(0).getAllBlockchains().asArray().size == 1
+            }
+        }
+
+        val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
+        val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
+        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+            RellRunConfigGenerator.buildFiles(this.config)
+        }
+
+        val provider1 = node1.client(0).getProvider1()
+        val provider2 = node2.getProvider()
+        val container = node1.client(0).getSystemContainer()
+        rellConfig.config.chains.forEach { chain ->
+            consoleLogger.info { "Adding test dapp ${chain.iid}" }
+            chain.configs.forEach { (height, config) ->
+                consoleLogger.info { "Proposing a blockchain on height $height" }
+                val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
+                node2.tx(0, "propose_blockchain", provider2, configGtv, container)
+
+                val proposal = awaitQueryResult { node1.client(0).getProposal() }
+                consoleLogger.info { "Making a vote for proposal: $proposal" }
+                node1.txAsAdmin(0, "make_vote", provider1, proposal!!, gtv(true))
+            }
+        }
+
+        awaitUntilAsserted {
+            listOf(node1, node2).forEach { node ->
+                assert(node.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
+            }
         }
     }
 

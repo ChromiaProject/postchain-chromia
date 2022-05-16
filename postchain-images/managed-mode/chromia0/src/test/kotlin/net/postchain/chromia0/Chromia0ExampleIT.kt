@@ -48,7 +48,6 @@ import java.net.URL
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
 
-
     companion object {
         val consoleLogger = KotlinLogging.logger("TestLogger")
         private val logger = KotlinLogging.logger {}
@@ -165,11 +164,11 @@ internal class Chromia0ExampleIT {
     @Order(2)
     fun `Make admin a provider for the network`() {
         println("Registering provider")
-        node1.tx(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
+        node1.txAsAdmin(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
 
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
         println("Enabling provider")
-        node1.tx(0, "enable_provider", provider)
+        node1.txAsAdmin(0, "enable_provider", provider)
         node1.client(0).querySync("get_provider_data", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).asDict().let {
             assert(it["active"]!!.asBoolean(),
                     name = "Provider is activated")
@@ -183,7 +182,7 @@ internal class Chromia0ExampleIT {
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
 
         println("Adding node 1 to its own network")
-        node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
         assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).asBoolean()).isTrue()
         val nodeGtv = node1.client(0).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray())))
@@ -205,9 +204,9 @@ internal class Chromia0ExampleIT {
     fun `Make node 2 and 3 signers of c0`() {
         println("Adding nodes 2 and 3 to node 1")
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
-        node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
         node1Db.awaitNewBlock()
-        node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
             assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).asBoolean(),
@@ -221,7 +220,7 @@ internal class Chromia0ExampleIT {
                 client.querySync("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray())))
             }
             val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRidStr(0))))
-            node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
+            node1.txAsAdmin(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
             // Adding signers will update the blockchain configuration after 5 blocks
             val heightWithSigners = node1Db.getHeight() + 5
             runAsync(node1Db, node2Db, node3Db) {
@@ -266,7 +265,7 @@ internal class Chromia0ExampleIT {
                 println("Adding test dapp ${chain.iid}")
                 chain.configs.forEach { (height, chainHeightConfig) ->
                     println("On height $height")
-                    val txId = node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
+                    val txId = node2.txAsAdmin(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
                     dappToBrid[chain.iid] = node2.client(0)
                             .querySync("get_added_blockchain_rid", gtv("tx_rid" to gtv(txId.data)))
                             .asByteArray()
@@ -302,7 +301,7 @@ internal class Chromia0ExampleIT {
         fun `Transactions can be sent to newly deployed dapp`() {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
-            node2.tx(dappToBrid[dappId]!!, "add_city", gtv(testCity))
+            node2.txAsAdmin(dappToBrid[dappId]!!, "add_city", gtv(testCity))
             listOf(node1, node2, node3).forEach { node ->
                 assert(node.client(dappToBrid[dappId]!!).querySync("get_cities", gtv(mapOf())).asArray().map { it.asString() })
                         .containsExactly(testCity)
