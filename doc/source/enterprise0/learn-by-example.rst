@@ -53,21 +53,22 @@ Add blockchain::
 
     ./postchain.sh add-blockchain -bc out/blockchains/0/0.xml -cid 0 -nc config/config.0.properties
 
-Should we also do add-configuration? The command ``add-blockchain`` is a special case of the more general ``add-configuration``, with height set to zero. You do not need to do both, add-blockchain is enough.
+.. note::
+    Should we also do ``add-configuration``? The command ``add-blockchain`` is a special case of the more general ``add-configuration``, where height set to zero. This means that if you run ``add-blockchain``, you don't need to add the configuration.
 
 
 Add peer::
 
     # Add its own info
-    ./postchain.sh peerinfo-add -h 10.240.0.55 -nc conf0/node-config.properties -p 5000 -pk 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+    ./postchain.sh peerinfo-add -nc config/config.0.properties -h <n0-host> -p <n0-port> -pk <n0-pubkey>
 
 In this example, you can use ``./run.sh 0 reset`` to perform the above operations on node 0.
 
 The next step is good to somehow run in the background, so that the node continues to run even if you get disconnected. We can use for example ``systemd``. Here, ``screen`` is used::
 
-    screen -S bc0
-    screen -r bc0  (means reattach)
+    screen -S n0
     Ctrl+a, d  (means detach)
+    screen -r n0  (means reattach)
 
 So in screen bc0 we do::
 
@@ -118,7 +119,7 @@ Provider 1 now votes for this proposal to add the provider.
 
 Then activates it with another proposal::
 
-    ./pmc.sh propose-enable-provider -cfg config/prov1.cfg -pk 027DE85A4FB4ED49F0208E7AEFDD3E926D18EE913A67A37CB2C6AF6DAC04CC21A9
+    ./pmc.sh propose-enable-provider -cfg config/prov1.cfg -pk <prov2-pubkey>
 
 Note that with two active (enabled) providers, NP=2, we need NP/2 + 1 = 2 approval votes. So both providers must vote yes on future proposals, before they take on effect.
 

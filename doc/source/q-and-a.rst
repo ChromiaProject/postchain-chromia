@@ -38,18 +38,17 @@ On linux you can do this (with schema = ai_cluster).::
 
 How many keys do I need and when to use which?
 ===============================================
-You need two key pairs: a node key pair, and a provider key pair. Key pairs can be generated with `keygen` subcommand.
+You need two key pairs: a node key pair, and a provider key pair. Key pairs can be generated with ``keygen`` subcommand.
 
 Provider Key pair
     You use this key pair whenever you need to prove who you are (that is, a provider with authorities to do stuff). You do that via the parameter -cfg with your prov.cfg file.
     
 A prov.cfg file typically look like this::
 
-    privkey: 4707C67377D5629AB3560ACD24F89C7273FE64C20BF1D6643A68D8E62051EC5E
-    pubkey: 036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
-    mnemonic: either dilemma orphan use file essence snap scout snake chief check top divide crash amused lawsuit stool canyon olive range ginger cigar ramp spot
-    api.url=http://10.240.0.55:7740
-    brid=9C1F485A1A3157CC29698F046DB804712FF7C385C5194A7F0D619DEE85153A41
+    privkey=4707C67377D5629AB3560ACD24F89C7273FE64C20BF1D6643A68D8E62051EC5E
+    pubkey=036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
+    api-url=http://10.240.0.55:7740
+    blockchain-rid=9C1F485A1A3157CC29698F046DB804712FF7C385C5194A7F0D619DEE85153A41
 
 Node key pair
     This is for signing blocks. Public node key is also used to identify a node.
@@ -72,7 +71,7 @@ On linux you can do this::
 How to use System-d for running a node in background?
 ================================================================
 
-System-d can be set up to run your node in background and also restart it automatically after a restart or crash of your computer.::
+System-d can be set up to run your node in background and also restart it automatically after a restart or crash of your computer::
 
     sudo nano  ../../etc/systemd/system/postchain.service
     sudo systemctl status postchain.service
@@ -84,6 +83,6 @@ Reload is needed after changes.
 What's the difference between Enterprise0 and Chomia0?
 =========================================================
 
-Enterprise0 and Chromia0 share quite a lot of functionality. Chromia is the public network and Enterpris0 is the Enterprise Level Solution, for use within a company or organization.
+Enterprise0 and Chromia0 share quite a lot of functionality. Chromia is managed by an admin and Enterprise0 is the Enterprise Level Solution, managed solely by the providers.
 
 

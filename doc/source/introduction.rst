@@ -67,7 +67,7 @@ nm_get_peer_infos()
   Return a list of peers (IP address, port, pubkey)
 
 nm_get_peer_list_version()
-  Return an integer version. This might for example be the timestamp of the last block a the time the node list whas updated, but could be anything, as long as it changes every time the node list changes.
+  Return an integer version. This might for example be the timestamp of the last block a the time the node list was updated, but could be anything, as long as it changes every time the node list changes.
 
 nm_compute_blockchain_list(pubkey)
   Return a list of blockchain RIDs that the node identified by the provided pubkey should run.
@@ -86,32 +86,13 @@ nm_get_node_replica_map
 
 GTXManagedNodeDataSource is the class responsible for fetching blockchain configurations and node configurations from the database.
 
-
-Bootstrapping
-===============
-
-Bootstrapping is the process of setting up a mangaged mode system from scratch. It consists of the following activities:
-
-* Prepare the host machine
-* Install the postchain software
-* Configure blockchain 0
-
-If you want to set up your own blockchain cluster, first make sure you have the following software:
-
-* Management Client (pmc) postchain-mc-1.0-SNAPSHOT-dist.tar.gz
-* Node software (postchain-node) rellr-0.10.3-dist.tar.gz with a recent (>=27547d61caaf7d5e84cf1b2102a79de9bf6b872b) build of postchain-3.3.1-SNAPSHOT
-* PostgreSQL
-
-Some inspiration can be found in `Chromia0 setup provider procedure <https://docs.google.com/document/d/1Lho7HxI9hHisrhk9A_2Sit3f4nO1ZJRjkMl9L7Qjnf0/edit?usp=sharing>`_.
-
-
 Setup a node
 ===============
 
 To setup a node in managed mode, the following steps are required:
 
 * Install Postchain and Rell
-* Create a `.properties` configuration file to setup database access and a few other things.
+* Create a ``.properties`` configuration file to setup database access and a few other things.
 * Get hold of a blockchain configuration for chain 0:
 
   - If first node in system
@@ -126,7 +107,7 @@ To setup a node in managed mode, the following steps are required:
 Node config file
 -------------------
 
-A node must have a `.properties` file. Here is an example of such a file.::
+A node must have a ``.properties`` file. Here is an example of such a file::
 
 
    ################################################
