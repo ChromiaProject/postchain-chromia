@@ -13,4 +13,3 @@ provider_state       Enable/disable a registered provider.
 bc_signers           Update which nodes that should be signers for a bc
 bc_stop              Stop building blocks for a given blockchain.
 =================    =======================================================
-

@@ -4,46 +4,47 @@ Introduction
 
 We start with a few concepts that are useful to know:
 
-Dapp
-   A distributed application where the back-end running on nodes and the front end on some client software.
+.. glossary::
+    Dapp
+       A distributed application where the back-end running on nodes and the front end on some client software.
 
-Management chain (bc0)
-    Dapp for managing settings/configurations for all blockchains in the network. This is convenient because it will help to synchronize configuration changes between nodes (where manual synchronization would be time consuming). `bc0` is managing all blockchains in the network, including itself.
-    Comes in a few flavors; Chromia0, Enterprise0 and Directory1.
+    Management chain (bc0)
+        Dapp for managing settings/configurations for all blockchains in the network. This is convenient because it will help to synchronize configuration changes between nodes (where manual synchronization would be time consuming). `bc0` is managing all blockchains in the network, including itself.
+        Comes in a few flavors; Chromia0, Enterprise0 and Directory1.
 
-Postchain-MC
-   A command line tool which submits transactions to the management chain chain.
+    Postchain-MC
+       A command line tool which submits transactions to the management chain chain.
 
-Node
-   Machine running bc0 dapp.
+    Node
+       Machine running bc0 dapp.
 
-Providers
-   Private persons or organizations responsible for the nodes.
+    Providers
+       Private persons or organizations responsible for the nodes.
 
-Blockchain
-   The data the "dapps" use are stored in "blockchains" that are
-     hosted by the "nodes".
+    Blockchain
+       The data the "dapps" use are stored in "blockchains" that are
+         hosted by the "nodes".
 
-   Example: The  dapp 'HorseDapp' use the blockchain 'HorseBC' to store its data,
-     but also reads from the blockchain 'AllSpeciesRepo' that is managed by a different dapp.
+       Example: The  dapp 'HorseDapp' use the blockchain 'HorseBC' to store its data,
+         but also reads from the blockchain 'AllSpeciesRepo' that is managed by a different dapp.
 
-Blockchain block
-   The blocks hold the actual data of the blockchain. Each block depend on the previous one and thereby create a chain of blocks.
+    Blockchain block
+       The blocks hold the actual data of the blockchain. Each block depend on the previous one and thereby create a chain of blocks.
 
-Blockchain configuration
-   The blockchain configuration fully defines the blockchain's behavior. Both signer nodes and replica nodes need to know the configuration to create and verify blocks.
+    Blockchain configuration
+       The blockchain configuration fully defines the blockchain's behavior. Both signer nodes and replica nodes need to know the configuration to create and verify blocks.
 
-Signer
-   Node responsible for verifying and creating data blocks.
+    Signer
+       Node responsible for verifying and creating data blocks.
 
-Replica
-   Node that verifies data blocks, but do not create blocks.
+    Replica
+       Node that verifies data blocks, but do not create blocks.
 
-Blockchain RID (brid)
-   Global reference ID for a blockchain, common for all nodes.
+    Blockchain RID (brid)
+       Global reference ID for a blockchain, common for all nodes.
 
-Chain ID
-   Local blockchain ID. Can be different on different nodes.
+    Chain ID
+       Local blockchain ID. Can be different on different nodes.
 
 
 One common situation is when a provider wants to add a node to the set of allowed nodes on the network
@@ -138,7 +139,7 @@ A node must have a `.properties` file. Here is an example of such a file.::
    # BlockchainInfrastructure
    #   * Decodes blockchain configurations from the BlockchainConfigurationProvider
    #   * Creates a BlockchainEngine that knows how to build blocks
-   #   * Creates a BlockchainProcess that knows how to use a BlockchainEngine and syncronize with other nodes.
+   #   * Creates a BlockchainProcess that knows how to use a BlockchainEngine and synchronize with other nodes.
    # BlockchainProcessManager knows how to start and stop blockchains, and can decide when it's time to restart a
    # blockchain, typically due to configuration changes.
    infrastructure=net.postchain.managed.Chromia0InfrastructureFactory

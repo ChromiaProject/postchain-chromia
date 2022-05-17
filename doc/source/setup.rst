@@ -65,5 +65,11 @@ You will now have a folder called ``out`` which contains the configuration of bc
     └── node-config.properties
 
 The files ``0.gtv`` and ``0.xml`` found in the folder ``0`` is the blockchain configuration (in two formats) for chain 0 at height 0 (`blockchains/<chain-id>/<height>.xml`)
-Note: Disregard the file ``node-config.properties`` file, we will be using the ones found in ``config`` folder in stead.
-Note: The ``brid.txt`` will not the the brid of ``bc0`` for this dapp since ``bc0`` will create its own brid for this chain when it manages itself.
+
+.. note::
+
+    Disregard the file ``node-config.properties`` file, we will be using the ones found in ``config`` folder in stead.
+
+.. note::
+
+    The ``brid.txt`` will not the the brid of ``bc0`` for this dapp since ``bc0`` will create its own brid for this chain when it manages itself.
