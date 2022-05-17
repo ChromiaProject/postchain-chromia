@@ -34,10 +34,10 @@ open class BaseClientConfig(private val config: Configuration) : ClientConfig {
     }
 
     override val apiURL: String
-        get() = config.getString("api.url", "")
+        get() = config.getString("api-url", "")
 
     override val brid: String
-        get() = config.getString("brid", "")
+        get() = config.getString("blockchain-rid", "")
 
     override val privKey: String
         get() = config.getString("privkey", "")
