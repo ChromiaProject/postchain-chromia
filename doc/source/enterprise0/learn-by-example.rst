@@ -1,13 +1,9 @@
-=============================================
-Learn by an example: The AI project
-=============================================
+Learn by an example: The city tracker
+######################################
 
-In this section you can learn how to set up your on blockchain network by studying an concrete example. The example project is called AI.
+In this section you can learn how to set up your on blockchain network by studying an concrete example. The example project is called "The city tracker".
 
-The cluster has four nodes. The first node Ai0 is the initial provider node. Bc0 is set up on this first node and also added by the Management client (postchain-mc) so that bc0 will become aware of itself. Then we can in a convenient  way update configuration, add a second blockchain to be managed by bc0: bcai. Also more nodes can be added and be made signers.
-
-There are quite a few steps here, we’ll take them one at a time.
-
+The cluster has four nodes. The first node n0 is the initial provider node. Bc0 is set up on this first node and also added by the Management client (postchain-mc) so that bc0 will become aware of itself. Then we can in a convenient  way update configuration, add a second blockchain to be managed by bc0: ``city``. More nodes can optionally be added and be made signers. This sample provides configurations for up to 4 nodes.
 
 Initial Provider
 ================
@@ -99,7 +95,8 @@ Now we can add management of bc0, so that bc0 becomes aware of itself::
 
 Vote for this proposal.
 
-:doc:`/enterprise0/voting`
+.. hint::
+    :doc:`/enterprise0/voting`
 
 Adding a node to the network
 =============================================
@@ -116,7 +113,8 @@ Initial provider first registers provider 2 and enables the new provider::
 
 Provider 1 now votes for this proposal to add the provider.
 
-:doc:`/enterprise0/voting`
+.. hint::
+    :doc:`/enterprise0/voting`
 
 Then activates it with another proposal::
 
@@ -127,18 +125,18 @@ Note that with two active (enabled) providers, NP=2, we need NP/2 + 1 = 2 approv
 Initialize
 -----------------------------------
 
-Provider 2 initializes its node in the same way as provider 1 (add-bc, and add peerinfo for itself and initial node)::
+Provider 2 initializes its node by adding the blockchain and peerinfos of itself and node 1. This can be done in one step using::
 
     ./run.sh 1 reset
 
-Problems? Try ``./postchain wipe-db -nc``. For example if you didn’t add the right bc with the correct brid.
+Problems? Try ``./postchain.sh wipe-db -nc``. For example if you didn’t add the right bc with the correct brid.
 
 Add Node to the network
-----------------
+---------------------------
 
 The initial provider can register the new node to bc0::
 
-    ./pmc.sh add-node -k <node1-pubkey> -cfg config/prov1.cfg -h <node1-host> -p <node1-port>
+    ./pmc.sh add-node -k <new-node-pubkey> -cfg config/prov1.cfg -h <new-node-host> -p <new-node-port>
 
 Make the new node a signer of bc0
 ------------------------------------------------------
@@ -150,44 +148,56 @@ So a provider does::
 
 And both providers must vote on this proposal.
 
-Do I have to add provider before adding a new node?
-===================================================
+.. note:: Do I have to add provider before adding a new node?
 
-No, it is also possible to add the new node and propose it as a signer before adding the new provider. The benefit of this is that less votes are needed to add the node as signer (in this case 1 in stead of two). The drawback is that then it is provider 1 that has to do all the work of adding the node. Consider providers as persons and nodes as machines they are hosting.
+    No, it is also possible to add the new node and propose it as a signer before adding the new provider. The benefit of this is that less votes are needed to add the node as signer (in this case 1 in stead of two). The drawback is that then it is provider 1 that has to do all the work of adding the node. Consider providers as persons and nodes as machines they are hosting.
 
-Add a new blockchain: bcai
-===========================
+Add a new blockchain: city
+============================
 
-Generate blockchain configuration.::
+Generate blockchain configuration::
 
-    ./multigen.sh -d rell-src-dir/aisweden/ runai.xml -o blockchainai
+    multigen.sh -d app/src/ app/config/run.xml -o app/out
 
-Want to add both nodes directly in the signer node list? No problem, just enter them as a comma separated list, no spaces.::
+This can be done using the supplied script::
 
-    ./pmc-e0.sh propose-blockchain -bc ../postchain-node/blockchainai/blockchains/100/0.xml -cfg ../postchain-node/prov.cfg -n 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57,035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
+    ./app/generate.sh
 
-NB: You cannot add a bc without at least one signer. Signers given in the blockchain configuration file are ignored. 
+Propose the new chain to bc0. This can be done as either of the providers and to any node that is a signer of bc0. To make both nodes signers of the new chain, supply public keys to all nodes you want as signers when you propose the chain and vote for its proposal::
 
-Do you want to add more signer after that the bc is added? Do this::
+    ./pmc.sh propose-blockchain -bc app/out/blockchains/100/0.xml -cfg config/prov2.cfg -n <n1-pubkey>,<n2-pubkey>
 
-    ./pmc-e0.sh propose-add-blockchain-signers -cfg config/prov2.cfg -brid 25095786FC38349095AD3E5326279D308BBB5932947594C623E9DB46A78848F9 -n 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
+.. note::
+    You cannot add a bc without at least one signer. Signers given in the blockchain configuration file are ignored.
 
-Great! Now we have two signers for bcai as well. Now, do I also need to post add-blockhain on the other node (ai1)? Nope, that’s the beauty of Managed Mode...
+Do you want to add more signers after that the bc is added? Propose and vote for it::
+
+    ./pmc.sh propose-add-blockchain-signers -cfg config/prov2.cfg -brid <bc0-brid> -n <nx-pubkey>
+
+Great! Now we have two signers for ``city`` as well.
+
+.. note::
+    Do I also need to post add-blockhain on the other nodes?
+
+    No, that’s the beauty of Managed Mode...
 
 Update blockchain configuration
 =================================
 
-Can I add new configuration “on the fly”? So I do not need to restart node? Yes, it is updated automatically in managed mode.
-I will now make some changes/updates in the behavior of bc0 and add this configuration with pmc-e0 propose-configuration. I generated a new 0.xml with ``./multigen:``::
+To update the configuration or source code of any of the chains, we generate a new blockchain configuration and propose it.
 
-    ./multigen.sh -d rellslimmed/src run0.xml
+For example if I make changes to bc0 rell source, we first re-generate the configuration::
 
-And then added the new configuration at a height > current_height.::
+    ./generate.sh
 
-    ./pmc-e0.sh propose-configuration -bc ../postchain-node/blockchains/0/0.xml -cfg ../postchain-node/prov.cfg -brid 25095786FC38349095AD3E5326279D308BBB5932947594C623E9DB46A78848F9 -h 500
+And then add the new configuration at a height > current_height.::
 
-NB If height < currentHeight, command will fail.::
+    ./pmc.sh propose-configuration -bc out/blockchains/0/0.xml -cfg config/prov1.cfg -brid <bc0-brid> -h 500
 
-    ./pmc-e0.sh propose-configuration -bc ../postchain-node/blockchainai/blockchains/100removed-row/0.xml -cfg ../postchain-node/prov.cfg -brid 3EB6181B3107568F6656E603FC02C240038CEB2D5F9D1ED13D620450A19C992E -h 17100
 
-Plus vote.
+.. warning::
+    If height < currentHeight, the command will fail.
+
+    If height is reached before consensus is acheived, the command will fail.
+
+    Make sure to add the configuration at a height sufficiently far in the future so that it can be added properly.

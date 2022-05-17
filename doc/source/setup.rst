@@ -13,20 +13,29 @@ The example package contains
 .. code-block:: shell
 
     .
-    └── managed-mode-example
-        ├── config
-        │   ├── common.properties
-        │   ├── config.0.properties
-        │   ├── config.1.properties
-        │   ├── config.2.properties
-        │   ├── config.3.properties
-        │   └── run.xml
-        ├── sources.tar.gz
-        ├── generate.sh
-        ├── dist.tar.gz
-        ├── postchain-debug.sh
-        ├── postchain.sh
-        └── run.sh
+    ├── app
+    │   ├── config
+    │   │   └── run.xml
+    │   ├── generate.sh
+    │   └── src
+    │       └── main.rell
+    ├── config
+    │   ├── common.properties
+    │   ├── config.0.properties
+    │   ├── config.1.properties
+    │   ├── config.2.properties
+    │   ├── config.3.properties
+    │   ├── prov1.cfg
+    │   └── run.xml
+    ├── doc
+    │   └── index.html
+    ├── sources.tar.gz
+    ├── generate.sh
+    ├── dist.tar.gz
+    ├── pmc.sh
+    ├── postchain-debug.sh
+    ├── postchain.sh
+    └── run.sh
 
 Setup
 ==================
