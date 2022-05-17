@@ -1,11 +1,14 @@
 package net.postchain.images.directory1
 
 import assertk.assert
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
 import mu.KLogging
 import mu.KotlinLogging
+import net.postchain.base.BlockchainRidFactory
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
@@ -40,6 +43,7 @@ internal class Directory1DeploymentIT {
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "directory1-deployment"
         private val network: Network = Network.newNetwork()
+        private lateinit var dapp1: Pair<Long, BlockchainRid>
 
         @Container
         private val postgres = ChromaWayPostgresContainer()
@@ -211,6 +215,7 @@ internal class Directory1DeploymentIT {
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
             chain.configs.forEach { (height, config) ->
                 consoleLogger.info { "Proposing a blockchain on height $height" }
+                dapp1 = 100L to BlockchainRidFactory.calculateBlockchainRid(config.gtvConfig)
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
                 node2.tx(0, "propose_blockchain", provider2, configGtv, container)
 
@@ -223,6 +228,21 @@ internal class Directory1DeploymentIT {
         awaitUntilAsserted {
             listOf(node1, node2).forEach { node ->
                 assert(node.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
+            }
+        }
+    }
+
+    @Test
+    @Order(7)
+    fun `Transactions can be sent to newly deployed dapp`() {
+        val city = "Heraklion"
+        node2.tx(dapp1.second, "add_city", gtv(city))
+        awaitUntilAsserted {
+            listOf(node1, node2).forEach { node ->
+                val cities = awaitQueryResult {
+                    node.client(dapp1.second).querySync("get_cities")
+                }!!.asArray().map { it.asString() }
+                assert(cities).containsExactly(city)
             }
         }
     }

@@ -90,7 +90,7 @@ internal fun PostchainClient.getProposal(): Gtv {
 
 
 internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid, sendTxTo: PostchainContainer) {
-    TxBuilder(brid0, newNode.sigMaker).tx("add_node",
+    TxBuilder(brid0, newNode.sigMaker).build("add_node",
             newNodeProvider,
             gtv(newNode.pubKeyByteArray),
             gtv(newNode.nodeHost), gtv(newNode.nodePort.toLong()),
