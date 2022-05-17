@@ -11,85 +11,73 @@ There are quite a few steps here, we’ll take them one at a time.
 
 Initial Provider
 ================
-The initial provider that can vote “yes” to the first blockchain, bc0, and is a module argument in the rell module, in run0.xml. Generate your provider keypair with:
+The initial provider can vote “yes” to the first blockchain, bc0, and is a module argument to the rell module, defined in run.xml. Generate your provider keypair with:
 
 Generate keypair for provider management console::
 
-    ./pmc.sh keygen --save prov.cfg
+    ./pmc.sh keygen --save config/prov1.cfg
 
+Update your run.xml with the corresponding public key. We used this pubkey of initial provider::
 
+    <arg key="initial_provider">
+        <bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea>
+    </arg>
 
-Update your run-e0.xml accordingly. We used this pubkey of initial provider::
-    03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710
-
-Generate your blockchain configuration
+Generate blockchain configuration
 =============================================
-The blockchain configuration is generated with the script ` ./multigen.sh`. The configuration is generated from
+The blockchain configuration is generated with the script ``multigen.sh``. The configuration is generated from
 
-#. a run.xml-file (in this example run0.xml)
-#1. the rell code.
+- run.xml
+- rell source code
 
-If parameter -d is not given, it will look for the rell code in the current directory.
-Rell code for Enterprise0 is here:   ``/postchain-mc/src/main/rell/enterprise0/``
-The rell code for Chromia0 is here: ``/postchain-mc/src/main/rell/chroma0/``::
-
-    ./multigen.sh -d  ../../../postchain-mc/src/main/rell//enterprise0/ run-e0.xml
-
-This command will generate your blockchain configuration in blockchains/0/0.xml. Example of run-xml files are found here::
-
-    /postchain-mc/config/managed-mode/run-e0.xml
-    /postchain-mc/config/managed-mode/run-c0.xml
+In this example you can run ``generate.sh`` supplied in this package to generate blockchain configuration for ``bc0``.
 
 Blockchain reference ID (BRID)
 ==============================
-In folder blockchains/0/ you can also find the derived *brid* for your blockchain: blockchains/0/brid.txt. You need this to put in your prov.cfg.
-Node configuration
-The node configuration is split in node-config.properties (the same for all nodes) and private.properties (the node’s keypair). The node keypair is not the same as the provider keypair.
-A node configuration file example is found here:
-/postchain-mc/config/managed-mode/node-conf/node-config.properties
+In the folder ``out/blockchains/0/`` you can find the blockchain configuration and the derived *brid* for the blockchain. The brid must be set in ``prov.cfg`` to be able to communicate with this chain::
 
-Ports and hosts
-===============
-Use open unique ports to avoid ssh and to not collide with testing. The ports used are
-For inter-node communication: 5000 (instead of the default 9870)
-For rest-API: 5001 (instead of the default 7740)
-The hosts for the four nodes are:
+    blockchain-rid=54D9D994C3563CBC1577E1E45E94E35647D2D46ED24FCD8A5C29F96F240A4BC8
 
-* 10.240.0.55
-* 10.240.0.56
-* 10.240.0.57
-* 10.240.0.58
+Rest API
+=============================
 
+Finally you need to specify the url to the rest api of the node you want to communicate with. For the initial step this needs to be the first node but once the network is set up this can be any node of the network. If you are running the node locally you can specify it as::
 
-Run your first node
+        api-url=http://127.0.0.1:7740
+
+Run the first node
 ===================
 
-Now you have everything needed to start the node. Here are the steps.
+To start the first node you need to perform the following steps:
 Wipe db::
 
-    ./postchain.sh wipe-db -nc conf0/node-config.properties
+    ./postchain.sh wipe-db -nc config/config.0.properties
 
 Add blockchain::
 
-    ./postchain.sh add-blockchain -bc blockchains/0/0.xml -cid 0 -nc conf0/node-config.properties
+    ./postchain.sh add-blockchain -bc out/blockchains/0/0.xml -cid 0 -nc config/config.0.properties
 
 Should we also do add-configuration? The command ``add-blockchain`` is a special case of the more general ``add-configuration``, with height set to zero. You do not need to do both, add-blockchain is enough.
 
 
 Add peer::
 
+    # Add its own info
     ./postchain.sh peerinfo-add -h 10.240.0.55 -nc conf0/node-config.properties -p 5000 -pk 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
-    (./postchain.sh peerinfo-add -h localhost -nc conf0/node-config.properties -p 5000 -pk 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57)
+
+In this example, you can use ``./run.sh 0 reset`` to perform the above operations on node 0.
 
 The next step is good to somehow run in the background, so that the node continues to run even if you get disconnected. We can use for example ``systemd``. Here, ``screen`` is used::
 
-    Screen -S bc0
-    Screen -r bc0  (means reattach)
+    screen -S bc0
+    screen -r bc0  (means reattach)
     Ctrl+a, d  (means detach)
 
 So in screen bc0 we do::
 
     ./postchain.sh run-node -cid 0 -nc conf0/node-config.properties
+    or
+    ./run.sh 0 run
 
 Great! The node is running with chain ID 0.
 
@@ -99,103 +87,73 @@ Manage bc0 using the Management Client (pmc)
 
 In Enterprise0, the providers have the power. Only providers can make updates. For it all to start we therefore need an initial provider that in the beginning has all the management power. With the command below, this first provider is registered and enabled.::
 
-    ./pmc-e0.sh init -cfg ../postchain-node/prov.cfg
-
-Problems? Check that ``brid``  in your prov.cfg is the same as in ``/blockchains/0/brid.txt``
+    ./pmc.sh init -cfg config/prov1.cfg
 
 To add management of a blockchain, at least one managed node is needed. Therefore first add a managed node, making enterprise0 (bc0) aware of the Node0.  The provider of the node does (NB: If you are not the initial provider, the initial provider must first propose and enable you)::
 
-    ./pmc-c0.sh add-node -cfg ../postchain-node/prov.cfg -p 5000 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h 10.240.0.55
-    (./pmc-e0.sh add-node -cfg ../postchain-node/prov.cfg -p 5000 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost)
+    ./pmc.sh add-node -cfg config/prov1.cfg -p 9780 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost
 
 Now we can add management of bc0, so that bc0 becomes aware of itself::
 
-    ./pmc-e0.sh propose-blockchain -bc ../postchain-node/blockchains/0/0.xml -cfg ../postchain-node/prov.cfg -n 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+    ./pmc.sh propose-blockchain -bc out/blockchains/0/0.xml -cfg config/prov1.cfg -n 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
 
-Plus vote.
+Vote for this proposal.
 
+:doc:`/enterprise0/voting`
 
-Adding a new node
+Adding a node to the network
 =============================================
 
-We want to add a new node to bc0 (node1). A node that is owned by another provider.
+Now we add a new node to the network. In this example, the node is owned by another provider.
+The second provider creates its own keypair and and adds the brid and api-url to a file ``config/prov2.cfg``.
 
 First provider adds a new provider
 -----------------------------------
 
-Initial provider first registers ai-se-2 as provider and enables the new provider.::
+Initial provider first registers provider 2 and enables the new provider::
 
-    ./pmc-e0.sh propose-provider -cfg ../postchain-node/prov.cfg -pk 036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
+    ./pmc.sh propose-provider -cfg config/prov1.cfg -pk <prov2-pubkey>
 
-Get proposal index::
+Provider 1 now votes for this proposal to add the provider.
 
-    ./pmc-e0.sh list-proposals-since  -cfg ../postchain-node/prov.cfg
+:doc:`/enterprise0/voting`
 
-Vote::
+Then activates it with another proposal::
 
-    ./pmc-e0.sh vote -idx index -cfg ../postchain-node/prov.cfg
-    ./pmc-e0.sh propose-enable-provider -cfg ../postchain-node/prov.cfg -pk 036C9145D9F535ED54AE942DD581E19DFFF6FDDAA98568BB936E41A23C356AF413
-    ./pmc-e0.sh list-proposals-since  -cfg ../postchain-node/prov.cfg
-    ./pmc-e0.sh vote -idx index -cfg ../postchain-node/prov.cfg
+    ./pmc.sh propose-enable-provider -cfg config/prov1.cfg -pk 027DE85A4FB4ED49F0208E7AEFDD3E926D18EE913A67A37CB2C6AF6DAC04CC21A9
 
 Note that with two active (enabled) providers, NP=2, we need NP/2 + 1 = 2 approval votes. So both providers must vote yes on future proposals, before they take on effect.
 
 Initialize
 -----------------------------------
 
-Provider initilaizes its node (add-bc, and add 2(!) peerinfo)::
+Provider 2 initializes its node in the same way as provider 1 (add-bc, and add peerinfo for itself and initial node)::
 
-    ./postchain.sh add-blockchain -cid 0 -bc blockchains/0/0.xml -nc conf1/node-config.properties
+    ./run.sh 1 reset
 
-    ./postchain.sh peerinfo-add -h 10.240.0.56 -nc conf1/node-config.properties -p 5000 -pk 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
-    ./postchain.sh peerinfo-add -h 10.240.0.55 -nc conf1/node-config.properties -p 5000 -pk 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+Problems? Try ``./postchain wipe-db -nc``. For example if you didn’t add the right bc with the correct brid.
 
-Problems? Try ``./postchain wipe-db -nc``. For example if you didn’t add the right bc with the correct brid. (Add-blockchain with -f does not seem to work?.
-
-Pubkey node ai-se-4::
-
-    03ef3f5be98d499b048ba28b247036b611a1ced7fcf87c17c8b5ca3b3ce1ee23a4
-
-Pubkey node ai-se-3::
-
-    03f811d3e806e6d093a4bcce49c145ba78f9a4b2fbd167753ecab2a13530b081f8
-
-Register Node
+Add Node to the network
 ----------------
 
-Now the new provider can register its node in bc0::
+The initial provider can register the new node to bc0::
 
-    ./pmc-e0.sh add-node -k 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9 -cfg ../postchain-node/prov.cfg -h 10.240.0.56 -p 5000
+    ./pmc.sh add-node -k <node1-pubkey> -cfg config/prov1.cfg -h <node1-host> -p <node1-port>
 
-Once you submit a blockchain configuration using ``./pmc-e0.sh propose-blockchain``, enterprise0 (bc0) code will delete the original signer list and add signers corresponding to the node list. So it needs to know the node before the blockchain can be added.
-
-Should I, or must I add my node before I synchronize?
+Make the new node a signer of bc0
 ------------------------------------------------------
 
-
-In fact, it might be necessary to do add-node before synchronization (run-node) in some cases because we have a rather odd rule: a machine with higher pubkey contacts machine with lower pubkey.
-So what happens is that if pubkey of ai2 is lower than pubkey of ai1, it will not dare to contact ai1 first. :)
-So you need to add it to chain0, so that ai1 would contact it. Like this:
-When you create configuration for pmc-c0, you can give a link to REST API of your first machine. (i.e. the first machine in the cluster).
-Then pmc-c0 add-node creates a record in the chain 0 currently managed by ai1 alone.
-Even if you do synchronization before add-node, it will be ai0 (ai-se-1) that executes the transaction, since it is the only node that produces blocks. Before the command add-node, ai-se-2 is just a replica, and nodes are not listening for transactions from replicas. For ai-se-1 to listen to the command from ai-se-2, I changed in the replicas prov.cfg from api.url = http://localhost:7740 to http://10.240.0.55:7740. Thus, We communicate with the Rest API via ai-se-1, since there is no node (or API running on our own machine yet. Or at least no node that ai-se-1 thinks is worth listening to)?
-Finally, I've successfully added my second node! Should I now change back in prov.cfg?
-I can now do list-nodes and get-node-info etc.
-I can also get from bc0 the configuration of a given blockchain at a given height (e.g. 4)::
-
-    ./pmc-e0.sh get-blockchain-configuration -cfg ../postchain-node/prov.cfg -brid 9C1F485A1A3157CC29698F046DB804712FF7C385C5194A7F0D619DEE85153A41 -h 4
-
-If I want to run my node with the new configuration I do ./postchain.sh add-configuration? No, not at all! It is done automatically when configuration is changed/updated.
-
-Make me a signer
-------------------------------------------------------
-
-
-Still, my new node is not a signer. When a provider does ``pmc-e0.sh propose-blockchain``, the provided list of nodes are made signers automatically. But when adding a node separately, the table blockchain_signer_node must explicitly updated. It is not included in add-node.
+Provider 2 will propose node 1 as a signer. This tx must be sent to an existing signer signer, in this case n0. This means provider 2 must set the ``api-url`` path to point at n0 url until it has become a signer.
 So a provider does::
 
-    ./pmc-e0.sh propose-add-blockchain-signers -cfg ../postchain-node/prov.cfg -brid 	 -n 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
+    ./pmc.sh propose-add-blockchain-signers -cfg config/prov2.cfg -brid <bc0-brid> -n <new-node-pubkey>
 
+And both providers must vote on this proposal.
+
+Do I have to add provider before adding a new node?
+===================================================
+
+No, it is also possible to add the new node and propose it as a signer before adding the new provider. The benefit of this is that less votes are needed to add the node as signer (in this case 1 in stead of two). The drawback is that then it is provider 1 that has to do all the work of adding the node. Consider providers as persons and nodes as machines they are hosting.
 
 Add a new blockchain: bcai
 ===========================
@@ -212,7 +170,7 @@ NB: You cannot add a bc without at least one signer. Signers given in the blockc
 
 Do you want to add more signer after that the bc is added? Do this::
 
-    ./pmc-e0.sh propose-add-blockchain-signers -cfg ../postchain-node/prov.cfg -brid 25095786FC38349095AD3E5326279D308BBB5932947594C623E9DB46A78848F9 -n 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
+    ./pmc-e0.sh propose-add-blockchain-signers -cfg config/prov2.cfg -brid 25095786FC38349095AD3E5326279D308BBB5932947594C623E9DB46A78848F9 -n 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9
 
 Great! Now we have two signers for bcai as well. Now, do I also need to post add-blockhain on the other node (ai1)? Nope, that’s the beauty of Managed Mode...
 

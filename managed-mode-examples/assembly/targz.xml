@@ -47,17 +47,11 @@
         <fileSet>
             <directory>./config</directory>
             <outputDirectory>./config</outputDirectory>
-            <includes>
-                <include>*.xml</include>
-            </includes>
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
             <directory>../config</directory>
             <outputDirectory>./config</outputDirectory>
-            <includes>
-                <include>*.properties</include>
-            </includes>
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
