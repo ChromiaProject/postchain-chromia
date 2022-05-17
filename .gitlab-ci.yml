@@ -14,6 +14,10 @@ stages:
 docs:
   image: python
   stage: docs
+  only:
+    - dev
+    - master
+    - /^support\/.*$/
   before_script:
     - pip install sphinx sphinx-rtd-theme
   script:
