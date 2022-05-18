@@ -9,7 +9,7 @@
                 <app module="enterprise0">
                     <args module="enterprise0">
                         <arg key="initial_provider">
-                            <bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea>
+                            <bytea>0254816E68AE7F95487330D3F8A110F5C998EEF910D81B5704F838E1CDA3927B97</bytea>
                         </arg>
                     </args>
                 </app>
