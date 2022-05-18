@@ -25,7 +25,6 @@ The example package contains
     │   ├── config.1.properties
     │   ├── config.2.properties
     │   ├── config.3.properties
-    │   ├── prov1.cfg
     │   └── run.xml
     ├── doc
     │   └── index.html

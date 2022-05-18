@@ -17,5 +17,6 @@ Postchain MC is used to issue commands to an entire group of Chromia nodes.
 
    setup.rst
    introduction.rst
+   chromia0/learn-by-example.rst
    queries.rst
    q-and-a.rst
