@@ -74,7 +74,7 @@ Add Node to the network
 
 The initial provider can register the new node to bc0::
 
-    ./pmc.sh add-node -k <new-node-pubkey> -cfg config/prov1.cfg -h <new-node-host> -p <new-node-port>
+    ./pmc.sh add-node -cfg config/prov1.cfg -h <new-node-host> -p <new-node-port> -k <new-node-pubkey>
 
 Make the new node a signer of bc0
 ------------------------------------------------------

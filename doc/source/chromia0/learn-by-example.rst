@@ -2,9 +2,7 @@
 
 Admin
 ================
-The admin holds the ultimate power. It can add providers and nodes. Providers are a bit more limited. They can update configurations and nodes, but not add them. The admin is a module argument to the rell module, defined in run.xml. Generate your admin keypair with:
-
-Generate keypair for provider management console::
+The admin of the network is a module argument to the rell module, defined in run.xml. Generate your admin keypair with::
 
     ./pmc.sh keygen --save config/admin.cfg
 
@@ -14,15 +12,12 @@ Update your run.xml with the corresponding public key. We used this pubkey of in
         <bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea>
     </arg>
 
-
 .. include:: ../example/setup.rst
 
 Manage bc0 using the Management Client (pmc)
 =============================================
 
-In Chromia0, only the admin can add and enable providers, update signer lists and add blockchains. Providers can add nodes. This means a new provider will ask admin for permission to become a provider. He will then add its nodes to the network and ask the admin to make the node a signer of a blockchain. Any user who wants to start a new blockchain will ask the admin. To set up the initial node and define the admin, run::
-
-    ./pmc.sh init -cfg config/admin.cfg
+In Chromia0, only the admin can add and enable providers, update signer lists and add blockchains. Providers can add nodes. This means a new provider will ask admin for permission to become a provider. He will then add its nodes to the network and ask the admin to make the node a signer of a blockchain. Any user who wants to start a new blockchain will ask the admin.
 
 Create a provider keypair similar to ``admin.cfg`` and store it in ``config/prov1.cfg``. Admin will now register and enable this provider::
 
@@ -48,8 +43,8 @@ Admin adds the new provider
 
 Admin first registers provider 2 and enables the new provider::
 
-    ./pmc.sh register-provider -cfg config/admin.cfg -pk <prov2-pubkey>
-    ./pmc.sh enable-provider -cfg config/admin.cfg -pk <prov2-pubkey>
+    ./pmc.sh register-provider -cfg config/admin.cfg -k <prov2-pubkey>
+    ./pmc.sh enable-provider -cfg config/admin.cfg -k <prov2-pubkey>
 
 Initialize
 -----------------------------------
@@ -65,7 +60,7 @@ Add Node to the network
 
 The new provider can register the new node to bc0::
 
-    ./pmc.sh add-node -k <new-node-pubkey> -cfg config/prov2.cfg -h <new-node-host> -p <new-node-port>
+    ./pmc.sh add-node -cfg config/prov2.cfg -h <new-node-host> -p <new-node-port> -k <new-node-pubkey>
 
 .. note::
     This has to be sent to node 1 since it is the only signer node so far. Configure ``prov2.cfg`` to point at n0 api-url.
@@ -76,7 +71,7 @@ Make the new node a signer of bc0
 Admin will add node 1 as a signer. This tx must be sent to an existing signer signer, in this case n0.
 Admin does::
 
-    ./pmc.sh add-blockchain-signers -cfg config/admin.cfg -brid <bc0-brid> -n <new-node-pubkey>
+    ./pmc.sh add-blockchain-signers -cfg config/admin.cfg -brid <bc0-brid> -s <new-node-pubkey>
 
 Add a new blockchain: city
 ============================
