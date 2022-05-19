@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Chromia0'
-copyright = '2021, ChromaWay AB'
-author = 'Linnéa Rosenbaum'
+copyright = '2022, Chromaway AB'
+author = 'Chromaway AB'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '3.5.0'
 
 
 # -- General configuration ---------------------------------------------------
