@@ -20,4 +20,4 @@ if [ "$WIPE_DB" = true ]; then
 fi
 
 echo "Starting node"
-sh postchain.sh "$1" --directory "$RELL_OUT"
+sh postchain.sh "$1" --debug --directory "$RELL_OUT"
