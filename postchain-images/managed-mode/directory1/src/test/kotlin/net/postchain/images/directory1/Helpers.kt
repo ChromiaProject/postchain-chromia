@@ -66,7 +66,7 @@ internal fun Context.registerNodeAsProvider(cluster: Gtv, newNode: PostchainCont
 internal fun PostchainContainer.approveProposal(provider: Gtv?): Gtv? {
     var proposal: Gtv? = null
     if (provider != null) {
-        proposal = awaitQueryResult { client(0).getProposal() }
+        proposal = client(0).getProposal()
 
         // FYI: if (node == node1) then use node.txAsAdmin()
         if (networkAliases.contains("node1")) {
@@ -78,35 +78,54 @@ internal fun PostchainContainer.approveProposal(provider: Gtv?): Gtv? {
     return proposal
 }
 
-internal fun PostchainClient.getBlockchainSigners(blockchain: Gtv): Array<out Gtv> {
-    return query("get_blockchain_signers", GtvFactory.gtv("bc" to blockchain)).get().asArray()
+internal fun PostchainContainer.getBlockchainSigners(blockchain: Gtv): Array<out Gtv> {
+    return awaitQueryResult {
+        client(0).query("get_blockchain_signers", GtvFactory.gtv("bc" to blockchain)).get().asArray()
+    }!!
+}
+
+internal fun PostchainContainer.getBlockchainGtv(blockchainRid: BlockchainRid): Gtv {
+    return awaitQueryResult {
+        client(0).querySync("get_blockchain", gtv("rid" to gtv(blockchainRid.data)))
+    }!!
 }
 
 internal fun PostchainClient.getProvider1(): Gtv {
-    return query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+    return awaitQueryResult {
+        query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
+    }!!
 }
 
 internal fun PostchainContainer.getProvider(): Gtv {
-    return client(0).query("get_provider", gtv("pubkey" to gtv(pubKeyByteArray))).get()
+    return awaitQueryResult {
+        client(0).query("get_provider", gtv("pubkey" to gtv(pubKeyByteArray))).get()
+    }!!
 }
 
 internal fun PostchainClient.getSystemCluster(): Gtv {
-    return query("get_cluster", gtv("name" to gtv("system"))).get()
+    return awaitQueryResult {
+        query("get_cluster", gtv("name" to gtv("system"))).get()
+    }!!
 }
 
 internal fun PostchainClient.getSystemContainer(): Gtv {
-    return query("get_container", gtv("name" to gtv("system"))).get()
+    return awaitQueryResult {
+        query("get_container", gtv("name" to gtv("system"))).get()
+    }!!
 }
 
-internal fun PostchainClient.getAllBlockchains(): Gtv {
-    return query("get_blockchains", gtv("include_inactive" to gtv(true))).get()
+internal fun PostchainContainer.getAllBlockchains(): Gtv {
+    return awaitQueryResult {
+        client(0).query("get_blockchains", gtv("include_inactive" to gtv(true))).get()
+    }!!
 }
 
 internal fun PostchainClient.getProposal(): Gtv {
-    return query("get_proposals_since", gtv("since" to gtv(0L))).get().asArray().first()
-            .asDict()["rowid"]!!
+    return awaitQueryResult {
+        query("get_proposals_since", gtv("since" to gtv(0L))).get().asArray().first()
+                .asDict()["rowid"]!!
+    }!!
 }
-
 
 internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid, sendTxTo: PostchainContainer) {
     TxBuilder(brid0, newNode.sigMaker).build("add_node",

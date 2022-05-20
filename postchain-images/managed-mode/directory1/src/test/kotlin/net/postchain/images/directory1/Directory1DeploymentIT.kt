@@ -5,12 +5,15 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
+import com.spotify.docker.client.DockerClient
 import mu.KLogging
 import mu.KotlinLogging
 import net.postchain.base.BlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.dapp.*
+import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -45,6 +48,9 @@ internal class Directory1DeploymentIT {
         private const val resourceFolder = "directory1-deployment"
         private val network: Network = Network.newNetwork()
         private lateinit var dapp1: Pair<Long, BlockchainRid>
+
+        private val resolvedDockerHost = getResolvedDockerHost()
+        private val dockerClient: DockerClient = DockerClientFactory.create()
 
         @Container
         private val postgres = ChromaWayPostgresContainer()
@@ -83,7 +89,8 @@ internal class Directory1DeploymentIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val appConfig3 = parseConfig(this::class.java.getResource("/directory1-deployment/node3/node-config.properties")!!)
+        private val appConfig3 = setupMasterNodeConfig(
+                this::class.java.getResource("/directory1-deployment/node3/node-config.properties")!!, resolvedDockerHost)
         private val node3 = PostchainContainer(imageName, appConfig3)
                 .withNetwork(network)
                 .withNetworkAliases("node3")
@@ -97,8 +104,11 @@ internal class Directory1DeploymentIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
+                .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
 
         private lateinit var node1Db: ChainDatabaseCommunicator
@@ -107,6 +117,7 @@ internal class Directory1DeploymentIT {
         @BeforeAll
         fun setup() {
             consoleLogger.info { "Starting nodes..." }
+            removeSubnodeContainers()
             startContainers(node1, node2, node3)
 
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
@@ -125,6 +136,16 @@ internal class Directory1DeploymentIT {
         @AfterAll
         fun breakdown() {
             stopContainers(node1, node2, node3)
+            removeSubnodeContainers()
+        }
+
+        private fun removeSubnodeContainers() {
+            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
+                if (it.image().contains("postchain-subnode")) {
+                    dockerClient.stopContainer(it.id(), 0)
+                    dockerClient.removeContainer(it.id())
+                }
+            }
         }
     }
 
@@ -149,7 +170,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(3)
     fun `Add node1 to its own network`() {
-        consoleLogger.info("Adding node 1 to its own network")
+        consoleLogger.info("Adding node1 to its own network")
 
         val provider = node1.client(0).getProvider1()
         val cluster = node1.client(0).getSystemCluster()
@@ -190,7 +211,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(5)
     fun `Add node2 as signer to c0`() {
-        consoleLogger.info("Adding node2 to [node1]")
+        consoleLogger.info("Adding node2 to the cluster")
         val brid0 = node1.getBlockchainRid(0)
         val provider1 = node1.client(0).getProvider1()
         val cluster = node1.client(0).getSystemCluster()
@@ -203,19 +224,17 @@ internal class Directory1DeploymentIT {
         addNode(node2, provider2, cluster, brid0, node1)
 
         // Asserting that node2 is signers of chain0
-        val c0 = awaitQueryResult {
-            node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
-        }!!
+        val c0 = node1.getBlockchainGtv(brid0)
         awaitUntilAsserted {
-            assert(node1.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
-            assert(node2.client(0).getBlockchainSigners(c0).size).isEqualTo(2)
+            assert(node1.getBlockchainSigners(c0).size).isEqualTo(2)
+            assert(node2.getBlockchainSigners(c0).size).isEqualTo(2)
         }
     }
 
     @Test
     @Order(6)
     fun `Add node3 as signer to c0`() {
-        consoleLogger.info("Adding node3 to node1")
+        consoleLogger.info("Adding node3 to the cluster")
         val brid0 = node1.getBlockchainRid(0)
         val provider1 = node1.client(0).getProvider1()
         val provider2 = node2.getProvider()
@@ -229,13 +248,11 @@ internal class Directory1DeploymentIT {
         addNode(node3, provider3, cluster, brid0, node1)
 
         // Asserting that node2 is signers of chain0
-        val c0 = awaitQueryResult {
-            node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
-        }!!
+        val c0 = node1.getBlockchainGtv(brid0)
         awaitUntilAsserted {
-            assert(node1.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
-            assert(node2.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
-            assert(node3.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node1.getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node2.getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node3.getBlockchainSigners(c0).size).isEqualTo(3)
         }
     }
 
@@ -244,7 +261,7 @@ internal class Directory1DeploymentIT {
     fun `Deploy new dapp`() {
         listOf(node1, node2, node3).forEach { node ->
             Assumptions.assumeTrue {
-                node.client(0).getAllBlockchains().asArray().size == 1
+                node.getAllBlockchains().asArray().size == 1
             }
         }
 
@@ -275,23 +292,40 @@ internal class Directory1DeploymentIT {
             }
         }
 
+        // Asserting that blockchain is added
         awaitUntilAsserted {
-            assert(node1.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
-            assert(node2.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
-            assert(node3.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
+            listOf(node1, node2, node3).forEach { node ->
+                assert(node.getAllBlockchains().asArray().size).isEqualTo(2)
+            }
+        }
+
+        // Asserting that node1/node2/node3 are signers of newly added blockchain
+        val c100 = node1.getBlockchainGtv(dapp1.second)
+        awaitUntilAsserted {
+            assert(node1.getBlockchainSigners(c100).size).isEqualTo(3)
+            assert(node2.getBlockchainSigners(c100).size).isEqualTo(3)
+            assert(node3.getBlockchainSigners(c100).size).isEqualTo(3)
         }
     }
 
     @Test
     @Order(8)
+    fun `Subnode container has been launched`() {
+        awaitUntilAsserted {
+            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+            assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
+        }
+    }
+
+    @Test
+    @Order(9)
     fun `Transactions can be sent to newly deployed dapp`() {
         val city = "Heraklion"
         node2.tx(dapp1.second, "add_city", gtv(city))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                val cities = awaitQueryResult {
-                    node.client(dapp1.second).querySync("get_cities")
-                }!!.asArray().map { it.asString() }
+                val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
+                        .asArray().map { it.asString() }
                 assert(cities).containsExactly(city)
             }
         }
