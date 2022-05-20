@@ -30,7 +30,9 @@ internal fun PostchainContainer.proposeChain0(provider: Gtv) {
 data class Context(
         val node: PostchainContainer,
         val db: ChainDatabaseCommunicator,
-        val provider: Gtv
+        val provider: Gtv,
+        val approverNode: PostchainContainer? = null,
+        val approver: Gtv? = null
 )
 
 internal fun Context.registerNodeAsProvider(cluster: Gtv, newNode: PostchainContainer): Gtv {
@@ -45,8 +47,10 @@ internal fun Context.registerNodeAsProvider(cluster: Gtv, newNode: PostchainCont
 
     node.txAsAdmin(0, "propose_enable_provider", provider, newProvider)
     db.awaitNewBlock()
+    approverNode?.approveProposal(approver)
 
     node.txAsAdmin(0, "propose_provider_is_system", provider, newProvider, gtv(true))
+    approverNode?.approveProposal(approver)
 
     // Asserting: provider2 is added correctly
     val newProviderData = awaitQueryResult {
@@ -57,6 +61,21 @@ internal fun Context.registerNodeAsProvider(cluster: Gtv, newNode: PostchainCont
     assert(newProviderData["active"]?.asBoolean()).isEqualTo(true)
 
     return newProvider
+}
+
+internal fun PostchainContainer.approveProposal(provider: Gtv?): Gtv? {
+    var proposal: Gtv? = null
+    if (provider != null) {
+        proposal = awaitQueryResult { client(0).getProposal() }
+
+        // FYI: if (node == node1) then use node.txAsAdmin()
+        if (networkAliases.contains("node1")) {
+            txAsAdmin(0, "make_vote", provider, proposal!!, gtv(true))
+        } else {
+            tx(0, "make_vote", provider, proposal!!, gtv(true))
+        }
+    }
+    return proposal
 }
 
 internal fun PostchainClient.getBlockchainSigners(blockchain: Gtv): Array<out Gtv> {

@@ -38,6 +38,7 @@ internal class Directory1DeploymentIT {
 
         private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
+        private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
         private val imageName = DockerImageName.parse("chromaway/postchain-directory1:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
@@ -82,16 +83,34 @@ internal class Directory1DeploymentIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
+        private val appConfig3 = parseConfig(this::class.java.getResource("/directory1-deployment/node3/node-config.properties")!!)
+        private val node3 = PostchainContainer(imageName, appConfig3)
+                .withNetwork(network)
+                .withNetworkAliases("node3")
+                .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
+                .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
+                .withEnv("NODE_PUBKEY", "02839DDE1D2121CE72794E54180F5F5C3AD23543D419CB4C3640A854ACB1ADA9E6")
+                .withEnv("NODE_HOST", "node3")
+                .withEnv("NODE_PORT", "9873")
+                .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
+                .withEnv("BOOTSTRAP_NODE_HOST", "node1")
+                .withEnv("BOOTSTRAP_NODE_PORT", "9871")
+                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
+                .withEnv("WIPE_DB", "true")
+                .withLogConsumer(node3Logger)
+
         private lateinit var node1Db: ChainDatabaseCommunicator
 
         @JvmStatic
         @BeforeAll
         fun setup() {
             consoleLogger.info { "Starting nodes..." }
-            startContainers(node1, node2)
+            startContainers(node1, node2, node3)
 
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-            /*
+/*
             val localDbConfig = DatabaseConfig(
                     "org.postgresql.Driver",
                     "jdbc:postgresql://localhost:5432/postchain",
@@ -99,13 +118,13 @@ internal class Directory1DeploymentIT {
                     "postchain"
             )
             node1Db = ChainDatabaseCommunicator(0, node1.appConfig.databaseSchema, localDbConfig)
-             */
+            */
         }
 
         @JvmStatic
         @AfterAll
         fun breakdown() {
-            stopContainers(node1, node2)
+            stopContainers(node1, node2, node3)
         }
     }
 
@@ -120,7 +139,7 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(2)
-    fun `Initialize network with provider 1`() {
+    fun `Initialize network with provider1`() {
         node1.txAsAdmin(0, "init")
         node1.client(0).querySync("get_all_providers").also {
             assert(it.asArray().size).isEqualTo(1)
@@ -129,7 +148,7 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(3)
-    fun `Add node 1 to its own network`() {
+    fun `Add node1 to its own network`() {
         consoleLogger.info("Adding node 1 to its own network")
 
         val provider = node1.client(0).getProvider1()
@@ -170,8 +189,8 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(5)
-    fun `Make node 2 signers of c0`() {
-        consoleLogger.info("Adding node 2 to node 1")
+    fun `Add node2 as signer to c0`() {
+        consoleLogger.info("Adding node2 to [node1]")
         val brid0 = node1.getBlockchainRid(0)
         val provider1 = node1.client(0).getProvider1()
         val cluster = node1.client(0).getSystemCluster()
@@ -195,8 +214,35 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(6)
+    fun `Add node3 as signer to c0`() {
+        consoleLogger.info("Adding node3 to node1")
+        val brid0 = node1.getBlockchainRid(0)
+        val provider1 = node1.client(0).getProvider1()
+        val provider2 = node2.getProvider()
+        val cluster = node1.client(0).getSystemCluster()
+
+        consoleLogger.info("Registering provider3")
+        val provider3 = Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
+                .registerNodeAsProvider(cluster, node3)
+
+        consoleLogger.info("Adding node3 to [node1, node2] network")
+        addNode(node3, provider3, cluster, brid0, node1)
+
+        // Asserting that node2 is signers of chain0
+        val c0 = awaitQueryResult {
+            node1.client(0).querySync("get_blockchain", gtv("rid" to gtv(brid0.data)))
+        }!!
+        awaitUntilAsserted {
+            assert(node1.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node2.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node3.client(0).getBlockchainSigners(c0).size).isEqualTo(3)
+        }
+    }
+
+    @Test
+    @Order(7)
     fun `Deploy new dapp`() {
-        listOf(node1, node2).forEach { node ->
+        listOf(node1, node2, node3).forEach { node ->
             Assumptions.assumeTrue {
                 node.client(0).getAllBlockchains().asArray().size == 1
             }
@@ -210,6 +256,7 @@ internal class Directory1DeploymentIT {
 
         val provider1 = node1.client(0).getProvider1()
         val provider2 = node2.getProvider()
+        val provider3 = node3.getProvider()
         val container = node1.client(0).getSystemContainer()
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
@@ -217,28 +264,31 @@ internal class Directory1DeploymentIT {
                 consoleLogger.info { "Proposing a blockchain on height $height" }
                 dapp1 = 100L to BlockchainRidFactory.calculateBlockchainRid(config.gtvConfig)
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
-                node2.tx(0, "propose_blockchain", provider2, configGtv, container)
+                node3.tx(0, "propose_blockchain", provider3, configGtv, container)
 
-                val proposal = awaitQueryResult { node1.client(0).getProposal() }
-                consoleLogger.info { "Making a vote for proposal: $proposal" }
-                node1.txAsAdmin(0, "make_vote", provider1, proposal!!, gtv(true))
+                // Voting
+                val p1 = node1.approveProposal(provider1)
+                consoleLogger.info { "node1 voted for proposal: $p1" }
+
+                val p2 = node2.approveProposal(provider2)
+                consoleLogger.info { "node2 voted for proposal: $p2" }
             }
         }
 
         awaitUntilAsserted {
-            listOf(node1, node2).forEach { node ->
-                assert(node.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
-            }
+            assert(node1.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
+            assert(node2.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
+            assert(node3.client(0).getAllBlockchains().asArray().size).isEqualTo(2)
         }
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `Transactions can be sent to newly deployed dapp`() {
         val city = "Heraklion"
         node2.tx(dapp1.second, "add_city", gtv(city))
         awaitUntilAsserted {
-            listOf(node1, node2).forEach { node ->
+            listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult {
                     node.client(dapp1.second).querySync("get_cities")
                 }!!.asArray().map { it.asString() }
