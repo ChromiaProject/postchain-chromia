@@ -7,8 +7,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.dapp.*
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
@@ -219,7 +219,7 @@ internal class Enterprise0ExampleIT {
             }
             val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
             val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), RellVersions.VERSION, false).apply {
                 RellRunConfigGenerator.buildFiles(this.config)
             }
 

@@ -18,7 +18,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
@@ -230,7 +230,7 @@ internal class Chromia0ExampleIT {
             }
             val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
             val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), RellVersions.VERSION, false).apply {
                 RellRunConfigGenerator.buildFiles(this.config)
             }
 

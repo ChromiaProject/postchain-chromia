@@ -2,7 +2,6 @@ package net.postchain.images.directory1
 
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 internal fun <T> awaitQueryResult(atMost: Duration = Duration.TWO_MINUTES, assertion: () -> T): T? {

@@ -19,7 +19,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
@@ -63,7 +63,6 @@ internal class Directory1DeploymentIT {
                 .withClasspathResourceMapping("$resourceFolder/node1", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
                 .withEnv("NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("NODE_HOST", "node1")
                 .withEnv("NODE_PORT", "9871")
@@ -78,7 +77,6 @@ internal class Directory1DeploymentIT {
                 .withClasspathResourceMapping("$resourceFolder/node2", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
                 .withEnv("NODE_PUBKEY", "02B99A05912B01B7797D84D6660E9ED35FAEE078BD5BDF40026E0CC6E0CB2EF50C")
                 .withEnv("NODE_HOST", "node2")
                 .withEnv("NODE_PORT", "9872")
@@ -97,7 +95,6 @@ internal class Directory1DeploymentIT {
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping("chain_zero/run-directory1.xml", "${POSTCHAIN_PATH}/chain_zero/manifest.xml", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-//                .withEnv("POSTCHAIN_DB_URL", "jdbc:postgresql://172.23.32.1:5432/postchain")
                 .withEnv("NODE_PUBKEY", "02839DDE1D2121CE72794E54180F5F5C3AD23543D419CB4C3640A854ACB1ADA9E6")
                 .withEnv("NODE_HOST", "node3")
                 .withEnv("NODE_PORT", "9873")
@@ -121,15 +118,6 @@ internal class Directory1DeploymentIT {
             startContainers(node1, node2, node3)
 
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-/*
-            val localDbConfig = DatabaseConfig(
-                    "org.postgresql.Driver",
-                    "jdbc:postgresql://localhost:5432/postchain",
-                    "postchain",
-                    "postchain"
-            )
-            node1Db = ChainDatabaseCommunicator(0, node1.appConfig.databaseSchema, localDbConfig)
-            */
         }
 
         @JvmStatic
@@ -267,7 +255,7 @@ internal class Directory1DeploymentIT {
 
         val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
         val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), RellVersions.VERSION, false).apply {
             RellRunConfigGenerator.buildFiles(this.config)
         }
 
