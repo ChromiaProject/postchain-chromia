@@ -27,16 +27,6 @@ query nm_get_blockchain_configuration(
         return null;		
 }
 
-query nm_get_blockchain_configurations(blockchain_rid: byte_array): map<integer, byte_array> {
-    val res = map<integer, byte_array>();
-    val bc = blockchain @ { blockchain_rid };
-    val configs = blockchain_configuration @* { bc };
-    for (config in configs) {
-        res[config.height] = config.data;
-    }
-    return res;
-}
-		
 query nm_compute_blockchain_list(node_id: pubkey): list<byte_array>
 {
 	val node = node @? { .pubkey == node_id};
