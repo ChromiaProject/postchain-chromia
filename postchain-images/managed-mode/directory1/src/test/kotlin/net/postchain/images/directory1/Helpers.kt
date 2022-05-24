@@ -19,10 +19,10 @@ internal fun PostchainContainer.proposeChain0(provider: Gtv) {
     val containerConfig0 = "${envMap["RELL_OUT"] ?: "${PostchainContainer.RELL_PATH}/out"}/blockchains/0/0.gtv"
     val hostConfig0 = Files.createTempDirectory("").toAbsolutePath().toString() + "0.gtv"
     copyFileFromContainer(containerConfig0, hostConfig0)
-    val configGtv = GtvFactory.gtv(File(hostConfig0).readBytes())
+    val configGtv = gtv(File(hostConfig0).readBytes())
 
     val containerGtv = client(0).query(
-            "get_container", GtvFactory.gtv("name" to GtvFactory.gtv("system"))).get()
+            "get_container", gtv("name" to gtv("system"))).get()
 
     txAsAdmin(0, "propose_blockchain", provider, configGtv, containerGtv)
 }
@@ -80,7 +80,7 @@ internal fun PostchainContainer.approveProposal(provider: Gtv?): Gtv? {
 
 internal fun PostchainContainer.getBlockchainSigners(blockchain: Gtv): Array<out Gtv> {
     return awaitQueryResult {
-        client(0).query("get_blockchain_signers", GtvFactory.gtv("bc" to blockchain)).get().asArray()
+        client(0).query("get_blockchain_signers", gtv("bc" to blockchain)).get().asArray()
     }!!
 }
 
