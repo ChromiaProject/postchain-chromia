@@ -6,7 +6,7 @@
 
     <artifactId>postchain-mc</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.4.2-SNAPSHOT</version>
+    <version>3.4.3-SNAPSHOT</version>
     <name>postchain-mc</name>
     <description>Postchain Management Console</description>
     <url>http://postchain.net</url>
