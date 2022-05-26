@@ -1,10 +1,7 @@
 package net.postchain.images.directory1
 
 import assertk.assert
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import assertk.assertions.isTrue
-import assertk.assertions.isZero
+import assertk.assertions.*
 import com.spotify.docker.client.DockerClient
 import mu.KLogging
 import mu.KotlinLogging
@@ -68,6 +65,8 @@ internal class Directory1DeploymentIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("POSTCHAIN_CLIENT_PRIVKEY", adminPrivKey) // Sign transactions via postchain-client with this key
+                .withEnv("POSTCHAIN_CLIENT_PUBKEY", adminPubKey)   // Could also be added to properties file of this node
                 .withLogConsumer(node1Logger)
 
         private val appConfig2 = parseConfig(this::class.java.getResource("/directory1-deployment/node2/node-config.properties")!!)
@@ -187,13 +186,14 @@ internal class Directory1DeploymentIT {
     @Order(4)
     fun `Make chain0 aware of itself`() {
         val provider = node1.client(0).getProvider1()
-        node1.proposeChain0(provider)
+        val container = node1.client(0).getSystemContainer()
+        val res = node1.execInContainer("sh",
+                "propose_blockchain.sh", provider.asInteger().toString(), container.asInteger().toString())
+        consoleLogger.info { if (res.exitCode != 0) res.stderr else "chain0 has been proposed" }
+        assert(res.stderr).isEmpty()
+
         node1Db.awaitNewBlock()
-        node1.client(0).querySync(
-                "get_blockchains", gtv("include_inactive" to gtv(true))
-        ).also {
-            assert(it.asArray().size).isEqualTo(1)
-        }
+        assert(node1.getAllBlockchains().asArray().size).isEqualTo(1)
     }
 
     @Test
