@@ -65,6 +65,7 @@ internal class Directory1DeploymentIT {
                 .withEnv("NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DEBUG", "true")
                 .withEnv("POSTCHAIN_CLIENT_PRIVKEY", adminPrivKey) // Sign transactions via postchain-client with this key
                 .withEnv("POSTCHAIN_CLIENT_PUBKEY", adminPubKey)   // Could also be added to properties file of this node
                 .withLogConsumer(node1Logger)
@@ -84,6 +85,7 @@ internal class Directory1DeploymentIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DEBUG", "true")
                 .withLogConsumer(node2Logger)
 
         private val appConfig3 = setupMasterNodeConfig(
@@ -102,6 +104,7 @@ internal class Directory1DeploymentIT {
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
                 .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
+                .withEnv("DEBUG", "true")
                 .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
                 .withMasterDockerConfig()
