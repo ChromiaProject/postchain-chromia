@@ -56,11 +56,10 @@ open class CliExecution(val config: ClientConfig) {
 
 
     fun addNodeInternal(key: String, host: String, port: Long): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation(
                     "add_node",
-                    provider,
+                    gtv(config.pubKey.hexStringToByteArray()),
                     gtv(key.hexStringToByteArray()), gtv(host), gtv(port)
             )
             sign(buildSigMaker())
@@ -389,11 +388,10 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     fun removeNodeInternal(key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
         return makeTransactionWithNop().apply {
             addOperation(
                     "remove_node",
-                    provider, gtv(key.hexStringToByteArray())
+                    gtv(config.pubKey.hexStringToByteArray()), gtv(key.hexStringToByteArray())
             )
             sign(buildSigMaker())
         }
