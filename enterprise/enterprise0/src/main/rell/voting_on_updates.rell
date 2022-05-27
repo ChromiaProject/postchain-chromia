@@ -140,18 +140,20 @@ operation propose_disable_provider(me: pubkey, other_prov: provider) {
 }
 
 // one proposal for the entire list
-operation propose_add_blockchain_signers(me: pubkey, blockchain_rid: byte_array, add_signers: list<node>) {
+operation propose_add_blockchain_signers(me: pubkey, blockchain_rid: byte_array, add_signers: list<pubkey>) {
     val meAsProvider = provider @ { .pubkey == me };
 	require_provider_auth(meAsProvider);
 	val blockchain = blockchain @ { .rid == blockchain_rid };
 	var new = false;
-	for (signer in add_signers) {
+	for (signer_pubkey in add_signers) {
+	    val signer = require(node @? { .pubkey == signer_pubkey });
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == true} limit 1))
 		new = true;
 	}
 	if (new) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, meAsProvider);
-		for (signer in add_signers) {
+		for (signer_pubkey in add_signers) {
+            val signer = require(node @? { .pubkey == signer_pubkey });
 			require(signer.active);
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
 		}
@@ -160,18 +162,20 @@ operation propose_add_blockchain_signers(me: pubkey, blockchain_rid: byte_array,
 
 
 // one proposal for entire list
-operation propose_remove_blockchain_signers(me: pubkey, blockchain_rid: byte_array, signers: list<node>) {
+operation propose_remove_blockchain_signers(me: pubkey, blockchain_rid: byte_array, signers: list<pubkey>) {
     val meAsProvider = provider @ { .pubkey == me };
 	require_provider_auth(meAsProvider);
 	val blockchain = blockchain @ { .rid == blockchain_rid };
 	var new = false;
-	for (signer in signers) {
+	for (signer_pubkey in signers) {
+        val signer = require(node @? { .pubkey == signer_pubkey });
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == false} limit 1))
 		new = true;
 	}
 	if (new) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, meAsProvider);
-		for (signer in signers) {
+		for (signer_pubkey in signers) {
+            val signer = require(node @? { .pubkey == signer_pubkey });
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
 		}
 	}

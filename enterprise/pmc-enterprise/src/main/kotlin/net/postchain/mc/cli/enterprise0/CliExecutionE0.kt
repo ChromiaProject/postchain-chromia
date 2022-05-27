@@ -109,7 +109,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     }
 
     fun proposeAddBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
-        val nodeList = signers.split(",").map { nodeGtv(it) }
+        val nodeList = signers.split(",").map { gtv(it) }
         return makeTransactionWithNop().apply {
             addOperation("propose_add_blockchain_signers", gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
             sign(buildSigMaker())
@@ -136,7 +136,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     }
 
     fun proposeRemoveBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
-        val nodeList = signers.split(",").map { nodeGtv(it) }
+        val nodeList = signers.split(",").map { gtv(it) }
         return makeTransactionWithNop().apply {
             addOperation("propose_remove_blockchain_signers",
                     gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
