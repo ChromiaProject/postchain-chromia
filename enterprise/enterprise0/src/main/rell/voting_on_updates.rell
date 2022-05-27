@@ -61,8 +61,9 @@ entity pending_update_blockchain_signer {
 }
 
 //Pubkey used for authorization 
-operation propose_configuration (blockchain, provider, config_data: byte_array, height: integer) {
-	require_provider_auth(provider);
+operation propose_configuration (blockchain, provider_pubkey: pubkey, config_data: byte_array, height: integer) {
+    val provider = provider @ { .pubkey == provider_pubkey };
+	require_provider_auth(meAsProvider);
 	require(get_last_height(blockchain) < height);
 	require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
 	require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
@@ -77,70 +78,76 @@ operation propose_configuration (blockchain, provider, config_data: byte_array, 
 	}
 }
 
-operation propose_blockchain( me: provider, config_data: byte_array, initial_nodes: list<node>) {
-	require_provider_auth(me);
+operation propose_blockchain(me: pubkey, config_data: byte_array, initial_nodes: list<pubkey>) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	require(initial_nodes.size() > 0);
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(config_data));
 	val signers = list<pubkey>();
-	for (node in initial_nodes) {
-		signers.add(node.pubkey);
+	for (node_pubkey in initial_nodes) {
+	    require(node @ { .pubkey == node_pubkey });
+		signers.add(node_pubkey);
 	}
 	config["signers"] = signers.to_gtv();
 	val new_data = 	config.to_gtv().to_bytes(); 
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == new_data } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me);
-		print("g");
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc, meAsProvider);
 		create pending_blockchain(prop, new_data);
 	}
 }
 
 
-operation propose_stop_blockchain(me: provider, blockchain, remove_replicas: boolean) {
-	require_provider_auth(me);
+operation propose_stop_blockchain(me: pubkey, blockchain, remove_replicas: boolean) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	//If already proposed, do not add again.
 	if (empty(pending_stop_blockchain @* {remove_replicas, blockchain } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_stop, meAsProvider);
 		create pending_stop_blockchain(prop, blockchain, remove_replicas);
 	}
 }
 
-operation propose_provider(me: provider, pubkey) {
-	require_provider_auth(me);
+operation propose_provider(me: pubkey, pubkey) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	//If already proposed, do not add again.
-	if (empty(pending_provider @* {pubkey } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, me);
+	if (empty(pending_provider @* { pubkey } limit 1)) {
+		val prop = create proposal(op_context.last_block_time, proposal_type.register_provider, meAsProvider);
 		create pending_provider(prop, pubkey);
 	}
 }
 
-operation propose_enable_provider(me: provider, other_prov: provider) {
-	require_provider_auth(me);
+operation propose_enable_provider(me: pubkey, other_prov: provider) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	//If proposal already exist, do not add again.
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, meAsProvider);
 		create pending_provider_state(prop, other_prov, .active = true);
 	}
 }
 
-operation propose_disable_provider(me: provider, other_prov: provider) {
-	require_provider_auth(me);
+operation propose_disable_provider(me: pubkey, other_prov: provider) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, meAsProvider);
 		create pending_provider_state(prop, other_prov, .active = false);
 	}
 }
 
 // one proposal for the entire list
-operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: list<node>) {
-	require_provider_auth(me);
+operation propose_add_blockchain_signers(me: pubkey, blockchain, add_signers: list<node>) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	var new = false;
 	for (signer in add_signers) {
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == true} limit 1))
 		new = true;
 	}
 	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, meAsProvider);
 		for (signer in add_signers) {
 			require(signer.active);
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = true);
@@ -150,15 +157,16 @@ operation propose_add_blockchain_signers(me: provider, blockchain, add_signers: 
 
 
 // one proposal for entire list
-operation propose_remove_blockchain_signers(me: provider, blockchain, signers: list<node>) {
-	require_provider_auth(me);
+operation propose_remove_blockchain_signers(me: pubkey, blockchain, signers: list<node>) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	var new = false;
 	for (signer in signers) {
 		if (empty(pending_update_blockchain_signer @* {blockchain, signer, .add == false} limit 1))
 		new = true;
 	}
 	if (new) {
-		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, me);
+		val prop = create proposal(op_context.last_block_time, proposal_type.bc_signers, meAsProvider);
 		for (signer in signers) {
 			create pending_update_blockchain_signer(prop, blockchain, signer, .add = false);
 		}
@@ -166,11 +174,12 @@ operation propose_remove_blockchain_signers(me: provider, blockchain, signers: l
 }
 
 //Pubkey used for authorization
-operation make_vote(provider, prop: proposal, ok: boolean) {
-	require_provider_auth(provider);
+operation make_vote(me: pubkey, prop: proposal, ok: boolean) {
+    val meAsProvider = provider @ { .pubkey == me };
+	require_provider_auth(meAsProvider);
 	print("vote authorization OK");
-	require(empty(vote @? {prop, provider})); //only one vote per pubkey.
-	create vote(prop, provider, ok);
+	require(empty(vote @? {prop, meAsProvider})); //only one vote per pubkey.
+	create vote(prop, meAsProvider, ok);
 	print("vote added");
 	apply_voting_result(prop);
 }

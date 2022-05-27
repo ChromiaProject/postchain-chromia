@@ -27,8 +27,10 @@ entity blockchain_signer_node { key blockchain, node; }
 entity blockchain_replica_node { key blockchain, node; }
 
 function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey)); }
+function require_is_provider () { require_not_empty(provider @* { .pubkey in op_context.get_signers() }); }
 
-operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
+operation add_node (provider_pubkey: pubkey, node_pubkey: pubkey, host: text, port: integer) {
+    val provider = provider @ { .pubkey == provider_pubkey };
 	require_provider_auth(provider);
 	val existing_node = node @? { node_pubkey };
 	if (exists(existing_node)) {
@@ -47,7 +49,8 @@ operation add_node (provider, node_pubkey: pubkey, host: text, port: integer) {
 	node_list.last_update = op_context.last_block_time;
 }
 
-operation remove_node (provider, node_pubkey: pubkey) {
+operation remove_node (provider_pubkey: pubkey, node_pubkey: pubkey) {
+    val provider = provider @ { .pubkey == provider_pubkey };
 	require_provider_auth(provider);
 	val node_to_remove = node @ { node_pubkey };
 	node_to_remove.active = false;
