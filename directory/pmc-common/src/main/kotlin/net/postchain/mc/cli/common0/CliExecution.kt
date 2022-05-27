@@ -3,9 +3,9 @@ package net.postchain.mc.cli.common0
 import mu.KLogging
 import net.postchain.client.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
@@ -294,7 +294,6 @@ open class CliExecution(val config: ClientConfig) {
     fun listBlockchainsForContainer(name: String): List<ByteArray> {
         val listBlockChain = arrayListOf<ByteArray>()
         doInTryBlock {
-            val container = containerGtv(name)
             val list = getPostchainClient().query(
                     "nm_get_blockchains_for_container", gtv(
                     "container_name" to GtvString(name)
@@ -303,6 +302,17 @@ open class CliExecution(val config: ClientConfig) {
             listBlockChain.addAll(list.map { it.asByteArray() })
         }
         return listBlockChain
+    }
+
+    fun getContainerForBlockchain(blockchainRid: String): String? {
+        var container: String? = null
+        doInTryBlock {
+            container = getPostchainClient().query(
+                    "nm_get_container_for_blockchain",
+                    gtv("blockchain_rid" to gtv(blockchainRid.hexStringToByteArray()))
+            ).get().asString()
+        }
+        return container
     }
 
     fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
@@ -931,7 +941,7 @@ open class CliExecution(val config: ClientConfig) {
      * Who can update cluster limits? Cluster governance voter set.
      * */
     fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): GTXTransactionBuilder {
-        var currentLimits = listClusterLimits(clusterName).toMutableMap()
+        val currentLimits = listClusterLimits(clusterName).toMutableMap()
         currentLimits.putAll(limits)
         val provider = providerGtv(config.pubKey)
         val cluster = clusterGtv(clusterName)
