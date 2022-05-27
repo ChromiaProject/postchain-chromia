@@ -2,7 +2,6 @@ package net.postchain.mc.test
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
@@ -14,7 +13,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.mc.config.app.BaseClientConfig
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.DelegatingClientConfig
-import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
@@ -86,7 +85,7 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
      * Create a node running the rell source in rellSourceDir
      */
     protected fun run(runConfigFile: File, rellSourceDir: File): Gtv {
-        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, R_LangVersion.of("0.10.8"), false)
+        val appConfig = RellRunConfigGenerator.generateCli(rellSourceDir, runConfigFile, RellVersions.VERSION, false)
 
         val blockchainSetups = mutableListOf<BlockchainSetup>()
         val blockchainConfigsGtv = mutableListOf<Gtv>()
