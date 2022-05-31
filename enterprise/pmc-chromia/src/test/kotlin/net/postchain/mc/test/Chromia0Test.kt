@@ -2,7 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import net.postchain.common.toHex
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory

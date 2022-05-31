@@ -3,7 +3,7 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
