@@ -20,4 +20,5 @@ if [ "$WIPE_DB" = true ]; then
 fi
 
 echo "Starting node"
-sh postchain.sh "$1" --directory "$RELL_OUT"
+if [ "${DEBUG:-false}" = true ]; then DEBUG_OPT=--debug; else DEBUG_OPT=''; fi
+sh postchain.sh "$1" $DEBUG_OPT --directory "$RELL_OUT"

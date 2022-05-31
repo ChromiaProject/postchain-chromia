@@ -8,19 +8,17 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
-import net.postchain.common.hexStringToByteArray
-import net.postchain.config.app.AppConfig
-import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
+import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.dapp.*
-import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.model.R_LangVersion
+import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
@@ -30,10 +28,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.io.File
-import java.net.InetAddress
-import java.net.URI
-import java.net.URL
-import java.nio.file.Files
 
 /**
  * This test proves the functionality of chromia0 dapp and the minimal needed configuration.
@@ -49,7 +43,6 @@ import java.nio.file.Files
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
 
-
     companion object {
         val consoleLogger = KotlinLogging.logger("TestLogger")
         private val logger = KotlinLogging.logger {}
@@ -58,7 +51,6 @@ internal class Chromia0ExampleIT {
         private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
         private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
 
-        private val resolvedDockerHost = getResolvedDockerHost()
         private val imageName = DockerImageName.parse("chromaway/postchain-chromia0:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
         private const val resourceFolder = "chromia0-example"
@@ -99,7 +91,7 @@ internal class Chromia0ExampleIT {
                 .withEnv("WIPE_DB", "true")
                 .withLogConsumer(node2Logger)
 
-        private val node3 = PostchainContainer(imageName, setupMasterNodeConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!, resolvedDockerHost))
+        private val node3 = PostchainContainer(imageName, parseConfig(this::class.java.getResource("/chromia0-example/node3/node-config.properties")!!))
                 .withNetwork(network)
                 .withNetworkAliases("node3")
                 .withClasspathResourceMapping("$resourceFolder/node3", "${POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
@@ -111,11 +103,8 @@ internal class Chromia0ExampleIT {
                 .withEnv("BOOTSTRAP_NODE_PUBKEY", "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57")
                 .withEnv("BOOTSTRAP_NODE_HOST", "node1")
                 .withEnv("BOOTSTRAP_NODE_PORT", "9871")
-                .withEnv("RELL_OUT", "${MOUNT_DIR}/chain0-generated")
+                .withEnv("RELL_OUT", "${POSTCHAIN_PATH}/chain0-generated")
                 .withEnv("WIPE_DB", "true")
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
                 .withLogConsumer(node3Logger)
 
         private lateinit var node1Db: ChainDatabaseCommunicator
@@ -128,7 +117,6 @@ internal class Chromia0ExampleIT {
         @BeforeAll
         fun setup() {
             consoleLogger.info { "Starting nodes..." }
-            removeSubnodeContainers()
             startContainers(node1, node2, node3)
             node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
             node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
@@ -140,16 +128,6 @@ internal class Chromia0ExampleIT {
         @AfterAll
         fun breakdown() {
             stopContainers(node1, node2, node3)
-            removeSubnodeContainers()
-        }
-
-        private fun removeSubnodeContainers() {
-            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
-                if (it.image().contains("postchain-subnode")) {
-                    dockerClient.stopContainer(it.id(), 0)
-                    dockerClient.removeContainer(it.id())
-                }
-            }
         }
     }
 
@@ -166,11 +144,11 @@ internal class Chromia0ExampleIT {
     @Order(2)
     fun `Make admin a provider for the network`() {
         println("Registering provider")
-        node1.tx(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
+        node1.txAsAdmin(0, "register_provider", gtv(adminPubKey.hexStringToByteArray()))
 
         val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
         println("Enabling provider")
-        node1.tx(0, "enable_provider", provider)
+        node1.txAsAdmin(0, "enable_provider", provider)
         node1.client(0).querySync("get_provider_data", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray()))).asDict().let {
             assert(it["active"]!!.asBoolean(),
                     name = "Provider is activated")
@@ -181,10 +159,8 @@ internal class Chromia0ExampleIT {
     @Test
     @Order(3)
     fun `Add node to the network`() {
-        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
-
         println("Adding node 1 to its own network")
-        node1.tx(0, "add_node", provider, gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", gtv(adminPubKey.hexStringToByteArray()), gtv(node1.pubKey.hexStringToByteArray()), gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1Db.awaitNewBlock()
         assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).asBoolean()).isTrue()
         val nodeGtv = node1.client(0).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray())))
@@ -205,10 +181,9 @@ internal class Chromia0ExampleIT {
     @Order(5)
     fun `Make node 2 and 3 signers of c0`() {
         println("Adding nodes 2 and 3 to node 1")
-        val provider = node1.client(0).querySync("get_provider", gtv("pubkey" to gtv(adminPubKey.hexStringToByteArray())))
-        node1.tx(0, "add_node", provider, gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", gtv(adminPubKey.hexStringToByteArray()), gtv(node2.pubKey.hexStringToByteArray()), gtv(node2.nodeHost), gtv(node2.nodePort.toLong()))
         node1Db.awaitNewBlock()
-        node1.tx(0, "add_node", provider, gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
+        node1.txAsAdmin(0, "add_node", gtv(adminPubKey.hexStringToByteArray()), gtv(node3.pubKey.hexStringToByteArray()), gtv(node3.nodeHost), gtv(node3.nodePort.toLong()))
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
             assert(node1.client(0).querySync("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).asBoolean(),
@@ -221,8 +196,8 @@ internal class Chromia0ExampleIT {
             val newSignerNodes = listOf(node2, node3).map { node ->
                 client.querySync("get_node", gtv("pubkey" to gtv(node.pubKey.hexStringToByteArray())))
             }
-            val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRId(0))))
-            node1.tx(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
+            val c0 = client.querySync("get_blockchain", gtv("rid" to gtv(node1.getBlockchainRidStr(0))))
+            node1.txAsAdmin(0, "add_blockchain_signers", c0, gtv(newSignerNodes))
             // Adding signers will update the blockchain configuration after 5 blocks
             val heightWithSigners = node1Db.getHeight() + 5
             runAsync(node1Db, node2Db, node3Db) {
@@ -252,7 +227,7 @@ internal class Chromia0ExampleIT {
             }
             val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
             val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), R_LangVersion.of("0.10.8"), false).apply {
+            val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), RellVersions.VERSION, false).apply {
                 RellRunConfigGenerator.buildFiles(this.config)
             }
 
@@ -267,7 +242,7 @@ internal class Chromia0ExampleIT {
                 println("Adding test dapp ${chain.iid}")
                 chain.configs.forEach { (height, chainHeightConfig) ->
                     println("On height $height")
-                    val txId = node2.tx(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
+                    val txId = node2.txAsAdmin(0, "add_blockchain", gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)), gtv(nodeGtvs))
                     dappToBrid[chain.iid] = node2.client(0)
                             .querySync("get_added_blockchain_rid", gtv("tx_rid" to gtv(txId.data)))
                             .asByteArray()
@@ -293,17 +268,10 @@ internal class Chromia0ExampleIT {
 
         @Test
         @Order(7)
-        fun `Subnode container has been launched`() {
-            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
-        }
-
-        @Test
-        @Order(8)
         fun `Transactions can be sent to newly deployed dapp`() {
             Assumptions.assumeTrue(dappToBrid.containsKey(dappId))
             val testCity = "uppsala"
-            node2.tx(dappToBrid[dappId]!!, "add_city", gtv(testCity))
+            node2.txAsAdmin(dappToBrid[dappId]!!, "add_city", gtv(testCity))
             listOf(node1, node2, node3).forEach { node ->
                 assert(node.client(dappToBrid[dappId]!!).querySync("get_cities", gtv(mapOf())).asArray().map { it.asString() })
                         .containsExactly(testCity)
@@ -320,47 +288,8 @@ internal class Chromia0ExampleIT {
             }
         }
     }
-
-    // Keeping this for future debugging purposes
-    private fun printSubnodeLogs() {
-        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
-        if (subnodeContainer != null) {
-            println("------------------------- CONTAINER LOGS ---------------------")
-            println()
-            println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(50))
-                    .readFully())
-            println()
-            println("------------------------- END OF CONTAINER LOGS --------------")
-        } else {
-            println("No subcontainer is launched")
-        }
-    }
 }
 
 fun PostchainClient.getBlockChainSigners(blockChain: Gtv): Array<out Gtv> {
     return querySync("get_blockchain_signers", gtv("blockchain" to blockChain)).asArray()
-}
-
-fun setupMasterNodeConfig(resource: URL, resolvedDockerHost: URI?): AppConfig {
-    return if (resolvedDockerHost != null) {
-        val configOverrides = mapOf(
-                "containerChains.masterHost" to resolvedDockerHost.host,
-                "containerChains.slaveHost" to resolvedDockerHost.host,
-                "configDir" to MOUNT_DIR
-        )
-        parseConfig(resource, configOverrides)
-    } else {
-        parseConfig(resource)
-    }
-}
-
-fun getResolvedDockerHost(): URI? {
-    return if (System.getenv("DOCKER_HOST") != null) {
-        val dockerUri = URI(System.getenv("DOCKER_HOST"))
-        // Pass docker host to master container with hostname resolved
-        URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
-    } else {
-        null
-    }
 }
