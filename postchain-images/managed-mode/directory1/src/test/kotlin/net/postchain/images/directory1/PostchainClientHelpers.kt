@@ -116,10 +116,11 @@ internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster:
     TxBuilder(brid0, newNode.sigMaker).build("add_node",
             newNodeProvider,
             gtv(newNode.pubKeyByteArray),
-            gtv(newNode.nodeHost), gtv(newNode.nodePort.toLong()),
+            gtv(newNode.nodeHost),
+            gtv(newNode.nodePort.toLong()),
             cluster
     ).also {
-        sendTxTo.tx(it)
+        sendTxTo.txBldr(it, "add_node")
     }
     awaitQueryResult {
         val isNode = sendTxTo.client(0).querySync("is_node", gtv("pubkey" to gtv(newNode.pubKeyByteArray)))
