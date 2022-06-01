@@ -5,7 +5,7 @@ import assertk.assertions.*
 import com.spotify.docker.client.DockerClient
 import mu.KLogging
 import mu.KotlinLogging
-import net.postchain.base.BlockchainRidFactory
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.DockerClientFactory
@@ -250,6 +250,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(7)
     fun `Deploy new dapp`() {
+        consoleLogger.info("Deploy new dapp")
         listOf(node1, node2, node3).forEach { node ->
             Assumptions.assumeTrue {
                 node.getAllBlockchains().asArray().size == 1
@@ -270,7 +271,7 @@ internal class Directory1DeploymentIT {
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
             chain.configs.forEach { (height, config) ->
                 consoleLogger.info { "Proposing a blockchain on height $height" }
-                dapp1 = 100L to BlockchainRidFactory.calculateBlockchainRid(config.gtvConfig)
+                dapp1 = 100L to GtvToBlockchainRidFactory.calculateBlockchainRid(config.gtvConfig)
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
                 node3.tx(0, "propose_blockchain", provider3, configGtv, container)
 
@@ -302,8 +303,18 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(8)
     fun `Subnode container has been launched`() {
+        consoleLogger.info("Launch Subnode container")
+        var i = 0
         awaitUntilAsserted {
+            i++
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+            all.forEach { node ->
+                // TODO: [Olle] remove when this worx
+                System.out.println("------ NODE ${node.id()} image: ${node.imageId()} state: ${node.state()}")
+                if (i == 1) {
+                    System.out.println("------ ${node.image().toString()}")
+                }
+            }
             assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
         }
     }
@@ -311,12 +322,20 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(9)
     fun `Transactions can be sent to newly deployed dapp`() {
+        consoleLogger.info("Send TX to new dapp and fetch data")
         val city = "Heraklion"
         node2.tx(dapp1.second, "add_city", gtv(city))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
+                // TODO: [Olle] remove when this worx
+                System.out.println("------ NODE ${node.nodeHost.toString()} port: ${node.nodePort.toString()}, pubkey: ${node.pubKey}")
                 val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
                         .asArray().map { it.asString() }
+                // TODO: [Olle] remove when this worx
+                System.out.println("------ NODE ${node.nodeHost.toString()} port: ${node.nodePort.toString()}, pubkey: ${node.pubKey} Got result! ${cities.size}")
+                cities.forEach {
+                    System.out.println("City: $it")
+                }
                 assert(cities).containsExactly(city)
             }
         }
