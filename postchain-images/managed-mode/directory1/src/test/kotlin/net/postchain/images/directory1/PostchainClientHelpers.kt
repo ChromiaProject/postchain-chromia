@@ -113,14 +113,15 @@ internal fun PostchainClient.getProposal(): Gtv {
 }
 
 internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid, sendTxTo: PostchainContainer) {
-    TxBuilder(brid0, newNode.sigMaker).build("add_node",
+    val opName = "add_node"
+    TxBuilder(brid0, newNode.sigMaker).build( opName,
             newNodeProvider,
             gtv(newNode.pubKeyByteArray),
             gtv(newNode.nodeHost),
             gtv(newNode.nodePort.toLong()),
             cluster
     ).also {
-        sendTxTo.txBldr(it, "add_node")
+        sendTxTo.txBldr(it, opName)
     }
     awaitQueryResult {
         val isNode = sendTxTo.client(0).querySync("is_node", gtv("pubkey" to gtv(newNode.pubKeyByteArray)))
