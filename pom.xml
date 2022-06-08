@@ -6,7 +6,7 @@
 
     <artifactId>postchain-mc</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.4.3-SNAPSHOT</version>
+    <version>3.5.0</version>
     <name>postchain-mc</name>
     <description>Postchain Management Console</description>
     <url>http://postchain.net</url>
@@ -20,7 +20,7 @@
 
     <properties>
         <postchain.version>${project.version}</postchain.version>
-        <rellr.version>0.10.8-SNAPSHOT</rellr.version>
+        <rellr.version>0.10.9</rellr.version>
         <kotlin.version>1.6.10</kotlin.version>
         <junit.version>5.8.2</junit.version>
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
