@@ -304,17 +304,8 @@ internal class Directory1DeploymentIT {
     @Order(8)
     fun `Subnode container has been launched`() {
         consoleLogger.info("Launch Subnode container")
-        var i = 0
         awaitUntilAsserted {
-            i++
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            all.forEach { node ->
-                // TODO: [Olle] remove when this worx
-                System.out.println("------ NODE ${node.id()} image: ${node.imageId()} state: ${node.state()}")
-                if (i == 1) {
-                    System.out.println("------ ${node.image().toString()}")
-                }
-            }
             assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
         }
     }
@@ -327,15 +318,8 @@ internal class Directory1DeploymentIT {
         node2.tx(dapp1.second, "add_city", gtv(city))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                // TODO: [Olle] remove when this worx
-                System.out.println("------ NODE ${node.nodeHost.toString()} port: ${node.nodePort.toString()}, pubkey: ${node.pubKey}")
                 val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
                         .asArray().map { it.asString() }
-                // TODO: [Olle] remove when this worx
-                System.out.println("------ NODE ${node.nodeHost.toString()} port: ${node.nodePort.toString()}, pubkey: ${node.pubKey} Got result! ${cities.size}")
-                cities.forEach {
-                    System.out.println("City: $it")
-                }
                 assert(cities).containsExactly(city)
             }
         }
