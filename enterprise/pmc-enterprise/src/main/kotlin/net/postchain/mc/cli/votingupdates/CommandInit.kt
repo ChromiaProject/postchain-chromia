@@ -10,7 +10,7 @@ import net.postchain.mc.cli.enterprise0.CliExecutionE0
 @Parameters(commandDescription = "Providers decide if proposed configuration changes should be applied. This function adds an initial provider that can approve things.")
 class CommandInit: CommandBase() {
 
-    override fun key() = "init"
+    override fun key() = "initialize"
 
     override fun execute(): CliResult {
         return try {
