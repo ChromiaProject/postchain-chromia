@@ -46,7 +46,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,distro deploy -pl :pmc-enterprise -am -DskipTests
 
 release:
   stage: release
