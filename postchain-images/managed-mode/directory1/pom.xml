@@ -20,7 +20,7 @@
         <dependency>
             <groupId>net.postchain.images</groupId>
             <artifactId>subnode</artifactId>
-            <scope>tests</scope>
+            <scope>test</scope>
             <type>pom</type>
             <version>${project.version}</version>
         </dependency>
