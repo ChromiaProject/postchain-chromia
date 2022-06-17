@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>directory</artifactId>
-        <groupId>net.postchain.directory</groupId>
+        <artifactId>management-chain-impl</artifactId>
+        <groupId>net.postchain.chain0</groupId>
         <version>3.6.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>common</artifactId>
+    <artifactId>chromia1</artifactId>
 
     <properties>
         <rell.directory>${project.basedir}/src/main/rell</rell.directory>
@@ -29,7 +29,7 @@
                         </goals>
                         <configuration>
                             <descriptors>
-                                <descriptor>${project.basedir}/src/main/assembly/targz.xml</descriptor>
+                                <descriptor>src/main/assembly/targz.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>

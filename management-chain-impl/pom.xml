@@ -8,21 +8,21 @@
         <version>3.6.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
-    <artifactId>directory</artifactId>
-    <groupId>net.postchain.directory</groupId>
-
-    <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-    </properties>
+    <packaging>pom</packaging>
+    <version>3.6.0-SNAPSHOT</version>
 
     <modules>
-        <module>pmc-common</module>
-        <module>pmc-chromia</module>
-        <module>pmc-directory</module>
+        <module>chromia1</module>
+        <module>directory1</module>
+        <module>common</module>
     </modules>
-    <packaging>pom</packaging>
 
+    <groupId>net.postchain.chain0</groupId>
+    <artifactId>management-chain-impl</artifactId>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
 
 </project>
