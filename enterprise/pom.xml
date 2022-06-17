@@ -21,8 +21,6 @@
         <module>pmc-common</module>
         <module>pmc-chromia</module>
         <module>pmc-enterprise</module>
-        <module>chromia0</module>
-        <module>enterprise0</module>
     </modules>
     <packaging>pom</packaging>
 

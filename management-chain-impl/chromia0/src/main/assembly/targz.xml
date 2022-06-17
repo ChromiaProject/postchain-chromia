@@ -6,11 +6,15 @@
         <format>dir</format>
     </formats>
 
-    <baseDirectory>common</baseDirectory>
+    <baseDirectory>chromia0</baseDirectory>
     <fileSets>
         <fileSet>
             <directory>${rell.directory}</directory>
-            <outputDirectory>./rell/common</outputDirectory>
+            <outputDirectory>./rell</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/../common0/src/main/rell/common0</directory>
+            <outputDirectory>./rell/chroma0</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>

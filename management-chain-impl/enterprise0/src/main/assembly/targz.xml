@@ -6,15 +6,15 @@
         <format>dir</format>
     </formats>
 
-    <baseDirectory>chromia0</baseDirectory>
+    <baseDirectory>enterprise0</baseDirectory>
     <fileSets>
         <fileSet>
             <directory>${rell.directory}</directory>
-            <outputDirectory>./rell</outputDirectory>
+            <outputDirectory>./rell/enterprise0</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/../pmc-common/src/main/rell/common0</directory>
-            <outputDirectory>./rell/chroma0</outputDirectory>
+            <directory>${project.basedir}/../common0/src/main/rell/common0</directory>
+            <outputDirectory>./rell/enterprise0</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>
