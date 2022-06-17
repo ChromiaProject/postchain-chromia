@@ -15,7 +15,6 @@
         <module>common</module>
         <module>chromia1</module>
         <module>directory1</module>
-        <module>common0</module>
         <module>enterprise0</module>
         <module>chromia0</module>
     </modules>
