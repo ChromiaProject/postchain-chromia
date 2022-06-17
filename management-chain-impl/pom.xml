@@ -12,7 +12,6 @@
     <version>3.6.0-SNAPSHOT</version>
 
     <modules>
-        <module>common</module>
         <module>chromia1</module>
         <module>directory1</module>
         <module>enterprise0</module>

@@ -13,7 +13,7 @@
             <outputDirectory>./rell/directory1</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/../common/src/main/rell/common0</directory>
+            <directory>${project.basedir}/../common1</directory>
             <outputDirectory>./rell/directory1</outputDirectory>
         </fileSet>
     </fileSets>
