@@ -37,7 +37,6 @@ import java.io.File
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
-@Disabled
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentIT {
@@ -98,8 +97,8 @@ internal class Directory1DeploymentIT {
     fun `Add node1 to its own network`() {
         consoleLogger.info("Adding node1 to its own network")
 
-        val provider = node1.client(brid).getProvider1()
-        val cluster = node1.client(brid).getSystemCluster()
+        val provider = node1.chain0.getProvider()
+        val cluster = node1.chain0.getSystemCluster()
 
         node1.txAsAdmin(
             brid, "add_node",
@@ -125,34 +124,34 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        val provider = node1.client(brid).getProvider1()
-        val container = node1.client(brid).getSystemContainer()
+        val provider = node1.chain0.getProvider()
+        val container = node1.chain0.getSystemContainer()
         node1.txAsAdmin(
             brid, "propose_blockchain", provider, gtv(chain0Config.readBytes()), container
         )
         node1Db.awaitNewBlock()
-        assert(node1.getAllBlockchains(brid).asArray().size).isEqualTo(1)
+        assert(node1.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
     }
 
     @Test
     @Order(5)
     fun `Add node2 as signer to c0`() {
         consoleLogger.info("Adding node2 to the cluster")
-        val provider1 = node1.client(brid).getProvider1()
-        val cluster = node1.client(brid).getSystemCluster()
+        val provider1 = node1.chain0.getProvider()
+        val cluster = node1.chain0.getSystemCluster()
 
         consoleLogger.info("Registering provider2")
         val provider2 = Context(node1, node1Db, provider1)
             .registerNodeAsProvider(brid, cluster, node2)
 
         consoleLogger.info("Adding node2 to [node1] network")
-        addNode(node2, provider2, cluster, brid, node1)
+        node1.chain0.addNode(node2, provider2, cluster, brid)
 
         // Asserting that node2 is signers of chain0
-        val c0 = node1.getBlockchainGtv(brid, brid)
+        val c0 = node1.chain0.getBlockchainGtv( brid)
         awaitUntilAsserted {
-            assert(node1.getBlockchainSigners(brid, c0).size).isEqualTo(2)
-            assert(node2.getBlockchainSigners(brid, c0).size).isEqualTo(2)
+            assert(node1.chain0.getBlockchainSigners(c0).size).isEqualTo(2)
+            assert(node2.chain0.getBlockchainSigners(c0).size).isEqualTo(2)
         }
     }
 
@@ -160,23 +159,23 @@ internal class Directory1DeploymentIT {
     @Order(6)
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
-        val provider1 = node1.client(brid).getProvider1()
-        val provider2 = node2.getProvider(brid)
-        val cluster = node1.client(brid).getSystemCluster()
+        val provider1 = node1.chain0.getProvider()
+        val provider2 = node2.chain0.getProvider(brid)
+        val cluster = node1.chain0.getSystemCluster()
 
         consoleLogger.info("Registering provider3")
         val provider3 = Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
             .registerNodeAsProvider(brid, cluster, node3)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
-        addNode(node3, provider3, cluster, brid, node1)
+        node1.chain0.addNode(node3, provider3, cluster, brid)
 
         // Asserting that node2 is signers of chain0
-        val c0 = node1.getBlockchainGtv(brid, brid)
+        val c0 = node1.chain0.getBlockchainGtv( brid)
         awaitUntilAsserted {
-            assert(node1.getBlockchainSigners(brid, c0).size).isEqualTo(3)
-            assert(node2.getBlockchainSigners(brid, c0).size).isEqualTo(3)
-            assert(node3.getBlockchainSigners(brid, c0).size).isEqualTo(3)
+            assert(node1.chain0.getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node2.chain0.getBlockchainSigners(c0).size).isEqualTo(3)
+            assert(node3.chain0.getBlockchainSigners(c0).size).isEqualTo(3)
         }
     }
 
@@ -186,7 +185,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Deploy new dapp")
         listOf(node1, node2, node3).forEach { node ->
             Assumptions.assumeTrue {
-                node.getAllBlockchains(brid).asArray().size == 1
+                node.chain0.getAllBlockchains().asArray().size == 1
             }
         }
 
@@ -201,10 +200,10 @@ internal class Directory1DeploymentIT {
             RellRunConfigGenerator.buildFiles(this.config)
         }
 
-        val provider1 = node1.client(brid).getProvider1()
-        val provider2 = node2.getProvider(brid)
-        val provider3 = node3.getProvider(brid)
-        val container = node1.client(brid).getSystemContainer()
+        val provider1 = node1.chain0.getProvider()
+        val provider2 = node2.chain0.getProvider(brid)
+        val provider3 = node3.chain0.getProvider(brid)
+        val container = node1.chain0.getSystemContainer()
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
             chain.configs.forEach { (height, config) ->
@@ -225,16 +224,16 @@ internal class Directory1DeploymentIT {
         // Asserting that blockchain is added
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                assert(node.getAllBlockchains(brid).asArray().size).isEqualTo(2)
+                assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(2)
             }
         }
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
-        val c100 = node1.getBlockchainGtv(brid, dapp1.second)
+        val c100 = node1.chain0.getBlockchainGtv( dapp1.second)
         awaitUntilAsserted {
-            assert(node1.getBlockchainSigners(brid, c100).size).isEqualTo(3)
-            assert(node2.getBlockchainSigners(brid, c100).size).isEqualTo(3)
-            assert(node3.getBlockchainSigners(brid, c100).size).isEqualTo(3)
+            assert(node1.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
+            assert(node2.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
+            assert(node3.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
         }
     }
 
@@ -263,4 +262,5 @@ internal class Directory1DeploymentIT {
         }
     }
 
+    val PostchainContainer.chain0 get() = Directory1Helper(this, brid)
 }

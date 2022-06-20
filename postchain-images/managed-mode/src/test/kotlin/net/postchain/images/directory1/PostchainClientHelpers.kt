@@ -63,68 +63,9 @@ internal fun PostchainContainer.approveProposal(brid: BlockchainRid, provider: G
     return proposal
 }
 
-internal fun PostchainContainer.getBlockchainSigners(brid: BlockchainRid, blockchain: Gtv): Array<out Gtv> {
-    return awaitQueryResult {
-        client(brid).query("get_blockchain_signers", gtv("bc" to blockchain)).get().asArray()
-    }!!
-}
-
-internal fun PostchainContainer.getBlockchainGtv(chain0: BlockchainRid, blockchainRid: BlockchainRid): Gtv {
-    return awaitQueryResult {
-        client(chain0).querySync("get_blockchain", gtv("rid" to gtv(blockchainRid.data)))
-    }!!
-}
-
-internal fun PostchainClient.getProvider1(): Gtv {
-    return awaitQueryResult {
-        query("get_provider", gtv("pubkey" to gtv(initialProviderPubKey))).get()
-    }!!
-}
-
-internal fun PostchainContainer.getProvider(brid: BlockchainRid): Gtv {
-    return awaitQueryResult {
-        client(brid).query("get_provider", gtv("pubkey" to gtv(pubKeyByteArray))).get()
-    }!!
-}
-
-internal fun PostchainClient.getSystemCluster(): Gtv {
-    return awaitQueryResult {
-        query("get_cluster", gtv("name" to gtv("system"))).get()
-    }!!
-}
-
-internal fun PostchainClient.getSystemContainer(): Gtv {
-    return awaitQueryResult {
-        query("get_container", gtv("name" to gtv("system"))).get()
-    }!!
-}
-
-internal fun PostchainContainer.getAllBlockchains(brid: BlockchainRid): Gtv {
-    return awaitQueryResult {
-        client(brid).query("get_blockchains", gtv("include_inactive" to gtv(true))).get()
-    }!!
-}
-
 internal fun PostchainClient.getProposal(): Gtv {
     return awaitQueryResult {
         query("get_proposals_since", gtv("since" to gtv(0L))).get().asArray().first()
                 .asDict()["rowid"]!!
     }!!
-}
-
-internal fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid, sendTxTo: PostchainContainer) {
-    val opName = "add_node"
-    TxBuilder(brid0, newNode.sigMaker).build( opName,
-            newNodeProvider,
-            gtv(newNode.pubKeyByteArray),
-            gtv(newNode.nodeHost),
-            gtv(newNode.nodePort.toLong()),
-            cluster
-    ).also {
-        sendTxTo.txBldr(it, opName)
-    }
-    awaitQueryResult {
-        val isNode = sendTxTo.client(brid0).querySync("is_node", gtv("pubkey" to gtv(newNode.pubKeyByteArray)))
-        assert(isNode.asBoolean(), "${newNode.nodeHost} is added to ${sendTxTo.nodeHost}").isTrue()
-    }
 }
