@@ -1,4 +1,4 @@
-package net.postchain.chromia0
+package net.postchain.images.chromia0
 
 import assertk.assert
 import assertk.assertions.*
