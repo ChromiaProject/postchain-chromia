@@ -3,7 +3,6 @@ package net.postchain.chromia0
 import assertk.assert
 import assertk.assertions.*
 import com.google.protobuf.ByteString
-import com.spotify.docker.client.DockerClient
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.launch
@@ -13,9 +12,7 @@ import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.dapp.*
-import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv

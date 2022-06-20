@@ -7,31 +7,42 @@
         <groupId>net.postchain.images</groupId>
         <version>3.6.0-SNAPSHOT</version>
     </parent>
-    <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <modules>
-        <module>chromia0</module>
-        <module>enterprise0</module>
-        <module>directory1</module>
-    </modules>
 
     <artifactId>managed-mode</artifactId>
 
     <properties>
-        <dockerfile>${project.parent.basedir}/src/main/docker/Dockerfile</dockerfile>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>net.postchain.distribution</groupId>
-            <artifactId>postchain-client</artifactId>
-            <classifier>dist</classifier>
+            <groupId>net.postchain.enterprise</groupId>
+            <artifactId>chromia0</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.enterprise</groupId>
+            <artifactId>enterprise0</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.directory</groupId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
             <type>tar.gz</type>
         </dependency>
         <dependency>
             <groupId>net.postchain.images</groupId>
             <artifactId>server</artifactId>
-            <version>3.6.0-SNAPSHOT</version>
+            <version>${project.version}</version>
             <type>pom</type>
         </dependency>
         <dependency>
@@ -63,105 +74,49 @@
             <artifactId>awaitility-kotlin</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
+
+        <testResources>
+            <testResource>
+                <filtering>false</filtering>
+                <directory>${project.build.directory}/chain0</directory>
+            </testResource>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+        </testResources>
         <plugins>
+
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>postchain-client</id>
+                        <id>chain0</id>
                         <phase>generate-resources</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
                         <configuration>
-                            <classifier>dist</classifier>
-                            <includeArtifactIds>postchain-client</includeArtifactIds>
-                            <outputDirectory>${project.build.directory}/client</outputDirectory>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>chromia0,enterprise0,directory1</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}/chain0</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>io.fabric8</groupId>
-                    <artifactId>docker-maven-plugin</artifactId>
-                    <configuration>
-                        <images>
-                            <image>
-                                <name>${image.name}:latest</name>
-                                <build>
-                                    <dockerFile>${dockerfile}</dockerFile>
-                                    <args>
-                                        <postchain_version>latest</postchain_version>
-                                        <chain0_source>${chain0.source}</chain0_source>
-                                    </args>
-                                </build>
-                            </image>
-                        </images>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
-
-    <profiles>
-        <profile>
-            <id>gitlab-registry</id>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
-                            <groupId>org.codehaus.mojo</groupId>
-                            <artifactId>exec-maven-plugin</artifactId>
-                            <executions>
-                                <execution>
-                                    <id>build-image</id>
-                                    <phase>package</phase>
-                                    <goals>
-                                        <goal>exec</goal>
-                                    </goals>
-                                    <configuration>
-                                        <executable>docker</executable>
-                                        <arguments>
-                                            <argument>buildx</argument>
-                                            <argument>build</argument>
-                                            <argument>--builder</argument>
-                                            <argument>postchain-builder</argument>
-                                            <argument>--platform</argument>
-                                            <argument>linux/amd64,linux/arm64</argument>
-                                            <argument>--tag</argument>
-                                            <argument>${gitlab.registry}/${image.name}:${project.version}</argument>
-                                            <argument>--file</argument>
-                                            <argument>${dockerfile}</argument>
-                                            <argument>${project.basedir}/.</argument>
-                                            <argument>--build-arg</argument>
-                                            <argument>postchain_image=${gitlab.registry}/chromaway/postchain-dapp
-                                            </argument>
-                                            <argument>--build-arg</argument>
-                                            <argument>postchain_version=${project.version}</argument>
-                                            <argument>--build-arg</argument>
-                                            <argument>chain0_source=${chain0.source}</argument>
-                                        </arguments>
-                                    </configuration>
-                                </execution>
-                            </executions>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
-            </build>
-        </profile>
-    </profiles>
 
 </project>
