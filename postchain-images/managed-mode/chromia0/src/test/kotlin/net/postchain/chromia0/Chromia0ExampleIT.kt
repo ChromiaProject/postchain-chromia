@@ -144,8 +144,6 @@ internal class Chromia0ExampleIT {
                         .setGtv(ByteString.copyFrom(config.readBytes()))
                         .build()
                 ).brid
-
-
         }
 
         @JvmStatic
