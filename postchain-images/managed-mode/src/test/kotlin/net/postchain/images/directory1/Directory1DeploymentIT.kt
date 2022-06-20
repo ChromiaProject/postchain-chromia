@@ -17,6 +17,7 @@ import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.images.common.ManagedModeBase
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
@@ -36,113 +37,34 @@ import java.io.File
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
+@Disabled
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentIT {
 
-    companion object : KLogging() {
-        val consoleLogger = KotlinLogging.logger("TestLogger")
-
-        private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
-        private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
-        private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
-
-        private val imageName = DockerImageName.parse("chromaway/postchain-server:latest")
-                .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
-        private const val resourceFolder = "directory1-deployment"
-        private val network: Network = Network.newNetwork()
-        private lateinit var dapp1: Pair<Long, BlockchainRid>
-
-        private val resolvedDockerHost = getResolvedDockerHost()
+    companion object : ManagedModeBase("directory1-deployment", "/directory1/rell", "/chain_zero/run-directory1.xml") {
         private val dockerClient: DockerClient = DockerClientFactory.create()
+        private lateinit var dapp1: Pair<Long, BlockchainRid>
+        private val resolvedDockerHost = getResolvedDockerHost()
 
-        @Container
-        private val postgres = ChromaWayPostgresContainer()
-                .withNetwork(network)
-
-        private val node1 = postchainServer("node1", node1Logger, 7740)
-        private val node2 = postchainServer("node2", node2Logger, 7741)
-        private val node3 = postchainServer("node3", node3Logger, 7742)
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+        init {
+            node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
                 .withMasterDockerConfig()
 
-        private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, apiPort: Int) =
-            PostchainContainer(
-                imageName,
-                parseConfig(this::class.java.getResource("/directory1-deployment/$hostName/node-config.properties")!!),
-                startupMsg = "Server started, listening on 50051"
-            )
-                .withNetwork(network)
-                .withNetworkAliases(hostName)
-                .withExposedPorts(50051, apiPort)
-                .withClasspathResourceMapping("$resourceFolder/$hostName", "/config", BindMode.READ_ONLY)
-                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-                .withLogConsumer(logConsumer)
-
-        private lateinit var node1Db: ChainDatabaseCommunicator
-
-        private lateinit var channel1: ManagedChannel
-        private lateinit var channel2: ManagedChannel
-        private lateinit var channel3: ManagedChannel
-
-        private lateinit var chain0Config: File
-        private lateinit var brid: BlockchainRid
-
-        init {
-            createChain0Config()
         }
+
 
         @JvmStatic
         @BeforeAll
         fun setup() {
-            consoleLogger.info { "Starting nodes..." }
-            removeSubnodeContainers()
-            startContainers(node1, node2, node3)
-
-            channel1 = createChannel(node1).usePlaintext().build()
-            channel2 = createChannel(node2).usePlaintext().build()
-            channel3 = createChannel(node3).usePlaintext().build()
-            addPeer(channel1, node1)
-            addPeer(channel2, node2)
-            addPeer(channel2, node1)
-            addPeer(channel3, node3)
-            addPeer(channel3, node1)
-            brid = startBlockchain(channel1, chain0Config).let { BlockchainRid.buildFromHex(it) }
-            startBlockchain(channel2, chain0Config)
-            startBlockchain(channel3, chain0Config)
-
-            node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-        }
-
-        private fun createChannel(target: PostchainContainer) =
-            ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
-
-        private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
-            val service = PeerServiceGrpc.newBlockingStub(channel)
-            service.addPeer(
-                AddPeerRequest.newBuilder()
-                    .setHost(peer.nodeHost)
-                    .setPort(peer.nodePort)
-                    .setPubkey(peer.pubKey)
-                    .build()
-            )
-        }
-
-        private fun startBlockchain(channel: ManagedChannel, config: File): String {
-            return PostchainServiceGrpc.newBlockingStub(channel)
-                .initializeBlockchain(
-                    InitializeBlockchainRequest.newBuilder()
-                        .setChainId(0)
-                        .setGtv(ByteString.copyFrom(config.readBytes()))
-                        .build()
-                ).brid
+            startNodesAndChain0()
         }
 
         @JvmStatic
         @AfterAll
         fun breakdown() {
-            stopContainers(node1, node2, node3)
+            stopNodes()
             removeSubnodeContainers()
         }
 
@@ -153,22 +75,6 @@ internal class Directory1DeploymentIT {
                     dockerClient.removeContainer(it.id())
                 }
             }
-        }
-
-        private fun createChain0Config() {
-            val applicationFolder = this::class.java.getResource("/directory1/rell")!!
-            val runConf = this::class.java.getResource("/chain_zero/run-directory1.xml")!!
-            val configFiles = RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
-                File(runConf.toURI()),
-                RellVersions.VERSION,
-                false
-            ).let {
-                RellRunConfigGenerator.buildFiles(it.config)
-            }
-            val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
-            configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
-            chain0Config = gtvFile.toFile()
         }
     }
 
@@ -195,21 +101,22 @@ internal class Directory1DeploymentIT {
         val provider = node1.client(brid).getProvider1()
         val cluster = node1.client(brid).getSystemCluster()
 
-        node1.txAsAdmin(brid, "add_node",
-                provider,
-                gtv(node1.pubKeyByteArray),
-                gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
-                cluster
+        node1.txAsAdmin(
+            brid, "add_node",
+            provider,
+            gtv(node1.pubKeyByteArray),
+            gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
+            cluster
         )
         node1Db.awaitNewBlock()
         node1.client(brid).query(
-                "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+            "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
             assert(it.get().asBoolean()).isTrue()
         }
 
         node1.client(brid).query(
-                "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+            "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
             assert(it.get().asDict()["active"]!!.asInteger()).isEqualTo(1L)
         }
@@ -236,7 +143,7 @@ internal class Directory1DeploymentIT {
 
         consoleLogger.info("Registering provider2")
         val provider2 = Context(node1, node1Db, provider1)
-                .registerNodeAsProvider(brid, cluster, node2)
+            .registerNodeAsProvider(brid, cluster, node2)
 
         consoleLogger.info("Adding node2 to [node1] network")
         addNode(node2, provider2, cluster, brid, node1)
@@ -259,7 +166,7 @@ internal class Directory1DeploymentIT {
 
         consoleLogger.info("Registering provider3")
         val provider3 = Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
-                .registerNodeAsProvider(brid, cluster, node3)
+            .registerNodeAsProvider(brid, cluster, node3)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
         addNode(node3, provider3, cluster, brid, node1)
@@ -285,7 +192,12 @@ internal class Directory1DeploymentIT {
 
         val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
         val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-        val rellConfig = RellRunConfigGenerator.generateCli(File(applicationFolder.toURI()), File(runConf.toURI()), RellVersions.VERSION, false).apply {
+        val rellConfig = RellRunConfigGenerator.generateCli(
+            File(applicationFolder.toURI()),
+            File(runConf.toURI()),
+            RellVersions.VERSION,
+            false
+        ).apply {
             RellRunConfigGenerator.buildFiles(this.config)
         }
 
@@ -345,7 +257,7 @@ internal class Directory1DeploymentIT {
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
-                        .asArray().map { it.asString() }
+                    .asArray().map { it.asString() }
                 assert(cities).containsExactly(city)
             }
         }

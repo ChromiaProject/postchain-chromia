@@ -18,6 +18,8 @@ import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.images.common.ManagedModeBase
+import net.postchain.images.directory1.initialProviderPubKey
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
@@ -46,130 +48,18 @@ import java.io.File
 internal class Enterprise0ExampleIT {
 
 
-    companion object {
-        val consoleLogger = KotlinLogging.logger("TestLogger")
-        private val logger = KotlinLogging.logger {}
-
-        private val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
-        private val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
-        private val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
-
-        private val imageName = DockerImageName.parse("chromaway/postchain-server:latest")
-            .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
-        private const val resourceFolder = "enterprise0-example"
-        private val network: Network = Network.newNetwork()
-
-        @Container
-        private val postgres = ChromaWayPostgresContainer()
-            .withNetwork(network)
-
-        private val node1 = postchainServer("node1", node1Logger, 7740)
-        private val node2 = postchainServer("node2", node2Logger, 7741)
-        private val node3 = postchainServer("node3", node3Logger, 7742)
-
-        private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, apiPort: Int) =
-            PostchainContainer(
-                imageName,
-                parseConfig(this::class.java.getResource("/enterprise0-example/$hostName/node-config.properties")!!),
-                startupMsg = "Server started, listening on 50051"
-            )
-                .withNetwork(network)
-                .withNetworkAliases(hostName)
-                .withExposedPorts(50051, apiPort)
-                .withClasspathResourceMapping("$resourceFolder/$hostName", "/config", BindMode.READ_ONLY)
-                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-                .withLogConsumer(logConsumer)
-
-        private lateinit var node1Db: ChainDatabaseCommunicator
-        private lateinit var node2Db: ChainDatabaseCommunicator
-        private lateinit var node3Db: ChainDatabaseCommunicator
-
-        private lateinit var channel1: ManagedChannel
-        private lateinit var channel2: ManagedChannel
-        private lateinit var channel3: ManagedChannel
-
-        // Here, adminPubKey is the same as we have in "initial_provider" module arg
-        private val initialProviderPubKey = adminPubKey.hexStringToByteArray()
-
-        private lateinit var chain0Config: File
-        private lateinit var brid: BlockchainRid
-
-        init {
-            createChain0Config()
-        }
+    companion object: ManagedModeBase("enterprise0-example", "/enterprise0/rell", "/chain_zero/run-enterprise0.xml") {
 
         @JvmStatic
         @BeforeAll
         fun setup() {
-            consoleLogger.info { "Starting nodes..." }
-            startContainers(node1, node2, node3)
-
-            channel1 = createChannel(node1).usePlaintext().build()
-            channel2 = createChannel(node2).usePlaintext().build()
-            channel3 = createChannel(node3).usePlaintext().build()
-            addPeer(channel1, node1)
-            addPeer(channel2, node2)
-            addPeer(channel2, node1)
-            addPeer(channel3, node3)
-            addPeer(channel3, node1)
-            brid = startBlockchain(channel1, chain0Config).let { BlockchainRid.buildFromHex(it) }
-            startBlockchain(channel2, chain0Config)
-            startBlockchain(channel3, chain0Config)
-
-            node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-            node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
-            node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
+            startNodesAndChain0()
         }
-
-        private fun createChannel(target: PostchainContainer) =
-            ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
-
-        private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
-            val service = PeerServiceGrpc.newBlockingStub(channel)
-            service.addPeer(
-                AddPeerRequest.newBuilder()
-                    .setHost(peer.nodeHost)
-                    .setPort(peer.nodePort)
-                    .setPubkey(peer.pubKey)
-                    .build()
-            )
-        }
-
-        private fun startBlockchain(channel: ManagedChannel, config: File): String {
-            return PostchainServiceGrpc.newBlockingStub(channel)
-                .initializeBlockchain(
-                    InitializeBlockchainRequest.newBuilder()
-                        .setChainId(0)
-                        .setGtv(ByteString.copyFrom(config.readBytes()))
-                        .build()
-                ).brid
-        }
-
-        private fun createChain0Config() {
-            val applicationFolder = this::class.java.getResource("/enterprise0/rell")!!
-            val runConf = this::class.java.getResource("/chain_zero/run-enterprise0.xml")!!
-            val configFiles = RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
-                File(runConf.toURI()),
-                RellVersions.VERSION,
-                false
-            ).let {
-                RellRunConfigGenerator.buildFiles(it.config)
-            }
-            val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
-            configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
-            chain0Config = gtvFile.toFile()
-        }
-
 
         @JvmStatic
         @AfterAll
         fun breakdown() {
-            channel1.shutdownNow()
-            channel2.shutdownNow()
-            channel3.shutdownNow()
-            stopContainers(node1, node2, node3)
-
+            stopNodes()
         }
     }
 
