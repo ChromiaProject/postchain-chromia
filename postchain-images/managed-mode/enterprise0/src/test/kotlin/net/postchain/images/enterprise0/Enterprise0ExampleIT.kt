@@ -214,11 +214,7 @@ internal class Enterprise0ExampleIT {
     fun `Make chain0 aware of itself`() {
         node1.txAsAdmin(
             brid, "propose_blockchain", gtv(initialProviderPubKey), gtv(chain0Config.readBytes()), gtv(
-                listOf(
-                    gtv(
-                        node1.pubKeyByteArray
-                    )
-                )
+                listOf( gtv( node1.pubKeyByteArray ) )
             )
         )
         val addChain0Proposal =
