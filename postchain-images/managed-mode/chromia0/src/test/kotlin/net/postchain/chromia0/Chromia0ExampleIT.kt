@@ -75,7 +75,7 @@ internal class Chromia0ExampleIT {
             PostchainContainer(
                 imageName,
                 parseConfig(this::class.java.getResource("/chromia0-example/$hostName/node-config.properties")!!),
-                startupMsg = "50051"
+                startupMsg = "Server started, listening on 50051"
             )
                 .withNetwork(network)
                 .withNetworkAliases(hostName)
@@ -205,7 +205,7 @@ internal class Chromia0ExampleIT {
     fun `Add node to the network`() {
         println("Adding node 1 to its own network")
         node1.txAsAdmin(
-            0,
+            brid,
             "add_node",
             gtv(adminPubKey.hexStringToByteArray()),
             gtv(node1.pubKey.hexStringToByteArray()),
@@ -225,9 +225,8 @@ internal class Chromia0ExampleIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        node1.txAsAdmin(
-            brid, "propose_blockchain", gtv(chain0Config.readBytes()), gtv(listOf(gtv(node1.pubKeyByteArray)))
-        )
+        val nodeGtv = node1.client(brid).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
+        node1.txAsAdmin(brid, "add_blockchain", gtv(chain0Config.readBytes()), gtv(listOf(nodeGtv)))
         assert(node1.client(brid).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(1)
     }
 
@@ -236,7 +235,7 @@ internal class Chromia0ExampleIT {
     fun `Make node 2 and 3 signers of c0`() {
         println("Adding nodes 2 and 3 to node 1")
         node1.txAsAdmin(
-            0,
+            brid,
             "add_node",
             gtv(adminPubKey.hexStringToByteArray()),
             gtv(node2.pubKey.hexStringToByteArray()),
@@ -245,7 +244,7 @@ internal class Chromia0ExampleIT {
         )
         node1Db.awaitNewBlock()
         node1.txAsAdmin(
-            0,
+            brid,
             "add_node",
             gtv(adminPubKey.hexStringToByteArray()),
             gtv(node3.pubKey.hexStringToByteArray()),
@@ -318,7 +317,7 @@ internal class Chromia0ExampleIT {
                 chain.configs.forEach { (height, chainHeightConfig) ->
                     println("On height $height")
                     val txId = node2.txAsAdmin(
-                        0,
+                        brid,
                         "add_blockchain",
                         gtv(GtvEncoder.encodeGtv(chainHeightConfig.gtvConfig)),
                         gtv(nodeGtvs)

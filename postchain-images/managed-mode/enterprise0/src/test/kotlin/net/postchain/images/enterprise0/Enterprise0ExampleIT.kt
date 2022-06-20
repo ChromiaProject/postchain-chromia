@@ -71,7 +71,7 @@ internal class Enterprise0ExampleIT {
             PostchainContainer(
                 imageName,
                 parseConfig(this::class.java.getResource("/enterprise0-example/$hostName/node-config.properties")!!),
-                startupMsg = "50051"
+                startupMsg = "Server started, listening on 50051"
             )
                 .withNetwork(network)
                 .withNetworkAliases(hostName)
