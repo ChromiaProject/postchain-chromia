@@ -25,7 +25,7 @@ import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 // Base class for managed mode tests
-open class ManagedModeBase(val resourceFolder: String, rellFolder: String, chain0Conf: String) {
+open class ManagedModeBase(val resourceFolder: String, rellFolder: String) {
 
     val consoleLogger = KotlinLogging.logger("TestLogger")
     private val logger = KotlinLogging.logger {}
@@ -63,7 +63,7 @@ open class ManagedModeBase(val resourceFolder: String, rellFolder: String, chain
 
     init {
         val applicationFolder = this::class.java.getResource(rellFolder)!!
-        val runConf = this::class.java.getResource(chain0Conf)!!
+        val runConf = this::class.java.getResource("run.xml")!!
         val configFiles = RellRunConfigGenerator.generateCli(
             File(applicationFolder.toURI()),
             File(runConf.toURI()),

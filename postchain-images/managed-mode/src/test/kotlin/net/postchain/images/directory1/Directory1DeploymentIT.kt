@@ -20,7 +20,7 @@ internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentIT {
 
-    companion object : ManagedModeBase("directory1-deployment", "/directory1/rell", "run-directory1.xml") {
+    companion object : ManagedModeBase("directory1-deployment", "/directory1/rell") {
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private lateinit var dapp1: Pair<Long, BlockchainRid>
         private val resolvedDockerHost = getResolvedDockerHost()

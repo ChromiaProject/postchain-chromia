@@ -30,7 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
 
-    companion object : ManagedModeBase("chromia0-example", "/chromia0/rell", "run-chromia0.xml") {
+    companion object : ManagedModeBase("chromia0-example", "/chromia0/rell") {
 
         @JvmStatic
         @BeforeAll

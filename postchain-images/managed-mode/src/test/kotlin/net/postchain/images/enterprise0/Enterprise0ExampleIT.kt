@@ -29,7 +29,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 internal class Enterprise0ExampleIT {
 
 
-    companion object: ManagedModeBase("enterprise0-example", "/enterprise0/rell", "run-enterprise0.xml") {
+    companion object: ManagedModeBase("enterprise0-example", "/enterprise0/rell") {
 
         @JvmStatic
         @BeforeAll
