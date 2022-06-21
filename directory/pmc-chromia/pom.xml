@@ -29,7 +29,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>net.postchain.directory</groupId>
+            <groupId>net.postchain.chain0</groupId>
             <artifactId>chromia1</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
