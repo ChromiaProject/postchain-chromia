@@ -139,7 +139,7 @@ internal class Directory1DeploymentIT {
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
         val provider1 = node1.chain0.getProvider()
-        val provider2 = node2.chain0.getProvider(brid)
+        val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
         val cluster = node1.chain0.getSystemCluster()
 
         consoleLogger.info("Registering provider3")
@@ -170,8 +170,8 @@ internal class Directory1DeploymentIT {
         val rellConfig = compileDapp()
 
         val provider1 = node1.chain0.getProvider()
-        val provider2 = node2.chain0.getProvider(brid)
-        val provider3 = node3.chain0.getProvider(brid)
+        val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
+        val provider3 = node3.chain0.getProvider(node3.pubKeyByteArray)
         val container = node1.chain0.getSystemContainer()
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
@@ -200,9 +200,9 @@ internal class Directory1DeploymentIT {
         // Asserting that node1/node2/node3 are signers of newly added blockchain
         val c100 = node1.chain0.getBlockchainGtv( dapp1.second)
         awaitUntilAsserted {
-            assert(node1.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
-            assert(node2.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
-            assert(node3.chain0.getBlockchainSigners( c100).size).isEqualTo(3)
+            assert(node1.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
+            assert(node2.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
+            assert(node3.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
         }
     }
 

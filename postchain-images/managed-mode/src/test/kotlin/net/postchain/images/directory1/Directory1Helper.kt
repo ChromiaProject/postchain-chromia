@@ -24,9 +24,9 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
         }!!
     }
 
-    fun getProvider(brid: BlockchainRid = BlockchainRid(initialProviderPubKey)): Gtv {
+    fun getProvider(pubkey: ByteArray = initialProviderPubKey): Gtv {
         return awaitQueryResult {
-            client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(brid.data))).get()
+            client.query("get_provider", GtvFactory.gtv("pubkey" to GtvFactory.gtv(pubkey))).get()
         }!!
     }
 
