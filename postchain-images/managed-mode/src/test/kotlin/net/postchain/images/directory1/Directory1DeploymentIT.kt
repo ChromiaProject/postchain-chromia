@@ -40,6 +40,7 @@ internal class Directory1DeploymentIT {
         @JvmStatic
         @BeforeAll
         fun setup() {
+            removeSubnodeContainers()
             startNodesAndChain0()
         }
 

@@ -46,6 +46,12 @@
             <type>pom</type>
         </dependency>
         <dependency>
+            <groupId>net.postchain.images</groupId>
+            <artifactId>subnode</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
             <version>${project.version}</version>
