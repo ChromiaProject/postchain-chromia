@@ -8,10 +8,12 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.dapp.*
+import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
@@ -29,7 +31,9 @@ internal class Directory1DeploymentIT {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
                 .withMasterDockerConfig()
-
+                .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
+                    MOUNT_DIR, BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
         }
 
 

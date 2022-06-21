@@ -18,17 +18,21 @@ internal fun getResolvedDockerHost(): URI? {
     }
 }
 
-internal fun setupMasterNodeConfig(resource: URL, resolvedDockerHost: URI?): AppConfig {
-    return if (resolvedDockerHost != null) {
-        val configOverrides = mapOf(
-                "containerChains.masterHost" to resolvedDockerHost.host,
-                "containerChains.slaveHost" to resolvedDockerHost.host,
-                "configDir" to PostchainContainer.MOUNT_DIR
+internal fun setupMasterNodeConfig(resource: URL): AppConfig {
+    val dockerHost = getResolvedDockerHost()
+    val configOverrides = if (dockerHost != null) {
+         mapOf(
+            "containerChains.masterHost" to dockerHost.host,
+            "containerChains.slaveHost" to dockerHost.host,
+            "configDir" to PostchainContainer.MOUNT_DIR,
         )
-        parseConfig(resource, configOverrides)
     } else {
-        parseConfig(resource)
+        mapOf(
+            "containerChains.masterHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+            "containerChains.slaveHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+        )
     }
+    return parseConfig(resource, configOverrides)
 }
 
 // Keeping this for future debugging purposes

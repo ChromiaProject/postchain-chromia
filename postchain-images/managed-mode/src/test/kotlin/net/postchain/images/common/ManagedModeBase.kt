@@ -6,9 +6,10 @@ import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.parseConfig
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.images.directory1.getResolvedDockerHost
+import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
@@ -20,7 +21,6 @@ import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
-import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.utility.DockerImageName
 import java.io.File
@@ -48,7 +48,7 @@ open class ManagedModeBase(rellFolder: String) {
         PostchainContainer(
             DockerImageName.parse("chromaway/postchain-server:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-            parseConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
+            setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
             startupMsg = "Postchain server started, listening on 50051"
         )
             .withNetworkAliases(hostName)
