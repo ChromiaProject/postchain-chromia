@@ -2,39 +2,23 @@ package net.postchain.images.enterprise0
 
 import assertk.assert
 import assertk.assertions.*
-import com.google.protobuf.ByteString
-import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import mu.KotlinLogging
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.dapp.*
-import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.images.directory1.initialProviderPubKey
 import net.postchain.postgres.ChainDatabaseCommunicator
-import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.server.service.AddPeerRequest
-import net.postchain.server.service.InitializeBlockchainRequest
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
 import org.junit.jupiter.api.*
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.Network
-import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 /**

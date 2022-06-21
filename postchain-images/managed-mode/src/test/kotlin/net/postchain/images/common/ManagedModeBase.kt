@@ -20,7 +20,6 @@ import net.postchain.server.service.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.utility.DockerImageName
 import java.io.File
 
@@ -36,7 +35,6 @@ open class ManagedModeBase(val resourceFolder: String, rellFolder: String, chain
 
     val network: Network = Network.newNetwork()
 
-    @Container
     val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer()
         .withNetwork(network)
 
@@ -44,12 +42,13 @@ open class ManagedModeBase(val resourceFolder: String, rellFolder: String, chain
     val node2: PostchainContainer = postchainServer("node2", node2Logger, 7741)
     val node3: PostchainContainer = postchainServer("node3", node3Logger, 7742)
 
-    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, apiPort: Int) = PostchainContainer(
-        DockerImageName.parse("chromaway/postchain-server:latest")
-            .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-        parseConfig(this::class.java.getResource("/$resourceFolder/$hostName/node-config.properties")!!),
-        startupMsg = "Server started, listening on 50051"
-    )
+    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, apiPort: Int) =
+        PostchainContainer(
+            DockerImageName.parse("chromaway/postchain-server:latest")
+                .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
+            parseConfig(this::class.java.getResource("/$resourceFolder/$hostName/node-config.properties")!!),
+            startupMsg = "Postchain server started, listening on 50051"
+        )
             .withNetworkAliases(hostName)
             .withNetwork(this@ManagedModeBase.network)
             .withExposedPorts(50051, apiPort)
