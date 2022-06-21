@@ -2,38 +2,17 @@ package net.postchain.images.directory1
 
 import assertk.assert
 import assertk.assertions.*
-import com.google.protobuf.ByteString
 import com.spotify.docker.client.DockerClient
-import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
-import mu.KLogging
-import mu.KotlinLogging
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.dapp.*
-import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
-import net.postchain.dapp.PostchainContainer.Companion.POSTCHAIN_PATH
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
-import net.postchain.postgres.ChainDatabaseCommunicator
-import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.module.RellVersions
-import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.server.service.AddPeerRequest
-import net.postchain.server.service.InitializeBlockchainRequest
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
 import org.junit.jupiter.api.*
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.Network
-import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
-import java.io.File
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
@@ -41,7 +20,7 @@ internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentIT {
 
-    companion object : ManagedModeBase("directory1-deployment", "/directory1/rell", "/chain_zero/run-directory1.xml") {
+    companion object : ManagedModeBase("directory1-deployment", "/directory1/rell", "run-directory1.xml") {
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private lateinit var dapp1: Pair<Long, BlockchainRid>
         private val resolvedDockerHost = getResolvedDockerHost()
@@ -188,17 +167,7 @@ internal class Directory1DeploymentIT {
                 node.chain0.getAllBlockchains().asArray().size == 1
             }
         }
-
-        val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
-        val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-        val rellConfig = RellRunConfigGenerator.generateCli(
-            File(applicationFolder.toURI()),
-            File(runConf.toURI()),
-            RellVersions.VERSION,
-            false
-        ).apply {
-            RellRunConfigGenerator.buildFiles(this.config)
-        }
+        val rellConfig = compileDapp()
 
         val provider1 = node1.chain0.getProvider()
         val provider2 = node2.chain0.getProvider(brid)

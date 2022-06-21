@@ -12,6 +12,7 @@ import net.postchain.dapp.stopContainers
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
+import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import net.postchain.server.service.AddPeerRequest
 import net.postchain.server.service.InitializeBlockchainRequest
@@ -140,4 +141,17 @@ open class ManagedModeBase(val resourceFolder: String, rellFolder: String, chain
                     .build()
             ).brid
     }
+
+   fun compileDapp(): RellPostAppCliConfig {
+       val applicationFolder = this::class.java.classLoader.getResource("test-dapp")!!
+       val runConf = this::class.java.classLoader.getResource("test-dapp/run.xml")!!
+       return RellRunConfigGenerator.generateCli(
+           File(applicationFolder.toURI()),
+           File(runConf.toURI()),
+           RellVersions.VERSION,
+           false
+       ).apply {
+           RellRunConfigGenerator.buildFiles(this.config)
+       }
+   }
 }

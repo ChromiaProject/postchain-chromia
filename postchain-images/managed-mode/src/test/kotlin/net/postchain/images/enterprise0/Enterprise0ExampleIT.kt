@@ -15,11 +15,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.images.directory1.initialProviderPubKey
 import net.postchain.postgres.ChainDatabaseCommunicator
-import net.postchain.rell.module.RellVersions
-import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.io.File
 
 /**
  * This test proves the functionality of enterprise0 dapp and the minimal needed configuration.
@@ -32,7 +29,7 @@ import java.io.File
 internal class Enterprise0ExampleIT {
 
 
-    companion object: ManagedModeBase("enterprise0-example", "/enterprise0/rell", "/chain_zero/run-enterprise0.xml") {
+    companion object: ManagedModeBase("enterprise0-example", "/enterprise0/rell", "run-enterprise0.xml") {
 
         @JvmStatic
         @BeforeAll
@@ -165,16 +162,7 @@ internal class Enterprise0ExampleIT {
                     node.client(brid).querySync("get_all_blockchains", gtv(mapOf())).asArray().size == 1
                 }
             }
-            val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
-            val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-            val rellConfig = RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
-                File(runConf.toURI()),
-                RellVersions.VERSION,
-                false
-            ).apply {
-                RellRunConfigGenerator.buildFiles(this.config)
-            }
+            val rellConfig = compileDapp()
 
             val nodeGtvs = listOf(node1, node2, node3).map { gtv(it.pubKeyByteArray) }
 

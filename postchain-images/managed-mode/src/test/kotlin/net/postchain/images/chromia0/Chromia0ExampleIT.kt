@@ -13,11 +13,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.images.enterprise0.getBlockChainSigners
 import net.postchain.postgres.ChainDatabaseCommunicator
-import net.postchain.rell.module.RellVersions
-import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import org.junit.jupiter.api.*
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.io.File
 
 /**
  * This test proves the functionality of chromia0 dapp and the minimal needed configuration.
@@ -33,7 +30,7 @@ import java.io.File
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Chromia0ExampleIT {
 
-    companion object : ManagedModeBase("chromia0-example", "/chromia0/rell", "/chain_zero/run-chromia0.xml") {
+    companion object : ManagedModeBase("chromia0-example", "/chromia0/rell", "run-chromia0.xml") {
 
         @JvmStatic
         @BeforeAll
@@ -169,16 +166,7 @@ internal class Chromia0ExampleIT {
                     node.client(brid).querySync("get_all_blockchains", gtv(mapOf())).asArray().size == 1
                 }
             }
-            val applicationFolder = this::class.java.getResource("/$resourceFolder/dapp")!!
-            val runConf = this::class.java.getResource("/$resourceFolder/dapp/run.xml")!!
-            val rellConfig = RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
-                File(runConf.toURI()),
-                RellVersions.VERSION,
-                false
-            ).apply {
-                RellRunConfigGenerator.buildFiles(this.config)
-            }
+            val rellConfig = compileDapp()
 
             val nodeGtvs = node1.client(brid).let { client ->
                 listOf(node1, node2, node3).map {
