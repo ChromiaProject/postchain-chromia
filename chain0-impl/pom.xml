@@ -18,7 +18,7 @@
     </modules>
 
     <groupId>net.postchain.chain0</groupId>
-    <artifactId>management-chain-impl</artifactId>
+    <artifactId>chain0-impl</artifactId>
 
     <properties>
         <sources.phase>none</sources.phase>

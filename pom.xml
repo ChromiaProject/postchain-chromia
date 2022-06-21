@@ -15,7 +15,7 @@
         <module>directory</module>
         <module>enterprise</module>
         <module>managed-mode-examples</module>
-        <module>management-chain-impl</module>
+        <module>chain0-impl</module>
     </modules>
     <packaging>pom</packaging>
 
