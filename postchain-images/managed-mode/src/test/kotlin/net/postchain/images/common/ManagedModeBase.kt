@@ -20,12 +20,13 @@ import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
+import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 // Base class for managed mode tests
-open class ManagedModeBase(val resourceFolder: String, rellFolder: String) {
+open class ManagedModeBase(rellFolder: String) {
 
     val consoleLogger = KotlinLogging.logger("TestLogger")
     private val logger = KotlinLogging.logger {}
@@ -47,13 +48,13 @@ open class ManagedModeBase(val resourceFolder: String, rellFolder: String) {
         PostchainContainer(
             DockerImageName.parse("chromaway/postchain-server:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-            parseConfig(this::class.java.getResource("/$resourceFolder/$hostName/node-config.properties")!!),
+            parseConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
             startupMsg = "Postchain server started, listening on 50051"
         )
             .withNetworkAliases(hostName)
             .withNetwork(this@ManagedModeBase.network)
             .withExposedPorts(50051, apiPort)
-            .withClasspathResourceMapping("${resourceFolder}/${hostName}", "/config", BindMode.READ_ONLY)
+            .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
             .withLogConsumer(logConsumer)
 
