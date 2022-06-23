@@ -11,7 +11,7 @@ import net.postchain.mc.cli.directory1.CliExecutionD1
         "Module argument initial_provider becomes first member of SYSTEM_P voter set.")
 class CommandInit: CommandBase() {
 
-    override fun key() = "init"
+    override fun key() = "initialize"
 
     override fun execute(): CliResult {
         return try {
