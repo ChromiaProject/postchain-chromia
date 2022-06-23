@@ -20,64 +20,63 @@
     <artifactId>chain0-impl</artifactId>
 
     <properties>
-        <sources.phase>none</sources.phase>
-        <rell.phase>none</rell.phase>
         <rell.directory>${project.basedir}/src/main/rell</rell.directory>
-        <rell.source>${project.build.directory}/${project.artifactId}-${project.version}-sources/${project.artifactId}/rell</rell.source>
         <rell.main.module>${project.artifactId}</rell.main.module>
     </properties>
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>rell-test</id>
-                        <phase>${rell.phase}</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>net.postchain.rell.RellCLIKt</mainClass>
-                            <arguments>
-                                <argument>--batch</argument>
-                                <argument>--source-dir</argument>
-                                <argument>${rell.source}</argument>
-                                <argument>${rell.main.module}</argument>
-                            </arguments>
-                            <classpathScope>test</classpathScope>
-                            <executableDependency>
-                                <groupId>net.postchain.rell</groupId>
-                                <artifactId>rell</artifactId>
-                            </executableDependency>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>make-archive</id>
-                        <phase>${sources.phase}</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>${project.basedir}/src/main/assembly/targz.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>make-executable-jar</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>rell-compile</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>java</goal>
+                            </goals>
+                            <configuration>
+                                <mainClass>net.postchain.rell.RellCLIKt</mainClass>
+                                <arguments>
+                                    <argument>--batch</argument>
+                                    <argument>--source-dir</argument>
+                                    <argument>${rell.directory}</argument>
+                                    <argument>${rell.main.module}</argument>
+                                </arguments>
+                                <classpathScope>test</classpathScope>
+                                <executableDependency>
+                                    <groupId>net.postchain.rell</groupId>
+                                    <artifactId>rell</artifactId>
+                                </executableDependency>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>make-archive</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>single</goal>
+                            </goals>
+                            <configuration>
+                                <descriptors>
+                                    <descriptor>${project.basedir}/src/main/assembly/targz.xml</descriptor>
+                                </descriptors>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>make-executable-jar</id>
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 </project>

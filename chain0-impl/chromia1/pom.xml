@@ -14,8 +14,6 @@
     <description>This module has not started dev yet and is excluded from main build. To build it, copy common files from directory1 to here.</description>
 
     <properties>
-        <sources.phase>process-resources</sources.phase>
-        <rell.phase>compile</rell.phase>
         <rell.main.module>chroma1</rell.main.module>
     </properties>
 

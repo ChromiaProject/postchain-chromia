@@ -12,9 +12,5 @@
             <directory>${rell.directory}</directory>
             <outputDirectory>./rell</outputDirectory>
         </fileSet>
-        <fileSet>
-            <directory>${project.basedir}/../common0</directory>
-            <outputDirectory>./rell/chroma0</outputDirectory>
-        </fileSet>
     </fileSets>
 </assembly>
