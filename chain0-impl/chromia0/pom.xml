@@ -11,6 +11,7 @@
     <packaging>pom</packaging>
 
     <artifactId>chromia0</artifactId>
+    <description>This module is deprecated, do not change rell code unless really needed.</description>
 
     <properties>
         <sources.phase>process-resources</sources.phase>
