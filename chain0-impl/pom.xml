@@ -11,7 +11,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>chromia1</module>
         <module>directory1</module>
         <module>enterprise0</module>
         <module>chromia0</module>
