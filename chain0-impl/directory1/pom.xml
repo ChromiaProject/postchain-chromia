@@ -13,8 +13,19 @@
     <artifactId>directory1</artifactId>
 
     <properties>
-        <sources.phase>process-resources</sources.phase>
-        <rell.phase>compile</rell.phase>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

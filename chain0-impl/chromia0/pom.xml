@@ -11,11 +11,23 @@
     <packaging>pom</packaging>
 
     <artifactId>chromia0</artifactId>
+    <description>This module is deprecated, do not change rell code unless really needed.</description>
 
     <properties>
-        <sources.phase>process-resources</sources.phase>
-        <rell.phase>compile</rell.phase>
         <rell.main.module>chroma0</rell.main.module>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

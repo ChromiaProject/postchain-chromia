@@ -10,11 +10,7 @@
     <fileSets>
         <fileSet>
             <directory>${rell.directory}</directory>
-            <outputDirectory>./rell/enterprise0</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>${project.basedir}/../common0</directory>
-            <outputDirectory>./rell/enterprise0</outputDirectory>
+            <outputDirectory>./rell</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>
