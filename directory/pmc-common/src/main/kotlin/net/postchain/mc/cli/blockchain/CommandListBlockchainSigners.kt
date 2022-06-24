@@ -12,7 +12,6 @@ import net.postchain.mc.cli.common0.CliExecution
 @Parameters(commandDescription = "List blockchain signers. To see also inactive signers, set flag -i.")
 class CommandListBlockchainSigners : CommandBase() {
 
-
     @Parameter(
             names = ["-brid", "--blockchain-rid"],
             description = "Blockchain Rid",

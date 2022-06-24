@@ -14,7 +14,11 @@ import net.postchain.mc.cli.votingupdates.*
 class CliD1: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandKeygen(),
+
+            // Init
             CommandInit(),
+
+            // Providers
             CommandRegisterProvider(),
             CommandListProviders(),
             CommandUpdateProviderName(),
@@ -23,6 +27,7 @@ class CliD1: CliBase() {
             CommandTransferActionPoints(),
             CommandGetProviderInfo(),
 
+            // Clusters
             CommandAddCluster(),
             CommandListClusters(),
             CommandProposeClusterProvider(),
@@ -31,28 +36,34 @@ class CliD1: CliBase() {
             CommandProposeContainerResourceLimits(),
             CommandProposeClusterDeployer(),
 
+            // Nodes
             CommandAddNode(),
             CommandListProviderNodes(),
             CommandListNodes(),
             CommandGetNodeInfo(),
             CommandRemoveNode(),
+            CommandGetNodeListVersion(),
 
+            // Blockchains
+            CommandProposeBlockchain(),
+            CommandListBlockchainsForNode(),
+            CommandListBlockchains(),
+            CommandProposeConfiguration(),
+            CommandGetBlockchainConfiguration(),
+            CommandListBlockchainSigners(),
+            // Blockchains / Governance
+            CommandProposePauseBlockchain(),
+            CommandProposeUnPauseBlockchain(),
+            CommandProposeDeleteBlockchain(),
+
+            // Replicas
             CommandAddBlockchainReplica(),
             CommandListBlockchainReplicas(),
             CommandRemoveBlockchainReplica(),
             CommandAddContainerReplica(),
             CommandRemoveContainerReplica(),
 
-            CommandProposeBlockchain(),
-            CommandListBlockchainsForNode(),
-            CommandListBlockchains(),
-            CommandProposeConfiguration(),
-            CommandGetBlockchainConfiguration(),
-
-            CommandProposePauseBlockchain(),
-            CommandProposeUnPauseBlockchain(),
-            CommandProposeDeleteBlockchain(),
-
+            // Governance
             CommandGetProposal(),
             CommandListProposalsSince(),
             CommandCreateVoterSet(),
@@ -61,10 +72,8 @@ class CliD1: CliBase() {
             CommandListVoterSets(),
             CommandProposeVoterSetGovernor(),
             CommandGetVoterSetGovernor(),
-            CommandVote(),
+            CommandVote()
 
-            CommandListBlockchainSigners(),
-            CommandGetNodeListVersion()
     ).associateBy { it.key() }
 
     init {

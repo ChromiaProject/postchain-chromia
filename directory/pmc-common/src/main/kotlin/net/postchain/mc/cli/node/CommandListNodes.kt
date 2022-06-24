@@ -2,7 +2,6 @@ package net.postchain.mc.cli.node
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.base.CliError
@@ -30,9 +29,8 @@ class CommandListNodes : CommandBase() {
     override fun execute(): CliResult {
         return try {
             val cliExecution = CliExecution(loadAppConfig())
-            val nodes : List<Gtv>
-                nodes = cliExecution.listNodesWithProvider()
-                PrintUtils.printNodes(nodes, includeInactive, showProvider)
+            val nodes: List<Gtv> = cliExecution.listNodesWithProvider()
+            PrintUtils.printNodes(nodes, includeInactive, showProvider)
             Ok("Listed nodes successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
