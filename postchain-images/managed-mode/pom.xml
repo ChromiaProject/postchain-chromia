@@ -16,7 +16,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.postchain.enterprise</groupId>
+            <groupId>net.postchain.chain0</groupId>
             <artifactId>chromia0</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
@@ -24,7 +24,7 @@
             <type>tar.gz</type>
         </dependency>
         <dependency>
-            <groupId>net.postchain.enterprise</groupId>
+            <groupId>net.postchain.chain0</groupId>
             <artifactId>enterprise0</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
@@ -32,7 +32,7 @@
             <type>tar.gz</type>
         </dependency>
         <dependency>
-            <groupId>net.postchain.directory</groupId>
+            <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
