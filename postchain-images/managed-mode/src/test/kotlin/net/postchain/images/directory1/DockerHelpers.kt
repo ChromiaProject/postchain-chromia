@@ -22,14 +22,14 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     val dockerHost = getResolvedDockerHost()
     val configOverrides = if (dockerHost != null) {
          mapOf(
-            "containerChains.masterHost" to dockerHost.host,
-            "containerChains.slaveHost" to dockerHost.host,
-            "configDir" to PostchainContainer.MOUNT_DIR,
+            "container.masterHost" to dockerHost.host,
+            "container.slaveHost" to dockerHost.host,
+            "container.host-mount-dir" to PostchainContainer.MOUNT_DIR,
         )
     } else {
         mapOf(
-            "containerChains.masterHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
-            "containerChains.slaveHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+            "container.masterHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+            "container.slaveHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
         )
     }
     return parseConfig(resource, configOverrides)
