@@ -396,12 +396,7 @@ open class CliExecution(val config: ClientConfig) {
     fun listVoterSets(): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val list = getPostchainClient().query(
-                    "list_voter_sets",
-                    gtv("type" to gtv("list_voter_sets"))
-            )
-                    .get()
-                    .asArray()
+            val list = getPostchainClient().query("list_voter_sets").get().asArray()
             returnList.addAll(list.map { it })
         }
         return returnList
