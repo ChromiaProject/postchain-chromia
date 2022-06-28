@@ -2,6 +2,10 @@ package net.postchain.images.directory1
 
 import com.spotify.docker.client.DockerClient
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_HOST
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_HOST
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.parseConfig
 import java.net.InetAddress
@@ -21,15 +25,15 @@ internal fun getResolvedDockerHost(): URI? {
 internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     val dockerHost = getResolvedDockerHost()
     val configOverrides = if (dockerHost != null) {
-         mapOf(
-            "container.masterHost" to dockerHost.host,
-            "container.slaveHost" to dockerHost.host,
-            "container.host-mount-dir" to PostchainContainer.MOUNT_DIR,
+        mapOf(
+            fullKey(KEY_MASTER_HOST) to dockerHost.host,
+            fullKey(KEY_SUBNODE_HOST) to dockerHost.host,
+            fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
         )
     } else {
         mapOf(
-            "container.masterHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
-            "container.slaveHost" to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+            fullKey(KEY_MASTER_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+            fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
         )
     }
     return parseConfig(resource, configOverrides)
@@ -42,8 +46,10 @@ internal fun printSubnodeLogs(dockerClient: DockerClient) {
     if (subnodeContainer != null) {
         println("------------------------- CONTAINER LOGS ---------------------")
         println()
-        println(dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(100))
-                .readFully())
+        println(
+            dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(100))
+                .readFully()
+        )
         println()
         println("------------------------- END OF CONTAINER LOGS --------------")
     } else {
