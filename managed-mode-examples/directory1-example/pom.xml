@@ -18,7 +18,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.postchain.directory</groupId>
+            <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
             <classifier>sources</classifier>
