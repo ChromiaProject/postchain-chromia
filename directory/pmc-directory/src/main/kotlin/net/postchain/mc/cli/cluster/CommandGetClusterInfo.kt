@@ -1,37 +1,31 @@
 package net.postchain.mc.cli.cluster
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.validate
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.PrintUtils.printClusters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import net.postchain.mc.cli.cluster.util.clusterNameOption
+import net.postchain.mc.cli.cluster.util.validateAlphaNumeric
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "Get information about a cluster")
-class CommandGetClusterInfo : CommandBase() {
+class CommandGetClusterInfo : CliktCommand(
+    name = "cluster-info",
+    help = "Get information about a cluster"
+) {
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "Name of cluster.",
-            required = true)
-    private var name = ""
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include disabled/removed clusters (not implemented yet)")
-    private var includeInactive = false
+    private val name by clusterNameOption().required().validate(validateAlphaNumeric())
 
-    override fun key() = "cluster-info"
+    private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
 
-    override fun execute(): CliResult {
-        return try {
-            val clusterInfo = CliExecutionD1(loadAppConfig()).getClusterInfo(name)
+    override fun run() {
+            val clusterInfo = CliExecutionD1(BaseClientConfig.fromPropertiesFile(nodeConfig)).getClusterInfo(name)
             printClusters(listOf(clusterInfo))
-            Ok("Query returned successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+            println("Query returned successfully")
     }
 }

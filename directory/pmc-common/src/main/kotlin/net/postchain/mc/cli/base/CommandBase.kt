@@ -2,6 +2,8 @@ package net.postchain.mc.cli.base
 
 import com.beust.jcommander.Parameter
 import mu.KLogging
+import net.postchain.mc.cli.base.CommandBase.Companion.NAME_LENGTH
+import net.postchain.mc.cli.base.CommandBase.Companion.charPool
 import net.postchain.mc.config.app.ClientConfig
 import net.postchain.mc.config.app.BaseClientConfig
 import java.util.regex.Matcher
@@ -14,6 +16,17 @@ abstract class CommandBase : Command {
         const val NAME_LENGTH = 10
         const val NAME_LENGTH_MAX = 50
         val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        fun autoGenerateName(): String {
+            return (1..NAME_LENGTH)
+                .map { i -> Random.nextInt(0, charPool.size) }
+                .map(charPool::get)
+                .joinToString("");
+        }
+
+        fun isAlphanumeric(string: String): Boolean {
+            val regex = "^[a-zA-Z0-9]*$"
+            return string.matches(regex.toRegex())
+        }
     }
 
     @Parameter(
@@ -31,15 +44,5 @@ abstract class CommandBase : Command {
         }
     }
 
-    protected fun autoGenerateName(): String {
-        return (1..NAME_LENGTH)
-                .map { i -> Random.nextInt(0, charPool.size) }
-                .map(charPool::get)
-                .joinToString("");
-    }
 
-    protected fun isAlphanumeric(string: String): Boolean {
-        val regex = "^[a-zA-Z0-9]*$"
-        return string.matches(regex.toRegex())
-    }
 }

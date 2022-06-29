@@ -15,9 +15,6 @@ class CliD1: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandKeygen(),
 
-            // Init
-            CommandInit(),
-
             // Providers
             CommandRegisterProvider(),
             CommandListProviders(),

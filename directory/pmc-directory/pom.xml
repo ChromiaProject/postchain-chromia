@@ -17,6 +17,17 @@
 
     <dependencies>
         <dependency>
+            <!-- CliKt Utils -->
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.postchain</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.directory</groupId>
             <artifactId>pmc-common</artifactId>
             <version>${project.version}</version>
