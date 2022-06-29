@@ -26,8 +26,6 @@ class CliD1: CliBase() {
             // Clusters
             CommandProposeClusterProvider(),
             CommandProposeClusterResourceLimits(),
-            CommandProposeContainer(),
-            CommandProposeContainerResourceLimits(),
             CommandProposeClusterDeployer(),
 
             // Nodes

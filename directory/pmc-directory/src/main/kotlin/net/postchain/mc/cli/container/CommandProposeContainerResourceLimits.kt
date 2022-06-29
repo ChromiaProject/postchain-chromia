@@ -1,52 +1,37 @@
 package net.postchain.mc.cli.container
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "Propose new resource limits for given container There are three types of limits. " +
-        "Proposal can contain one, two, or all three types.")
-class CommandProposeContainerResourceLimits: CommandBase() {
+class CommandProposeContainerResourceLimits : CliktCommand(
+    name = "limits",
+    help = "Propose new resource limits for given container There are three types of limits. " +
+            "Proposal can contain one, two, or all three types."
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "Name of container",
-            required = true)
-    private var containerName = ""
+    private val containerName by nameOption("Container name").required()
 
-    @Parameter(
-            names = ["-r", "--ram"],
-            description = "ram limit")
-    private var ram: Long? = null
+    private val ram by option("-r", "--ram", help = "RAM limit").long()
 
-    @Parameter(
-            names = ["-c", "--cpu"],
-            description = "ram limit")
-    private var cpu: Long? = null
+    private val cpu by option("-c", "--cpu", help = "CPU limit").long()
 
-    @Parameter(
-            names = ["-s", "--storage"],
-            description = "ram limit")
-    private var storage: Long? = null
+    private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
 
-    override fun key(): String = "propose-container-limits"
-
-    override fun execute(): CliResult {
+    override fun run() {
         val limitMap = mutableMapOf<String, Long>()
         ram?.let { limitMap.put("ram", it) }
         cpu?.let { limitMap.put("cpu", it) }
         storage?.let { limitMap.put("storage", it) }
 
-        return try {
-            CliExecution(loadAppConfig()).proposeContainerLimits(containerName, limitMap)
-            Ok("proposal has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).proposeContainerLimits(containerName, limitMap)
+        println("proposal has been added successfully")
     }
 
 }
