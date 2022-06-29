@@ -1,34 +1,24 @@
 package net.postchain.mc.cli.node
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.toHex
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "List blockchains for node")
-class CommandListBlockchainsForNode : CommandBase() {
+class CommandListBlockchainsForNode : CliktCommand(
+    name = "blockchains",
+    help = "List blockchains for node"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "Node's public key",
-            required = true)
-    private var key = ""
+    private val key by requiredPubkeyOption()
 
-    override fun key(): String = "list-blockchains-for-node"
-
-    override fun execute(): CliResult {
-        return try {
-            val listBlockchains = CliExecution(loadAppConfig()).listBlockchainsForNode(key)
-            listBlockchains.forEach { blockchain ->
-                println(blockchain.toHex())
-            }
-            Ok("Listed blockchains successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+    override fun run() {
+        val listBlockchains = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).listBlockchainsForNode(key)
+        listBlockchains.forEach { blockchain ->
+            println(blockchain.toHex())
         }
     }
 }

@@ -1,39 +1,28 @@
 package net.postchain.mc.cli.node
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.gtv.Gtv
 import net.postchain.mc.PrintUtils
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.includeInactiveOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "list all active nodes. To see also the corresponding providers' information set flag " +
-        "-p. To see also inactive nodes, set flag -i.")
-class CommandListNodes : CommandBase() {
+class CommandListNodes : CliktCommand(
+    name = "list",
+    help = "List all nodes"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-p", "--provider"],
-            description = "Show provider information")
-    private var showProvider = false
+    private val showProvider by option("-p", "--provider", help = "Show provider information").flag()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include inactive nodes")
-    private var includeInactive = false
+    private val includeInactive by includeInactiveOption()
 
-    override fun key(): String = "list-nodes"
-
-    override fun execute(): CliResult {
-        return try {
-            val cliExecution = CliExecution(loadAppConfig())
-            val nodes: List<Gtv> = cliExecution.listNodesWithProvider()
-            PrintUtils.printNodes(nodes, includeInactive, showProvider)
-            Ok("Listed nodes successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        val cliExecution = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig))
+        val nodes: List<Gtv> = cliExecution.listNodesWithProvider()
+        PrintUtils.printNodes(nodes, includeInactive, showProvider)
     }
 }

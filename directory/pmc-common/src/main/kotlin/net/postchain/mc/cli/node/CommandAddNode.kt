@@ -1,48 +1,35 @@
 package net.postchain.mc.cli.node
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.hostOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.portOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "add node. This command is also used for updating node info.")
-class CommandAddNode: CommandBase() {
+class CommandAddNode : CliktCommand(
+    name = "add",
+    help = "Add or update node information"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "Node's public key",
-            required = true)
-    private var key = ""
+    private val key by requiredPubkeyOption()
 
-    @Parameter(
-            names = ["-h", "--host"],
-            description = "Node's host",
-            required = true)
-    private var host = ""
+    private val host by hostOption().required()
 
-    @Parameter(
-            names = ["-p", "--port"],
-            description = "Node's port",
-            required = true)
-    private var port = 0L
+    private val port by portOption().required()
 
-    @Parameter(
-            names = ["-c", "--cluster"],
-            description = "Specify which cluster node should belong to. Can be several.")
-    private var clusterName = ""
+    private val clusterName by option(
+        "-c",
+        "--cluster",
+        help = "comma delimited list of clusters this node belongs to"
+    ).required()
 
-    override fun key(): String = "add-node"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).addNode(key, host, port, clusterName)
-            Ok("Node has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).addNode(key, host, port.toLong(), clusterName)
+        println("Node has been added successfully")
     }
-
 }

@@ -27,23 +27,13 @@ class CliD1: CliBase() {
             CommandProposeClusterDeployer(),
 
             // Nodes
-            CommandAddNode(),
             CommandListProviderNodes(),
-            CommandListNodes(),
-            CommandGetNodeInfo(),
-            CommandRemoveNode(),
-            CommandGetNodeListVersion(),
 
             // Blockchains
-            CommandListBlockchainsForNode(),
-            CommandListBlockchains(),
             CommandProposeConfiguration(),
-            CommandGetBlockchainConfiguration(),
-            CommandListBlockchainSigners(),
 
             // Replicas
             CommandAddBlockchainReplica(),
-            CommandListBlockchainReplicas(),
             CommandRemoveBlockchainReplica(),
 
             // Governance

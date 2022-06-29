@@ -16,17 +16,9 @@ class CliC0: CliBase() {
             CommandUpdateProvider(),
             CommandGetProviderInfo(),
 
-            CommandAddNode(),
-            CommandGetNodeInfo(),
-            CommandRemoveNode(),
-            CommandAddBlockchainReplica(),
-            CommandRemoveBlockchainReplica(),
 
-            CommandListBlockchainsForNode(),
-            CommandGetNodeListVersion(),
             CommandListProviderNodes(),
             CommandListProviders(),
-            CommandListNodes()
     ).associateBy { it.key() }
 
     init {
