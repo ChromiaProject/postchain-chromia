@@ -47,8 +47,6 @@ class CliD1: CliBase() {
             CommandAddBlockchainReplica(),
             CommandListBlockchainReplicas(),
             CommandRemoveBlockchainReplica(),
-            CommandAddContainerReplica(),
-            CommandRemoveContainerReplica(),
 
             // Governance
             CommandCreateVoterSet(),

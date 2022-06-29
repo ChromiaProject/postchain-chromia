@@ -1,37 +1,25 @@
 package net.postchain.mc.cli.replica
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "remove replica of this container from this cluster")
-class CommandRemoveContainerReplica: CommandBase() {
+class CommandRemoveContainerReplica : CliktCommand(
+    name = "remove",
+    help = "remove replica of this container from this cluster"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-cl", "--cluster"],
-            description = "cluster name",
-            required = true)
-    private var clusterName = ""
+    private val clusterName by option("-cl", "--cluster", help = "Cluster name").required()
 
-    @Parameter(
-            names = ["-co", "--container"],
-            description = "container name",
-            required = true)
-    private var containerName = ""
+    private val containerName by option("-co", "--container", help = "Container name").required()
 
-    override fun key(): String = "remove-container-replica"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).removeContainerReplica(clusterName, containerName)
-            Ok("Container replica has been removed from cluster successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).removeContainerReplica(clusterName, containerName)
+        println("Container replica has been removed from cluster successfully")
     }
 
 }

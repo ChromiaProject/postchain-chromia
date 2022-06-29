@@ -1,37 +1,25 @@
 package net.postchain.mc.cli.replica
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "add replica of a container to this cluster. (Another cluster is responsible for blockbuilding)")
-class CommandAddContainerReplica: CommandBase() {
+class CommandAddContainerReplica : CliktCommand(
+    name = "add",
+    help = "add replica of a container to this cluster. (Another cluster is responsible for blockbuilding)"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain RID",
-            required = true)
-    private var blockchainRID = ""
+    private val blockchainRID by blockchainRidOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "Node's public key",
-            required = true)
-    private var key = ""
+    private val key by requiredPubkeyOption()
 
-    override fun key(): String = "add-container-replica"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).addContainerReplica(blockchainRID, key)
-            Ok("Replica of blockchain has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).addContainerReplica(blockchainRID.toHex(), key)
+        println("Replica of blockchain has been added successfully")
     }
 
 }
