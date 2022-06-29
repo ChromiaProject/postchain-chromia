@@ -13,7 +13,7 @@ import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandGetClusterInfo : CliktCommand(
-    name = "cluster-info",
+    name = "info",
     help = "Get information about a cluster"
 ) {
 

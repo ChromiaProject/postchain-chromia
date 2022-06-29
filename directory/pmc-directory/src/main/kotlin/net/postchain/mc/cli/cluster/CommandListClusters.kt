@@ -9,7 +9,7 @@ import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandListClusters : CliktCommand(
-    name = "list-clusters",
+    name = "list",
     help = "List all existing clusters"
 ) {
     private val nodeConfig by nodeConfigOption()

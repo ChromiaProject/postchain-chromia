@@ -12,7 +12,7 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandAddCluster : CliktCommand(
-    name = "add-cluster",
+    name = "add",
     help = "Create a new cluster that can hold containers with blockchains."
 ) {
 
