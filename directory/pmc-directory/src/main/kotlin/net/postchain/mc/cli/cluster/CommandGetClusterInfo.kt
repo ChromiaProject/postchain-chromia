@@ -7,8 +7,8 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.PrintUtils.printClusters
-import net.postchain.mc.cli.cluster.util.clusterNameOption
-import net.postchain.mc.cli.cluster.util.validateAlphaNumeric
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.validateAlphaNumeric
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.config.app.BaseClientConfig
 
@@ -19,7 +19,7 @@ class CommandGetClusterInfo : CliktCommand(
 
     private val nodeConfig by nodeConfigOption()
 
-    private val name by clusterNameOption().required().validate(validateAlphaNumeric())
+    private val name by nameOption("Cluster Name").required().validate(validateAlphaNumeric())
 
     private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
 
