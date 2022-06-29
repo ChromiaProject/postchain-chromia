@@ -25,8 +25,6 @@ class CliD1: CliBase() {
             CommandGetProviderInfo(),
 
             // Clusters
-            CommandAddCluster(),
-            CommandListClusters(),
             CommandProposeClusterProvider(),
             CommandProposeClusterResourceLimits(),
             CommandProposeContainer(),
