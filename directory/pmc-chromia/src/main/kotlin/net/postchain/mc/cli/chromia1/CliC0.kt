@@ -23,10 +23,6 @@ class CliC0: CliBase() {
             CommandRemoveBlockchainReplica(),
 
             CommandListBlockchainsForNode(),
-            CommandListBlockchains(),
-            CommandListBlockchainSigners(),
-            CommandListBlockchainReplicas(),
-            CommandGetBlockchainConfiguration(),
             CommandGetNodeListVersion(),
             CommandListProviderNodes(),
             CommandListProviders(),

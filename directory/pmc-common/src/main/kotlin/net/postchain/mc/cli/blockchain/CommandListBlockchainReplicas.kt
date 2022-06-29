@@ -1,38 +1,28 @@
 package net.postchain.mc.cli.blockchain
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.PrintUtils
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.includeInactiveOption
+import net.postchain.mc.config.app.BaseClientConfig
 
 @Parameters(commandDescription = "List blockchain replicas. To see also inactive replicas, set flag -i.")
-class CommandListBlockchainReplicas : CommandBase() {
+class CommandListBlockchainReplicas : CliktCommand(
+    name = "replicas",
+    help = "List blockchain replicas"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain Rid",
-            required = true)
-    private var blockchainRID = ""
+    private val blockchainRID by blockchainRidOption()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include inactive replicas")
-    private var includeInactive = false
+    private val includeInactive by includeInactiveOption()
 
-    override fun key(): String = "list-blockchain-replicas"
-
-    override fun execute(): CliResult {
-        return try {
-            val list = CliExecution(loadAppConfig()).listBlockchainReplicas(blockchainRID)
-            println("Replicas:")
-            PrintUtils.printBlockchainReplicas(list, includeInactive)
-            Ok("Listed blockchain replicas successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        val list = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).listBlockchainReplicas(blockchainRID.toHex())
+        println("Replicas:")
+        PrintUtils.printBlockchainReplicas(list, includeInactive)
     }
 }

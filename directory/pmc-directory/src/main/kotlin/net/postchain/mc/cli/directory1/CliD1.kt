@@ -5,8 +5,6 @@ import net.postchain.mc.cli.account.CommandKeygen
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
 import net.postchain.mc.cli.blockchain.*
-import net.postchain.mc.cli.container.CommandProposeContainer
-import net.postchain.mc.cli.container.CommandProposeContainerResourceLimits
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
