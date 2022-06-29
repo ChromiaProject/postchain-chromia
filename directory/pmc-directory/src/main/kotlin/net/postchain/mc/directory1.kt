@@ -3,6 +3,7 @@ package net.postchain.mc
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import net.postchain.cli.*
+import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.*
 import net.postchain.mc.cli.proposal.proposalCommands
 
@@ -19,6 +20,9 @@ fun main(args: Array<String>) = ManagementConsole()
 
         // Voting
         proposalCommands(),
+
+        // Blockchain
+        blockchainCommands(),
 
         // Cluster
         clusterCommands(),

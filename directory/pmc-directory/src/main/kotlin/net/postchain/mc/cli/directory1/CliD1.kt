@@ -8,9 +8,6 @@ import net.postchain.mc.cli.blockchain.*
 import net.postchain.mc.cli.node.*
 import net.postchain.mc.cli.provider.*
 import net.postchain.mc.cli.replica.*
-import net.postchain.mc.cli.proposal.CommandGetProposal
-import net.postchain.mc.cli.proposal.CommandListProposalsSince
-import net.postchain.mc.cli.proposal.CommandVote
 import net.postchain.mc.cli.votingupdates.*
 
 class CliD1: CliBase() {
@@ -42,16 +39,11 @@ class CliD1: CliBase() {
             CommandGetNodeListVersion(),
 
             // Blockchains
-            CommandProposeBlockchain(),
             CommandListBlockchainsForNode(),
             CommandListBlockchains(),
             CommandProposeConfiguration(),
             CommandGetBlockchainConfiguration(),
             CommandListBlockchainSigners(),
-            // Blockchains / Governance
-            CommandProposePauseBlockchain(),
-            CommandProposeUnPauseBlockchain(),
-            CommandProposeDeleteBlockchain(),
 
             // Replicas
             CommandAddBlockchainReplica(),
