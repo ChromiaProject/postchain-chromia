@@ -1,4 +1,4 @@
-package net.postchain.mc.cli.replica
+package net.postchain.mc.cli.container.replica
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option

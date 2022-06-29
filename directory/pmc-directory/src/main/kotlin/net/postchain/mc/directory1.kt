@@ -7,7 +7,7 @@ import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.*
 import net.postchain.mc.cli.container.containerCommands
 import net.postchain.mc.cli.proposal.proposalCommands
-import net.postchain.mc.cli.replica.containerReplicaCommands
+import net.postchain.mc.cli.container.replica.containerReplicaCommands
 
 class ManagementConsole : CliktCommand(name = "postchain-mc") {
     override fun run() = Unit
