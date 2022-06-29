@@ -26,5 +26,8 @@ fun main(args: Array<String>) = ManagementConsole()
 
         // Cluster
         clusterCommands(),
+
+        // Provider
+        proposalCommands(),
         )
     .main(args)

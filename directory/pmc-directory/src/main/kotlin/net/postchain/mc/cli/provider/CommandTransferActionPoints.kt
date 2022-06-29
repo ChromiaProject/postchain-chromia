@@ -1,36 +1,26 @@
 package net.postchain.mc.cli.provider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "transfer some of your action points to another provider")
-class CommandTransferActionPoints : CommandBase() {
+class CommandTransferActionPoints : CliktCommand(
+    name = "transfer-action-points",
+    help = "transfer some of your action points to another provider"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "provider's public key",
-            required = true)
-    private var key = ""
+    private val pubkey by requiredPubkeyOption()
 
-    @Parameter(
-            names = ["-a", "--amount"],
-            description = "number of points to transfer",
-            required = true)
-    private var amount = 0L
+    private val amount by option("-a", "--amount", help = "number of points to transfer").long().required()
 
-    override fun key(): String = "transfer-action-points"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).transferActionPoints(key, amount)
-            Ok("Action points have been transferred successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).transferActionPoints(pubkey, amount)
+        println("Action points have been transferred successfully")
     }
 }

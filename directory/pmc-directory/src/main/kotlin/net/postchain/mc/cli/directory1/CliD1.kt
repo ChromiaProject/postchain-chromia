@@ -17,10 +17,8 @@ class CliD1: CliBase() {
             // Providers
             CommandRegisterProvider(),
             CommandListProviders(),
-            CommandUpdateProviderName(),
             CommandProposeEnableProvider(),
             CommandProposeDisableProvider(),
-            CommandTransferActionPoints(),
             CommandGetProviderInfo(),
 
             // Clusters
