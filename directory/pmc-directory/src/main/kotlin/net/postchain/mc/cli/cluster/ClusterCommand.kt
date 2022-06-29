@@ -7,7 +7,7 @@ class ClusterCommand : CliktCommand("Interacting with clusters") {
     override fun run() = Unit
 }
 
-fun clusterCommand() = ClusterCommand().subcommands(
+fun clusterCommands() = ClusterCommand().subcommands(
     CommandListClusters(),
     CommandAddCluster(),
     CommandGetClusterInfo()

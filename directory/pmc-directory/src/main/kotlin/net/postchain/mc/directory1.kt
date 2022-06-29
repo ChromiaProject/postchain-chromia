@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import net.postchain.cli.*
 import net.postchain.mc.cli.cluster.*
+import net.postchain.mc.cli.proposal.proposalCommands
 
 class ManagementConsole : CliktCommand(name = "postchain-mc") {
     override fun run() = Unit
@@ -16,7 +17,10 @@ fun main(args: Array<String>) = ManagementConsole()
         // Init
         CommandInit(),
 
+        // Voting
+        proposalCommands(),
+
         // Cluster
-        clusterCommand(),
+        clusterCommands(),
         )
     .main(args)
