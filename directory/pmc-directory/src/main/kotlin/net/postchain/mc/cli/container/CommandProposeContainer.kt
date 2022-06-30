@@ -22,7 +22,7 @@ class CommandProposeContainer : CliktCommand(
 
     private val deployerName by option(
         "-d", "--deployer",
-        "Name of voter set authorized to operate in container."
+        help = "Name of voter set authorized to operate in container."
     ).required()
 
     override fun run() {

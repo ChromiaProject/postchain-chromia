@@ -9,7 +9,7 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.config.app.BaseClientConfig
 
-fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI")
+fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")
     .convert { BaseClientConfig.fromPropertiesFile(it) }.required()
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
