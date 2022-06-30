@@ -1,6 +1,5 @@
 package net.postchain.mc.cli.blockchain
 
-import com.beust.jcommander.Parameters
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
@@ -9,7 +8,6 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "List blockchain replicas. To see also inactive replicas, set flag -i.")
 class CommandListBlockchainReplicas : CliktCommand(
     name = "replicas",
     help = "List blockchain replicas"

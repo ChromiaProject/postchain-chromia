@@ -3,6 +3,7 @@ package net.postchain.mc.cli.common0
 import mu.KLogging
 import net.postchain.client.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
@@ -11,7 +12,6 @@ import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
@@ -53,15 +53,7 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     fun doInTryBlock(todo: () -> Unit) {
-        try {
-            todo()
-        } catch (e: UserMistake) {
-            logger.error(e) {}
-            throw CliError.Companion.CliException(e.message!!)
-        } catch (e: Exception) {
-            logger.error(e) {}
-            throw CliError.Companion.CliException(e.message!!)
-        }
+        todo()
     }
 
     fun getProviderInfo(key: String): Gtv {
@@ -538,7 +530,7 @@ open class CliExecution(val config: ClientConfig) {
             if (txResult.status == TransactionStatus.CONFIRMED) {
                 println(onSuccess)
             } else {
-                throw CliError.Companion.CliException(onFail)
+                throw TransactionFailed(onFail)
             }
         }
     }

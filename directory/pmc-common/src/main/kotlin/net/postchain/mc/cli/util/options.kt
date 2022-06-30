@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.mc.cli.base.CommandBase
+import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
@@ -24,7 +25,7 @@ fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOp
 fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
     {
         require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
-        require(it.length <= CommandBase.NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is ${CommandBase.NAME_LENGTH_MAX}" }
+        require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
     }
 
 

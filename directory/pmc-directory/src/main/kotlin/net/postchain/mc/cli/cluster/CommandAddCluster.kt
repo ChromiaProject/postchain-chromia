@@ -1,12 +1,8 @@
 package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.groups.*
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.mc.cli.base.CommandBase.Companion.autoGenerateName
-import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.validateAlphaNumeric
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.nameOrGenerateOption
 import net.postchain.mc.config.app.BaseClientConfig
