@@ -24,7 +24,7 @@ class CommandCreateVoterSet : CliktCommand(
     ).required()
 
     private val threshold by option(
-        "-t", "--thresholds",
+        "-t", "--threshold",
         help = """
         0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
         -1: simple majority
