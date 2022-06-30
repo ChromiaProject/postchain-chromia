@@ -1,33 +1,19 @@
 package net.postchain.mc.cli.provider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.PrintUtils
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "List all providers. Too see also inactive (disabled) providers, set flag -i.")
-class CommandListProviders : CommandBase() {
+class CommandListProviders : CliktCommand(
+    name = "list",
+    help = "List all providers"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include disabled providers")
-    private var includeInactive = false
-
-    override fun key(): String = "list-providers"
-
-    override fun execute(): CliResult {
-        return try {
-            val providers = CliExecution(loadAppConfig()).listProviders()
-            PrintUtils.printProviders(providers)
-            Ok("List providers successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        val providers = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).listProviders()
+        PrintUtils.printProviders(providers)
     }
-
-
 }

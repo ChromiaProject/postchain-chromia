@@ -1,38 +1,25 @@
 package net.postchain.mc.cli.provider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.common.toHex
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.PrintUtils
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.includeInactiveOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "list nodes by provider. To see also inactive nodes, set flag -i.")
-class CommandListProviderNodes : CommandBase() {
+class CommandListProviderNodes : CliktCommand(
+    name = "nodes",
+    help = "List nodes by provider"
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "provider's public key",
-            required = true)
-    private var key = ""
+    private val key by requiredPubkeyOption()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include inactive nodes")
-    private var includeInactive = false
+    private val includeInactive by includeInactiveOption()
 
-    override fun key(): String = "list-provider-nodes"
-
-    override fun execute(): CliResult {
-        return try {
-            val nodes = CliExecution(loadAppConfig()).listNodesByProvider(key)
-            PrintUtils.printNodes(nodes, includeInactive, false)
-            Ok("List nodes by provider successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        val nodes = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).listNodesByProvider(key)
+        PrintUtils.printNodes(nodes, includeInactive, false)
     }
 }

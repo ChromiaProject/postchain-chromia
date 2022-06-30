@@ -9,6 +9,7 @@ import net.postchain.mc.cli.container.containerCommands
 import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.container.replica.containerReplicaCommands
 import net.postchain.mc.cli.node.nodeCommands
+import net.postchain.mc.cli.provider.providerCommands
 
 class ManagementConsole : CliktCommand(name = "postchain-mc") {
     override fun run() = Unit
@@ -31,12 +32,12 @@ fun main(args: Array<String>) = ManagementConsole()
         clusterCommands(),
 
         // Provider
-        proposalCommands(),
+        providerCommands(),
 
         // Container
         containerCommands(),
 
         // Node
-        nodeCommands()
+        nodeCommands(),
         )
     .main(args)

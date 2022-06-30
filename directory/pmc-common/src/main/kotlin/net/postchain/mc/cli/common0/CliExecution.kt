@@ -550,25 +550,25 @@ open class CliExecution(val config: ClientConfig) {
         )
     }
 
-    fun updateProvider(key: String, name: String, beneficiary: String) {
+    fun updateProvider(key: String, name: String?, beneficiary: String?) {
         sendTxSync(
                 updateProviderAsync(key, name, beneficiary), "Provider data has been updated",
                 "Cannot update provider"
         )
     }
 
-    fun updateProviderAsync(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
+    fun updateProviderAsync(key: String, name: String?, beneficiary: String?): GTXTransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
-        if (name.isNotEmpty()) {
-            data = data.plus(gtv(name))
+        data = if (name != null && name.isNotEmpty()) {
+            data.plus(gtv(name))
         } else {
-            data = data.plus(GtvNull)
+            data.plus(GtvNull)
         }
-        if (beneficiary.isNotEmpty()) {
-            data = data.plus(gtv(beneficiary))
+        data = if (beneficiary != null && beneficiary.isNotEmpty()) {
+            data.plus(gtv(beneficiary))
         } else {
-            data = data.plus(GtvNull)
+            data.plus(GtvNull)
         }
         return makeTransactionWithNop().apply {
             addOperation("update_provider_data", *data)
