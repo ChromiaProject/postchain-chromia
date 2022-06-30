@@ -12,20 +12,10 @@ class CliD1: CliBase() {
     override val commands: Map<String, Command> = listOf(
             CommandKeygen(),
 
-            // Providers
-            CommandRegisterProvider(),
-            CommandListProviders(),
-            CommandProposeEnableProvider(),
-            CommandProposeDisableProvider(),
-            CommandGetProviderInfo(),
-
             // Clusters
             CommandProposeClusterProvider(),
             CommandProposeClusterResourceLimits(),
             CommandProposeClusterDeployer(),
-
-            // Nodes
-            CommandListProviderNodes(),
 
             // Blockchains
             CommandProposeConfiguration(),
