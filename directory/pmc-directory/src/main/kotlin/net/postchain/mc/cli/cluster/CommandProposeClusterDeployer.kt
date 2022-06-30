@@ -1,37 +1,29 @@
 package net.postchain.mc.cli.cluster
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "proposes an update of a cluster's deployer. New deployer must be an existing voter set.")
-class CommandProposeClusterDeployer : CommandBase() {
+class CommandProposeClusterDeployer : CliktCommand(
+    name = "deployer",
+    help = "proposes an update of a cluster's deployer. New deployer must be an existing voter set."
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "name of new deployer.")
-    private var deployer = ""
+    private val deployer by nameOption("Name of new deployer").required()
 
 
-    @Parameter(
-            names = ["-c", "--cluster"],
-            description = "Name of cluster to update. Must exist in database",
-            required = true)
-    private var clusterName = ""
+    private val clusterName by option(
+        "-c", "--cluster",
+        help = "Name of existing cluster to update"
+    ).required()
 
-    override fun key(): String = "propose-cluster-deployer"
-
-    override fun execute(): CliResult {
-
-        return try {
-            CliExecution(loadAppConfig()).proposeClusterDeployer(clusterName, deployer)
-            Ok("proposal for deployer of cluster $clusterName has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).proposeClusterDeployer(clusterName, deployer)
+        println("proposal for deployer of cluster $clusterName has been added successfully")
     }
 }

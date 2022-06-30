@@ -9,6 +9,7 @@ import net.postchain.mc.cli.container.containerCommands
 import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.node.nodeCommands
 import net.postchain.mc.cli.provider.providerCommands
+import net.postchain.mc.cli.votingupdates.voterSetCommands
 
 fun main(args: Array<String>) = ManagementConsole()
     .subcommands(
@@ -19,6 +20,7 @@ fun main(args: Array<String>) = ManagementConsole()
 
         // Voting
         proposalCommands(),
+        voterSetCommands(),
 
         // Blockchain
         blockchainCommands(),

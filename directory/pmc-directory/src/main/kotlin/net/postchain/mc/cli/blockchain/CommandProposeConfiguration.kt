@@ -1,57 +1,31 @@
 package net.postchain.mc.cli.blockchain
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import net.postchain.cli.util.*
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "propose new configuration to blockchain at specific height. Height must be > current height " +
-        " and > all previously approved configuration heights. " +
-        "Use force flag -f to override previously added configs or to squeeze in a configuration at a height < previously approved config heights." +
-        "Change will be applied after voting.")
-class CommandProposeConfiguration: CommandBase() {
+class CommandProposeConfiguration : CliktCommand(
+    name = "update",
+    help = "propose new configuration to blockchain at specific height. Height must be > current height " +
+            " and > all previously approved configuration heights. " +
+            "Use force flag -f to override previously added configs or to squeeze in a configuration at a height < previously approved config heights." +
+            "Change will be applied after voting."
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain RID",
-            required = true)
-    private var blockchainRID = ""
+    private val blockchainConfigFile by blockchainConfigOption()
 
-    @Parameter(
-            names = ["-bc", "--blockchain-config"],
-            description = "Configuration file of blockchain (gtxml)",
-            required = true)
-    private var blockchainConfigFile = ""
+    private val blockchainRID by blockchainRidOption()
 
-    @Parameter(
-            names = ["-h", "--height"],
-            description = "block height at which new configuration will be applied",
-            required = true)
-    private var height = 0L
+    private val height by heightOption().default(0L)
 
-    @Parameter(
-            names = ["-fmt", "--format"],
-            description = "format of blockchain configuration file (gtv|xml)",
-            required = false)
-    private var format : String? = null
+    private val force by forceOption()
 
-    @Parameter(
-            names = ["-f", "--force"],
-            description = "Force the addition of blockchain configuration " +
-                    "for a height that already exists or a height < already proposed configuration heights.")
-    private var force = false
-
-    override fun key() = "propose-blockchain-configuration"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecutionD1(loadAppConfig()).proposeConfiguration(blockchainRID, blockchainConfigFile, height, format, force)
-            Ok("Proposal is registered.")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecutionD1(BaseClientConfig.fromPropertiesFile(nodeConfig))
+            .proposeConfiguration(blockchainRID.toHex(), blockchainConfigFile, height, null, force)
+        println("Configuration update has been proposed")
     }
 }

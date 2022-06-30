@@ -1,37 +1,26 @@
 package net.postchain.mc.cli.replica
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "add replica of a blockchain. The node is verifying but not building blocks.")
-class CommandAddBlockchainReplica : CommandBase() {
+class CommandAddBlockchainReplica : CliktCommand(
+    name = "add",
+    help = "add replica of a blockchain. The node is verifying but not building blocks."
+) {
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain RID",
-            required = true)
-    private var blockchainRID = ""
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "Node's public key",
-            required = true)
-    private var key = ""
+    private val blockchainRID by blockchainRidOption()
 
-    override fun key(): String = "add-blockchain-replica"
+    private val key by requiredPubkeyOption()
 
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).addBlockchainReplica(blockchainRID, key)
-            Ok("Replica of blockchain has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).addBlockchainReplica(blockchainRID.toHex(), key)
+        println("Replica of blockchain has been added successfully")
     }
 
 }

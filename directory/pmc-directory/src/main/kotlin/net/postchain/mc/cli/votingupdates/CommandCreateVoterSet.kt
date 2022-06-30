@@ -1,47 +1,48 @@
 package net.postchain.mc.cli.votingupdates
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.validate
+import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "Create a new voter set with a list of providers. All important changes are done using voter sets. ")
-class CommandCreateVoterSet: CommandBase() {
+class CommandCreateVoterSet : CliktCommand(
+    name = "create",
+    help = "Create a new voter set with a list of providers."
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "Name of new voter set",
-            required = true)
-    private var name = ""
+    private val name by nameOption("Name of new voter set").required()
 
-    @Parameter(
-            names = ["-p", "--providers"],
-            description = "String of comma separated list of pubkey strings of initial voters")
-    private var providers = ""
+    private val providers by option(
+        "-p", "--providers",
+        help = "Comma separated list of pubkeys for this voter set"
+    ).required()
 
-    @Parameter(
-            names = ["-t", "--threshold"],
-            description = "0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)\n" +
-                    "\t// -1: simple majority\n" +
-                    "\t// positive number: that many voters")
-    private var threshold = 0L
+    private val threshold by option(
+        "-t", "--thresholds",
+        help = """
+        0: supermajority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
+        -1: simple majority
+        positive number: that many voters
+    """.trimIndent()
+    )
+        .long().default(0L)
+        .validate { require(it >= -1L) { "Threshold must be -1, 0 or a positive integer" } }
 
-    @Parameter(
-            names = ["-g", "--governor"],
-            description = "Name of another voter set which can update this voter set. Default: voter set is its own governor.")
-    private var governorName = ""
+    private val governorName by option(
+        "-g", "--governor",
+        help = "Name of another voter set which can update this voter set. Default: voter set is its own governor."
+    )
 
-    override fun key() = "create-voter-set"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).createVoterSet(name, providers, threshold, governorName)
-            Ok("Voter set created")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig))
+            .createVoterSet(name, providers, threshold, governorName)
+        println("Voter set created")
     }
 }

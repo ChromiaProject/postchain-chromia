@@ -576,7 +576,7 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String) {
+    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
         sendTxSync(
                 createVoterSetAsync(name, providers, threshold, governorName), "voter set created",
                 "Cannot create voter set"
@@ -820,7 +820,7 @@ open class CliExecution(val config: ClientConfig) {
             name: String,
             providerKeys: String,
             threshold: Long,
-            governorName: String
+            governorName: String?
     ): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
         var providerList: Gtv
@@ -830,7 +830,7 @@ open class CliExecution(val config: ClientConfig) {
             providerList = providersGtv(providerKeys)
         }
         var governor: Gtv
-        if (governorName.isEmpty()) {
+        if (governorName == null || governorName.isEmpty()) {
             governor = GtvNull
         } else {
             governor = voterSetGtv(governorName)

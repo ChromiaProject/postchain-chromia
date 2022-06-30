@@ -1,37 +1,28 @@
 package net.postchain.mc.cli.votingupdates
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "proposes an update of a voter set's governor. New governor must be an existing voter set.")
-class CommandProposeVoterSetGovernor : CommandBase() {
+class CommandProposeVoterSetGovernor : CliktCommand(
+    name = "update",
+    help = "proposes an update of a voter set's governor. New governor must be an existing voter set."
+) {
+    private val nodeConfig by nodeConfigOption()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "name of new governor.")
-    private var governor = ""
+    private val governor by nameOption("Name of new governor").required()
 
+    private val voterSet by option(
+        "-v", "--voterset",
+        help = "Name of existing voter set to update"
+    ).required()
 
-    @Parameter(
-            names = ["-v", "--voterset"],
-            description = "Name of voter set to update. Must exist in database",
-            required = true)
-    private var voterSet = ""
-
-    override fun key(): String = "propose-voter-set-governor"
-
-    override fun execute(): CliResult {
-
-        return try {
-            CliExecution(loadAppConfig()).proposeVoterSetGovernor(voterSet, governor)
-            Ok("governor proposal for voter set $voterSet has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).proposeVoterSetGovernor(voterSet, governor)
+        println("governor proposal for voter set $voterSet has been added successfully")
     }
 }

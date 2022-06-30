@@ -1,38 +1,27 @@
 package net.postchain.mc.cli.votingupdates
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.toHex
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.config.app.BaseClientConfig
 
-@Parameters(commandDescription = "List members of the given voter set")
-class CommandListVoterSetMembers: CommandBase() {
+class CommandListVoterSetMembers : CliktCommand(
+    name = "info",
+    help = "Show members of a voter set"
+) {
+    private val nodeConfig by nodeConfigOption()
+    private val name by nameOption("Name of voter set").required()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "Name of voter set. Existing names can be listed with voter-sets-list",
-            required = true)
-    private var name = ""
-
-    override fun key() = "list-voter-set-members"
-
-    override fun execute(): CliResult {
-        return try {
-            val members = CliExecutionD1(loadAppConfig()).listVoterSetMembers(name)
-            members.forEach {
-                println(it.asByteArray().toHex())
-            }
-            if (members.isEmpty()) {
-                Ok("Voter set has no members.")
-            } else {
-                Ok("Voter set members listed")
-            }
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+    override fun run() {
+        val members = CliExecutionD1(BaseClientConfig.fromPropertiesFile(nodeConfig)).listVoterSetMembers(name)
+        members.forEach {
+            println(it.asByteArray().toHex())
+        }
+        if (members.isEmpty()) {
+            println("Voter set has no members.")
         }
     }
 }
