@@ -2,17 +2,16 @@ package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOrGenerateOption
-import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandAddCluster : CliktCommand(
     name = "add",
     help = "Create a new cluster that can hold containers with blockchains."
 ) {
 
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val name by nameOrGenerateOption("Cluster name")
 
@@ -32,7 +31,7 @@ class CommandAddCluster : CliktCommand(
     ).required()
 
     override fun run() {
-        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).addCluster(
+        CliExecution(config).addCluster(
             name,
             providers,
             governorName,

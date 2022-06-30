@@ -4,24 +4,23 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.heightOption
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.cli.util.configOption
 
 class CommandGetBlockchainConfiguration : CliktCommand(
     name = "get",
     help = "Get blockchain configuration"
 ) {
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val blockchainRID by blockchainRidOption()
 
     private val height by heightOption().default(-1L)
 
     override fun run() {
-        val bc = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig))
+        val bc = CliExecution(config)
             .getBlockchainConfiguration(blockchainRID.toHex(), height)
         if (height == -1L) {
             println("Blockchain configuration at current:")

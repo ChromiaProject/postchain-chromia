@@ -7,7 +7,10 @@ import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
+import net.postchain.mc.config.app.BaseClientConfig
 
+fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI")
+    .convert { BaseClientConfig.fromPropertiesFile(it) }.required()
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
 fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOptions(

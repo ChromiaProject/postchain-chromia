@@ -4,17 +4,16 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandProposeClusterResourceLimits : CliktCommand(
     name = "limits",
     help = "Propose new resource limits for given cluster. There are three types of limits. " +
             "Proposal can contain one, two, or all three types."
 ) {
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val containerName by nameOption("Cluster name").required()
 
@@ -29,7 +28,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
         cpu?.let { limitMap.put("cpu", it) }
         storage?.let { limitMap.put("storage", it) }
 
-        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig)).proposeClusterLimits(containerName, limitMap)
+        CliExecution(config).proposeClusterLimits(containerName, limitMap)
         println("proposal has been added successfully")
     }
 

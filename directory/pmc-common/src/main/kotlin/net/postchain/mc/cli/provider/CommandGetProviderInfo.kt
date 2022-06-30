@@ -1,23 +1,22 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.gtv.Gtv
 import net.postchain.mc.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.cli.util.configOption
 
 class CommandGetProviderInfo : CliktCommand(
     name = "info",
     help = "Show provider information"
 ) {
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        val cliExecution = CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig))
+        val cliExecution = CliExecution(config)
         val provider = cliExecution.getProviderInfo(key)
         val providerList = arrayListOf<Gtv>(provider)
         PrintUtils.printProviders(providerList)

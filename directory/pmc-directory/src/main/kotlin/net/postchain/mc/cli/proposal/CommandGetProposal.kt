@@ -2,22 +2,21 @@ package net.postchain.mc.cli.proposal
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.toHex
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
-import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.cli.util.configOption
 
 class CommandGetProposal : CliktCommand(
     name = "info",
     help = "Gets information of a given proposal"
 ) {
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val idx by proposalIndexOption().required()
 
     override fun run() {
-        val cliExecution = CliExecutionD1(BaseClientConfig.fromPropertiesFile(nodeConfig))
+        val cliExecution = CliExecutionD1(config)
         val proposal = cliExecution.getProposal(idx).asDict()
         val provPubkey = proposal["proposed_by"]!!.asByteArray().toHex()
         val proposedBy = cliExecution.getProviderInfo(provPubkey).asDict()

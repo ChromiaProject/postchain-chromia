@@ -6,16 +6,15 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.config.app.BaseClientConfig
 
 class CommandCreateVoterSet : CliktCommand(
     name = "create",
     help = "Create a new voter set with a list of providers."
 ) {
-    private val nodeConfig by nodeConfigOption()
+    private val config by configOption()
 
     private val name by nameOption("Name of new voter set").required()
 
@@ -41,7 +40,7 @@ class CommandCreateVoterSet : CliktCommand(
     )
 
     override fun run() {
-        CliExecution(BaseClientConfig.fromPropertiesFile(nodeConfig))
+        CliExecution(config)
             .createVoterSet(name, providers, threshold, governorName)
         println("Voter set created")
     }
