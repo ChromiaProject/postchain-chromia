@@ -3,6 +3,10 @@ package net.postchain.mc.cli.directory1
 import com.beust.jcommander.JCommander
 import net.postchain.mc.cli.base.CliBase
 import net.postchain.mc.cli.base.Command
+import net.postchain.mc.cli.blockchain.CommandProposeConfiguration
+import net.postchain.mc.cli.cluster.CommandProposeClusterDeployer
+import net.postchain.mc.cli.cluster.CommandProposeClusterProvider
+import net.postchain.mc.cli.cluster.CommandProposeClusterResourceLimits
 import net.postchain.mc.cli.replica.*
 import net.postchain.mc.cli.votingupdates.*
 
