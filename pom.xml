@@ -21,7 +21,7 @@
 
     <properties>
         <postchain.version>${project.version}</postchain.version>
-        <rellr.version>0.10.10</rellr.version>
+        <rellr.version>0.10.11-SNAPSHOT</rellr.version>
         <kotlin.version>1.6.10</kotlin.version>
         <junit.version>5.8.2</junit.version>
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
