@@ -1,32 +1,23 @@
 package net.postchain.mc.cli.cluster
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.util.configOption
 
-@Parameters(commandDescription = "List all existing clusters")
-class CommandListClusters : CommandBase() {
+class CommandListClusters : CliktCommand(
+    name = "list",
+    help = "List all existing clusters"
+) {
+    private val config by configOption()
+    private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include disabled/removed clusters (not implemented yet)")
-    private var includeInactive = false
-
-    override fun key() = "list-clusters"
-
-    override fun execute(): CliResult {
-        return try {
-            val clusters = CliExecutionD1(loadAppConfig()).listClusters()
+    override fun run() {
+            val clusters = CliExecutionD1(config).listClusters()
             clusters.forEach {
                 println(it.asString())
             }
-            Ok("Query returned successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+            println("Query returned successfully")
     }
 }

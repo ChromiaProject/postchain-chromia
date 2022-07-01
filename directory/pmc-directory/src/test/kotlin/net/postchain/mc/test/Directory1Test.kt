@@ -2,12 +2,12 @@ package net.postchain.mc.test
 
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.config.app.ClientConfig
@@ -287,7 +287,7 @@ class Directory1Test : ManagedModeTest() {
     fun testGetContainerForUnknownBlockchain() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        assertThrows<CliError.Companion.CliException> {
+        assertThrows<UserMistake> {
             prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
         }
     }

@@ -3,6 +3,7 @@ package net.postchain.mc.cli.common0
 import mu.KLogging
 import net.postchain.client.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
@@ -11,7 +12,6 @@ import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.config.app.ClientConfig
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
@@ -53,15 +53,7 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     fun doInTryBlock(todo: () -> Unit) {
-        try {
-            todo()
-        } catch (e: UserMistake) {
-            logger.error(e) {}
-            throw CliError.Companion.CliException(e.message!!)
-        } catch (e: Exception) {
-            logger.error(e) {}
-            throw CliError.Companion.CliException(e.message!!)
-        }
+        todo()
     }
 
     fun getProviderInfo(key: String): Gtv {
@@ -538,7 +530,7 @@ open class CliExecution(val config: ClientConfig) {
             if (txResult.status == TransactionStatus.CONFIRMED) {
                 println(onSuccess)
             } else {
-                throw CliError.Companion.CliException(onFail)
+                throw TransactionFailed(onFail)
             }
         }
     }
@@ -550,25 +542,25 @@ open class CliExecution(val config: ClientConfig) {
         )
     }
 
-    fun updateProvider(key: String, name: String, beneficiary: String) {
+    fun updateProvider(key: String, name: String?, beneficiary: String?) {
         sendTxSync(
                 updateProviderAsync(key, name, beneficiary), "Provider data has been updated",
                 "Cannot update provider"
         )
     }
 
-    fun updateProviderAsync(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
+    fun updateProviderAsync(key: String, name: String?, beneficiary: String?): GTXTransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
-        if (name.isNotEmpty()) {
-            data = data.plus(gtv(name))
+        data = if (name != null && name.isNotEmpty()) {
+            data.plus(gtv(name))
         } else {
-            data = data.plus(GtvNull)
+            data.plus(GtvNull)
         }
-        if (beneficiary.isNotEmpty()) {
-            data = data.plus(gtv(beneficiary))
+        data = if (beneficiary != null && beneficiary.isNotEmpty()) {
+            data.plus(gtv(beneficiary))
         } else {
-            data = data.plus(GtvNull)
+            data.plus(GtvNull)
         }
         return makeTransactionWithNop().apply {
             addOperation("update_provider_data", *data)
@@ -576,7 +568,7 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String) {
+    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
         sendTxSync(
                 createVoterSetAsync(name, providers, threshold, governorName), "voter set created",
                 "Cannot create voter set"
@@ -820,7 +812,7 @@ open class CliExecution(val config: ClientConfig) {
             name: String,
             providerKeys: String,
             threshold: Long,
-            governorName: String
+            governorName: String?
     ): GTXTransactionBuilder {
         val meProvider = providerGtv(config.pubKey)
         var providerList: Gtv
@@ -830,7 +822,7 @@ open class CliExecution(val config: ClientConfig) {
             providerList = providersGtv(providerKeys)
         }
         var governor: Gtv
-        if (governorName.isEmpty()) {
+        if (governorName == null || governorName.isEmpty()) {
             governor = GtvNull
         } else {
             governor = voterSetGtv(governorName)

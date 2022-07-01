@@ -1,43 +1,29 @@
 package net.postchain.mc.cli.votingupdates
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nameOption
 
-@Parameters(commandDescription = "proposes an update of a voter set's members. add = false => remove provider from vote set. Voter set's governor has authority to update members")
-class CommandProposeVoterSetMember : CommandBase() {
+class CommandProposeVoterSetMember : CliktCommand(
+    name = "update",
+    help = "proposes an update of a voter set's members. add = false => remove provider from vote set. Voter set's governor has authority to update members"
+) {
+    private val config by configOption()
 
-    @Parameter(
-            names = ["-k", "--pubkey"],
-            description = "pubkey of provider to be added or removed.")
-    private var provider = ""
+    private val provider by requiredPubkeyOption()
 
+    private val vsName by nameOption("Name of voter set").required()
 
-    @Parameter(
-            names = ["-v", "--voterset"],
-            description = "Name of voter set to update. Must exist in database",
-            required = true)
-    private var vsName = ""
+    private val add by option("-a", "--add", help = "Add or remove provider pubkey from voter set")
+        .flag("-r", "--remove", default = true)
 
-    @Parameter(
-            names = ["-a", "--add"],
-            description = "boolean flag. Set to false if given provider should be removed",
-            required = true)
-    private var add = true
-
-    override fun key(): String = "propose-voter-set-member"
-
-    override fun execute(): CliResult {
-
-        return try {
-            CliExecution(loadAppConfig()).proposeVoterSetMember(vsName, provider, add)
-            Ok("proposal for member update of voter set $vsName has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecution(config).proposeVoterSetMember(vsName, provider, add)
+        println("proposal for member update of voter set $vsName has been added successfully")
     }
 }

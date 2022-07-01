@@ -17,6 +17,17 @@
 
     <dependencies>
         <dependency>
+            <!-- CliKt Utils -->
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.postchain</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.directory</groupId>
             <artifactId>pmc-common</artifactId>
             <version>${project.version}</version>
@@ -61,6 +72,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <mainClass>${main-class}</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -1,43 +1,26 @@
 package net.postchain.mc.cli.provider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nameOption
 
-@Parameters(commandDescription = "update provider data (name, beneficiary,...")
-class CommandUpdateProvider : CommandBase() {
+class CommandUpdateProvider : CliktCommand(
+    name = "update",
+    help = "update provider data (name, beneficiary,..."
+) {
+    private val config by configOption()
+    private val key by requiredPubkeyOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "provider's public key",
-            required = true)
-    private var key = ""
+    private val name by nameOption("Provider name")
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "provider's name",
-            required = false)
-    private var name = ""
+    private val beneficiary by option("-b", "--beneficiary",
+    help = "Providers beneficiary account id")
 
-    @Parameter(
-            names = ["-b", "--beneficiary"],
-            description = "provider's beneficiary account id",
-            required = false)
-    private var beneficiary = ""
-
-    override fun key() = "update-provider"
-
-    override fun execute(): CliResult {
-        return try {
-            CliExecution(loadAppConfig()).updateProvider(key, name, beneficiary)
-            Ok("Provider has been updated successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+            CliExecution(config).updateProvider(key, name, beneficiary)
+            println("Provider has been updated successfully")
     }
-
 }

@@ -1,33 +1,23 @@
 package net.postchain.mc.cli.blockchain
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.common.toHex
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.includeInactiveOption
+import net.postchain.mc.cli.util.configOption
 
-@Parameters(commandDescription = "List blockchains. To include inactive ones, set flag -i.")
-class CommandListBlockchains : CommandBase() {
+class CommandListBlockchains : CliktCommand(
+    name = "list",
+    help = "List blockchains"
+) {
+    private val config by configOption()
 
-    @Parameter(
-            names = ["-i", "--includeinactive"],
-            description = "Include inactive blockchains. A blockchain is inactivated with the command pause-blockchain.")
-    private var includeInactive = false
+    private val includeInactive by includeInactiveOption()
 
-    override fun key(): String = "list-blockchains"
-
-    override fun execute(): CliResult {
-        return try {
-            val listBlockchains = CliExecution(loadAppConfig()).listBlockchains(includeInactive)
-            listBlockchains.forEach { blockchain ->
-                println(blockchain.toHex())
-            }
-            Ok("Listed blockchains successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+    override fun run() {
+        val listBlockchains = CliExecution(config).listBlockchains(includeInactive)
+        listBlockchains.forEach { blockchain ->
+            println(blockchain.toHex())
         }
     }
 }

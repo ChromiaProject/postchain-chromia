@@ -1,7 +1,8 @@
 package net.postchain.mc
 
-import net.postchain.mc.cli.chromia1.CliC0
+import com.github.ajalt.clikt.core.subcommands
+import net.postchain.mc.cli.ManagementConsole
 
-fun main(args: Array<String>) {
-    exec(CliC0(), args)
-}
+fun main(args: Array<String>) = ManagementConsole().subcommands(
+    
+)

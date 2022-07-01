@@ -23,9 +23,14 @@
 
         <!-- Cli -->
         <dependency>
-            <groupId>com.beust</groupId>
-            <artifactId>jcommander</artifactId>
-            <version>1.82</version>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.postchain</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- logging -->

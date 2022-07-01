@@ -1,37 +1,26 @@
 package net.postchain.mc.cli.provider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.mc.cli.base.CliError
-import net.postchain.mc.cli.base.CliResult
-import net.postchain.mc.cli.base.CommandBase
-import net.postchain.mc.cli.base.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.util.configOption
 
-@Parameters(commandDescription = "update name of provider")
-class CommandUpdateProviderName: CommandBase() {
+class CommandUpdateProviderName : CliktCommand(
+    name = "update",
+    help = "Update the name of a provider"
+) {
+    private val config by configOption()
 
-    @Parameter(
-            names = ["-k", "--key"],
-            description = "provider's public key",
-            required = true)
-    private var key = ""
+    private val pubkey by requiredPubkeyOption()
 
-    @Parameter(
-            names = ["-n", "--name"],
-            description = "provider's name",
-            required = false)
-    private var name = ""
+    private val name by option("-n", "--name", help = "Name of provider").default("")
 
-    override fun key() = "update-provider-name"
 
-    override fun execute(): CliResult {
-        return try {
-            CliExecutionD1(loadAppConfig()).updateProvider(key, name)
-            Ok("Provider has been renamed successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        CliExecutionD1(config).updateProvider(pubkey, name)
+        println("Provider has been renamed successfully")
     }
 
 }
