@@ -40,16 +40,18 @@ open class ManagedModeBase(rellFolder: String) {
     val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer()
         .withNetwork(network)
 
-    val node1: PostchainContainer = postchainServer("node1", node1Logger, 7740)
-    val node2: PostchainContainer = postchainServer("node2", node2Logger, 7741)
-    val node3: PostchainContainer = postchainServer("node3", node3Logger, 7742)
+    val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
+    val node2: PostchainContainer = postchainServer("node2", node2Logger, 9872, 7741)
+    val node3: PostchainContainer = postchainServer("node3", node3Logger, 9873, 7742)
 
-    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, apiPort: Int) =
+    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int) =
         PostchainContainer(
             DockerImageName.parse("chromaway/postchain-server:latest")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
             setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
-            startupMsg = "Postchain server started, listening on 50051"
+            startupMsg = "Postchain server started, listening on 50051",
+            nodeHost = hostName,
+            nodePort = messagePort
         )
             .withNetworkAliases(hostName)
             .withNetwork(this@ManagedModeBase.network)
