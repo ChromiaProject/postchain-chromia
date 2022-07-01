@@ -102,10 +102,7 @@ open class ManagedModeBase(rellFolder: String) {
         channel1 = createChannel(node1).usePlaintext().build()
         channel2 = createChannel(node2).usePlaintext().build()
         channel3 = createChannel(node3).usePlaintext().build()
-        addPeer(channel1, node1)
-        addPeer(channel2, node2)
         addPeer(channel2, node1)
-        addPeer(channel3, node3)
         addPeer(channel3, node1)
         brid = startBlockchain(
             channel1,
