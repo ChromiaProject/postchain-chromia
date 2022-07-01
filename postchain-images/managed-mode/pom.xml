@@ -140,7 +140,7 @@
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
                             <systemPropertyVariables>
-                                <DOCKER_HOST_MASTER>127.17.0.1</DOCKER_HOST_MASTER>
+                                <DOCKER_HOST_MASTER>172.17.0.1</DOCKER_HOST_MASTER>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>

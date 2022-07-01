@@ -28,7 +28,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Enterprise0ExampleIT {
 
-
     companion object: ManagedModeBase("/enterprise0/rell") {
 
         @JvmStatic
