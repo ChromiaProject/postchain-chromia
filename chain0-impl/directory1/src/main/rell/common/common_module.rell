@@ -1,4 +1,3 @@
-
 entity provider { key pubkey; }
 
 entity provider_state {
