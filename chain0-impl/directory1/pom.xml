@@ -37,7 +37,7 @@
                                 <argument>--batch</argument>
                                 <argument>--source-dir</argument>
                                 <argument>${rell.directory}</argument>
-                                <argument>--db-url=jdbc:postgresql://${postgres.host}/postchain?username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</argument>
+                                <argument>--db-url=jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</argument>
                                 <argument>--test</argument>
                                 <argument>common</argument>
                             </arguments>
