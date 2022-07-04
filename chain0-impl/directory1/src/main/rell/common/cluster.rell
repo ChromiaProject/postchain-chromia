@@ -83,9 +83,6 @@ function add_node_to_cluster_internal(provider, node, cluster) {
 	if (exists( cluster_provider @* {cluster, provider})) {
 		val nodes = cluster_node @* {cluster} .node;
 		require(node @? { .provider == provider }, "A provider can only provide one node to each cluster");
-		for (n in nodes) {
-		    require(n.provider != provider, "A provider can only provide one node to each cluster");
-		}
 		create cluster_node(cluster, node);
 		update_configuration_signers (cluster);
 		print("blockchain configuration signers are updated");

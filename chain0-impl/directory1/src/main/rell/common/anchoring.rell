@@ -1,5 +1,3 @@
-import ^.common.*;
-
 entity anchored_block {
 	key blockchain, height: integer;
 	key block_rid: byte_array;

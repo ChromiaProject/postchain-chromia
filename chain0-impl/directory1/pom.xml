@@ -18,12 +18,37 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>rell-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>net.postchain.rell.RellCLIKt</mainClass>
+                            <arguments>
+                                <argument>--batch</argument>
+                                <argument>--source-dir</argument>
+                                <argument>${rell.directory}</argument>
+                                <argument>--db-url=jdbc:postgresql://${postgres.host}/postchain?username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</argument>
+                                <argument>--test</argument>
+                                <argument>common</argument>
+                            </arguments>
+                            <classpathScope>test</classpathScope>
+                            <executableDependency>
+                                <groupId>net.postchain.rell</groupId>
+                                <artifactId>rell</artifactId>
+                            </executableDependency>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
