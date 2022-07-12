@@ -1,0 +1,12 @@
+@test module;
+
+import ^^.*;
+
+function test_update_activity_counter() {
+    assert_equals(activity_check.last_checked, 0);
+    val update_op = rell.test.op("update_activity_counter");
+    rell.test.tx(update_op, rell.test.nop(1)).run();
+    assert_equals(activity_check.last_checked, -1);
+    rell.test.tx(update_op, rell.test.nop(2)).run();
+    assert_gt(activity_check.last_checked, 0);
+}

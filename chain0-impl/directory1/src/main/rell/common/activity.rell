@@ -18,7 +18,7 @@ operation update_activity_counter () {
 	for (provider in provider_state @* { .active == true } (.provider)) {
 		// if provider has at least one active node
 		if (exists(node @? { .provider == provider, .active == true} limit 1)) {
-			update activity_counter@ { provider} (.count += delta);
+			update activity_counter@ { provider } (.count += delta);
 		}
 	}
 	activity_check.last_checked = op_context.last_block_time;

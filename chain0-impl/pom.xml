@@ -22,7 +22,9 @@
     <properties>
         <rell.directory>${project.basedir}/src/main/rell</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
+        <postgres.host>localhost:5432</postgres.host>
     </properties>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -43,27 +45,6 @@
                                     <argument>--source-dir</argument>
                                     <argument>${rell.directory}</argument>
                                     <argument>${rell.main.module}</argument>
-                                </arguments>
-                                <classpathScope>test</classpathScope>
-                                <executableDependency>
-                                    <groupId>net.postchain.rell</groupId>
-                                    <artifactId>rell</artifactId>
-                                </executableDependency>
-                            </configuration>
-                        </execution>
-                        <execution>
-                            <id>rell-test</id>
-                            <phase>test</phase>
-                            <goals>
-                                <goal>java</goal>
-                            </goals>
-                            <configuration>
-                                <mainClass>net.postchain.rell.RellCLIKt</mainClass>
-                                <arguments>
-                                    <argument>--batch</argument>
-                                    <argument>--source-dir</argument>
-                                    <argument>${rell.directory}</argument>
-                                    <argument>--test</argument>
                                 </arguments>
                                 <classpathScope>test</classpathScope>
                                 <executableDependency>
@@ -99,5 +80,14 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>ci</id>
+            <properties>
+                <postgres.host>postgres</postgres.host>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

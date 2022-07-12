@@ -1,6 +1,8 @@
 @mount('')
 module;
 
+import ^.common.*;
+
 struct module_args {
     initial_provider: pubkey;
 }
