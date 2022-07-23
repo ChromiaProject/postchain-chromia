@@ -476,25 +476,22 @@ function apply_conf(proposal) {
 	delete pending_conf @* { proposal };
 }
 
-//Initial signers of new bc are the ones in cluster_node table.
+// Initial signers of new bc are the ones in cluster_node table.
 function apply_bc(proposal) {
-	val bc = pending_blockchain @ {proposal};
+    val bc = pending_blockchain @ {proposal};
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
 	val blockchain_rid = config.hash();
-	val blockchain = create blockchain ( blockchain_rid, true );
+	val blockchain = create blockchain(blockchain_rid, true);
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
 	val signers = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that.
 	require(signers.size() > 0);
 	create blockchain_configuration_signers(blockchain, 0, signers.to_gtv().to_bytes());
-	create blockchain_added (blockchain, op_context.transaction);
+	create blockchain_added(blockchain, op_context.transaction);
 	create container_blockchain(bc.container, blockchain);
 	add_dependencies(bc.data, blockchain_rid, 0);
 	delete pending_blockchain @* { proposal };
 }
-
 
 //remove block production by inactivating bc, Keep replicas.
 function apply_pause_blockchain(proposal) {
