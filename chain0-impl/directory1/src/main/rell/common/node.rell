@@ -1,4 +1,19 @@
 
+entity node {
+	index provider;
+	key pubkey;
+	mutable active: boolean = true;
+	mutable host: text;
+	mutable port: integer;
+	mutable api_port: integer; // NEW. Need API port to connect client to a node.
+	mutable last_updated: timestamp;
+}
+
+
+object node_list {
+	mutable last_update: timestamp = 0;
+}
+
 operation add_node(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
 	require_provider_auth_with_rl(provider);
 	add_node_internal(provider, node_pubkey, host, port, cluster);
