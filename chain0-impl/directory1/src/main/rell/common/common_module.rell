@@ -38,7 +38,7 @@ entity blockchain_replica_node { key blockchain, node; }
 
 function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey)); }
 
-operation add_node (provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
+operation add_node(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
 	require_provider_auth_with_rl(provider);
 	add_node_internal(provider, node_pubkey, host, port, cluster);
 }
@@ -55,9 +55,7 @@ function add_node_internal(provider, node_pubkey: pubkey, host: text, port: inte
 			.last_updated = op_context.last_block_time
 		);
 	} else {
-		create node (provider, node_pubkey, host, port=port, api_port=port,
-			last_updated = op_context.last_block_time
-		);
+		create node(provider, node_pubkey, host, port = port, api_port = port, last_updated = op_context.last_block_time);
 	}
 	node_list.last_update = op_context.last_block_time;
 	//If a cluster is given and provider is part of that cluster, add node as block signer to this cluster

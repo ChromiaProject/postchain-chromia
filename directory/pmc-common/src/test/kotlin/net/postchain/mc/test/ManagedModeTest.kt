@@ -13,7 +13,7 @@ import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 import org.junit.jupiter.api.Assertions.assertArrayEquals

@@ -20,14 +20,27 @@ query get_node_data (pubkey) {
     );
 }
 
-query get_cluster_data (name) {
-	return cluster @ { name} (
+query get_cluster_data(name) {
+	return cluster @ { name } (
 		name = .name,
      	governor = .governance.name,
      	deployer = .deployer.name,
      	is_operational = .operational
 	);
 }
+
+query get_cluster_providers(name) {
+    return provider_state @* {
+        .provider in cluster_provider @* { cluster @ { name } }.provider
+    } (name = .name, pubkey = .provider.pubkey);
+}
+
+query get_cluster_nodes(name) {
+    return node @* {
+        .pubkey in cluster_node @* { cluster @ { name } }.node.pubkey
+    } (pubkey = .pubkey, host = .host, port = .port, api_port = .api_port, active = .active);
+}
+
 query list_clusters_of_node (pubkey) : list<text> {
 	return cluster_node @* { node @ {pubkey} }.cluster.name;
 }
@@ -119,7 +132,6 @@ query get_voter_set_members (name) {
 	return voter_set_member @* {voter_set @ {name}} (.provider.pubkey);
 }
 
-
 query get_provider_points(pubkey): integer {
 	return provider_rl_state @ {provider @ { pubkey }} .points;
 }
@@ -127,4 +139,21 @@ query get_provider_points(pubkey): integer {
 query get_provider_clusters(pubkey) : list<text> {
 	return cluster_provider @* { provider @ {pubkey} }.cluster.name;
 }
-	
+
+query get_containers(): list<(cluster:text, name:text, deployer:text)> {
+    return container @* {} (@sort cluster = .cluster.name, @sort name = .name, deployer = .deployer.name);
+}
+
+query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
+    return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
+}
+
+query get_node_containers(pubkey): list<(cluster:text, name:text, deployer:text)> {
+	val clusters = cluster_node @* { node @ { pubkey } } .cluster;
+	val res = list<(cluster:text, name:text, deployer:text)>();
+	for (cl in clusters) {
+		val containers = container @* { cl } (@sort cluster = .cluster.name, @sort name = .name, deployer = .deployer.name);
+		res.add_all(containers);
+	}
+	return res;
+}

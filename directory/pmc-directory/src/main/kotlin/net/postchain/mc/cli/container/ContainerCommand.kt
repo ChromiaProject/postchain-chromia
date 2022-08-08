@@ -9,7 +9,8 @@ class ContainerCommand : CliktCommand("Container commands") {
 }
 
 fun containerCommands() = ContainerCommand().subcommands(
-    CommandProposeContainer(),
-    CommandProposeContainerResourceLimits(),
-    containerReplicaCommands()
+        CommandProposeContainer(),
+        CommandProposeContainerResourceLimits(),
+        CommandListContainers(),
+        containerReplicaCommands()
 )

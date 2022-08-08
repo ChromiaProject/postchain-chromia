@@ -8,10 +8,11 @@ class ClusterCommand : CliktCommand("Interacting with clusters") {
 }
 
 fun clusterCommands() = ClusterCommand().subcommands(
-    CommandListClusters(),
-    CommandAddCluster(),
-    CommandGetClusterInfo(),
-    CommandProposeClusterProvider(),
-    CommandProposeClusterDeployer(),
-    CommandProposeClusterResourceLimits()
+        CommandListClusters(),
+        CommandAddCluster(),
+        CommandGetClusterInfo(),
+        CommandListClusterContainers(),
+        CommandProposeClusterProvider(),
+        CommandProposeClusterDeployer(),
+        CommandProposeClusterResourceLimits()
 )

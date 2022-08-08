@@ -27,7 +27,6 @@ operation init () {
 	create container("system", system_cluster, container_type.naked, system_voter_set);
 }
 
-
 function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {
 	var enable = false;
 	if (tier == 0) { enable = true; } //low rank providers can be enabled by anyone.

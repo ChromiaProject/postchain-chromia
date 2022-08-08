@@ -15,7 +15,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 ) {
     private val config by configOption()
 
-    private val containerName by nameOption("Cluster name").required()
+    private val clusterName by nameOption("Cluster name").required()
 
     private val ram by option("-r", "--ram", help = "RAM limit").long()
 
@@ -28,7 +28,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
         cpu?.let { limitMap.put("cpu", it) }
         storage?.let { limitMap.put("storage", it) }
 
-        CliExecution(config).proposeClusterLimits(containerName, limitMap)
+        CliExecution(config).proposeClusterLimits(clusterName, limitMap)
         println("proposal has been added successfully")
     }
 
