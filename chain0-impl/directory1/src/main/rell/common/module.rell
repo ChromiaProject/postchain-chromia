@@ -1,1 +1,4 @@
 module;
+
+import .voting.*;
+import .proposal.*;
