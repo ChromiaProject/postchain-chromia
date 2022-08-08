@@ -43,32 +43,57 @@ entity vote {
 	vote: boolean; // yes | no
 }
 
-// Pubkey used for authorization
 operation make_vote(provider, prop: proposal, vote: boolean) {
 	require_provider_auth_with_rl(provider);
 	require(not(empty(voter_set_member @* {prop.voter_set, provider})));
-	print("vote authorization OK");
+	print("vote authorization: OK");
 	require(empty(vote @? {prop, provider})); // only one vote per pubkey.
 	internal_vote(provider, prop, vote);
+}
+
+operation retract_vote(provider, prop: proposal) {
+	require_provider_auth_with_rl(provider);
+	require(not(empty(voter_set_member @* {prop.voter_set, provider})));
+	print("vote authorization: OK");
+
+	if (exists(vote @? { prop, provider })) {
+	    delete vote @* { prop, provider };
+        print("vote for proposal retracted:", proposalStr(prop));
+        log_proposal_voting(prop);
+	} else {
+	    print("not vote for proposal to retract:", proposalStr(prop));
+	}
 }
 
 // NB: check authority before calling this function
 function internal_vote(provider, prop: proposal, vote: boolean) {
 	create vote(prop, provider, vote);
 	print("vote added:", vote);
+	log_proposal_voting(prop);
 	apply_voting_result(prop);
 }
 
+function log_proposal_voting(proposal) {
+    val max = max_votes(proposal.voter_set);
+    val needed = needed_votes(proposal.voter_set);
+    val yes = positive_votes(proposal);
+    val no = negative_votes(proposal);
+    val msg = "max votes: %d, needed: %d, positive: %d, negative: %d".format(max, needed, yes, no);
+    print(msg);
+}
+
 function max_votes(voter_set) {
-    return voter_set_member @* { voter_set } (@sum 1) limit 1;
+    return (voter_set_member @* { voter_set } (@sum 1) limit 1)[0];
 }
 
 function positive_votes(proposal) {
-    return vote @* { proposal, .vote == true };
+    val votes = vote @* { proposal, .vote == true } (@sum 1);
+    return if (exists(votes)) votes[0] else 0;
 }
 
 function negative_votes(proposal) {
-    return vote @* { proposal, .vote == false };
+    val votes = vote @* { proposal, .vote == false } (@sum 1);
+    return if (exists(votes)) votes[0] else 0;
 }
 
 function needed_votes(voter_set) {
@@ -76,30 +101,29 @@ function needed_votes(voter_set) {
 	var needed_votes = voter_set.threshold;
 	// two special cases (0 and -1):
 	when (voter_set.threshold) {
-		0  -> needed_votes = n[0]-(n[0]-1)/3;
-	 	-1 -> needed_votes = n[0]/2+1;
+		0  -> needed_votes = n-(n-1)/3;
+	 	-1 -> needed_votes = n/2+1;
 	}
-	print("max votes: %d, needed votes: %d".format(n[0], needed_votes));
 	return needed_votes;
 }
 
-function consensus_achieved(proposal, needed: integer) {
-	if (exists(positive_votes(proposal))) {
-		val positive = vote @* { .proposal == proposal, .vote == true } ( @sum 1 );
-		print("positive votes:", positive[0]);
-		return ((positive[0] >= needed));
+function is_consensus_achieved(proposal, needed: integer) {
+    val positive = positive_votes(proposal);
+	if (positive > 0) {
+		return (positive >= needed);
+	} else {
+	    print("No positive votes");
+	    return false;
 	}
-	print("No positive votes");
-	return false; 
 }
 
-function proposal_rejected(proposal, needed: integer) {
-	if (exists(negative_votes(proposal))) {
-	    val max = max_votes(proposal.voter_set)[0];
-		val negative = vote @* { .proposal == proposal, .vote == false} ( @sum 1 );
-		print("negative votes:", negative[0]);
-		return ((negative[0] > max - needed));
+function is_proposal_rejected(proposal, needed: integer) {
+    val negative = negative_votes(proposal);
+	if (negative > 0) {
+	    val max = max_votes(proposal.voter_set);
+		return (negative > max - needed);
+	} else {
+	    print("No negative votes");
+	    return false;
 	}
-	print("No negative votes");
-	return false;	
 }

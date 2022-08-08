@@ -304,9 +304,9 @@ operation propose_provider_is_system(me: provider, other_prov: provider, promote
 }
 
 function apply_voting_result(prop: proposal) {
-    val propStr = "%s:%d".format(prop.proposal_type, prop.rowid);
+    val propStr = proposalStr(prop);
     val needed = needed_votes(prop.voter_set);
-	if (consensus_achieved(prop, needed)) {
+	if (is_consensus_achieved(prop, needed)) {
 		print("proposal approved:", propStr);
 		when (prop.proposal_type) {
 	 		conf              -> apply_conf(prop);
@@ -326,7 +326,7 @@ function apply_voting_result(prop: proposal) {
 	    }
 		delete vote @* { .proposal == prop };
 		delete proposal @ { .rowid == prop.rowid };
-	} else if (proposal_rejected(prop, needed)) {
+	} else if (is_proposal_rejected(prop, needed)) {
 		print("proposal rejected:", propStr);
 		when (prop.proposal_type) {
 	 		conf              -> delete pending_conf @ { prop };
@@ -520,7 +520,7 @@ function apply_unpause_blockchain(proposal) {
 	delete pending_unpause_blockchain @ { proposal };
 }
 
-//Delete everything about this bc.
+// Delete everything about this bc
 function apply_delete_blockchain(proposal) {
 	val bc = pending_delete_blockchain @ { proposal } .blockchain;
 	delete container_blockchain @ { bc };
@@ -531,4 +531,8 @@ function apply_delete_blockchain(proposal) {
 	delete blockchain_dependency @* { .me == bc };
 	delete pending_delete_blockchain @ { proposal };
 	delete blockchain @ { bc.rid };
+}
+
+function proposalStr(prop: proposal) {
+    return "%s:%d".format(prop.proposal_type, prop.rowid);
 }
