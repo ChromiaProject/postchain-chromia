@@ -560,7 +560,7 @@ open class CliExecution(val config: ClientConfig) {
             val txResult = sendTx(tx).get()
             when (txResult.status) {
                 TransactionStatus.CONFIRMED -> println(onSuccess)
-                TransactionStatus.REJECTED -> println(onFail + ": " + txResult.rejectReason)
+                TransactionStatus.REJECTED -> println(onFail + ": " + "txResult.rejectReason") // TODO: POS-301: Unquote rejectReason
                 else -> println(onFail)
             }
         }

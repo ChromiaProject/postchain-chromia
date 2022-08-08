@@ -4,7 +4,6 @@ import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -316,9 +315,9 @@ class Directory1Test : ManagedModeTest() {
     fun testGetContainerForUnknownBlockchain() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        assertThrows<UserMistake> {
-            prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
-        }
+        assertNull(
+                prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
+        )
     }
 
     @Test
