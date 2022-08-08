@@ -20,14 +20,21 @@ query get_node_data (pubkey) {
     );
 }
 
-query get_cluster_data (name) {
-	return cluster @ { name} (
+query get_cluster_data(name) {
+	return cluster @ { name } (
 		name = .name,
      	governor = .governance.name,
      	deployer = .deployer.name,
      	is_operational = .operational
 	);
 }
+
+query get_cluster_providers(name) {
+    return provider_state @* {
+        .provider in cluster_provider @* { cluster @ { name } }.provider
+    } (name = .name, pubkey = .provider.pubkey);
+}
+
 query list_clusters_of_node (pubkey) : list<text> {
 	return cluster_node @* { node @ {pubkey} }.cluster.name;
 }
@@ -118,7 +125,6 @@ query get_voter_set_governor (name) {
 query get_voter_set_members (name) {
 	return voter_set_member @* {voter_set @ {name}} (.provider.pubkey);
 }
-
 
 query get_provider_points(pubkey): integer {
 	return provider_rl_state @ {provider @ { pubkey }} .points;

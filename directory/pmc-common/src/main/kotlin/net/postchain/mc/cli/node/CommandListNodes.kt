@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.gtv.Gtv
-import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption

@@ -1,10 +1,10 @@
-package net.postchain.mc
+package net.postchain.mc.cli.util
 
 import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 
 object PrintUtils {
-//    This function is for printing results from get_nodes_by_provider and get_nodes_with_provider. Query listNodes
+    //    This function is for printing results from get_nodes_by_provider and get_nodes_with_provider. Query listNodes
 //    (nm_get_peer_infos) returns an array, not a dict.
     fun printNodes(nodes: List<Gtv>, includeInactive: Boolean = true, showProvider: Boolean = true) {
         nodes.forEach {
@@ -78,9 +78,21 @@ object PrintUtils {
         }
     }
 
+    fun printProvidersNamePubKey(providers: List<Gtv>): String {
+        val template = "%-15s%-15s"
+        val header = template.format("PROVIDER", "PUBKEY")
+
+        return providers.joinToString("\n", prefix = "$header\n") {
+            val p = it.asDict()
+            val name = p["name"]?.asString()
+            val pubkey = p["pubkey"]?.asByteArray()?.toHex()
+            template.format(name, pubkey)
+        }
+    }
+
     /**
      * TODO: Inactivation of clusters is not yet implemented
-      */
+     */
     fun printClusters(clusters: List<Gtv>, includeInactive: Boolean = false) {
         clusters.forEach {
             val dict = it.asDict()
@@ -95,8 +107,9 @@ object PrintUtils {
             }
         }
     }
+
     //get_nodes_by_provider has key "active", get_nodes_with_provider has key "node_active"
-    private fun active(n: Map<String, Gtv>) : Boolean {
+    private fun active(n: Map<String, Gtv>): Boolean {
         if (n.containsKey("node_active")) {
             return n["node_active"]!!.asBoolean()
         }

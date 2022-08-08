@@ -52,10 +52,13 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    private fun doInTryBlock(todo: () -> Unit) {
+    private fun doInTryBlock(logError: Boolean = true, todo: () -> Unit) {
         try {
             todo()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (logError) {
+                logger.error { e.message }
+            }
         }
     }
 
@@ -71,28 +74,43 @@ open class CliExecution(val config: ClientConfig) {
         return returnVal!!
     }
 
-    fun getClusterInfo(name: String): Gtv {
-        var returnVal: Gtv? = null
+    fun getClusterInfo(name: String): Gtv? {
+        var info: Gtv? = null
+
         doInTryBlock {
-            val info = getPostchainClient().query(
+            info = getPostchainClient().query(
                     "get_cluster_data",
                     gtv("name" to gtv(name))
             ).get()
-            returnVal = info
         }
-        return returnVal!!
+
+        return info
+    }
+
+    fun getClusterProviders(name: String): List<Gtv> {
+        val providers = mutableListOf<Gtv>()
+
+        doInTryBlock {
+            getPostchainClient().query(
+                    "get_cluster_providers",
+                    gtv("name" to gtv(name))
+            ).get().asArray().forEach(providers::add)
+        }
+
+        return providers
     }
 
     fun listProvidersActionPoints(key: String): Long {
-        var returnVal: Gtv? = null
+        var points: Gtv? = null
+
         doInTryBlock {
-            val info = getPostchainClient().query(
+            points = getPostchainClient().query(
                     "get_provider_points",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).get()
-            returnVal = info
         }
-        return returnVal!!.asInteger()
+
+        return points!!.asInteger()
     }
 
     fun getNodeInfo(key: String): Gtv {
@@ -102,11 +120,11 @@ open class CliExecution(val config: ClientConfig) {
                     "get_node_data",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).get().asDict().toMutableMap()
-            val cluster_info = getPostchainClient().query(
+            val clusterInfo = getPostchainClient().query(
                     "list_clusters_of_node",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).get()
-            info.set("cluster", cluster_info)
+            info["cluster"] = clusterInfo
             returnVal = gtv(info)
         }
         return returnVal!!
@@ -525,7 +543,7 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     fun sendTxSync(tx: GTXTransactionBuilder, onSuccess: String, onFail: String) {
-        doInTryBlock {
+        doInTryBlock(false) {
             val txResult = sendTx(tx).get()
             when (txResult.status) {
                 TransactionStatus.CONFIRMED -> println(onSuccess)

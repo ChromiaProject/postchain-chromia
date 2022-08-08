@@ -2,7 +2,7 @@ package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption

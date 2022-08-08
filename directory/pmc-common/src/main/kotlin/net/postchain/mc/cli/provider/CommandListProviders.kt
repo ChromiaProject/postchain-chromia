@@ -1,7 +1,7 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 

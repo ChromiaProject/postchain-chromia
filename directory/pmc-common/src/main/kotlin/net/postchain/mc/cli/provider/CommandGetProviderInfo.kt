@@ -2,8 +2,7 @@ package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.gtv.Gtv
-import net.postchain.mc.PrintUtils
+import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
@@ -18,7 +17,7 @@ class CommandGetProviderInfo : CliktCommand(
     override fun run() {
         val cliExecution = CliExecution(config)
         val provider = cliExecution.getProviderInfo(key)
-        val providerList = arrayListOf<Gtv>(provider)
+        val providerList = arrayListOf(provider)
         PrintUtils.printProviders(providerList)
 
         val points = cliExecution.listProvidersActionPoints(key)
@@ -26,7 +25,7 @@ class CommandGetProviderInfo : CliktCommand(
         println("")
 
         val clusters = cliExecution.listClustersForProvider(key)
-        println("belongs to cluster/s: $clusters")
+        println("belongs to cluster(s): $clusters")
         println("")
     }
 }

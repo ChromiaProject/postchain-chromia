@@ -1,5 +1,7 @@
 package net.postchain.mc.test
 
+import assertk.assert
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -385,12 +387,22 @@ class Directory1Test : ManagedModeTest() {
         clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
         assertEquals(listOf(), clusters)
 
-        //change deployer
+        // change deployer
         doAndBuildBlocks(provConfig, provExecutor.proposeClusterDeployerAsync(newClusterName, voterSetSystem))
         val clusterInfo = provExecutor.getClusterInfo(newClusterName)
-        println(clusterInfo.asDict())
-        assertk.assert(clusterInfo["deployer"]?.asString()).isEqualTo(voterSetSystem)
+        println(clusterInfo!!.asDict())
+        assert(clusterInfo["deployer"]?.asString()).isEqualTo(voterSetSystem)
 
+        // cluster providers
+        val clusterProviders = provExecutor.getClusterProviders(newClusterName)
+        println(clusterProviders.toTypedArray().contentToString())
+        assert(clusterProviders.size).isEqualTo(1)
+        assert(clusterProviders.first()["pubkey"]?.asByteArray()?.toHex()).isEqualTo(
+                provConfig.pubKey
+        )
+        // UNKNOWN cluster providers
+        val unknownProviders = provExecutor.getClusterProviders("unknown cluster name")
+        assert(unknownProviders).isEmpty()
     }
 
     @Test
