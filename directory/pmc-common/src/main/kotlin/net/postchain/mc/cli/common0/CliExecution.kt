@@ -2,15 +2,14 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.client.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.cryptoSystem
 import net.postchain.mc.config.app.ClientConfig
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
@@ -21,21 +20,7 @@ open class CliExecution(val config: ClientConfig) {
 
     companion object : KLogging()
 
-    protected val cryptoSystem = Secp256K1CryptoSystem()
-
-    protected fun getPostchainClient(): PostchainClient {
-        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {
-            throw UserMistake("Missing required parameters: brid | pub-key | priv-key")
-        }
-        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-        val defaultSigner = DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray())
-        return ConcretePostchainClientProvider().createClient(
-                config.apiURL,
-                BlockchainRid.buildFromHex(config.brid),
-                defaultSigner
-        )
-
-    }
+    protected fun getPostchainClient() = ClientUtil.fromConfig(config)
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
         val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
