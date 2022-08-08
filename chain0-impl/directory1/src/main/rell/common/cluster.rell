@@ -121,13 +121,14 @@ function add_node_to_cluster_internal(provider, node, cluster) {
 //Who can create a cluster? Any provider
 operation create_cluster(me: provider, name, initials: list<provider>?, governance: voter_set, deployer: voter_set) {
 	require_provider_auth_with_rl(me);
-	val cl = create cluster(name, governance, deployer);
-	create cluster_resource_limit(cl, resource_limit_type.cpu , 100);
-	create cluster_resource_limit(cl, resource_limit_type.ram , 100);
-	create cluster_resource_limit(cl, resource_limit_type.storage , 100);
+	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
+	val c = create cluster(name, governance, deployer);
+	create cluster_resource_limit(c, resource_limit_type.cpu , 100);
+	create cluster_resource_limit(c, resource_limit_type.ram , 100);
+	create cluster_resource_limit(c, resource_limit_type.storage , 100);
 	if (exists(initials)) {
 		for (prov in initials) {
-		create cluster_provider(cl, prov);			
+			create cluster_provider(cl, prov);
 		}
 	}
 }
