@@ -47,6 +47,11 @@
             <scope>provided</scope>
             <type>tar.gz</type>
         </dependency>
+        <dependency>
+            <groupId>net.postchain.chain0</groupId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
