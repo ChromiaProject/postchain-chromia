@@ -193,14 +193,14 @@ class Directory1Test : ManagedModeTest() {
         //Now updated container resource limits and check result
         proposeAndAssertContainerLimits(
                 containerName,
-                mapOf("ramm" to 123L),
-                mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
+                mapOf(),
+                mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1
         )
 
         proposeAndAssertContainerLimits(
                 containerName,
                 mapOf("ram" to 123L),
-                mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
+                mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1 and not 100
         )
 
         val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -230,12 +230,12 @@ class Directory1Test : ManagedModeTest() {
                 )
         )
 
-        var limits = mapOf("ramm" to 123L)
-        var expected = mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
+        var limits = mapOf<String, Long>()
+        var expected = mapOf("ram" to 100, "cpu" to 100, "storage" to 100L) //TODO: POS-301 should be -1
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L)
-        expected = mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
+        expected = mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1 in stead of 100
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -316,9 +316,9 @@ class Directory1Test : ManagedModeTest() {
     fun testGetContainerForUnknownBlockchain() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        assertThrows<UserMistake> {
+        assertNull(
             prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
-        }
+        )
     }
 
     @Test

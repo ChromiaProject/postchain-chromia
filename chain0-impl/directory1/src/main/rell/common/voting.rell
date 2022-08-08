@@ -68,7 +68,7 @@ operation retract_vote(provider, prop: proposal) {
 // NB: check authority before calling this function
 function internal_vote(provider, prop: proposal, vote: boolean) {
 	create vote(prop, provider, vote);
-	print("vote added:", vote);
+	print("vote added with value:", if (vote) "Yes" else "False");
 	log_proposal_voting(prop);
 	apply_voting_result(prop);
 }
