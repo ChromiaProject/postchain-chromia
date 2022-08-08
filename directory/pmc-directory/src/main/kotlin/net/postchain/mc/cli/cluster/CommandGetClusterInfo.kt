@@ -6,11 +6,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.util.*
 import net.postchain.mc.cli.util.PrintUtils.printClusters
-import net.postchain.mc.cli.util.PrintUtils.printProvidersNamePubKey
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.validateAlphaNumeric
 
 class CommandGetClusterInfo : CliktCommand(
         name = "info",
@@ -29,9 +26,14 @@ class CommandGetClusterInfo : CliktCommand(
             printClusters(listOf(clusterInfo))
 
             val providers = CliExecutionD1(config).getClusterProviders(name)
-            println(printProvidersNamePubKey(providers))
+            println(ProvidersPrinter.printProvidersNamePubKey(providers))
+            println()
 
-            println("\nQuery returned successfully")
+            val nodes = CliExecutionD1(config).getClusterNodes(name)
+            println(NodesPrinter.printNodes(nodes))
+            println()
+
+            println("Query returned successfully")
         } else {
             println("Can't run query")
         }

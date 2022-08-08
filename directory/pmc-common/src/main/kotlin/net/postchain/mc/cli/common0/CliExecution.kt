@@ -100,6 +100,19 @@ open class CliExecution(val config: ClientConfig) {
         return providers
     }
 
+    fun getClusterNodes(name: String): List<Gtv> {
+        val nodes = mutableListOf<Gtv>()
+
+        doInTryBlock {
+            getPostchainClient().query(
+                    "get_cluster_nodes",
+                    gtv("name" to gtv(name))
+            ).get().asArray().forEach(nodes::add)
+        }
+
+        return nodes
+    }
+
     fun listProvidersActionPoints(key: String): Long {
         var points: Gtv? = null
 
