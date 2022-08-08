@@ -226,23 +226,44 @@ open class CliExecution(val config: ClientConfig) {
     /**
      * key - publicKey of node
      */
-    fun listContainersForNode(key: String): List<String> {
-        val listContainers = arrayListOf<String>()
+    fun listContainersForNode(key: String): List<Gtv> {
+        val containers = arrayListOf<Gtv>()
+
         doInTryBlock {
             val isNode = getPostchainClient().query(
                     "is_node",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).get().asBoolean()
+
             if (isNode) {
-                val list = getPostchainClient().query(
-                        "nm_get_containers", gtv(
-                        "pubkey" to gtv(key.hexStringToByteArray())
-                )
-                ).get().asArray()
-                listContainers.addAll(list.map { it.asString() })
+                getPostchainClient().query(
+                        "get_node_containers",
+                        gtv("pubkey" to gtv(key.hexStringToByteArray()))
+                ).get().asArray().forEach(containers::add)
             }
         }
-        return listContainers
+
+        return containers
+    }
+
+    fun listContainers(): List<Gtv> {
+        val containers = arrayListOf<Gtv>()
+        doInTryBlock {
+            getPostchainClient().query("get_containers").get()
+                    .asArray().forEach(containers::add)
+        }
+        return containers
+    }
+
+    fun listClusterContainers(cluster: String): List<Gtv> {
+        val containers = arrayListOf<Gtv>()
+        doInTryBlock {
+            getPostchainClient().query(
+                    "get_cluster_containers",
+                    gtv("cluster_name" to gtv(cluster))
+            ).get().asArray().forEach(containers::add)
+        }
+        return containers
     }
 
     fun listClustersForProvider(key: String): List<String> {

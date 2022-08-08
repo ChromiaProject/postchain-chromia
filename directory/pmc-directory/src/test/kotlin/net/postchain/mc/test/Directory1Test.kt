@@ -5,6 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
@@ -17,6 +18,7 @@ import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Paths
+import java.util.Comparator.naturalOrder
 import kotlin.test.*
 
 class Directory1Test : ManagedModeTest() {
@@ -190,13 +192,13 @@ class Directory1Test : ManagedModeTest() {
         proposeAndAssertContainerLimits(
                 containerName,
                 mapOf("ramm" to 123L),
-                mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L)
+                mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
         )
 
         proposeAndAssertContainerLimits(
                 containerName,
                 mapOf("ram" to 123L),
-                mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L)
+                mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
         )
 
         val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -217,21 +219,21 @@ class Directory1Test : ManagedModeTest() {
     fun testProposeClusterLimits() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val clusterName = "Vera"
-        val providers_list = provConfig.pubKey
-        //create cluster, initial providers added
+        val providersList = provConfig.pubKey
+        // create cluster, initial providers added
         doAndBuildBlocks(
-                provConfig, provExecutor.createClusterAsync(
-                clusterName, providers_list,
-                voterSetSystemP, voterSetSystemP
-        )
+                provConfig,
+                provExecutor.createClusterAsync(
+                        clusterName, providersList, voterSetSystemP, voterSetSystemP
+                )
         )
 
         var limits = mapOf("ramm" to 123L)
-        var expected = mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L)
+        var expected = mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L)
-        expected = mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L)
+        expected = mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -244,23 +246,48 @@ class Directory1Test : ManagedModeTest() {
             expected: Map<String, Long>
     ) {
         doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
-        var updated = provExecutor.listClusterLimits(clusterName)
+        val updated = provExecutor.listClusterLimits(clusterName)
         assertEquals(expected, updated)
     }
 
     @Test
-    fun testGetContainersForNode() {
-        //add node0 and bc0
+    fun testGetContainers() {
+        // add node0 and bc0
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
-        //add new container to system cluster
+        // add new container to system cluster
         val containerName = "container1"
         doAndBuildBlocks(
                 provConfig,
                 provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
         )
-        val containerList = prov2Executor.listContainersForNode(nodes[0].pubKey)
-        assertEquals(2, containerList.size)
+
+        val expected = arrayOf<String?>("container1", "system")
+
+        fun List<Gtv>.names() = map { it.asDict()["name"]?.asString() }
+                .sortedWith(naturalOrder<String>())
+                .toTypedArray()
+
+        // asserting all containers
+        val all = prov2Executor.listContainers().names()
+        assertContentEquals(expected, all)
+
+        // asserting cluster containers
+        val clusterContainers = prov2Executor.listClusterContainers("system").names()
+        assertContentEquals(expected, clusterContainers)
+
+        // asserting UNKNOWN cluster containers
+        val unknownClusterContainers = prov2Executor.listClusterContainers("unknown").names()
+        assertContentEquals(arrayOf(), unknownClusterContainers)
+
+        // asserting node containers
+        val nodeContainers = prov2Executor.listContainersForNode(nodes[0].pubKey).names()
+        assertContentEquals(expected, nodeContainers)
+
+        // asserting UNKNOWN node containers
+        val unknownKey = KeyPairHelper.pubKeyHex(77) // node 77
+        val unknownNodeContainers = prov2Executor.listContainersForNode(unknownKey).names()
+        assertContentEquals(arrayOf(), unknownNodeContainers)
     }
 
     @Test

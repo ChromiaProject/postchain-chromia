@@ -6,10 +6,10 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import net.postchain.mc.PrintUtils.printClusters
-import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.validateAlphaNumeric
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.validateAlphaNumeric
 
 class CommandGetClusterInfo : CliktCommand(
     name = "info",

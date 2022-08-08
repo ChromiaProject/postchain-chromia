@@ -127,4 +127,21 @@ query get_provider_points(pubkey): integer {
 query get_provider_clusters(pubkey) : list<text> {
 	return cluster_provider @* { provider @ {pubkey} }.cluster.name;
 }
-	
+
+query get_containers(): list<(cluster:text, name:text, deployer:text)> {
+    return container @* {} (@sort cluster = .cluster.name, @sort name = .name, deployer = .deployer.name);
+}
+
+query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
+    return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
+}
+
+query get_node_containers(pubkey): list<(cluster:text, name:text, deployer:text)> {
+	val clusters = cluster_node @* { node @ { pubkey } } .cluster;
+	val res = list<(cluster:text, name:text, deployer:text)>();
+	for (cl in clusters) {
+		val containers = container @* { cl } (@sort cluster = .cluster.name, @sort name = .name, deployer = .deployer.name);
+		res.add_all(containers);
+	}
+	return res;
+}
