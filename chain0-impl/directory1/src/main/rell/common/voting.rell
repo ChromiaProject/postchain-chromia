@@ -45,16 +45,14 @@ entity vote {
 
 operation make_vote(provider, prop: proposal, vote: boolean) {
 	require_provider_auth_with_rl(provider);
-	require(not(empty(voter_set_member @* {prop.voter_set, provider})), "Provider is not a member of proposal voter_set");
-	print("vote authorization: OK");
+	require_voter_set_member(prop.voter_set, provider);
 	require(empty(vote @? {prop, provider}), "Only one vote per pubkey is allowed");
 	internal_vote(provider, prop, vote);
 }
 
 operation retract_vote(provider, prop: proposal) {
 	require_provider_auth_with_rl(provider);
-	require(not(empty(voter_set_member @* {prop.voter_set, provider})), "Provider is not a member of proposal voter_set");
-	print("vote authorization: OK");
+	require_voter_set_member(prop.voter_set, provider);
 
 	if (exists(vote @? { prop, provider })) {
 	    delete vote @* { prop, provider };
@@ -87,13 +85,11 @@ function max_votes(voter_set) {
 }
 
 function positive_votes(proposal) {
-    val votes = vote @? { proposal, .vote == true } (@sum 1);
-    return if (exists(votes)) votes!! else 0;
+    return vote @? { proposal, .vote == true } (@sum 1) ?: 0;
 }
 
 function negative_votes(proposal) {
-    val votes = vote @? { proposal, .vote == false } (@sum 1);
-    return if (exists(votes)) votes!! else 0;
+    return vote @? { proposal, .vote == false } (@sum 1) ?: 0;
 }
 
 function needed_votes(voter_set) {
