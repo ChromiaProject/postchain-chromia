@@ -212,10 +212,10 @@ operation propose_configuration(blockchain, me: provider, config_data: byte_arra
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
-	require(get_last_height(blockchain) < height);
+	require(get_last_height(blockchain) < height, "Height must be greater than current height " + height);
 	if (not(force)) {
-		require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1));
-		require(empty(pending_conf @? { blockchain, .height >= height } limit 1));
+		require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1), "BC config already exists.");
+		require(empty(pending_conf @? { blockchain, .height >= height } limit 1), "BC config already exists.");
 	}
 	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.deployer);
 	create pending_conf(prop,

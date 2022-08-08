@@ -62,7 +62,7 @@ function require_provider_auth_with_rl (provider) {
 
 operation transfer_action_points (from: provider, to: provider, amount: integer) {
 	require_provider_auth_with_rl(from);
-	require( provider_rl_state @ { from } .points >= amount);
+	require( provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
 	update provider_rl_state @ { from } ( .points -= amount );
 	update provider_rl_state @ { to } ( .points += amount );
 }
@@ -89,5 +89,5 @@ function require_container_deployer(container, provider) {
 }
 
 function require_voter_set_member(voter_set, provider) {
-	require ( exists ( voter_set_member @* { voter_set, provider}));	
+	require ( exists ( voter_set_member @* { voter_set, provider}), "Provider is not a member of voter set " + voter_set.name);	
 }
