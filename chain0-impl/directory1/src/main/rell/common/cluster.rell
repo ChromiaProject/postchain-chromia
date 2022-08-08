@@ -128,7 +128,7 @@ operation create_cluster(me: provider, name, initials: list<provider>?, governan
 	create cluster_resource_limit(c, resource_limit_type.storage , 100);
 	if (exists(initials)) {
 		for (prov in initials) {
-			create cluster_provider(cl, prov);
+			create cluster_provider(c, prov);
 		}
 	}
 }

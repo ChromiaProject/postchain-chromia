@@ -41,6 +41,25 @@ to the set of allowed nodes on the Chromia network
 * How to run tests
 * Deployment instructions
 
+### Examples ###
+Сonfig file `config.properties`:
+```properties
+api-url=http://localhost:7740
+blockchain-rid=71B35D0F8E7056E663FF003E9C64919393D67666866521805241B92F8C2DE1DD
+privkey=<...>
+pubkey=<...>
+```
+
+Prints top level commands:
+```shell
+ ./pmc.sh
+```
+
+Lists providers:
+```shell
+ ./pmc.sh provider list --config config.properties
+```
+
 ### Contribution guidelines ###
 
 Unit tests run chromia0 nodes internally, but you can also run them manually
