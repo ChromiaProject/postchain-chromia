@@ -129,7 +129,7 @@ operation propose_cluster_deployer(me: provider, cluster, new_deployer: voter_se
 	require_cluster_governor(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_deployer, me, cluster.governance);
 	create pending_cluster_deployer(prop, cluster, new_deployer);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can change voter set governor? Voter set governor.
@@ -139,7 +139,7 @@ operation propose_voter_set_governor(me: provider, voter_set, new_governor: vote
 	require_voter_set_governor(voter_set, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.voter_set_governor, me, voter_set_governance @ { voter_set }.governor );
 	create pending_voter_set_governor(prop, voter_set, .governor = new_governor);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
@@ -149,7 +149,7 @@ operation propose_container(me: provider, cluster, name, deployer: voter_set) {
 	require_cluster_deployer(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.container, me, cluster.deployer);
 	create pending_container(prop, name, cluster, container_type.isolated, deployer);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can update container limits? Cluster deployers' voter set.
@@ -159,7 +159,7 @@ operation propose_container_limits(me: provider, container, ram: integer, cpu: i
 	require_cluster_deployer(container.cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
 	create pending_container_limits(prop, container, cpu, ram, storage);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can update cluster limits? Cluster governance voter set.
@@ -169,7 +169,7 @@ operation propose_cluster_limits(me: provider, cluster, ram: integer, cpu: integ
 	require_cluster_governor(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_limits, me, cluster.governance);
 	create pending_cluster_limits(prop, cluster, cpu, ram, storage);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can update voter set's provider list? Voter set's governor.
@@ -180,7 +180,7 @@ operation propose_voter_set_provider(me: provider, voter_set, provider, add: boo
 	val governor = voter_set_governance @ { voter_set } .governor;
 	val prop = create proposal(op_context.last_block_time, proposal_type.voter_set_provider, me, governor);
 	create pending_voter_set_provider(prop, voter_set, provider, add);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 //Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
@@ -190,26 +190,25 @@ operation propose_cluster_provider(me: provider, cluster, provider, add: boolean
 	require_cluster_governor(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_provider, me, cluster.governance);
 	create pending_cluster_provider(prop, cluster, provider, add);
-	internal_vote( me, prop, true );
+	internal_vote(me, prop, true);
 }
 
 
 //Who can propose a new blockchain? The container deployer voter set
-operation propose_blockchain( me: provider, config_data: byte_array, container) {
+operation propose_blockchain(me: provider, config_data: byte_array, container) {
 	require_provider_auth_with_rl(me);
 	require_container_deployer(container, me);
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.deployer);
 		create pending_blockchain(prop, config_data, container);
-		internal_vote( me, prop, true );
+		internal_vote(me, prop, true);
 	}
 }
 
-
-//Pubkey used for authorization. Who can propose configuration updates? Container deployers.
-//SYSTEM_P is deployer of system container
-operation propose_configuration (blockchain, me: provider, config_data: byte_array, height: integer, force: boolean) {
+// Pubkey used for authorization. Who can propose configuration updates? Container deployers.
+// SYSTEM_P is deployer of system container
+operation propose_configuration(blockchain, me: provider, config_data: byte_array, height: integer, force: boolean) {
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
@@ -273,7 +272,7 @@ operation propose_enable_provider(me: provider, other_prov: provider) {
 			val system_voter_set = voter_set @ {"SYSTEM_P"};
 			val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
 			create pending_provider_state(prop, other_prov, .active = true);
-			internal_vote( me, prop, true);
+			internal_vote(me, prop, true);
 		}
 	}
 }
@@ -286,7 +285,7 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 		val system_voter_set = voter_set @ {"SYSTEM_P"};
 		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
 		create pending_provider_state(prop, other_prov, .active = false);
-		internal_vote( me, prop, true);
+		internal_vote(me, prop, true);
 	}
 }
 
@@ -300,14 +299,15 @@ operation propose_provider_is_system(me: provider, other_prov: provider, promote
 		val system_voter_set = voter_set @ {"SYSTEM_P"};
 		val prop = create proposal(op_context.last_block_time, proposal_type.provider_is_system, me, system_voter_set);
 		create pending_provider_is_system(prop, other_prov, .system = promote);
-		internal_vote( me, prop, true);
+		internal_vote(me, prop, true);
 	}
 }
 
-function apply_voting_result (prop: proposal) {
-	print("consensus?");
-	if (consensus_achieved(prop)) {
-		print("approval achieved");
+function apply_voting_result(prop: proposal) {
+    val propStr = "%s:%d".format(prop.proposal_type, prop.rowid);
+    val needed = needed_votes(prop.voter_set);
+	if (consensus_achieved(prop, needed)) {
+		print("proposal approved:", propStr);
 		when (prop.proposal_type) {
 	 		conf              -> apply_conf(prop);
 	 		bc                -> apply_bc(prop);
@@ -323,12 +323,11 @@ function apply_voting_result (prop: proposal) {
 			bc_pause		  -> apply_pause_blockchain(prop);
 			bc_unpause		  -> apply_unpause_blockchain(prop);
 			bc_delete		  -> apply_delete_blockchain(prop);
-	}
-		val prop_id = vote @* {.proposal == prop} (.rowid);
-		delete vote @* {.proposal == prop};
-		delete proposal @ {.rowid == prop.rowid};
-	} else if (proposal_rejected(prop)) {
-		print("proposal has been rejected");
+	    }
+		delete vote @* { .proposal == prop };
+		delete proposal @ { .rowid == prop.rowid };
+	} else if (proposal_rejected(prop, needed)) {
+		print("proposal rejected:", propStr);
 		when (prop.proposal_type) {
 	 		conf              -> delete pending_conf @ { prop };
 	 		bc                -> delete pending_blockchain @ { prop };
@@ -344,12 +343,11 @@ function apply_voting_result (prop: proposal) {
 			bc_pause		  -> delete pending_pause_blockchain @ { prop };
 			bc_unpause		  -> delete pending_unpause_blockchain @ { prop };
 			bc_delete		  -> delete pending_delete_blockchain @ { prop };
-	}
-		val prop_id = vote @* {.proposal == prop} (.rowid);
-		delete vote @* {.proposal == prop};
-		delete proposal @ {.rowid == prop.rowid};
+	    }
+		delete vote @* { .proposal == prop };
+		delete proposal @ { .rowid == prop.rowid };
 	} else {
-		print("no, not yet");
+		print("proposal is still under discussion:", propStr);
 	}
 }
 
