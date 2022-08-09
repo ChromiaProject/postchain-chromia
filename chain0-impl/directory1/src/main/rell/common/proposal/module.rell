@@ -1,0 +1,127 @@
+module;
+
+import ^.*;
+import ^.voting.*;
+
+ enum proposal_type {
+   conf,
+   bc,
+   container,
+   container_limits,
+   cluster_limits,
+   cluster_provider,
+   cluster_deployer,
+   voter_set_provider,
+   voter_set_governor,
+   provider_state,
+   provider_is_system,
+   bc_pause,
+   bc_unpause,
+   bc_delete
+   // and a lot more
+}
+
+entity proposal {
+  index timestamp, proposal_type;
+  proposed_by: provider;
+  index voter_set; // voter set is determined at the time proposal is created
+}
+
+//Proposed configuration changes are put here while waiting for enough positive votes.
+entity pending_conf {
+    key proposal;
+    blockchain;
+	height: integer;
+	force: boolean;
+    data: byte_array;
+}
+
+entity pending_container {
+	key proposal;
+	key name;
+ 	cluster;
+ 	container_type;
+ 	deployer: voter_set;
+}
+
+entity pending_container_limits {
+	key proposal;
+	key container;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+
+entity pending_cluster_limits {
+	key proposal;
+	key cluster;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+entity pending_cluster_provider {
+	key proposal;
+	key cluster;
+	provider;
+	add: boolean;
+}
+
+entity pending_cluster_deployer {
+	key proposal;
+	key cluster;
+	deployer: voter_set;
+}
+
+entity pending_voter_set_governor{
+	key proposal;
+	key voter_set;
+	governor: voter_set;
+}
+
+entity pending_voter_set_provider {
+	key proposal;
+	key voter_set;
+	provider;
+	add: boolean;
+}
+
+//Proposed destructions of bcs are put here while waiting for enough positive votes.
+entity pending_delete_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+//Proposed pauses of bcs are put here while waiting for enough positive votes.
+entity pending_pause_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+//Proposed unpauses (start building blocks again) of bcs are put here while waiting for enough positive votes.
+entity pending_unpause_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+//Proposed bc:s are put here while waiting for enough positive votes.
+entity pending_blockchain {
+	key proposal;
+	data: byte_array;
+	container;
+}
+
+//Proposed enabling/disabling of providers are put here while waiting for enough positive votes.
+entity pending_provider_state {
+	key proposal;
+	provider;
+	active: boolean;
+}
+
+//Proposed promotion/demotion of provider to/from being system provider
+entity pending_provider_is_system {
+	key proposal;
+	provider;
+	system: boolean;
+}

@@ -1,4 +1,13 @@
 
+entity provider { key pubkey; }
+
+entity provider_state {
+	key provider;
+	mutable name: text;
+	mutable active: boolean;
+	mutable system: boolean; // NEW. System provider has extra permissions.
+    mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
+}
 
 // type of quota for a provider
 enum provider_quota_type {
@@ -18,6 +27,15 @@ entity provider_rl_state {
 	mutable points: integer;
 	mutable last_update: integer;
 }
+
+
+// This is the function we should use for auth
+function require_provider_auth_with_rl (provider) {
+	require_provider_auth(provider);
+	provider_rate_limit(provider);
+}
+
+function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey)); }
 
 // recover provider's action points and consume one, if possible
 function provider_rate_limit (provider) {
@@ -53,13 +71,6 @@ function provider_rate_limit (provider) {
     );
 }
 
-// This is the function we should use for auth
-function require_provider_auth_with_rl (provider) {
-	require_provider_auth(provider);
-	provider_rate_limit(provider);
-}
-
-
 operation transfer_action_points (from: provider, to: provider, amount: integer) {
 	require_provider_auth_with_rl(from);
 	require( provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
@@ -86,8 +97,4 @@ function require_voter_set_governor(voter_set, provider) {
 
 function require_container_deployer(container, provider) {
 	require_voter_set_member(container.deployer, provider);
-}
-
-function require_voter_set_member(voter_set, provider) {
-	require ( exists ( voter_set_member @* { voter_set, provider}), "Provider is not a member of voter set " + voter_set.name);	
 }

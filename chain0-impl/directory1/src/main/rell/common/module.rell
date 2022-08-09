@@ -1,1 +1,10 @@
 module;
+
+import .voting.*;
+import .proposal.*;
+
+ enum resource_limit_type {
+ 	cpu,
+ 	ram,
+ 	storage
+ }
