@@ -1,0 +1,39 @@
+@test module;
+
+import ^^.*;
+import ^^^.test.ops.*;
+import ^^^.voting.test.ops.*;
+
+function setup() {
+	rell.test.tx().op(initialize_test(rell.test.pubkeys.alice)).run();
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob)).run();
+}
+
+function test_propose_blockchain() {
+	setup();
+	val cl = cluster @ { "system" };
+	val co = container @ { "system" };
+	val p1 = provider @ { rell.test.pubkeys.alice };
+	val p2 = provider @ { rell.test.pubkeys.bob };
+	rell.test.tx().op(add_test_member(voter_set @ { "SYSTEM_P" }, p2)).run();
+
+	var conf = map<text, text>();
+    rell.test.tx()
+    	.op(propose_blockchain(p1, conf.to_gtv().to_bytes(), co))
+    	.sign(rell.test.keypairs.alice)
+    	.run();
+	val prop = (proposal @ {} limit 1);
+	
+	// Proposal is pending
+	val config_proposal = get_blockchain_proposal(prop.rowid);
+	assert_not_null(config_proposal);
+	assert_equals(config_proposal.container, "system");
+	
+	rell.test.tx()
+		.op(add_node(p1, rell.test.pubkeys.alice, "", 0, cl))
+		.sign(rell.test.keypairs.alice)
+		.run();
+	// Proposal is removed
+	rell.test.tx().op(make_vote(p2, prop, true)).sign(rell.test.keypairs.bob).run();
+	assert_null(proposal @? {} limit 1);
+}

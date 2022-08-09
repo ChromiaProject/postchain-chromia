@@ -52,7 +52,7 @@ function log_proposal_voting(proposal) {
     val needed = needed_votes(proposal.voter_set);
     val yes = positive_votes(proposal);
     val no = negative_votes(proposal);
-    val msg = "max votes: %d, needed: %d, positive: %d, negative: %d".format(max, needed, yes, no);
+    val msg = "voter set: %s, max votes: %d, needed: %d, positive: %d, negative: %d".format(proposal.voter_set.name, max, needed, yes, no);
     print(msg);
 }
 

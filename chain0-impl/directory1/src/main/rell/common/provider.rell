@@ -35,7 +35,7 @@ function require_provider_auth_with_rl (provider) {
 	provider_rate_limit(provider);
 }
 
-function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey)); }
+function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey), "Provider must sign this operation"); }
 
 // recover provider's action points and consume one, if possible
 function provider_rate_limit (provider) {

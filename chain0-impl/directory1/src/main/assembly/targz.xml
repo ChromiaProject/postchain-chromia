@@ -11,6 +11,12 @@
         <fileSet>
             <directory>${rell.directory}</directory>
             <outputDirectory>./rell</outputDirectory>
+            <includes>
+                <include>**/*.rell</include>
+            </includes>
+            <excludes>
+                <exclude>**/test/*</exclude>
+            </excludes>
         </fileSet>
     </fileSets>
 </assembly>
