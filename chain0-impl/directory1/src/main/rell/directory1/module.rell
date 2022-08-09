@@ -5,29 +5,11 @@ import ^.common.*;
 
 struct module_args {
     initial_provider: pubkey;
+    // actions_per_day: integer = 100; consider adding this module arg
 }
-
 
 // This operation will check that provider table is empty and if so add the provider supplied as module argument. And
 // enable this first system provider.
 operation init () {
-	initialize_module(chain_context.args.initial_provider);
-}
-
-
-
-operation update_provider_data (provider, name?) {
-	require_provider_auth_with_rl(provider);
-	if (exists(name)) {
-		update provider_state @ {provider} (
-			.name = name
-		);		
-	}
-}
-
-//Includes enabling (active = true)
-operation register_provider (me: provider, pubkey, tier: integer) {
-	require_provider_auth_with_rl(me);
-	require( (provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
-	add_pubkey_as_provider(pubkey, false, tier, null);
+	initialize_module(chain_context.args.initial_provider, 100);
 }

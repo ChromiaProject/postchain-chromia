@@ -5,7 +5,7 @@ import ^^^.test.ops.*;
 import ^^^.voting.test.ops.*;
 
 function setup() {
-	rell.test.tx().op(initialize_test(rell.test.pubkeys.alice)).run();
+	rell.test.tx().op(initialize_test_module(rell.test.pubkeys.alice)).run();
 	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob)).run();
 }
 

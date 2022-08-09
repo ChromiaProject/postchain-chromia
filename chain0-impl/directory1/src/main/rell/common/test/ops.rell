@@ -2,8 +2,8 @@ module;
 
 import ^^.*;
 
-operation initialize_test(pubkey) {
-	initialize_module(pubkey);
+operation initialize_test_module(pubkey, majority_threshold:integer = 0) {
+	initialize_module(pubkey, 1000, majority_threshold);
 }
 
 operation create_test_provider(name, pubkey, tier:integer = 1) {

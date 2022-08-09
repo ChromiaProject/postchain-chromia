@@ -9,24 +9,22 @@ import .proposal.*;
  	storage
  }
 
-// This operation will check that provider table is empty and if so add the provider supplied as module argument. And
-// enable this first system provider.
-function initialize_module(initial_provider:pubkey) {
+// Adds the initial provider as a system provider along with voter sets and clusters needed to start
+function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
 	val tier = 1;
 	require(empty( provider @* {}));
 	create voter_set("SYSTEM", 1);
 	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */
-	val system_voter_set = create voter_set("SYSTEM_P", 0);
+	val system_voter_set = create voter_set("SYSTEM_P", majority_threshold);
 	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
 	add_pubkey_as_provider(initial_provider, true, tier, system_cluster);
 	val prov = provider @ { initial_provider };
 	update provider_state @ { prov } ( .active = true );
 	create voter_set_member(system_voter_set, prov);
-	create provider_quota(tier, provider_quota_type.max_actions_per_day, value = 100);
+	create provider_quota(tier, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	create container("system", system_cluster, container_type.naked, system_voter_set);
-
 }
 
 function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {
