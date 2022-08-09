@@ -15,25 +15,23 @@ query get_proposal (rowid) {
     );
 }
 
-query get_blockchain_proposal(rowid): (data:byte_array, container:text) {
-	return pending_blockchain @ { proposal @ { rowid } } ( data = .data, container = .container.name );
+query get_blockchain_proposal(rowid): (data:byte_array, container:text)? {
+	return pending_blockchain @? { require_proposal(rowid) } ( data = .data, container = .container.name );
 }
 
-query get_configuration_proposal(rowid): (height:integer, current_conf:struct<blockchain_configuration>, new_conf:byte_array, proposed_conf:struct<pending_conf>)? {
-	
-	val proposal = proposal @? { rowid };
-	if (proposal == null) return null;
-	val config = pending_conf @? { proposal };
+function require_proposal(rowid) = require(proposal @? { rowid }, "Proposal " + rowid + " not found");
+
+query get_configuration_proposal(rowid): (
+	current_conf:struct<blockchain_configuration>, 
+	proposed_conf:struct<pending_conf>
+)? {
+	val config = pending_conf @? { require_proposal(rowid) };
 	if (config == null) return null;
 	val current = (blockchain_configuration @ { config.blockchain , .height > 0 }
      (@omit @sort_desc .height, bc=blockchain_configuration) limit 1).bc;
 	
-	
 	return (
-		height = config.height,
 		current_conf = current.to_struct(),
-		new_conf = config.data,
 		proposed_conf = config.to_struct()
-		
 	);
 }
