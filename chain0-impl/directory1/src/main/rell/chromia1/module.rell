@@ -36,6 +36,12 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 	return ft3_account.account @ { account_id };
 }
 
+// Registers and enables a provider
+operation register_provider (me: provider, pubkey, tier: integer) {
+	register_and_enable_provider(me, pubkey, tier);
+	create_simple_ft3_account(pubkey);
+}
+
 operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {
 	require_provider_auth(provider);
 	if (exists(name)) {
