@@ -28,15 +28,6 @@ entity provider_rl_state {
 	mutable last_update: integer;
 }
 
-operation update_provider_data (provider, name?) {
-	require_provider_auth_with_rl(provider);
-	if (exists(name)) {
-		update provider_state @ {provider} (
-			.name = name
-		);		
-	}
-}
-
 //Includes enabling (active = true)
 operation register_provider (me: provider, pubkey, tier: integer) {
 	require_provider_auth_with_rl(me);
