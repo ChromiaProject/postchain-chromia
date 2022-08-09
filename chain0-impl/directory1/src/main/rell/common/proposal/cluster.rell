@@ -1,0 +1,20 @@
+
+//Who can change cluster deployer? Cluster governor.
+operation propose_cluster_deployer(me: provider, cluster, new_deployer: voter_set) {
+	//check that provider authority and that it is in cluster's governor voter set
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_deployer, me, cluster.governance);
+	create pending_cluster_deployer(prop, cluster, new_deployer);
+	internal_vote(me, prop, true);
+}
+
+//Who can update cluster limits? Cluster governance voter set.
+operation propose_cluster_limits(me: provider, cluster, ram: integer, cpu: integer, storage: integer) {
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_limits, me, cluster.governance);
+	create pending_cluster_limits(prop, cluster, cpu, ram, storage);
+	internal_vote(me, prop, true);
+}
