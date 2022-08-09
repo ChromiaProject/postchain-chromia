@@ -22,7 +22,8 @@ entity provider_beneficiary {
 operation init () {
 	initialize_module(chain_context.args.initial_provider, 100);
 	ft3_core.register_asset("CHR", chain_context.blockchain_rid);
-	create_simple_ft3_account(chain_context.args.initial_provider);
+	val account = create_simple_ft3_account(chain_context.args.initial_provider);
+	create provider_beneficiary(provider @ { chain_context.args.initial_provider }, account);
 }
 
 function create_simple_ft3_account(pubkey): ft3_account.account {
@@ -39,7 +40,8 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 // Registers and enables a provider
 operation register_provider (me: provider, pubkey, tier: integer) {
 	register_and_enable_provider(me, pubkey, tier);
-	create_simple_ft3_account(pubkey);
+	val account = create_simple_ft3_account(pubkey);
+	create provider_beneficiary(provider @ { pubkey }, account);
 }
 
 operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {
