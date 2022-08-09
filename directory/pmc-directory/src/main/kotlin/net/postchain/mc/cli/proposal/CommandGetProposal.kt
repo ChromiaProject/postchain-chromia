@@ -12,12 +12,10 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 import java.time.Instant
 import java.util.*
-import kotlin.collections.EmptyMap.entries
 
 class CommandGetProposal : CliktCommand(
     name = "info",
@@ -44,7 +42,7 @@ class CommandGetProposal : CliktCommand(
     fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.proposalType) {
             ProposalType.bc ->  {
-                val p = client.getBlockchainProposal(proposal.rowid)
+                val p = client.getBlockchainProposal(proposal.rowid) ?: return ""
                 """
                     Container: ${p.container}
                     Data: ${p.data.toHex()}
