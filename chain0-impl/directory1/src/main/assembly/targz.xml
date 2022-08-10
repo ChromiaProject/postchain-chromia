@@ -16,6 +16,7 @@
             </includes>
             <excludes>
                 <exclude>**/test/*</exclude>
+                <exclude>**/chromia1/**/*</exclude>
             </excludes>
         </fileSet>
     </fileSets>

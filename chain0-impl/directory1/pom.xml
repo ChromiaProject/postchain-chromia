@@ -45,11 +45,9 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.2.2</version>
+                <version>0.2.3</version>
                 <configuration>
                     <source>src/main/rell</source>
-                    <mainModule>directory1</mainModule>
-                    <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
                     <packageName>net.postchain.chain0</packageName>
                 </configuration>
                 <executions>
@@ -61,13 +59,26 @@
                         <configuration>
                             <testModule>common</testModule>
                             <skip>${skipTests}</skip>
+                            <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-gen</id>
+                        <id>rell-client-gen-d1</id>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
+                        <configuration>
+                            <mainModule>directory1</mainModule>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-client-gen-c1</id>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <mainModule>chromia1</mainModule>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

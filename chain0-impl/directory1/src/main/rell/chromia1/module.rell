@@ -1,0 +1,59 @@
+module;
+
+import ^.common.*;
+import .ft3.ft3_basic;
+import ft3_account: .ft3.account;
+import ft3_core: .ft3.core;
+
+/*
+ * Chromia1 is a public blockchain networking dapp where the c1 dapp manages and controls creating and deleting clusters, containers and blockchains.
+ * To run this dapp postchain must be started in managed mode using anchoring, EIF and preferably the master/subnode configuration.
+ * This dapp supports usage of the CHR token across dapps.
+ */
+struct module_args {
+    initial_provider: pubkey;
+}
+
+entity provider_beneficiary {
+	key provider;
+	mutable beneficiary: ft3_account.account; 	 
+}
+
+operation init () {
+	initialize_module(chain_context.args.initial_provider, 100);
+	ft3_core.register_asset("CHR", chain_context.blockchain_rid);
+	val account = create_simple_ft3_account(chain_context.args.initial_provider);
+	create provider_beneficiary(provider @ { chain_context.args.initial_provider }, account);
+}
+
+function create_simple_ft3_account(pubkey): ft3_account.account {
+	val account_id = ft3_account.create_account_with_auth(
+		ft3_account.auth_descriptor(
+			"C",
+			[pubkey],
+			[pubkey.to_gtv()]
+		)	
+	);
+	return ft3_account.account @ { account_id };
+}
+
+// Registers and enables a provider
+operation register_provider (me: provider, pubkey, tier: integer) {
+	register_and_enable_provider(me, pubkey, tier);
+	val account = create_simple_ft3_account(pubkey);
+	create provider_beneficiary(provider @ { pubkey }, account);
+}
+
+operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {
+	require_provider_auth(provider);
+	if (exists(name)) {
+		update provider_state @ {provider} (
+			.name = name
+		);		
+	}
+	if (exists(beneficiary_account_id)) {
+		update provider_beneficiary @ {provider} (
+			.beneficiary = ft3_account.account @ { .id == beneficiary_account_id }
+		);
+	} 
+}
