@@ -45,11 +45,10 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.2.1</version>
+                <version>0.2.2</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <mainModule>directory1</mainModule>
-                    <testModule>common</testModule>
                     <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
                     <packageName>net.postchain.chain0</packageName>
                 </configuration>
@@ -59,6 +58,10 @@
                         <goals>
                             <goal>rell-test</goal>
                         </goals>
+                        <configuration>
+                            <testModule>common</testModule>
+                            <skip>${skipTests}</skip>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>rell-gen</id>
