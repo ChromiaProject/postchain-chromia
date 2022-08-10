@@ -22,41 +22,39 @@
  *
  */
 
- // node cluster
- entity cluster {
-     key name;
-     governance: voter_set; // who controls the cluster
-     mutable deployer: voter_set; // who can deploy containers
-     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
- }
+// node cluster
+entity cluster {
+    key name;
+    governance: voter_set; // who controls the cluster
+    mutable deployer: voter_set; // who can deploy containers
+    mutable operational: boolean = false; // cluster goes operational when all providers provide a node
+}
 
- entity cluster_provider { key cluster, provider; }
- entity cluster_node { key cluster, node; }
+entity cluster_provider { key cluster, provider; }
+entity cluster_node { key cluster, node; }
  
  
- entity cluster_resource_limit {
+entity cluster_resource_limit {
  	key cluster, resource_limit_type;
  	mutable value: integer;
- }
+}
   
- // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
- entity cluster_container_replica { key cluster, container; }
- 
+// Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
+entity cluster_container_replica { key cluster, container; }
 
 //entity cluster_signer_list { key cluster_node;}
 
 /**Adding a node to a cluster automatically makes it signer of all bc in this cluster. Only one node per provider and cluster.
  * TODO: Start as replica; once it is in sync, it will become signer.
- * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node. 
+ * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node.
  * */
 operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
 	require_provider_auth_with_rl(provider);
 	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
 	//make_node_a_replica_in_cluster(cluster, node_pubkey);
 	//check if cluster now is operational, if so update the flag:
-	check_operational(cluster);	
+	check_operational(cluster);
 }
-
 
 //Updates of cluster providers are controlled by its governor voter set.
 //TODO: Change this to propose_* or propose_update_cluster_providers(...)
@@ -115,19 +113,17 @@ function update_configuration_signers (cluster) {
 	}
 }
 
-//Create cluster with deafult resource limits.
-//Who can create a cluster? Any provider
+// Who can create a cluster? Any provider
 operation create_cluster(me: provider, name, initials: list<provider>?, governance: voter_set, deployer: voter_set) {
 	require_provider_auth_with_rl(me);
 	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
 	val c = create cluster(name, governance, deployer);
-	create cluster_resource_limit(c, resource_limit_type.cpu , 100);
-	create cluster_resource_limit(c, resource_limit_type.ram , 100);
-	create cluster_resource_limit(c, resource_limit_type.storage , 100);
+	create cluster_resource_limit(c, resource_limit_type.cpu , -1);
+	create cluster_resource_limit(c, resource_limit_type.ram , -1);
+	create cluster_resource_limit(c, resource_limit_type.storage , -1);
 	if (exists(initials)) {
 		for (prov in initials) {
 			create cluster_provider(c, prov);
 		}
 	}
 }
- 

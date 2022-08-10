@@ -4,7 +4,6 @@ import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -193,14 +192,14 @@ class Directory1Test : ManagedModeTest() {
         //Now updated container resource limits and check result
         proposeAndAssertContainerLimits(
                 containerName,
-                mapOf(),
-                mapOf("ram" to 100L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1
+                mapOf("ramm" to 123L),
+                mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
         )
 
         proposeAndAssertContainerLimits(
                 containerName,
                 mapOf("ram" to 123L),
-                mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1 and not 100
+                mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
         )
 
         val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -230,12 +229,12 @@ class Directory1Test : ManagedModeTest() {
                 )
         )
 
-        var limits = mapOf<String, Long>()
-        var expected = mapOf("ram" to 100, "cpu" to 100, "storage" to 100L) //TODO: POS-301 should be -1
+        var limits = mapOf("ramm" to 123L)
+        var expected = mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L)
-        expected = mapOf("ram" to 123L, "cpu" to 100L, "storage" to 100L) // TODO: POS-301 should be -1 in stead of 100
+        expected = mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
         proposeAndAssertClusterLimits(clusterName, limits, expected)
 
         limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
@@ -317,7 +316,7 @@ class Directory1Test : ManagedModeTest() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         assertNull(
-            prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
+                prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
         )
     }
 

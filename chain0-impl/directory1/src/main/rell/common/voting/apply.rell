@@ -53,9 +53,9 @@ function apply_voting_result(prop: proposal) {
 function apply_container(proposal) {
 	val pps = pending_container @ {proposal};
 	val c = create container(pps.name, pps.cluster, pps.container_type, pps.deployer);
-	create container_resource_limit(c, resource_limit_type.cpu , 100);
-	create container_resource_limit(c, resource_limit_type.ram , 100);
-	create container_resource_limit(c, resource_limit_type.storage , 100);
+	create container_resource_limit(c, resource_limit_type.cpu , -1);
+	create container_resource_limit(c, resource_limit_type.ram , -1);
+	create container_resource_limit(c, resource_limit_type.storage , -1);
 	delete pending_container @ { proposal };
 }
 
@@ -171,17 +171,16 @@ function apply_conf(proposal) {
 	delete pending_conf @* { proposal };
 }
 
-//Initial signers of new bc are the ones in cluster_node table.
+// Initial signers of new bc are the ones in cluster_node table.
 function apply_bc(proposal) {
 	val bc = pending_blockchain @ {proposal};
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
 	val blockchain_rid = config.hash();
-	val blockchain = create blockchain ( blockchain_rid, true );
+	val blockchain = create blockchain (blockchain_rid, true);
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
 	val nodes = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
-	// do not write new configuration when size is 0 since it's impossible to recover
-	// from that.
+	// do not write new configuration when size is 0 since it's impossible to recover from that
 	require(nodes.size() > 0, "Cluster must have at least one node");
 	create blockchain_configuration_signers(blockchain, 0, nodes.to_gtv().to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);
@@ -190,8 +189,7 @@ function apply_bc(proposal) {
 	delete pending_blockchain @* { proposal };
 }
 
-
-//remove block production by inactivating bc, Keep replicas.
+// Remove block production by inactivating bc, Keep replicas.
 function apply_pause_blockchain(proposal) {
 	val bc = pending_pause_blockchain @ { proposal };
 	update blockchain @ { bc.blockchain.rid } (.active = false);

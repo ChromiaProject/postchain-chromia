@@ -24,7 +24,11 @@ function initialize_module(initial_provider:pubkey, actions_per_day:integer, maj
 	update provider_state @ { prov } ( .active = true );
 	create voter_set_member(system_voter_set, prov);
 	create provider_quota(tier, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	create container("system", system_cluster, container_type.naked, system_voter_set);
+	// system container
+    val c = create container("system", system_cluster, container_type.naked, system_voter_set);
+    create container_resource_limit(c, resource_limit_type.cpu , -1);
+    create container_resource_limit(c, resource_limit_type.ram , -1);
+    create container_resource_limit(c, resource_limit_type.storage , -1);
 }
 
 function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {

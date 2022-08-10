@@ -40,7 +40,7 @@ entity blockchain_replica_node { key blockchain, node; }
 	}
 }
 
- function require_no_dependenices_on_me(blockchain) {
+ function require_no_dependencies_on_me(blockchain) {
 	require ( empty ( blockchain_dependency @* { .dependent_on == blockchain}));	
 }
  

@@ -55,9 +55,9 @@ operation propose_unpause_blockchain(me: provider, blockchain) {
 }
 
 //Who can pause and delete bcs? Container deployers
-//NB not Ok to delete a bc if other bcs dependend on it.
+//NB not Ok to delete a bc if other bcs dependent on it.
 operation propose_delete_blockchain(me: provider, blockchain) {
-	require_no_dependenices_on_me(blockchain);
+	require_no_dependencies_on_me(blockchain);
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
