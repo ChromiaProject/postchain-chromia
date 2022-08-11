@@ -1,14 +1,16 @@
 package net.postchain.images.directory1
 
 import assertk.assert
-import assertk.assertions.*
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.containers.bpm.DockerClientFactory
-import net.postchain.dapp.*
+import net.postchain.containers.bpm.docker.DockerClientFactory
+import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
+import net.postchain.dapp.adminPubKey
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
@@ -29,11 +31,11 @@ internal class Directory1DeploymentIT {
 
         init {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
-                    MOUNT_DIR, BindMode.READ_ONLY)
-                .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
+                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                    .withMasterDockerConfig()
+                    .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
+                            MOUNT_DIR, BindMode.READ_ONLY)
+                    .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
         }
 
 
@@ -85,21 +87,21 @@ internal class Directory1DeploymentIT {
         val cluster = node1.chain0.getSystemCluster()
 
         node1.txAsAdmin(
-            brid, "add_node",
-            provider,
-            gtv(node1.pubKeyByteArray),
-            gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
-            cluster
+                brid, "add_node",
+                provider,
+                gtv(node1.pubKeyByteArray),
+                gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
+                cluster
         )
         node1Db.awaitNewBlock()
         node1.client(brid).query(
-            "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+                "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
             assert(it.get().asBoolean()).isTrue()
         }
 
         node1.client(brid).query(
-            "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
+                "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
             assert(it.get().asDict()["active"]!!.asInteger()).isEqualTo(1L)
         }
@@ -111,7 +113,7 @@ internal class Directory1DeploymentIT {
         val provider = node1.chain0.getProvider()
         val container = node1.chain0.getSystemContainer()
         node1.txAsAdmin(
-            brid, "propose_blockchain", provider, gtv(chain0Config.readBytes()), container
+                brid, "propose_blockchain", provider, gtv(chain0Config.readBytes()), container
         )
         node1Db.awaitNewBlock()
         assert(node1.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
@@ -126,13 +128,13 @@ internal class Directory1DeploymentIT {
 
         consoleLogger.info("Registering provider2")
         val provider2 = Context(node1, node1Db, provider1)
-            .registerNodeAsProvider(brid, cluster, node2)
+                .registerNodeAsProvider(brid, cluster, node2)
 
         consoleLogger.info("Adding node2 to [node1] network")
         node1.chain0.addNode(node2, provider2, cluster, brid)
 
         // Asserting that node2 is signers of chain0
-        val c0 = node1.chain0.getBlockchainGtv( brid)
+        val c0 = node1.chain0.getBlockchainGtv(brid)
         awaitUntilAsserted {
             assert(node1.chain0.getBlockchainSigners(c0).size).isEqualTo(2)
             assert(node2.chain0.getBlockchainSigners(c0).size).isEqualTo(2)
@@ -149,13 +151,13 @@ internal class Directory1DeploymentIT {
 
         consoleLogger.info("Registering provider3")
         val provider3 = Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
-            .registerNodeAsProvider(brid, cluster, node3)
+                .registerNodeAsProvider(brid, cluster, node3)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
         node1.chain0.addNode(node3, provider3, cluster, brid)
 
         // Asserting that node2 is signers of chain0
-        val c0 = node1.chain0.getBlockchainGtv( brid)
+        val c0 = node1.chain0.getBlockchainGtv(brid)
         awaitUntilAsserted {
             assert(node1.chain0.getBlockchainSigners(c0).size).isEqualTo(3)
             assert(node2.chain0.getBlockchainSigners(c0).size).isEqualTo(3)
@@ -181,8 +183,9 @@ internal class Directory1DeploymentIT {
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp ${chain.iid}" }
             chain.configs.forEach { (height, config) ->
-                consoleLogger.info { "Proposing a blockchain on height $height" }
-                dapp1 = 100L to GtvToBlockchainRidFactory.calculateBlockchainRid(config.gtvConfig)
+                consoleLogger.info { "Proposing a blockchain with config at height $height" }
+
+                dapp1 = 100L to BlockchainRid(chain.brid.toByteArray())
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
                 node3.tx(brid, "propose_blockchain", provider3, configGtv, container)
 
@@ -203,7 +206,7 @@ internal class Directory1DeploymentIT {
         }
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
-        val c100 = node1.chain0.getBlockchainGtv( dapp1.second)
+        val c100 = node1.chain0.getBlockchainGtv(dapp1.second)
         awaitUntilAsserted {
             assert(node1.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
             assert(node2.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
@@ -230,7 +233,7 @@ internal class Directory1DeploymentIT {
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
-                    .asArray().map { it.asString() }
+                        .asArray().map { it.asString() }
                 assert(cities).containsExactly(city)
             }
         }
