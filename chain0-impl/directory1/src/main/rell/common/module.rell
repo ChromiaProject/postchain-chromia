@@ -13,11 +13,13 @@ import .proposal.*;
 function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
 	val tier = 1;
 	require(empty( provider @* {}));
-	create voter_set("SYSTEM", 1);
+	val system = create voter_set("SYSTEM", 1);
+	create voter_set_governance(voter_set=system, governor=system);
 	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */
 	val system_voter_set = create voter_set("SYSTEM_P", majority_threshold);
+	create voter_set_governance(voter_set=system_voter_set, governor=system_voter_set);
 	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
 	add_pubkey_as_provider(initial_provider, true, tier, system_cluster);
 	val prov = provider @ { initial_provider };
