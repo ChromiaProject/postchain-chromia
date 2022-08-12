@@ -118,10 +118,12 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(4)
     fun `Make chain0 aware of itself`() {
-        val provider = node1.chain0.getProvider()
-        val container = node1.chain0.getSystemContainer()
         node1.txAsAdmin(
-                brid, "propose_blockchain", provider, gtv(chain0Config.readBytes()), container
+                brid,
+                "propose_blockchain",
+                gtv(initialProviderPubKey),
+                gtv(chain0Config.readBytes()),
+                gtv("system")
         )
         node1Db.awaitNewBlock()
         assert(node1.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
@@ -238,8 +240,6 @@ internal class Directory1DeploymentIT {
 
         val provider1 = node1.chain0.getProvider()
         val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
-        val provider3 = node3.chain0.getProvider(node3.pubKeyByteArray)
-        val container = node1.chain0.getContainer(containerName)
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp $dappName:${chain.iid}" }
@@ -249,7 +249,7 @@ internal class Directory1DeploymentIT {
                 consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
-                node3.tx(brid, "propose_blockchain", provider3, configGtv, container)
+                node3.tx(brid, "propose_blockchain", gtv(node3.pubKeyByteArray), configGtv, gtv(containerName))
 
                 // Voting
                 val p1 = node1.approveProposal(brid, provider1)
