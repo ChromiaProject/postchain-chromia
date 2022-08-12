@@ -1,8 +1,13 @@
 
 
-
+/*
+ * Proposes a new blockchain to a container.
+ * NB: only the deployer voter set of the container can do this.
+ */
 //Who can propose a new blockchain? The container deployer voter set
-operation propose_blockchain(me: provider, config_data: byte_array, container) {
+operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, container_name:text) {
+	val me = provider @ { my_pubkey };
+	val container = container @ { container_name };
 	require_provider_auth_with_rl(me);
 	require_container_deployer(container, me);
 	//If already proposed, do not add again.
@@ -13,9 +18,13 @@ operation propose_blockchain(me: provider, config_data: byte_array, container) {
 	}
 }
 
-// Pubkey used for authorization. Who can propose configuration updates? Container deployers.
-// SYSTEM_P is deployer of system container
-operation propose_configuration(blockchain, me: provider, config_data: byte_array, height: integer, force: boolean) {
+/*
+ * Proposes a new configuration for a blockchain.
+ * NB: Only the deployer of the container the blockchain is running in can perform operation
+ */
+operation propose_configuration(blockchain_rid:byte_array, my_pubkey: pubkey, config_data: byte_array, height: integer, force: boolean) {
+	val blockchain = blockchain @ { blockchain_rid };
+	val me = provider @ { my_pubkey };
 	require_provider_auth_with_rl(me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
@@ -34,8 +43,9 @@ operation propose_configuration(blockchain, me: provider, config_data: byte_arra
 	internal_vote(me, prop, true);
 }
 
-//Who can pause, unpause and delete bcs? Container deployers
-operation propose_pause_blockchain(me: provider, blockchain) {
+operation propose_pause_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
+	val me = provider @ { my_pubkey };
+	val blockchain = blockchain @ { blockchain_rid };
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
@@ -44,8 +54,9 @@ operation propose_pause_blockchain(me: provider, blockchain) {
 	internal_vote(me, prop, true);
 }
 
-//Who can pause, unpause and delete bcs? Container deployers
-operation propose_unpause_blockchain(me: provider, blockchain) {
+operation propose_unpause_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
+	val me = provider @ { my_pubkey };
+	val blockchain = blockchain @ { blockchain_rid };
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;
 	require_container_deployer(container, me);
@@ -54,9 +65,13 @@ operation propose_unpause_blockchain(me: provider, blockchain) {
 	internal_vote(me, prop, true);
 }
 
-//Who can pause and delete bcs? Container deployers
-//NB not Ok to delete a bc if other bcs dependent on it.
-operation propose_delete_blockchain(me: provider, blockchain) {
+/*
+ * Proposes deletion of a blockchain.
+ * NB: Cannot be done if other blockchains depends on it.
+ */
+operation propose_delete_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
+	val me = provider @ { my_pubkey };
+	val blockchain = blockchain @ { blockchain_rid };
 	require_no_dependencies_on_me(blockchain);
 	require_provider_auth_with_rl (me);
 	val container = container_blockchain @ {blockchain} .container;

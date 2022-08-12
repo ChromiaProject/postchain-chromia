@@ -19,7 +19,7 @@ function test_propose_blockchain() {
 
 	var conf = map<text, text>();
     rell.test.tx()
-    	.op(propose_blockchain(p1, conf.to_gtv().to_bytes(), co))
+    	.op(propose_blockchain(p1.pubkey, conf.to_gtv().to_bytes(), co.name))
     	.sign(rell.test.keypairs.alice)
     	.run();
 	val prop = (proposal @ {} limit 1);
