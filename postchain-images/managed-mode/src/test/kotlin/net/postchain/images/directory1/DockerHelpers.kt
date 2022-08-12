@@ -1,6 +1,7 @@
 package net.postchain.images.directory1
 
 import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.DockerClient.LogsParam
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_HOST
@@ -47,7 +48,7 @@ internal fun printSubnodeLogs(dockerClient: DockerClient) {
         println("------------------------- CONTAINER LOGS ---------------------")
         println()
         println(
-            dockerClient.logs(subnodeContainer.id(), DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr(), DockerClient.LogsParam.tail(100))
+            dockerClient.logs(subnodeContainer.id(), LogsParam.stdout(), LogsParam.stderr(), LogsParam.tail(100))
                 .readFully()
         )
         println()

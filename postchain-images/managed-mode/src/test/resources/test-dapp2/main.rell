@@ -1,0 +1,8 @@
+module;
+
+entity book { key name; }
+
+operation add_book (name) { create book (name); }
+
+query get_books () { return book @* {} ( .name ); }
+
