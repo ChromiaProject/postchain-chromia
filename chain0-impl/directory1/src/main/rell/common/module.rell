@@ -2,6 +2,9 @@ module;
 
 import .voting.*;
 import .proposal.*;
+import .queries.*;
+
+query directory_solution_version() = "0.1";
 
  enum resource_limit_type {
  	cpu,
