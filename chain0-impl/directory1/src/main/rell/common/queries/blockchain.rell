@@ -28,11 +28,12 @@ query get_blockchain_replicas(blockchain) {
 }
 
 //Cannot use function get_last_height, since it uses an op_context.
-query get_blockchain_last_height(blockchain) : integer {
-	if (blockchain.rid == chain_context.blockchain_rid) {
+query get_blockchain_last_height(blockchain_rid: byte_array) : integer {
+	
+	if (blockchain_rid == chain_context.blockchain_rid) {
 		return  (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
 	} else {
-		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
+		return (anchored_block @? { blockchain @ { blockchain_rid } } (@sort_desc .height) limit 1) ?: -1;
 	}
 }
 

@@ -19,6 +19,5 @@ class CommandProposeBlockchain: CliktCommand(
 
     override fun run() {
             CliExecutionD1(config).proposeBlockchain(blockchainConfigFile, null, container)
-            println("Blockchain has been proposed")
     }
 }

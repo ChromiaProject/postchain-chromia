@@ -22,5 +22,4 @@ object ClientUtil {
     fun sigMaker(config: ClientConfig): SigMaker {
         return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
     }
-
 }

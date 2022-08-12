@@ -43,10 +43,8 @@ class CommandGetProposal : CliktCommand(
         return when (proposal.proposalType) {
             ProposalType.bc ->  {
                 val p = client.getBlockchainProposal(proposal.rowid) ?: return ""
-                """
-                    Container: ${p.container}
-                    Data: ${p.data.toHex()}
-                """.trimIndent()
+                val conf = GtvDecoder.decodeGtv(p.data)
+                "Container: ${p.container}\nData: $conf"
             }
             ProposalType.conf -> {
                 val p = client.getConfigurationProposal(proposal.rowid) ?: return ""
