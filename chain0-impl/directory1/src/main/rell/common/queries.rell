@@ -51,8 +51,8 @@ query list_clusters () : list<text> {
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
-query get_nodes_by_provider(provider) {
-    return node @* { provider } (
+query get_nodes_by_provider(provider_key:pubkey) {
+    return node @* { provider @ { provider_key } } (
         .pubkey,
         .active,
         .host,

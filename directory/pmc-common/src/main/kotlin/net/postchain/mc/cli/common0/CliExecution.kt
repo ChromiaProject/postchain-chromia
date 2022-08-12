@@ -458,10 +458,9 @@ open class CliExecution(val config: ClientConfig) {
     fun listNodesByProvider(key: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val provider = providerGtv(key)
             val list = getPostchainClient().query(
                     "get_nodes_by_provider",
-                    gtv("provider" to gtv(provider.asInteger()))
+                    gtv("provider_key" to gtv(key.hexStringToByteArray()))
             )
                     .get()
                     .asArray()

@@ -1,7 +1,14 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.chain0.common.getNodesByProvider
+import net.postchain.chain0.common.getProviderClusters
+import net.postchain.chain0.common.getProviderData
+import net.postchain.chain0.common.getProviderPoints
 import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
+import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.ProvidersPrinter
 import net.postchain.mc.cli.util.configOption
@@ -15,17 +22,21 @@ class CommandGetProviderInfo : CliktCommand(
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        val cliExecution = CliExecution(config)
-        val provider = cliExecution.getProviderInfo(key)
-        val providerList = arrayListOf(provider)
-        ProvidersPrinter.printProviders(providerList)
-
-        val points = cliExecution.listProvidersActionPoints(key)
-        println("action points: $points")
-        println("")
-
-        val clusters = cliExecution.listClustersForProvider(key)
-        println("belongs to cluster(s): $clusters")
-        println("")
+        val client = ClientUtil.fromConfig(config)
+        val providerData = client.getProviderData(key.hexStringToByteArray())
+        val actionPoints = client.getProviderPoints(key.hexStringToByteArray())
+        val providerClusters = client.getProviderClusters(key.hexStringToByteArray())
+        val nodesByProvider = client.getNodesByProvider(key.hexStringToByteArray())
+        println("""
+            Provider: ${providerData.name}
+            Pubkey: ${providerData.pubkey.toHex()}
+            System: ${providerData.system}
+            Tier: ${providerData.tier}
+            Active: ${providerData.active}
+            Action points: $actionPoints
+            Belongs to cluster(s): ${providerClusters.joinToString("\n")}
+            Nodes:
+            ${nodesByProvider.joinToString("\n") { it.pubkey.toHex() }}
+        """.trimIndent())
     }
 }
