@@ -12,6 +12,7 @@ fun voterSetCommands() = VoterSetCommand().subcommands(
 
     CommandCreateVoterSet(),
     CommandListVoterSets(),
+    CommandVoterSetInfo(),
     memberCommands(),
     governorCommands()
 )

@@ -405,7 +405,7 @@ open class CliExecution(val config: ClientConfig) {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
             val list = getPostchainClient().query("list_voter_sets").get().asArray()
-            returnList.addAll(list.map { it })
+            returnList.addAll(list.map { it["name"]!! })
         }
         return returnList
     }

@@ -49,10 +49,6 @@ query list_clusters () : list<text> {
 	return cluster@* {} .name;
 }
 
-query list_voter_sets () : list<text> {
-	return voter_set@* {} .name;
-}
-
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
 query get_nodes_by_provider(provider) {
