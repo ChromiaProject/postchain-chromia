@@ -168,17 +168,22 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(7)
     fun `Deploy new dapp`() {
-        deployDapp("test-dapp", 1, 2)
-        deployDapp("test-dapp2", 2, 3)
+        listOf(node1, node2, node3).forEach { node ->
+            assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
+        }
+
+        deployDapp("test-dapp")
+        deployDapp("test-dapp2")
+
+        // Asserting that blockchain is added
+        listOf(node1, node2, node3).forEach { node ->
+            assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(3)
+        }
     }
 
-    private fun deployDapp(dappName: String, blockchainsBefore: Int, blockchainsAfter: Int) {
+    private fun deployDapp(dappName: String) {
         consoleLogger.info("Deploy new dapp $dappName")
-        listOf(node1, node2, node3).forEach { node ->
-            Assumptions.assumeTrue {
-                node.chain0.getAllBlockchains().asArray().size == blockchainsBefore
-            }
-        }
+
         val rellConfig = compileDapp(dappName)
 
         val provider1 = node1.chain0.getProvider()
@@ -202,13 +207,6 @@ internal class Directory1DeploymentIT {
 
                 val p2 = node2.approveProposal(brid, provider2)
                 consoleLogger.info { "node2 voted for proposal: $p2" }
-            }
-        }
-
-        // Asserting that blockchain is added
-        awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
-                assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(blockchainsAfter)
             }
         }
 
