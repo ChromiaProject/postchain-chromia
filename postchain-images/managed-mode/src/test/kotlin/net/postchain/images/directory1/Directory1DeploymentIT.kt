@@ -7,6 +7,8 @@ import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
@@ -17,6 +19,7 @@ import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
+import kotlin.test.assertEquals
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
@@ -28,6 +31,11 @@ internal class Directory1DeploymentIT {
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
+        private const val systemContainer = "system"
+        private const val foobarContainer = "foobar"
+        private val foobarResourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
+        private val foobarResourceLimits = ContainerResourceLimits.fromValues(
+                foobarResourceLimitsValues.first, foobarResourceLimitsValues.second, foobarResourceLimitsValues.third)
 
         init {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
@@ -121,6 +129,48 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(5)
+    fun `Add new container`() {
+        // Asserting that there is only one container (system) before test
+        assert(node1.chain0.getAllContainers().asArray().size).isEqualTo(1)
+
+        val provider = node1.chain0.getProvider()
+        val cluster = node1.chain0.getSystemCluster()
+        val deployer = node1.chain0.getSystemDeployer()
+
+        node1.txAsAdmin(brid, "propose_container", provider, cluster, gtv(foobarContainer), deployer)
+
+        awaitUntilAsserted {
+            val containers = node1.chain0.getAllContainers().asArray()
+                    .map { it.asDict()["name"]?.asString() }
+                    .toSet()
+            assertEquals(setOf(systemContainer, foobarContainer), containers)
+        }
+    }
+
+    @Test
+    @Order(6)
+    fun `Add container resource limits`() {
+        // Asserting that resource limits are defaults
+        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L)
+        val actualLimits = ContainerResourceLimits(queryContainerResourceLimits())
+        assertEquals(expectedLimits, actualLimits)
+
+        // Changing resource limits
+        val provider = node1.chain0.getProvider()
+        val container = node1.chain0.getContainer(foobarContainer)
+        node1.txAsAdmin(brid, "propose_container_limits", provider, container,
+                gtv(foobarResourceLimitsValues.first),
+                gtv(foobarResourceLimitsValues.second),
+                gtv(foobarResourceLimitsValues.third)
+        )
+
+        // Asserting resource limits changed
+        val newActualLimits = ContainerResourceLimits(queryContainerResourceLimits())
+        assertEquals(foobarResourceLimits, newActualLimits)
+    }
+
+    @Test
+    @Order(7)
     fun `Add node2 as signer to c0`() {
         consoleLogger.info("Adding node2 to the cluster")
         val provider1 = node1.chain0.getProvider()
@@ -142,7 +192,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(6)
+    @Order(8)
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
         val provider1 = node1.chain0.getProvider()
@@ -166,14 +216,14 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(7)
+    @Order(9)
     fun `Deploy new dapp`() {
         listOf(node1, node2, node3).forEach { node ->
             assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
         }
 
-        deployDapp("test-dapp")
-        deployDapp("test-dapp2")
+        deployDapp("test-dapp", systemContainer)
+        deployDapp("test-dapp2", foobarContainer)
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
@@ -181,7 +231,7 @@ internal class Directory1DeploymentIT {
         }
     }
 
-    private fun deployDapp(dappName: String) {
+    private fun deployDapp(dappName: String, containerName: String) {
         consoleLogger.info("Deploy new dapp $dappName")
 
         val rellConfig = compileDapp(dappName)
@@ -189,7 +239,7 @@ internal class Directory1DeploymentIT {
         val provider1 = node1.chain0.getProvider()
         val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
         val provider3 = node3.chain0.getProvider(node3.pubKeyByteArray)
-        val container = node1.chain0.getSystemContainer()
+        val container = node1.chain0.getContainer(containerName)
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp $dappName:${chain.iid}" }
@@ -220,7 +270,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(8)
+    @Order(10)
     fun `Subnode container has been launched`() {
         consoleLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
@@ -231,34 +281,31 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(9)
+    @Order(11)
     fun `Subnode container has resource limits`() {
         consoleLogger.info("Asserting container resource limits")
 
-        val ram = 600L // Mb, see /node3/node-config.properties
-        val expectedRamLimit = ram * 1024 * 1024 // to bytes
-
-        val cpu = 250L // 2.5 cpus = 250%, see /node3/node-config.properties
-        val expectedCpuQuota = cpu * 1000 // * cpuQuota * cpuPeriod
+        val expectedResourceLimits = ContainerResourceLimits.fromValues(
+                foobarResourceLimitsValues.first, foobarResourceLimitsValues.second, foobarResourceLimitsValues.third)
 
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
-            if (it.image().contains("postchain-subnode")) {
+            if (it.names()?.get(0)?.contains(foobarContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                Assertions.assertEquals(expectedRamLimit, res.hostConfig()?.memory())
-                Assertions.assertEquals(expectedCpuQuota, res.hostConfig()?.cpuQuota())
+                Assertions.assertEquals(expectedResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                Assertions.assertEquals(expectedResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
             }
         }
     }
 
     @Test
-    @Order(10)
+    @Order(12)
     fun `Transactions can be sent to dapp 100`() {
         assertThatDappProcessesTx(dapps[100]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(11)
+    @Order(13)
     fun `Transactions can be sent to dapp 101`() {
         assertThatDappProcessesTx(dapps[101]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
@@ -273,6 +320,13 @@ internal class Directory1DeploymentIT {
                 assert(cities).containsExactly(txArg)
             }
         }
+    }
+
+    private fun queryContainerResourceLimits(): Map<ResourceLimit, Long> {
+        return node1.chain0.getContainerResourceLimits(foobarContainer)
+                .asDict()
+                .map { ResourceLimit.valueOf(it.key.uppercase()) to it.value.asInteger() }
+                .toMap()
     }
 
     val PostchainContainer.chain0 get() = Directory1Helper(this, brid)
