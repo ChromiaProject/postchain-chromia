@@ -224,7 +224,7 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(8)
     fun `Subnode container has been launched`() {
-        consoleLogger.info("Launch Subnode container(s)")
+        consoleLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
@@ -234,12 +234,33 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(9)
+    fun `Subnode container has resource limits`() {
+        consoleLogger.info("Asserting container resource limits")
+
+        val ram = 600L // Mb, see /node3/node-config.properties
+        val expectedRamLimit = ram * 1024 * 1024 // to bytes
+
+        val cpu = 250L // 2.5 cpus = 250%, see /node3/node-config.properties
+        val expectedCpuQuota = cpu * 1000 // * cpuQuota * cpuPeriod
+
+        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        all.forEach {
+            if (it.image().contains("postchain-subnode")) {
+                val res = dockerClient.inspectContainer(it.id())
+                Assertions.assertEquals(expectedRamLimit, res.hostConfig()?.memory())
+                Assertions.assertEquals(expectedCpuQuota, res.hostConfig()?.cpuQuota())
+            }
+        }
+    }
+
+    @Test
+    @Order(10)
     fun `Transactions can be sent to dapp 100`() {
         assertThatDappProcessesTx(dapps[100]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `Transactions can be sent to dapp 101`() {
         assertThatDappProcessesTx(dapps[101]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
