@@ -1,0 +1,42 @@
+
+query get_provider (pubkey) = provider @ { pubkey };
+
+query get_nodes_by_provider(provider_key:pubkey) {
+    return node @* { provider @ { provider_key } } (
+        .pubkey,
+        .active,
+        .host,
+        .port,
+        .last_updated
+    );
+}
+
+query get_provider_points(pubkey): integer {
+	return provider_rl_state @ {provider @ { pubkey }} .points;
+}
+
+query get_provider_clusters(pubkey) : list<text> {
+	return cluster_provider @* { provider @ {pubkey} }.cluster.name;
+}
+
+query get_provider_data (pubkey) {
+    return provider_state @ {
+        provider @ { pubkey }
+    } (
+        pubkey = .provider.pubkey,
+        name = .name,
+        active = .active,
+        system = .system,
+        tier = .tier
+    );
+}
+
+query get_all_providers() {
+    return provider_state @* {} (
+        pubkey = .provider.pubkey,
+        name = .name,
+        active = .active,
+        system = .system,
+        tier = .tier
+    );
+}

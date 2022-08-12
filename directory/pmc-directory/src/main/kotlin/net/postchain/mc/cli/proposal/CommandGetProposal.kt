@@ -4,8 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.getProviderData
 import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
 import net.postchain.gtv.Gtv

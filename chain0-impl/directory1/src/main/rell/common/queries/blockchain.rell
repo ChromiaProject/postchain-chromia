@@ -1,0 +1,48 @@
+
+query get_blockchain (rid: byte_array) = blockchain @ { rid };
+
+query get_blockchain_signers(bc: blockchain) {
+	val cl = container_blockchain @ {bc}.container.cluster;
+	var return_list = list<(byte_array, text, integer, boolean, integer)>();
+    if (bc.active) {
+    	return_list = cluster_node @* { cl } (
+        @sort .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    	);
+    }
+    return return_list;
+}
+
+query get_blockchain_replicas(blockchain) {
+    return blockchain_replica_node @* { blockchain } (
+        .blockchain.rid,
+        @sort .node.pubkey,
+        .node.host,
+        .node.port,
+        .node.active,
+        .node.last_updated
+    );
+}
+
+//Cannot use function get_last_height, since it uses an op_context.
+query get_blockchain_last_height(blockchain) : integer {
+	if (blockchain.rid == chain_context.blockchain_rid) {
+		return  (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
+	} else {
+		return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
+	}
+}
+
+query get_blockchains(include_inactive: boolean): list<byte_array> {
+	if (include_inactive) {
+		return blockchain @* {} .rid;
+	}
+    return blockchain @* { .active == true } .rid;
+}
+
+query get_added_blockchain_rid(tx_rid: byte_array) {
+	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
+}
