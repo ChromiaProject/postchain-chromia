@@ -26,7 +26,7 @@ internal class Directory1DeploymentIT {
 
     companion object : ManagedModeBase("/directory1/rell") {
         private val dockerClient: DockerClient = DockerClientFactory.create()
-        private lateinit var dapp1: Pair<Long, BlockchainRid>
+        private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
 
         init {
@@ -168,24 +168,31 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(7)
     fun `Deploy new dapp`() {
-        consoleLogger.info("Deploy new dapp")
+        deployDapp("test-dapp", 1, 2)
+        deployDapp("test-dapp2", 2, 3)
+    }
+
+    private fun deployDapp(dappName: String, blockchainsBefore: Int, blockchainsAfter: Int) {
+        consoleLogger.info("Deploy new dapp $dappName")
         listOf(node1, node2, node3).forEach { node ->
             Assumptions.assumeTrue {
-                node.chain0.getAllBlockchains().asArray().size == 1
+                node.chain0.getAllBlockchains().asArray().size == blockchainsBefore
             }
         }
-        val rellConfig = compileDapp()
+        val rellConfig = compileDapp(dappName)
 
         val provider1 = node1.chain0.getProvider()
         val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
         val provider3 = node3.chain0.getProvider(node3.pubKeyByteArray)
         val container = node1.chain0.getSystemContainer()
+        var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
-            consoleLogger.info { "Adding test dapp ${chain.iid}" }
+            consoleLogger.info { "Adding test dapp $dappName:${chain.iid}" }
             chain.configs.forEach { (height, config) ->
-                consoleLogger.info { "Proposing a blockchain with config at height $height" }
+                blockchainRid = BlockchainRid(chain.brid.toByteArray())
+                dapps[chain.iid] = blockchainRid!!
+                consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
-                dapp1 = 100L to BlockchainRid(chain.brid.toByteArray())
                 val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
                 node3.tx(brid, "propose_blockchain", provider3, configGtv, container)
 
@@ -201,40 +208,50 @@ internal class Directory1DeploymentIT {
         // Asserting that blockchain is added
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(2)
+                assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(blockchainsAfter)
             }
         }
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
-        val c100 = node1.chain0.getBlockchainGtv(dapp1.second)
+        val bcGtv = node1.chain0.getBlockchainGtv(blockchainRid!!)
         awaitUntilAsserted {
-            assert(node1.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
-            assert(node2.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
-            assert(node3.chain0.getBlockchainSigners(c100).size).isEqualTo(3)
+            assert(node1.chain0.getBlockchainSigners(bcGtv).size).isEqualTo(3)
+            assert(node2.chain0.getBlockchainSigners(bcGtv).size).isEqualTo(3)
+            assert(node3.chain0.getBlockchainSigners(bcGtv).size).isEqualTo(3)
         }
     }
 
     @Test
     @Order(8)
     fun `Subnode container has been launched`() {
-        consoleLogger.info("Launch Subnode container")
+        consoleLogger.info("Launch Subnode container(s)")
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            assert(all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }.size).isEqualTo(1)
+            val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
+            assert(runningSubnodes.size).isEqualTo(2)
         }
     }
 
     @Test
     @Order(9)
-    fun `Transactions can be sent to newly deployed dapp`() {
-        consoleLogger.info("Send TX to new dapp and fetch data")
-        val city = "Heraklion"
-        node2.tx(dapp1.second, "add_city", gtv(city))
+    fun `Transactions can be sent to dapp 100`() {
+        assertThatDappProcessesTx(dapps[100]!!, "add_city", "Heraklion", "get_cities")
+    }
+
+    @Test
+    @Order(10)
+    fun `Transactions can be sent to dapp 101`() {
+        assertThatDappProcessesTx(dapps[101]!!, "add_book", "Mastering Bitcoin", "get_books")
+    }
+
+    private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
+        consoleLogger.info("Send TX to new dapp ${brid.toShortHex()} and fetch data")
+        node2.tx(brid, txOp, gtv(txArg))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                val cities = awaitQueryResult { node.client(dapp1.second).querySync("get_cities") }!!
+                val cities = awaitQueryResult { node.client(brid).querySync(query) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly(city)
+                assert(cities).containsExactly(txArg)
             }
         }
     }

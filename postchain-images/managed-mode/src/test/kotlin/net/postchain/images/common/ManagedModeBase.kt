@@ -8,7 +8,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
-import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -142,9 +141,9 @@ open class ManagedModeBase(rellFolder: String) {
             ).brid
     }
 
-   fun compileDapp(): RellPostAppCliConfig {
-       val applicationFolder = this::class.java.classLoader.getResource("test-dapp")!!
-       val runConf = this::class.java.classLoader.getResource("test-dapp/run.xml")!!
+   fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
+       val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
+       val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
        return RellRunConfigGenerator.generateCli(
            File(applicationFolder.toURI()),
            File(runConf.toURI()),
