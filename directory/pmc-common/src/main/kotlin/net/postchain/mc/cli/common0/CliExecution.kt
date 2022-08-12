@@ -1109,12 +1109,10 @@ open class CliExecution(val config: ClientConfig) {
     )
             : GTXTransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        val provider = providerGtv(config.pubKey)
-        val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation(
                     "propose_configuration",
-                    blockchain, provider, gtv(data), gtv(height), gtv(force)
+                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.pubKey), gtv(data), gtv(height), gtv(force)
             )
             sign(buildSigMaker())
         }
@@ -1149,12 +1147,10 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     private fun proposeBc(data: ByteArray, containerName: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
-        val container = containerGtv(containerName)
         return makeTransactionWithNop().apply {
             addOperation(
                     "propose_blockchain",
-                    meProvider, gtv(data), container
+                    gtv(config.pubKey), gtv(data), gtv(containerName)
             )
             sign(buildSigMaker())
         }
@@ -1163,12 +1159,10 @@ open class CliExecution(val config: ClientConfig) {
     /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposePauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
-        val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation(
                     "propose_pause_blockchain",
-                    meProvider, blockchain
+                        gtv(config.pubKey), gtv(blockchainRID.hexStringToByteArray())
             )
             sign(buildSigMaker())
         }
@@ -1177,12 +1171,10 @@ open class CliExecution(val config: ClientConfig) {
     /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposeUnPauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
-        val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation(
                     "propose_unpause_blockchain",
-                    meProvider, blockchain
+                    gtv(config.pubKey), gtv(blockchainRID.hexStringToByteArray())
             )
             sign(buildSigMaker())
         }
@@ -1191,12 +1183,10 @@ open class CliExecution(val config: ClientConfig) {
     /** Who can delete a blockchain? Container deployer voter set
      * */
     fun proposeDeleteBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
-        val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
             addOperation(
                     "propose_delete_blockchain",
-                    meProvider, blockchain
+                    gtv(config.pubKey), gtv(blockchainRID.hexStringToByteArray())
             )
             sign(buildSigMaker())
         }

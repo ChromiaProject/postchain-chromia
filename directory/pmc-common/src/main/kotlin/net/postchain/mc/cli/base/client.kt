@@ -1,5 +1,7 @@
 package net.postchain.mc.cli.base
 
+import net.postchain.chain0.common.proposal.ProposalType
+import net.postchain.chain0.common.proposal.getLastProposal
 import net.postchain.client.core.*
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -23,4 +25,21 @@ object ClientUtil {
         return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
     }
 
+}
+
+fun PostchainClient.sendTxWithNop(sigMaker: SigMaker, op: GTXTransactionBuilder.() -> Unit) {
+    makeTransaction().apply {
+        addNop()
+        op(this)
+        sign(sigMaker)
+        postSync(ConfirmationLevel.UNVERIFIED)
+    }
+}
+
+/**
+ * Sends a tx and returns the last created proposal id
+ */
+fun PostchainClient.createProposal(proposalType: ProposalType, myKey: String, sigMaker: SigMaker, op: GTXTransactionBuilder.() -> Unit): Long? {
+    sendTxWithNop(sigMaker, op)
+    return getLastProposal(proposalType, myKey.hexStringToByteArray())
 }
