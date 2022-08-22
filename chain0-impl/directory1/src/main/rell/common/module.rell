@@ -6,12 +6,6 @@ import .queries.*;
 
 query directory_solution_version() = "0.1";
 
- enum resource_limit_type {
- 	cpu,
- 	ram,
- 	storage
- }
-
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
 	require(empty( provider @* {}));
@@ -32,10 +26,12 @@ function initialize_module(initial_provider:pubkey, actions_per_day:integer, maj
 	);
 	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	// system container
-    val c = create container("system", system_cluster, container_type.naked, system_voter_set);
-    create container_resource_limit(c, resource_limit_type.cpu , -1);
-    create container_resource_limit(c, resource_limit_type.ram , -1);
-    create container_resource_limit(c, resource_limit_type.storage , -1);
+
+	create_container_with_resource_limits(
+		"system",
+		container_type.naked,
+		cluster = system_cluster,
+		voter_set = system_voter_set
+	);
 }
  

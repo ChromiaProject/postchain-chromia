@@ -52,10 +52,12 @@ function apply_voting_result(prop: proposal) {
 //TODO: Update default values to make sense.
 function apply_container(proposal) {
 	val pps = pending_container @ {proposal};
-	val c = create container(pps.name, pps.cluster, pps.container_type, pps.deployer);
-	create container_resource_limit(c, resource_limit_type.cpu , -1);
-	create container_resource_limit(c, resource_limit_type.ram , -1);
-	create container_resource_limit(c, resource_limit_type.storage , -1);
+	create_container_with_resource_limits(
+		pps.name,
+		pps.container_type,
+		pps.cluster,
+		pps.deployer
+	);
 	delete pending_container @ { proposal };
 }
 
