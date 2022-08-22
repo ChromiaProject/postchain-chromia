@@ -26,7 +26,7 @@ Create a provider keypair similar to ``admin.cfg`` and store it in ``config/prov
 
 To add management of a blockchain, at least one managed node is needed. Therefore first add a managed node, making chromia0 (bc0) aware of the Node0. The provider does::
 
-    ./pmc.sh add-node -cfg config/prov1.cfg -p 9780 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost
+    ./pmc.sh add-node -cfg config/prov1.cfg -p 9870 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost
 
 Now the admin can add management of bc0, so that bc0 becomes aware of itself::
 

@@ -21,11 +21,11 @@ Manage bc0 using the Management Client (pmc)
 
 In Enterprise0, the providers have the power. Only providers can make updates. For it all to start we therefore need an initial provider that in the beginning has all the management power. With the command below, this first provider is registered and enabled.::
 
-    ./pmc.sh init -cfg config/prov1.cfg
+    ./pmc.sh initialize -cfg config/prov1.cfg
 
 To add management of a blockchain, at least one managed node is needed. Therefore first add a managed node, making enterprise0 (bc0) aware of the Node0.  The provider of the node does (NB: If you are not the initial provider, the initial provider must first propose and enable you)::
 
-    ./pmc.sh add-node -cfg config/prov1.cfg -p 9780 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost
+    ./pmc.sh add-node -cfg config/prov1.cfg -p 9870 -k 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 -h localhost
 
 Now we can add management of bc0, so that bc0 becomes aware of itself::
 
