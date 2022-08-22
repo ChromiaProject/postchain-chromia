@@ -6,49 +6,32 @@ import .queries.*;
 
 query directory_solution_version() = "0.1";
 
- enum resource_limit_type {
- 	cpu,
- 	ram,
- 	storage
- }
-
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
 	require(empty( provider @* {}));
-	val system = create voter_set("SYSTEM", 1);
-	create voter_set_governance(voter_set=system, governor=system);
-	/** System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
+	create_voter_set_internal("SYSTEM", 1);
+	/** 
+	 * System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */
-	val system_voter_set = create voter_set("SYSTEM_P", majority_threshold);
-	create voter_set_governance(voter_set=system_voter_set, governor=system_voter_set);
+	val system_voter_set = create_voter_set_internal("SYSTEM_P", majority_threshold);
 	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
-	add_pubkey_as_provider(initial_provider, true, 1, system_cluster); // Initial provider has tier 1
-	val prov = provider @ { initial_provider };
-	update provider_state @ { prov } ( .active = true );
-	create voter_set_member(system_voter_set, prov);
+	register_and_enable_provider(
+		initial_provider, 
+		is_system = true, 
+		tier = 1, 
+		cluster = system_cluster, 
+		voter_set = system_voter_set, 
+		enabled_by_default = true
+	);
 	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	// system container
-    val c = create container("system", system_cluster, container_type.naked, system_voter_set);
-    create container_resource_limit(c, resource_limit_type.cpu , -1);
-    create container_resource_limit(c, resource_limit_type.ram , -1);
-    create container_resource_limit(c, resource_limit_type.storage , -1);
-}
 
-function add_pubkey_as_provider(pubkey, is_system: boolean, tier: integer, cluster?) {
-	var enable = false;
-	if (tier == 0) { enable = true; } //low rank providers can be enabled by anyone.
-	val provider = create provider (pubkey);
-	create provider_state(
-	    provider, name="",
-        active=enable,
-        system=is_system,
-        tier=tier
-    );
-    create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
-    if (exists(cluster)) {
-        create cluster_provider(cluster, provider);
-    }
+	create_container_with_resource_limits(
+		"system",
+		container_type.naked,
+		cluster = system_cluster,
+		voter_set = system_voter_set
+	);
 }
  

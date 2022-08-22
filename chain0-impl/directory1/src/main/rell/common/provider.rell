@@ -30,13 +30,15 @@ entity provider_rl_state {
 
 // Registers and enables a provider
 operation register_provider (me: provider, pubkey, tier: integer) {
-	register_and_enable_provider(me, pubkey, tier);
-}
-
-@extendable function register_and_enable_provider(me: provider, pubkey, tier: integer) {
 	require_provider_auth_with_rl(me);
-	require((provider_state @ {me}.tier > 0 and tier == 0) or (provider_state @ {me}.system));
-	add_pubkey_as_provider(pubkey, false, tier, null);
+	require((provider_state @ { me }.tier > 0 and tier == 0) or (provider_state @ { me }.system));
+	register_and_enable_provider(pubkey, 
+		is_system = false, 
+		tier = tier, 
+		cluster = null, 
+		voter_set = null, 
+		enabled_by_default = tier == 0
+	);
 }
 
 // This is the function we should use for auth
@@ -46,6 +48,23 @@ function require_provider_auth_with_rl (provider) {
 }
 
 function require_provider_auth (provider) { require( op_context.is_signer(provider.pubkey), "Provider must sign this operation"); }
+
+@extendable function register_and_enable_provider(pubkey, is_system: boolean, tier: integer, cluster?, voter_set?, enabled_by_default: boolean = false) {
+	val provider = create provider (pubkey);
+	create provider_state(
+	    provider, name="",
+        active=enabled_by_default,
+        system=is_system,
+        tier=tier
+    );
+    create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
+    if (exists(cluster)) {
+        create cluster_provider(cluster, provider);
+    }
+    if (exists(voter_set)) {
+    	create voter_set_member(voter_set, provider);
+    }
+}
 
 // recover provider's action points and consume one, if possible
 function provider_rate_limit (provider) {

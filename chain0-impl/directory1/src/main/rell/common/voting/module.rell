@@ -31,6 +31,16 @@ function require_voter_set_member(voter_set, provider) {
 	require ( exists ( voter_set_member @* { voter_set, provider}), "Provider is not a member of voter set " + voter_set.name);	
 }
 
+function create_voter_set_internal(name, threshold: integer = 0, governor: voter_set? = null) {
+	val vs = create voter_set(name, threshold);
+    if (exists(governor)) {
+        create voter_set_governance(voter_set = vs, governor = governor);
+    } else {
+        create voter_set_governance(voter_set = vs, governor = vs);
+    }
+    return vs;
+}
+
 query list_voter_sets() {
 	return voter_set@* {} ( voter_set.to_struct() );
 }

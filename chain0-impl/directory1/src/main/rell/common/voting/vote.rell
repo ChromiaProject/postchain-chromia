@@ -6,12 +6,7 @@
  **/
 operation create_voter_set(me: provider, name, threshold: integer, initials: list<provider>?, governor: voter_set?) {
     require_provider_auth_with_rl(me);
-    val vs = create voter_set(name, threshold);
-    if (exists(governor)) {
-        create voter_set_governance(voter_set = vs, governor = governor);
-    } else {
-        create voter_set_governance(voter_set = vs, governor = vs);
-    }
+    val vs = create_voter_set_internal(name, threshold, governor);
     if (exists(initials)) {
         for (prov in initials) {
             create voter_set_member(voter_set = vs, prov);
