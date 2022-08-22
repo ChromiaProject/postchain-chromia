@@ -37,9 +37,7 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 	return ft3_account.account @ { account_id };
 }
 
-// Registers and enables a provider
-operation register_provider (me: provider, pubkey, tier: integer) {
-	register_and_enable_provider(me, pubkey, tier);
+@extend(register_and_enable_provider) function add_account_to_provider(me: provider, pubkey, tier: integer) {
 	val account = create_simple_ft3_account(pubkey);
 	create provider_beneficiary(provider @ { pubkey }, account);
 }

@@ -17,11 +17,6 @@ operation init () {
 	initialize_module(chain_context.args.initial_provider, 100);
 }
 
-// Registers and enables a provider
-operation register_provider (me: provider, pubkey, tier: integer) {
-	register_and_enable_provider(me, pubkey, tier);
-}
-
 operation update_provider_data (provider, name?) {
 	require_provider_auth_with_rl(provider);
 	if (exists(name)) {
