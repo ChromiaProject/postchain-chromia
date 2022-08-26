@@ -528,13 +528,13 @@ open class CliExecution(val config: ClientConfig) {
     }
 
     fun sendTxUnconfirmed(tx: GTXTransactionBuilder): TransactionResult {
-        return tx.postSync(ConfirmationLevel.NO_WAIT)
+        return tx.postSync()
     }
 
     fun sendTx(tx: GTXTransactionBuilder): Promise<TransactionResult, Exception> {
         // Why task? See POS 136
         return task {
-            tx.postSync(ConfirmationLevel.UNVERIFIED)
+            tx.postSyncAwaitConfirmation()
         }
     }
 
