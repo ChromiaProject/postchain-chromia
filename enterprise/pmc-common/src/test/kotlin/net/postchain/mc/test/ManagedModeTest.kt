@@ -94,13 +94,13 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.query("nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L))).get()
+        val height = client.querySync("nm_find_next_configuration_height", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L)))
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.query("nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height)).get()
+        val bc = client.querySync("nm_get_blockchain_configuration", GtvFactory.gtv(
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height))
         assertk.assert(bc.asByteArray()).isNotNull()
     }
 
@@ -133,16 +133,16 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     fun assertBcAdded(config: ClientConfig, bridByteArray: ByteArray) {
         val client = getPostchainClient(config)
-        val blockchain = client.query("get_blockchain", GtvFactory.gtv(
-                "rid" to GtvFactory.gtv(bridByteArray))).get()
+        val blockchain = client.querySync("get_blockchain", GtvFactory.gtv(
+                "rid" to GtvFactory.gtv(bridByteArray)))
 
         assertk.assert(blockchain.asInteger()).isGreaterThan(0L)
     }
 
     fun assertAddedNode(config: ClientConfig, providerPublicKey: String, nodePubkey: String, host: String, port: Long) {
         val client = getPostchainClient(config)
-        val node = client.query("get_node_data", GtvFactory.gtv(
-                "pubkey" to GtvFactory.gtv(nodePubkey.hexStringToByteArray()))).get().asDict()
+        val node = client.querySync("get_node_data", GtvFactory.gtv(
+                "pubkey" to GtvFactory.gtv(nodePubkey.hexStringToByteArray()))).asDict()
         assertk.assert(node["active"]?.asBoolean()).isEqualTo(true)
         assertk.assert(node["host"]?.asString()).isEqualTo(host)
         assertk.assert(node["port"]?.asInteger()).isEqualTo(port)

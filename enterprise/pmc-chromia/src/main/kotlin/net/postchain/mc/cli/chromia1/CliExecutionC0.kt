@@ -36,10 +36,10 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
 
     private fun addBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
         val nodeList = nodes.split(",").map {
-            getPostchainClient().query(
+            getPostchainClient().querySync(
                 "get_node",
                 gtv("pubkey" to gtv(it.hexStringToByteArray()))
-            ).get()
+            )
         }
         return makeTransactionWithNop().apply {
             addOperation(

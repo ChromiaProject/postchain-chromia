@@ -103,19 +103,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.query(
+        val height = client.querySync(
                 "nm_find_next_configuration_height", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L)
         )
-        ).get()
+        )
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.query(
+        val bc = client.querySync(
                 "nm_get_blockchain_configuration", GtvFactory.gtv(
                 "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height
         )
-        ).get()
+        )
         assertk.assert(bc.asByteArray()).isNotNull()
         return bc.asByteArray()
     }
@@ -154,7 +154,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
         val client = getPostchainClient(provConfig)
-        val vs = client.query(opName, GtvFactory.gtv(keyName to addedItem)).get()
+        val vs = client.querySync(opName, GtvFactory.gtv(keyName to addedItem))
         assertk.assert(vs.asInteger()).isGreaterThan(0L)
     }
 

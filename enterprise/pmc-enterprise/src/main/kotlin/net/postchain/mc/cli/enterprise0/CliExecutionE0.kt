@@ -192,9 +192,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     fun listProposalsSince(rowid: Long) : List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val list =  getPostchainClient().query("get_proposals_since", gtv(
+            val list =  getPostchainClient().querySync("get_proposals_since", gtv(
                     "since" to gtv(rowid)))
-                    .get()
                     .asArray()
             returnList.addAll(list.map { it })
         }
@@ -204,9 +203,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
     fun getProposal(rowid: Long) : Gtv {
         var returnValue : Gtv? = null
         doInTryBlock {
-            val prop =  getPostchainClient().query("get_proposal", gtv(
+            val prop =  getPostchainClient().querySync("get_proposal", gtv(
                     "rowid" to gtv(rowid)))
-                    .get()
             returnValue = prop
         }
         return returnValue!!
