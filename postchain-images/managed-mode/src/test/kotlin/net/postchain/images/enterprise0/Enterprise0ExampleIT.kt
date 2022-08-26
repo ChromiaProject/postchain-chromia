@@ -71,11 +71,10 @@ internal class Enterprise0ExampleIT {
         )
         node1Db.awaitNewBlock()
         assert(
-            node1.client(brid).query("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).toCompletableFuture().join()
-                .asBoolean()
+            node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).asBoolean()
         ).isTrue()
         val nodeGtv =
-            node1.client(brid).query("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).toCompletableFuture().join()
+            node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray())))
         assert(nodeGtv.asDict()["active"]!!.asInteger()).isEqualTo(1L)
     }
 
@@ -118,8 +117,7 @@ internal class Enterprise0ExampleIT {
         node1Db.awaitNewBlock()
         listOf(node2, node3).forEach { addedNode ->
             assert(
-                node1.client(brid).query("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).toCompletableFuture().join()
-                    .asBoolean(),
+                node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(addedNode.pubKey.hexStringToByteArray()))).asBoolean(),
                 name = "Node ${addedNode.nodeHost} is added to ${node1.nodeHost}"
             ).isTrue()
         }
@@ -217,7 +215,7 @@ internal class Enterprise0ExampleIT {
             node2DappDb.awaitNewBlock()
             listOf(node1, node2, node3).forEach { node ->
                 assert(
-                    node.client(dappToBrid[dappId]!!).query("get_cities", gtv(mapOf())).toCompletableFuture().join().asArray()
+                    node.client(dappToBrid[dappId]!!).querySync("get_cities", gtv(mapOf())).asArray()
                         .map { it.asString() })
                     .containsExactly(testCity)
             }

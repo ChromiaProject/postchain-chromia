@@ -102,17 +102,13 @@ internal class Directory1DeploymentIT {
                 cluster
         )
         node1Db.awaitNewBlock()
-        node1.client(brid).query(
-                "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
-        ).also {
-            assert(it.toCompletableFuture().join().asBoolean()).isTrue()
-        }
+        assert(
+            node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
+        ).isTrue()
 
-        node1.client(brid).query(
-                "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
-        ).also {
-            assert(it.toCompletableFuture().join().asDict()["active"]!!.asInteger()).isEqualTo(1L)
-        }
+        assert(
+            node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asDict()["active"]!!.asInteger()
+        ).isEqualTo(1L)
     }
 
     @Test

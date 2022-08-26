@@ -2,11 +2,9 @@ package net.postchain.images.directory1
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import assertk.assertions.isTrue
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.TxBuilder
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChainDatabaseCommunicator
@@ -65,7 +63,6 @@ internal fun PostchainContainer.approveProposal(brid: BlockchainRid, provider: G
 
 internal fun PostchainClient.getProposal(): Gtv {
     return awaitQueryResult {
-        query("get_proposals_since", gtv("since" to gtv(0L))).toCompletableFuture().join().asArray().first()
-                .asDict()["rowid"]!!
+        querySync("get_proposals_since", gtv("since" to gtv(0L))).asArray().first().asDict()["rowid"]!!
     }!!
 }
