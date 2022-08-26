@@ -97,7 +97,7 @@ internal class Chromia0ExampleIT {
     @Order(4)
     fun `Make chain0 aware of itself`() {
         val nodeGtv =
-            node1.client(brid).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).get()
+            node1.client(brid).query("get_node", gtv("pubkey" to gtv(node1.pubKey.hexStringToByteArray()))).toCompletableFuture().join()
         node1.txAsAdmin(brid, "add_blockchain", gtv(chain0Config.readBytes()), gtv(listOf(nodeGtv)))
         assert(node1.client(brid).querySync("get_all_blockchains", gtv(mapOf())).asArray().size).isEqualTo(1)
     }

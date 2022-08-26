@@ -105,13 +105,13 @@ internal class Directory1DeploymentIT {
         node1.client(brid).query(
                 "is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
-            assert(it.get().asBoolean()).isTrue()
+            assert(it.toCompletableFuture().join().asBoolean()).isTrue()
         }
 
         node1.client(brid).query(
                 "get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))
         ).also {
-            assert(it.get().asDict()["active"]!!.asInteger()).isEqualTo(1L)
+            assert(it.toCompletableFuture().join().asDict()["active"]!!.asInteger()).isEqualTo(1L)
         }
     }
 

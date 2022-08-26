@@ -65,7 +65,7 @@ internal fun PostchainContainer.approveProposal(brid: BlockchainRid, provider: G
 
 internal fun PostchainClient.getProposal(): Gtv {
     return awaitQueryResult {
-        query("get_proposals_since", gtv("since" to gtv(0L))).get().asArray().first()
+        query("get_proposals_since", gtv("since" to gtv(0L))).toCompletableFuture().join().asArray().first()
                 .asDict()["rowid"]!!
     }!!
 }

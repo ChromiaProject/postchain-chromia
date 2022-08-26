@@ -13,7 +13,7 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
 
     fun getBlockchainSigners(blockchain: Gtv): Array<out Gtv> {
         return awaitQueryResult {
-            client.query("get_blockchain_signers", gtv("bc" to blockchain)).get().asArray()
+            client.query("get_blockchain_signers", gtv("bc" to blockchain)).toCompletableFuture().join().asArray()
         }!!
     }
 
@@ -25,14 +25,14 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
 
     fun getProvider(pubkey: ByteArray = initialProviderPubKey): Gtv {
         return awaitQueryResult {
-            client.query("get_provider", gtv("pubkey" to gtv(pubkey))).get()
+            client.query("get_provider", gtv("pubkey" to gtv(pubkey))).toCompletableFuture().join()
         }!!
     }
 
 
     fun getSystemCluster(): Gtv {
         return awaitQueryResult {
-            client.query("get_cluster", gtv("name" to gtv("system"))).get()
+            client.query("get_cluster", gtv("name" to gtv("system"))).toCompletableFuture().join()
         }!!
     }
 
@@ -42,31 +42,31 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
 
     fun getContainer(name: String): Gtv {
         return awaitQueryResult {
-            client.query("get_container", gtv("name" to gtv(name))).get()
+            client.query("get_container", gtv("name" to gtv(name))).toCompletableFuture().join()
         }!!
     }
 
     fun getSystemDeployer(): Gtv {
         return awaitQueryResult {
-            client.query("get_voter_set", gtv("name" to gtv("SYSTEM_P"))).get()
+            client.query("get_voter_set", gtv("name" to gtv("SYSTEM_P"))).toCompletableFuture().join()
         }!!
     }
 
     fun getAllBlockchains(): Gtv {
         return awaitQueryResult {
-            client.query("get_blockchains", gtv("include_inactive" to gtv(true))).get()
+            client.query("get_blockchains", gtv("include_inactive" to gtv(true))).toCompletableFuture().join()
         }!!
     }
 
     fun getAllContainers(): Gtv {
         return awaitQueryResult {
-            client.query("get_containers").get()
+            client.query("get_containers").toCompletableFuture().join()
         }!!
     }
 
     fun getContainerResourceLimits(name: String): Gtv {
         return awaitQueryResult {
-            client.query("nm_get_container_limits", gtv("name" to gtv(name))).get()
+            client.query("nm_get_container_limits", gtv("name" to gtv(name))).toCompletableFuture().join()
         }!!
     }
 
