@@ -1,6 +1,5 @@
 package net.postchain.mc.cli.chromia1
 
-import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
@@ -115,7 +114,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
 
     fun runTxAndAwaitConfirmed(doer: GTXTransactionBuilder) {
         doInTryBlock {
-            val txResult = doer.postSync(ConfirmationLevel.UNVERIFIED)
+            val txResult = doer.postSyncAwaitConfirmation()
             if (txResult.status == TransactionStatus.CONFIRMED) {
                 println("Blockchain's signers have been removed")
             } else {
