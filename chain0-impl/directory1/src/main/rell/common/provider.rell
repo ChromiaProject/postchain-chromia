@@ -67,7 +67,7 @@ function require_provider_auth (provider) { require( op_context.is_signer(provid
 }
 
 // recover provider's action points and consume one, if possible
-function provider_rate_limit (provider) {
+function provider_rate_limit(provider) {
 	val max_actions_per_day = provider_quota @ {
 			.tier == provider_state @ { provider } .tier,
 			provider_quota_type.max_actions_per_day

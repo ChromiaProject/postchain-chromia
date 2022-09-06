@@ -26,7 +26,7 @@ function signers_from_configuration( blockchain_configuration ): list<pubkey> {
 	return list<pubkey>.from_gtv(config_dict["signers"]);
 }
 
-operation anchor_block (header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
+operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
 	val blockchain = blockchain @ { header.blockchain_rid };
 	val existing_ab = anchored_block @? { blockchain, header.height };
 	require(not exists(existing_ab));

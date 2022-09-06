@@ -64,7 +64,7 @@ query nm_get_blockchain_configuration(
 */
 function blockchain_configuration_merge(blockchain, height: integer, conf_h: integer) : byte_array {
 	val signer_h = blockchain_configuration_signers @ { blockchain , .height <= height } (@sort_desc .height) limit 1;
-	val signers = blockchain_configuration_signers @ {blockchain, .height==signer_h } .signers;
+	val signers = blockchain_configuration_signers @ {blockchain, .height == signer_h } .signers;
 	val current_config = blockchain_configuration @ { blockchain, .height == conf_h };
 	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(current_config.data));
 	config_dict["signers"] = gtv.from_bytes(signers);
@@ -132,16 +132,16 @@ query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): lis
 query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<integer> {
 	val res = list<integer>();
     for (brid in blockchain_rids) {
-    		val bc = blockchain @? { brid };
-    		if (brid == chain_context.blockchain_rid) {
-    			val h = (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
-    		    res.add( h );
-    		} else if (empty(bc)) {
-            	res.add(-1);
-            } else {
-            	val h = (anchored_block @? { bc } (@sort_desc .height) limit 1) ?: -1;
-                res.add( h );
-            }
+        val bc = blockchain @? { brid };
+        if (brid == chain_context.blockchain_rid) {
+            val h = (block @? {} (@sort_desc .block_height) limit 1) ?: -1;
+            res.add(h);
+        } else if (empty(bc)) {
+            res.add(-1);
+        } else {
+            val h = (anchored_block @? { bc } (@sort_desc .height) limit 1) ?: -1;
+            res.add(h);
+        }
     }
     return res;
 }
