@@ -19,12 +19,11 @@ class CommandGetNodeInfo : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val node = client.getNodeData(key.hexStringToByteArray())
+        val node = client.getNodeData(key.hexStringToByteArray(), true)
         println("Active: ${node.active}")
         println("Host: ${node.host}")
         println("Port: ${node.port}")
         println("Provided by: ${node.provider.toHex()}")
-        val clusters = client.listClustersOfNode(node.pubkey)
-        println("Used by clusters: $clusters")
+        println("Used by clusters: ${node.clusters}")
     }
 }

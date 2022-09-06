@@ -108,6 +108,7 @@ entity pending_unpause_blockchain {
 //Proposed bc:s are put here while waiting for enough positive votes.
 entity pending_blockchain {
 	key proposal;
+	name;
 	data: byte_array;
 	container;
 }

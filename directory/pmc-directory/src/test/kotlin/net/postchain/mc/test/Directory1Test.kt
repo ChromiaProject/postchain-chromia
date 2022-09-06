@@ -307,14 +307,14 @@ class Directory1Test : ManagedModeTest() {
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
         assertEquals(2, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
 
         //add yet another bc, dependent on previous one
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
         val listOfBcs = provExecutor.listBlockchains(false)
         val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[2].toHex(), 0)
 
@@ -475,7 +475,7 @@ class Directory1Test : ManagedModeTest() {
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
         var bcs = provExecutor.listBlockchains(false)
@@ -504,7 +504,7 @@ class Directory1Test : ManagedModeTest() {
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1))
+        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         var bcs = provExecutor.listBlockchains(false)
         assertEquals(2, bcs.size)

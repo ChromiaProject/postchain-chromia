@@ -36,11 +36,11 @@ query get_blockchain_last_height(blockchain_rid: byte_array) : integer {
 	}
 }
 
-query get_blockchains(include_inactive: boolean): list<byte_array> {
+query get_blockchains(include_inactive: boolean): list<struct<blockchain>> {
 	if (include_inactive) {
-		return blockchain @* {} .rid;
+		return blockchain @* {} ($.to_struct());
 	}
-    return blockchain @* { .active == true } .rid;
+    return blockchain @* { .active == true } ($.to_struct());
 }
 
 query get_added_blockchain_rid(tx_rid: byte_array) {
