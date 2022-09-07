@@ -92,7 +92,7 @@ function make_node_a_replica_in_cluster(cluster, node_pubkey: pubkey) {
 */
 function add_node_to_cluster_internal(provider, node, cluster) {
 	if (exists(cluster_provider @* {cluster, provider})) {
-		require(node @? { .provider == provider }, "A provider can only provide one node to each cluster");
+		require(empty(cluster_node @* { cluster, node }), "A provider can only provide one node to each cluster");
 		create cluster_node(cluster, node);
 		update_configuration_signers(cluster);
 		print("blockchain configuration signers are updated");
