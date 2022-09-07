@@ -15,12 +15,6 @@ struct base_block_header {
 	extra: map<text, gtv>;
 }
 
-function find_blockchain_configuration (blockchain, height: integer): blockchain_configuration {
-    // find configuration height -- the latest height up to given height
-    return (blockchain_configuration @ { blockchain , .height <= height }
-        (@sort_desc .height, bc=blockchain_configuration) limit 1).bc;
-}
-
 operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
 	val blockchain = blockchain @ { header.blockchain_rid };
 	val existing_ab = anchored_block @? { blockchain, header.height };
