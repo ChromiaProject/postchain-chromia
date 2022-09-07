@@ -9,13 +9,23 @@ query directory_solution_version() = "0.1";
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
 	require(empty( provider @* {}));
+	print("--------------------Initializing-Chain-0-----------------------");
+	print("Creating provider quotas");
+	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	print("Creating SYSTEM voter set");
 	create_voter_set_internal("SYSTEM", 1);
 	/** 
 	 * System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */
+	print("Creating SYSTEM_P voter set");
 	val system_voter_set = create_voter_set_internal("SYSTEM_P", majority_threshold);
+	
+	print("Creating system cluster with SYSTEM_P as governor");
 	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
+	
+	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
 	register_and_enable_provider(
 		initial_provider, 
 		is_system = true, 
@@ -24,14 +34,33 @@ function initialize_module(initial_provider:pubkey, actions_per_day:integer, maj
 		voter_set = system_voter_set, 
 		enabled_by_default = true
 	);
-	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
-
-	create_container_with_resource_limits(
+	val provider = provider @ { initial_provider };
+	
+	print("Creating naked system container");
+	val system_container = create_container_with_resource_limits(
 		"system",
 		container_type.naked,
 		cluster = system_cluster,
 		voter_set = system_voter_set
 	);
+	
+	print("Adding c0 blockchain to system container");
+	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
+	val blockchain = create blockchain (chain_context.blockchain_rid, true);
+
+	val signer_nodes = list<byte_array>.from_gtv(c0_config["signers"]);
+	require(signer_nodes.size() > 0, "C0 must have at least one signer");
+	create blockchain_configuration (blockchain, 0, chain_context.raw_config.to_bytes());
+
+	create blockchain_configuration_signers(blockchain, 0, c0_config["signers"].to_bytes());
+	create blockchain_added (blockchain, op_context.transaction);
+	create container_blockchain(system_container, blockchain);
+	
+	val signer_nodes_text = list<text>();
+	for (s in signer_nodes) { 
+		signer_nodes_text.add(s.to_hex());
+	}
+	print("Initialization complete, update information for signer nodes: " + signer_nodes_text);
+	print("---------------------------------------------------------------");
 }
  

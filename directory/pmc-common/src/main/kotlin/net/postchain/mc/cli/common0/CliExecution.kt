@@ -873,19 +873,8 @@ open class CliExecution(val config: ClientConfig) {
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
-        var data: Array<Gtv> = arrayOf(provider)
-        data = data.plus(gtv(key.hexStringToByteArray()))
-        data = data.plus(gtv(host))
-        data = data.plus(gtv(port))
-        if (clusterName != "") {
-            val cluster = clusterGtv(clusterName)
-            data = data.plus(cluster)
-        } else {
-            data = data.plus(GtvNull)
-        }
         return makeTransactionWithNop().apply {
-            addOperation("add_node", *data)
+            addOperation("add_node", gtv(config.pubKey.hexStringToByteArray()), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
             sign(buildSigMaker())
         }
     }

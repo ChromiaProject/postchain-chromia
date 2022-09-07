@@ -2,7 +2,9 @@ package net.postchain.mc.cli.directory1
 
 import mu.KLogging
 import net.postchain.client.core.GTXTransactionBuilder
+import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.*
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.config.app.ClientConfig
 
@@ -16,14 +18,15 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
      * that can vote for update proposals.
      */
-    fun initAsync() : GTXTransactionBuilder {
+    fun initAsync(pubkey: String, host: String, port: Long) : GTXTransactionBuilder {
         return makeTransactionWithNop().apply {
             addOperation("init")
+            addOperation("add_node", gtv(config.pubKey.hexStringToByteArray()), gtv(pubkey.hexStringToByteArray()), gtv(host), gtv(port), gtv("system"))
             sign(buildSigMaker())
         }
     }
-    fun init() {
-        sendTxSync(initAsync(), "Initial provider added and enabled",
+    fun init(pubkey: String, host: String, port: Long) {
+        sendTxSync(initAsync(pubkey, host, port), "Initial provider added and enabled",
                 "Cannot add and enable initial provider")
     }
 

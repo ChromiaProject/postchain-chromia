@@ -105,7 +105,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val client = getPostchainClient(config)
         val height = client.querySync(
                 "nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(0L)
+                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(expectedHeight - 1)
         )
         )
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
@@ -120,20 +120,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return bc.asByteArray()
     }
 
-
-    /** Function used in tests for system setup. Node0 is added as signer and blockchain 0 is added, so that becomes
-     * aware of itself. So that it can be managed. Bc0 is added to naked system container. Node0 is added to
-     * system cluster so that it becomes signer.
-     */
-    protected fun addNode0AndBc0(blockchain0ConfigGtv: Gtv, configProv: ClientConfig) {
-        addNode0(configProv, systemClusterName)
-        addBc(blockchain0ConfigGtv, systemContainerName)
-        assertAdded("get_blockchain", "rid", GtvFactory.gtv(configProv.brid.hexStringToByteArray()))
-    }
-
-    fun addBc(blockchain0ConfigGtv: Gtv, container: String) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainGtvAsync(blockchain0ConfigGtv, container))
-    }
 
     /**
      * Add node; optionally also add it to a cluster
@@ -176,7 +162,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      * function addNode0AndBlockchain). Finally, node1 is added as replica for bc0.
      * */
     protected fun initAndNode1ReplicaOfBc0() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //add node1 (no specified cluster)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")

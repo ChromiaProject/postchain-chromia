@@ -30,7 +30,7 @@ function test_propose_blockchain() {
 	assert_equals(config_proposal.container, "system");
 	
 	rell.test.tx()
-		.op(add_node(p1, rell.test.pubkeys.alice, "", 0, cl))
+		.op(add_node(p1.pubkey, rell.test.pubkeys.alice, "", 0, cl.name))
 		.sign(rell.test.keypairs.alice)
 		.run();
 	// Proposal is removed
