@@ -15,25 +15,14 @@ struct base_block_header {
 	extra: map<text, gtv>;
 }
 
-function find_blockchain_configuration (blockchain, height: integer): blockchain_configuration {
-    // find configuration height -- the latest height up to given height
-    return (blockchain_configuration @ { blockchain , .height <= height }
-     (@sort_desc .height, bc=blockchain_configuration) limit 1).bc;
-}
-
-function signers_from_configuration( blockchain_configuration ): list<pubkey> {
-	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(blockchain_configuration.data));
-	return list<pubkey>.from_gtv(config_dict["signers"]);
-}
-
-operation anchor_block (header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
+operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
 	val blockchain = blockchain @ { header.blockchain_rid };
 	val existing_ab = anchored_block @? { blockchain, header.height };
 	require(not exists(existing_ab));
 
-	val all_signers = set(signers_from_configuration(
-		find_blockchain_configuration(blockchain, header.height)
-	));
+	val all_signers = set<pubkey>.from_gtv(
+	    get_signers_for_configuration(blockchain, header.height)
+    );
 
 	val block_rid = header.hash();
 	print("block rid", block_rid);

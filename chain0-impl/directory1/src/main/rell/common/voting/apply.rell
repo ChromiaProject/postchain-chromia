@@ -84,8 +84,8 @@ function apply_cluster_deployer(proposal) {
 }
 
 function apply_voter_set_governor(proposal) {
-	val pps = pending_voter_set_governor @ {proposal};
-	update voter_set_governance @ {. voter_set == pps.voter_set} (.governor = pps.governor);
+	val pps = pending_voter_set_governor @ { proposal };
+	update voter_set_governance @ {.voter_set == pps.voter_set} (.governor = pps.governor);
 	delete pending_voter_set_governor @ { proposal };
 }
 

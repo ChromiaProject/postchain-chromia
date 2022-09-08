@@ -1,0 +1,39 @@
+@test module;
+
+import ^^.*;
+import ^^.test.ops.*;
+
+function setup() {
+	rell.test.tx().op(
+	    initialize_test_module(rell.test.pubkeys.alice)
+	).run();
+}
+
+function test_add_node_to_cluster() {
+    setup();
+
+    val system_cluster = cluster @ { "system" };
+    val alice = provider @ { rell.test.pubkeys.alice };
+
+    // adding a node
+    rell.test.tx()
+        .op(
+            add_node(alice, rell.test.pubkeys.alice, "localhost", 0, system_cluster)
+        )
+        .sign(rell.test.keypairs.alice)
+        .run();
+
+    // asserting node added
+    assert_equals(
+        cluster_node @ { system_cluster } .node,
+        node @ { rell.test.pubkeys.alice }
+    );
+
+    // must fail
+    rell.test.tx()
+        .op(
+            add_node(alice, rell.test.pubkeys.bob, "localhost", 1, system_cluster)
+        )
+        .sign(rell.test.keypairs.alice)
+        .run_must_fail();
+}

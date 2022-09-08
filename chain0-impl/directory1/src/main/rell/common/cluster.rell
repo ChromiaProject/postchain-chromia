@@ -32,8 +32,7 @@ entity cluster {
 
 entity cluster_provider { key cluster, provider; }
 entity cluster_node { key cluster, node; }
- 
- 
+
 entity cluster_resource_limit {
  	key cluster, resource_limit_type;
  	mutable value: integer;
@@ -60,7 +59,8 @@ operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
 //TODO: Change this to propose_* or propose_update_cluster_providers(...)
 operation add_provider_to_cluster(me: provider, provider, cluster) {
 	require_provider_auth_with_rl(me);
-	require( (provider_state @ {me}.tier > 0 and provider_state @ {provider}.tier == 0) or (provider_state @ {me}.system),
+	require(
+	    (provider_state @ {me}.tier > 0 and provider_state @ {provider}.tier == 0) or (provider_state @ {me}.system),
 		"Must be system provider or have higher tier to add a provider to a cluster."
 	);
 	create cluster_provider(cluster, provider);
@@ -86,28 +86,28 @@ function make_node_a_replica_in_cluster(cluster, node_pubkey: pubkey) {
 	}
 }
 
-/** If a provider is part of that cluster, and if provider do not already have a node in this cluster,
+/**
+* If a provider is part of that cluster, and if provider do not already have a node in this cluster,
 * add node as block signer to this cluster. blockchain_configuration_signers update is included.
 */
 function add_node_to_cluster_internal(provider, node, cluster) {
-	if (exists( cluster_provider @* {cluster, provider})) {
-		val nodes = cluster_node @* {cluster} .node;
-		require(node @? { .provider == provider }, "A provider can only provide one node to each cluster");
+	if (exists(cluster_provider @* { cluster, provider })) {
+	    val provider_cluster_nodes = cluster_node @* { cluster, .node in node @* { provider } };
+		require(empty(provider_cluster_nodes), "A provider can only provide one node to each cluster");
 		create cluster_node(cluster, node);
-		update_configuration_signers (cluster);
+		update_configuration_signers(cluster);
 		print("blockchain configuration signers are updated");
 	}
 }
 
-//Use this to update signers after a change in cluster_node table. TODO: +5 or not?
-function update_configuration_signers (cluster) {
+// Use this to update signers after a change in cluster_node table. TODO: +5 or not?
+function update_configuration_signers(cluster) {
 	val bcs = container_blockchain @*{ .container.cluster == cluster} .blockchain;
 	for (blockchain in bcs) {
-		val current_height =  get_last_height(blockchain);
+		val current_height = get_last_height(blockchain);
 		val container = container_blockchain @ {blockchain} .container;
 		val signers = cluster_node @* { container.cluster } (@sort .node.pubkey);
-		// do not write new configuration when size is 0 since it's impossible to recover
-		// from that
+		// do not write new configuration when size is 0 since it's impossible to recover from that
 		require(signers.size() > 0);
 		create blockchain_configuration_signers(blockchain, current_height + 5, signers.to_gtv().to_bytes());
 	}
