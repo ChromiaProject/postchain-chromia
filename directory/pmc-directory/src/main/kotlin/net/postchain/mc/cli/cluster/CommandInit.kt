@@ -1,6 +1,10 @@
 package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.hostOption
+import net.postchain.cli.util.portOption
+import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.util.configOption
 
@@ -11,8 +15,12 @@ class CommandInit : CliktCommand(
 
     private val config by configOption()
 
+    private val host by hostOption().required()
+
+    private val port by portOption().required()
+
     override fun run() {
-        CliExecutionD1(config).init()
+        CliExecutionD1(config).init(host, port.toLong())
         println("You now have an initial provider that can vote for updates.")
     }
 }

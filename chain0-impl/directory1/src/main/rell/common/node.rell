@@ -14,9 +14,13 @@ object node_list {
 	mutable last_update: timestamp = 0;
 }
 
-operation add_node(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
-	require_provider_auth_with_rl(provider);
-	add_node_internal(provider, node_pubkey, host, port, cluster);
+operation add_node(provider_key:pubkey, node_pubkey: pubkey, host: text, port: integer, cluster_name:text?) {
+	print("-------------Add-Node--------------");
+	require_provider_auth_with_rl(provider @ { provider_key });
+	val cluster = if (cluster_name != null) cluster @? { cluster_name } else null;
+	add_node_internal(provider @ { provider_key }, node_pubkey, host, port, cluster);
+	print("Added node information for node: " + node_pubkey.to_hex());
+	print("-----------------------------------");
 }
 
 function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, cluster?) {
