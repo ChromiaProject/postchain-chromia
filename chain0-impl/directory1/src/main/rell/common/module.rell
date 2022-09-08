@@ -7,7 +7,7 @@ import .queries.*;
 query directory_solution_version() = "0.1";
 
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
-function initialize_module(initial_provider:pubkey, actions_per_day:integer, majority_threshold:integer = 0) {
+function initialize_module(initial_provider:pubkey, initial_node_host:text, initial_node_port:integer, actions_per_day:integer, majority_threshold:integer = 0) {
 	require(empty( provider @* {}));
 	print("--------------------Initializing-Chain-0-----------------------");
 	print("Creating provider quotas");
@@ -46,21 +46,28 @@ function initialize_module(initial_provider:pubkey, actions_per_day:integer, maj
 	
 	print("Adding c0 blockchain to system container");
 	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
+	val c0_signers_gtv = c0_config["signers"];
 	val blockchain = create blockchain (chain_context.blockchain_rid, true);
-
-	val signer_nodes = list<byte_array>.from_gtv(c0_config["signers"]);
-	require(signer_nodes.size() > 0, "C0 must have at least one signer");
 	create blockchain_configuration (blockchain, 0, chain_context.raw_config.to_bytes());
-
-	create blockchain_configuration_signers(blockchain, 0, c0_config["signers"].to_bytes());
+	create blockchain_configuration_signers(blockchain, 0, c0_signers_gtv.to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);
 	create container_blockchain(system_container, blockchain);
+
+	val signer_node_keys = list<byte_array>.from_gtv(c0_signers_gtv);
+	require(signer_node_keys.size() == 1, "C0 must have exactly one initial signer");
 	
-	val signer_nodes_text = list<text>();
-	for (s in signer_nodes) { 
-		signer_nodes_text.add(s.to_hex());
-	}
-	print("Initialization complete, update information for signer nodes: " + signer_nodes_text);
+	val initial_signer_node_key = signer_node_keys[0];
+	print("Adding initial signer node of c0 to system cluster: " + initial_signer_node_key.to_hex());
+	val initial_node = create node(
+		provider, 
+		initial_signer_node_key, 
+		initial_node_host, 
+		port = initial_node_port, 
+		api_port = 7740, 
+		last_updated = op_context.last_block_time
+	);
+	create cluster_node(system_cluster, initial_node);
+	node_list.last_update = op_context.last_block_time;
 	print("---------------------------------------------------------------");
 }
  

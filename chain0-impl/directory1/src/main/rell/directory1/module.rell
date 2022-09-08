@@ -13,8 +13,8 @@ struct module_args {
 
 // This operation will check that provider table is empty and if so add the provider supplied as module argument. And
 // enable this first system provider.
-operation init () {
-	initialize_module(chain_context.args.initial_provider, 100);
+operation init (initial_node_host:text, initial_node_port:integer) {
+	initialize_module(chain_context.args.initial_provider, initial_node_host, initial_node_port, 100);
 }
 
 operation update_provider_data (provider, name?) {

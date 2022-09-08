@@ -63,7 +63,7 @@ class Directory1Test : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.initAsync(nodes[0].pubKey, node0Host, node0Port))
+        doAndBuildBlocks(provConfig, provExecutor.initAsync(node0Host, node0Port))
     }
 
     @Test

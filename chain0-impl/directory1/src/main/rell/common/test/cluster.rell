@@ -15,18 +15,10 @@ function test_add_node_to_cluster() {
     val system_cluster = cluster @ { "system" };
     val alice = provider @ { rell.test.pubkeys.alice };
 
-    // adding a node
-    rell.test.tx()
-        .op(
-            add_node(alice.pubkey, rell.test.pubkeys.alice, "localhost", 0, system_cluster.name)
-        )
-        .sign(rell.test.keypairs.alice)
-        .run();
-
     // asserting node added
     assert_equals(
         cluster_node @ { system_cluster } .node,
-        node @ { rell.test.pubkeys.alice }
+        node @ { } limit 1
     );
 
     // must fail
