@@ -10,8 +10,6 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
     <modules>
-        <module>chromia0-example</module>
-        <module>enterprise0-example</module>
         <module>directory1-example</module>
     </modules>
 

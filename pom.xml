@@ -13,7 +13,6 @@
 
     <modules>
         <module>directory</module>
-        <module>enterprise</module>
         <module>managed-mode-examples</module>
         <module>chain0-impl</module>
     </modules>
