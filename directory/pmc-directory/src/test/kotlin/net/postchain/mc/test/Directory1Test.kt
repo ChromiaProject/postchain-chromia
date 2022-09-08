@@ -3,6 +3,7 @@ package net.postchain.mc.test
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -47,12 +48,12 @@ class Directory1Test : ManagedModeTest() {
         """.trimIndent()
     }
 
-    override fun cliExecution(cliConfig: ClientConfig): CliExecution {
+    override fun cliExecution(cliConfig: PostchainClientConfig): CliExecution {
         return CliExecutionD1(cliConfig)
     }
 
-    override val provExecutor = CliExecutionD1(provConfig)
-    override val prov2Executor = CliExecutionD1(prov2Config)
+    override val provExecutor by lazy { CliExecutionD1(provConfig) }
+    override val prov2Executor by lazy { CliExecutionD1(prov2Config) }
 
     /*
     * The pre-step includes starting a single
@@ -73,17 +74,17 @@ class Directory1Test : ManagedModeTest() {
 
         //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
-        assertProviderEnabled(prov2Config.pubKey)
+        assertProviderEnabled(prov2Config.pubkey())
 
         // The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster. TODO: Start as
         //  replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, systemClusterName)
 
         //First provider proposes Disable prov2. Prov2 agrees:
-        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubKey))
+        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
         val id = assertProposalTypeAndGetRowid("provider_state")
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
-        assertProviderDisabled(prov2Config.pubKey)
+        assertProviderDisabled(prov2Config.pubkey())
     }
 
     @Test
@@ -93,13 +94,13 @@ class Directory1Test : ManagedModeTest() {
 
         //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
-        val myAP = provExecutor.listProvidersActionPoints(provConfig.pubKey)
-        val othersAP = provExecutor.listProvidersActionPoints(prov2Config.pubKey)
+        val myAP = provExecutor.listProvidersActionPoints(provConfig.pubkey())
+        val othersAP = provExecutor.listProvidersActionPoints(prov2Config.pubkey())
         val amount: Long = 20
-        doAndBuildBlocks(provConfig, provExecutor.transferActionPointsAsync(prov2Config.pubKey, amount))
-        val othersAPAfter = provExecutor.listProvidersActionPoints(prov2Config.pubKey)
+        doAndBuildBlocks(provConfig, provExecutor.transferActionPointsAsync(prov2Config.pubkey(), amount))
+        val othersAPAfter = provExecutor.listProvidersActionPoints(prov2Config.pubkey())
         assertEquals(othersAP + amount, othersAPAfter)
-        val myAPAfter = provExecutor.listProvidersActionPoints(provConfig.pubKey)
+        val myAPAfter = provExecutor.listProvidersActionPoints(provConfig.pubkey())
         assertEquals(myAP - amount - 1, myAPAfter)
     }
 
@@ -107,11 +108,11 @@ class Directory1Test : ManagedModeTest() {
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
-        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 1L))
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey, systemClusterName))
-        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubKey))
-        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubKey, true))
-        assertProviderData(prov2Config.pubKey, "", true)
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), 1L))
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubkey(), systemClusterName))
+        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubkey()))
+        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), true))
+        assertProviderData(prov2Config.pubkey(), "", true)
     }
 
     /**
@@ -122,7 +123,7 @@ class Directory1Test : ManagedModeTest() {
 
         addSystemProv2()
         // Prov2 proposes degradation/demotion of prov1.
-        doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubKey, false))
+        doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
 
         // Prov votes no
         voteNo("provider_is_system")
@@ -139,7 +140,7 @@ class Directory1Test : ManagedModeTest() {
         addSystemProv2()
 
         val voterSetName = "Ellen"
-        val providers_list = "${provConfig.pubKey},${prov2Config.pubKey}"
+        val providers_list = "${provConfig.pubkey()},${prov2Config.pubkey()}"
         doAndBuildBlocks(
                 provConfig, provExecutor.createVoterSetAsync(
                 voterSetName, providers_list, 0,
@@ -152,15 +153,15 @@ class Directory1Test : ManagedModeTest() {
         assertEquals(voterSetSystemP, provExecutor.getVoterSetGovernor(voterSetName))
 
         var members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubKey, prov2Config.pubKey), members.map { it.asByteArray().toHex() })
+        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.asByteArray().toHex() })
 
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
-        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubKey, false))
+        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), false))
         var id = assertProposalTypeAndGetRowid("voter_set_provider")
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubKey), members.map { it.asByteArray().toHex() })
+        assertEquals(listOf(provConfig.pubkey()), members.map { it.asByteArray().toHex() })
 
         //Make Ellen her own governor.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
@@ -168,9 +169,9 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
-        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubKey, true))
+        doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), true))
         members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubKey, prov2Config.pubKey), members.map { it.asByteArray().toHex() })
+        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.asByteArray().toHex() })
     }
 
     @Test
@@ -220,7 +221,7 @@ class Directory1Test : ManagedModeTest() {
     fun testProposeClusterLimits() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val clusterName = "Vera"
-        val providersList = provConfig.pubKey
+        val providersList = provConfig.pubkey()
         // create cluster, initial providers added
         doAndBuildBlocks(
                 provConfig,
@@ -357,7 +358,7 @@ class Directory1Test : ManagedModeTest() {
     fun testCluster() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val newClusterName = "Vera"
-        val providers_list = provConfig.pubKey
+        val providers_list = provConfig.pubkey()
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
         //create cluster, initial providers added
         doAndBuildBlocks(
@@ -368,22 +369,22 @@ class Directory1Test : ManagedModeTest() {
         )
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
-        var clusters = provExecutor.listClustersForProvider(provConfig.pubKey)
+        var clusters = provExecutor.listClustersForProvider(provConfig.pubkey())
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
-        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubKey, 0))
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), 0))
         doAndBuildBlocks(
                 provConfig,
-                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = true)
+                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
         )
-        clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
+        clusters = provExecutor.listClustersForProvider(prov2Config.pubkey())
         assertEquals(listOf(newClusterName), clusters)
 
         doAndBuildBlocks(
                 provConfig,
-                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubKey, add = false)
+                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = false)
         )
-        clusters = provExecutor.listClustersForProvider(prov2Config.pubKey)
+        clusters = provExecutor.listClustersForProvider(prov2Config.pubkey())
         assertEquals(listOf(), clusters)
 
         // change deployer
@@ -397,7 +398,7 @@ class Directory1Test : ManagedModeTest() {
         println(clusterProviders.toTypedArray().contentToString())
         assert(clusterProviders.size).isEqualTo(1)
         assert(clusterProviders.first()["pubkey"]?.asByteArray()?.toHex()).isEqualTo(
-                provConfig.pubKey
+                provConfig.pubkey()
         )
         // UNKNOWN cluster providers
         val unknownProviders = provExecutor.getClusterProviders("unknown cluster name")
@@ -409,7 +410,7 @@ class Directory1Test : ManagedModeTest() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.brid, bcConfigGtvFile,
+                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
                 20L, "gtv", false
         )
         )
@@ -418,7 +419,7 @@ class Directory1Test : ManagedModeTest() {
         //force == false: only configs for heights > next config height can be added:
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.brid, bcConfigGtvFile,
+                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
                 18L, "gtv", false
         )
         )
@@ -427,7 +428,7 @@ class Directory1Test : ManagedModeTest() {
         //force == true: OK to add configs at all heights > current height
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.brid, bcConfigGtvFile,
+                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
                 18L, "gtv", true
         )
         )
@@ -436,7 +437,7 @@ class Directory1Test : ManagedModeTest() {
         //force == true: OK to override a configuration
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.brid, bcConfig1xmlFile,
+                provConfig.blockchainRid.toHex(), bcConfig1xmlFile,
                 18L, "xml", true
         )
         )
@@ -449,7 +450,7 @@ class Directory1Test : ManagedModeTest() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.brid, bcConfig1xmlFile,
+                provConfig.blockchainRid.toHex(), bcConfig1xmlFile,
                 20L, "xml", false
         )
         )
@@ -481,7 +482,7 @@ class Directory1Test : ManagedModeTest() {
         // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {
-                doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubKey))
+                doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
                 true
             }
         }
@@ -496,7 +497,7 @@ class Directory1Test : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
         doAndBuildBlocks(prov2Config, provExecutor.removeNodeAsync(node1Pubkey))
-        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.brid)
+        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
         assertEquals(1, listBlockchainSigners.size)
     }
 
@@ -577,7 +578,7 @@ class Directory1Test : ManagedModeTest() {
     @Test
     fun testGetBlockchainLastHeight() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        val h = provExecutor.getBlockchainLastHeight(provConfig.brid)
+        val h = provExecutor.getBlockchainLastHeight(provConfig.blockchainRid.toHex())
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 + vote = 3
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 = 2 (vote included in proposal)
         assertEquals(2, h)
@@ -586,7 +587,7 @@ class Directory1Test : ManagedModeTest() {
     @Test
     fun testGetBlockchainConfiguration() {
         addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-        val blockchain = provExecutor.getBlockchainConfiguration(provConfig.brid, 0L)
+        val blockchain = provExecutor.getBlockchainConfiguration(provConfig.blockchainRid.toHex(), 0L)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
         assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
@@ -636,10 +637,10 @@ class Directory1Test : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.brid, node1Pubkey), 5)
+        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.blockchainRid.toHex(), node1Pubkey), 5)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
 
-        val listBlockchainReplicas = provExecutor.listBlockchainReplicas(provConfig.brid)
+        val listBlockchainReplicas = provExecutor.listBlockchainReplicas(provConfig.blockchainRid.toHex())
         assertEquals(1, listBlockchainReplicas.size)
     }
 
@@ -651,12 +652,12 @@ class Directory1Test : ManagedModeTest() {
         addSystemProv2()
 
         //prov adds prov2 to system cluster
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubKey, "system"))
+        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubkey(), "system"))
 
         // Prov2 adds new node to system cluster => Two blockchain signers in system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
 
-        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.brid)
+        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
         assertEquals(2, listBlockchainSigners.size)
     }
 
@@ -671,7 +672,7 @@ class Directory1Test : ManagedModeTest() {
         val clusterA = "A"
         val clusterB = "B"
         val containerName = "C"
-        val providers_list = provConfig.pubKey
+        val providers_list = provConfig.pubkey()
         //create two new clusters with initial provider added
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
@@ -703,7 +704,7 @@ class Directory1Test : ManagedModeTest() {
     fun testGetProposal() {
         addSystemProv2()
         //Propose degradation of prov2 again
-        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubKey, false))
+        doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), false))
 
         val type = "provider_is_system"
         val id = assertProposalTypeAndGetRowid(type)
@@ -713,7 +714,7 @@ class Directory1Test : ManagedModeTest() {
         val timestamp = (proposal["timestamp"] as GtvInteger).asInteger()
         val proposedBy = proposal["proposed_by"]!!.asByteArray().toHex()
 
-        assertEquals(provConfig.pubKey, proposedBy, "wrong proposed_by")
+        assertEquals(provConfig.pubkey(), proposedBy, "wrong proposed_by")
         assertEquals(id, propid, "wrong idx")
         assertEquals(type, actualType, "Wrong proposal type")
         assertNotEquals(0, timestamp, "timestamp is 0")

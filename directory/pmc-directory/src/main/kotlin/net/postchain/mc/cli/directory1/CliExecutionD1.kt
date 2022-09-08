@@ -1,12 +1,12 @@
 package net.postchain.mc.cli.directory1
 
 import mu.KLogging
-import net.postchain.client.core.GTXTransactionBuilder
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.gtv.*
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.ClientConfig
 
-class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
+class CliExecutionD1(config: PostchainClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
@@ -16,11 +16,8 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
      * that can vote for update proposals.
      */
-    fun initAsync() : GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("init")
-            sign(buildSigMaker())
-        }
+    fun initAsync() : TransactionBuilder {
+        return makeTransactionWithNop().addOperation("init")
     }
     fun init() {
         sendTxSync(initAsync(), "Initial provider added and enabled",
@@ -34,7 +31,7 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
                 "Cannot update provider")
     }
 
-    fun updateProviderAsync(key: String, name: String): GTXTransactionBuilder {
+    fun updateProviderAsync(key: String, name: String): TransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         if (name.isNotEmpty()) {
@@ -42,10 +39,7 @@ class CliExecutionD1(config: ClientConfig) : CliExecution(config) {
         } else {
             data = data.plus(GtvNull)
         }
-        return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", *data)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("update_provider_data", *data)
     }
 
 }

@@ -13,35 +13,3 @@ interface ClientConfig {
     val privKey: String
     val pubKey: String
 }
-
-open class DelegatingClientConfig(private val delegate: ClientConfig) : ClientConfig by delegate
-
-open class BaseClientConfig(private val config: Configuration) : ClientConfig {
-
-    companion object {
-
-        fun fromPropertiesFile(configFile: String): ClientConfig {
-            val params = Parameters().properties()
-                    .setFileName(configFile)
-                    .setListDelimiterHandler(DefaultListDelimiterHandler(','))
-
-            val configuration = FileBasedConfigurationBuilder<PropertiesConfiguration>(PropertiesConfiguration::class.java)
-                    .configure(params)
-                    .configuration
-
-            return BaseClientConfig(configuration)
-        }
-    }
-
-    override val apiURL: String
-        get() = config.getString("api-url", "")
-
-    override val brid: String
-        get() = config.getString("blockchain-rid", "")
-
-    override val privKey: String
-        get() = config.getString("privkey", "")
-
-    override val pubKey: String
-        get() = config.getString("pubkey", "")
-}

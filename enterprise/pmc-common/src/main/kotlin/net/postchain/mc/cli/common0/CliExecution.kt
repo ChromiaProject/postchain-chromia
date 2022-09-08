@@ -1,8 +1,10 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.crypto.SigMaker
 import net.postchain.client.core.*
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -18,23 +20,14 @@ import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 import java.time.Instant
 
-open class CliExecution(val config: ClientConfig) {
+open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
     protected val cryptoSystem = Secp256K1CryptoSystem()
 
     protected fun getPostchainClient(): PostchainClient {
-        if (config.privKey.isEmpty() || config.brid.isEmpty() || config.pubKey.isEmpty()) {
-            throw UserMistake("Missing required parameters: brid | pub-key | priv-key")
-        }
-        val resolver = PostchainClientFactory.makeSimpleNodeResolver(config.apiURL)
-        val sigMaker = cryptoSystem.buildSigMaker(
-                config.pubKey.hexStringToByteArray(),
-                config.privKey.hexStringToByteArray()
-        )
-        val defaultSigner = DefaultSigner(sigMaker, config.pubKey.hexStringToByteArray())
-        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(config.brid), defaultSigner)
+        return ConcretePostchainClientProvider().createClient(config)
     }
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
@@ -42,26 +35,17 @@ open class CliExecution(val config: ClientConfig) {
         return GtvEncoder.encodeGtv(gtv)
     }
 
-    protected fun buildSigMaker(): SigMaker {
-        return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-    }
-
-    protected fun makeTransactionWithNop(): GTXTransactionBuilder {
-        return getPostchainClient().makeTransaction().apply {
-            addOperation("nop", gtv(Instant.now().toEpochMilli()))
-        }
+    protected fun makeTransactionWithNop(): TransactionBuilder {
+        return getPostchainClient().transactionBuilder().addNop()
     }
 
 
-    fun addNodeInternal(key: String, host: String, port: Long): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun addNodeInternal(key: String, host: String, port: Long): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "add_node",
-                    gtv(config.pubKey.hexStringToByteArray()),
+                    gtv(config.signers.first().pubKey.key),
                     gtv(key.hexStringToByteArray()), gtv(host), gtv(port)
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun doInTryBlock(todo: () -> Unit) {
@@ -290,11 +274,11 @@ open class CliExecution(val config: ClientConfig) {
         return data
     }
 
-    fun sendTxUnconfirmed(tx: GTXTransactionBuilder): TransactionResult {
+    fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.postSync()
     }
 
-    fun sendTxSync(tx: GTXTransactionBuilder, onSuccess: String, onFail: String) {
+    fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
         doInTryBlock {
             val txResult = tx.postSyncAwaitConfirmation()
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -305,33 +289,24 @@ open class CliExecution(val config: ClientConfig) {
         }
     }
 
-    fun registerProviderInternal(key: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun registerProviderInternal(key: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "register_provider",
                     gtv(key.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
-    fun enableProviderInternal(key: String): GTXTransactionBuilder {
+    fun enableProviderInternal(key: String): TransactionBuilder {
         val provider = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("enable_provider", provider)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("enable_provider", provider)
     }
 
-    fun disableProviderInternal(key: String): GTXTransactionBuilder {
+    fun disableProviderInternal(key: String): TransactionBuilder {
         val provider = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("disable_provider", provider)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("disable_provider", provider)
     }
 
-    fun addBlockchainSignersInternal(blockchainRID: String, signers: String, heightDelay: Long): GTXTransactionBuilder {
+    fun addBlockchainSignersInternal(blockchainRID: String, signers: String, heightDelay: Long): TransactionBuilder {
         val nodeList = signers.split(",").map { nodeGtv(it) }
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().apply {
@@ -346,38 +321,28 @@ open class CliExecution(val config: ClientConfig) {
                         blockchain, gtv(nodeList), gtv(heightDelay)
                 )
             }
-            sign(buildSigMaker())
         }
     }
 
-    fun addReplicaInternal(blockchainRID: String, key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun addReplicaInternal(blockchainRID: String, key: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("add_replica", provider, blockchain, node)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("add_replica", provider, blockchain, node)
     }
 
-    fun removeReplicaInternal(blockchainRID: String, key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun removeReplicaInternal(blockchainRID: String, key: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("remove_replica", provider, blockchain, node)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("remove_replica", provider, blockchain, node)
     }
 
-    fun removeNodeInternal(key: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun removeNodeInternal(key: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "remove_node",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(key.hexStringToByteArray())
+                    gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun addNode(key: String, host: String, port: Long) {

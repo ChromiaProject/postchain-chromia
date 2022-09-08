@@ -1,28 +1,25 @@
 package net.postchain.mc.cli.enterprise0
 
 import mu.KLogging
-import net.postchain.client.core.GTXTransactionBuilder
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 
-class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
+class CliExecutionE0(config: PostchainClientConfig) : CliExecution(config) {
 
     companion object : KLogging()
 
     fun proposeConfigurationInternal(blockchainRID: String, blockchainConfigFile: File, height: Long, format: String?)
-            : GTXTransactionBuilder {
+            : TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_configuration",
-                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.pubKey.hexStringToByteArray()), gtv(data), gtv(height))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_configuration",
+                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.signers.first().pubKey.key), gtv(data), gtv(height))
     }
     fun proposeConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?)  {
         sendTxSync(proposeConfigurationInternal(blockchainRID, File(blockchainConfigFile), height, format),
@@ -35,35 +32,26 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot add provider proposal")
     }
 
-    fun proposeProviderInternal(key: String) : GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("propose_provider",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(key.hexStringToByteArray()))
-            sign(buildSigMaker())
-        }
+    fun proposeProviderInternal(key: String) : TransactionBuilder {
+        return makeTransactionWithNop().addOperation("propose_provider",
+                    gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()))
     }
 
     /**
      * Instead of an admin node, configuration changes are made via propositions and voting. This is how a block signing
      * node can vote for a pending configuration.
      */
-    fun voteInternal(rowid: Long, yes: Boolean) : GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("make_vote",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(rowid), gtv((yes)))
-            sign(buildSigMaker())
-        }
+    fun voteInternal(rowid: Long, yes: Boolean) : TransactionBuilder {
+        return makeTransactionWithNop().addOperation("make_vote",
+                    gtv(config.signers.first().pubKey.key), gtv(rowid), gtv((yes)))
     }
     fun vote(rowid: Long, yes: Boolean) {
         sendTxSync(voteInternal(rowid, yes), "vote added successfully", "Cannot add vote")
     }
 
-    fun proposeEnableProviderInternal(key: String) : GTXTransactionBuilder{
+    fun proposeEnableProviderInternal(key: String) : TransactionBuilder{
         val providerToBeEnabled = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_enable_provider", gtv(config.pubKey.hexStringToByteArray()), providerToBeEnabled)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_enable_provider", gtv(config.signers.first().pubKey.key), providerToBeEnabled)
     }
 
     fun proposeEnableProvider(key: String) {
@@ -76,31 +64,25 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot add bc proposal")
     }
 
-    fun proposeBlockchainInternal(blockchainConfigFile: File, nodes: String, format: String?) : GTXTransactionBuilder {
+    fun proposeBlockchainInternal(blockchainConfigFile: File, nodes: String, format: String?) : TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return proposeBc(nodes, data)
     }
 
-    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
+    fun proposeBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): TransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
         return proposeBc(nodes, data)
     }
 
-    private fun proposeBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
+    private fun proposeBc(nodes: String, data: ByteArray): TransactionBuilder {
         val nodeList = nodes.split(",").map { gtv(it) }
-        return makeTransactionWithNop().apply {
-            addOperation("propose_blockchain",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(data), gtv(nodeList))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_blockchain",
+                    gtv(config.signers.first().pubKey.key), gtv(data), gtv(nodeList))
     }
 
-    fun proposeDisableProviderInternal(key: String) : GTXTransactionBuilder {
+    fun proposeDisableProviderInternal(key: String) : TransactionBuilder {
         val providerToBeDisabled = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_disable_provider", gtv(config.pubKey.hexStringToByteArray()), providerToBeDisabled)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_disable_provider", gtv(config.signers.first().pubKey.key), providerToBeDisabled)
     }
 
     fun proposeDisableProvider(key: String) {
@@ -108,12 +90,9 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot propose disabling of provider")
     }
 
-    fun proposeAddBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
+    fun proposeAddBlockchainSignersInternal(blockchainRID: String, signers: String) : TransactionBuilder {
         val nodeList = signers.split(",").map { gtv(it) }
-        return makeTransactionWithNop().apply {
-            addOperation("propose_add_blockchain_signers", gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_add_blockchain_signers", gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
     }
     fun ProposeAddBlockchainSigners(blockchainRID: String, signers: String) {
         sendTxSync(proposeAddBlockchainSignersInternal(blockchainRID,signers),
@@ -121,12 +100,9 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "cannot add proposal of new signers for blockchain")
     }
 
-    fun proposeStopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean) : GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("propose_stop_blockchain",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray()), gtv(removeReplicas))
-            sign(buildSigMaker())
-        }
+    fun proposeStopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean) : TransactionBuilder {
+        return makeTransactionWithNop().addOperation("propose_stop_blockchain",
+                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray()), gtv(removeReplicas))
     }
 
     fun proposeStopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
@@ -135,13 +111,10 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot add proposal for stopping blockchain")
     }
 
-    fun proposeRemoveBlockchainSignersInternal(blockchainRID: String, signers: String) : GTXTransactionBuilder {
+    fun proposeRemoveBlockchainSignersInternal(blockchainRID: String, signers: String) : TransactionBuilder {
         val nodeList = signers.split(",").map { gtv(it) }
-        return makeTransactionWithNop().apply {
-            addOperation("propose_remove_blockchain_signers",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_remove_blockchain_signers",
+                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray()), gtv(nodeList))
     }
     fun proposeRemoveBlockchainSigners(blockchainRID: String, signers: String) {
         sendTxSync(proposeRemoveBlockchainSignersInternal(blockchainRID, signers),
@@ -157,11 +130,8 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
      * that can vote for update propsals.
      */
-    fun initInternal() : GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("init")
-            sign(buildSigMaker())
-        }
+    fun initInternal() : TransactionBuilder {
+        return makeTransactionWithNop().addOperation("init")
     }
     fun init() {
         sendTxSync(initInternal(), "Initial provider added and enabled",
@@ -175,7 +145,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
                 "Cannot update provider")
     }
 
-    fun updateProviderInternal(key: String, name: String): GTXTransactionBuilder {
+    fun updateProviderInternal(key: String, name: String): TransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         if (name.isNotEmpty()) {
@@ -183,10 +153,7 @@ class CliExecutionE0(config: ClientConfig) : CliExecution(config) {
         } else {
             data = data.plus(GtvNull)
         }
-        return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", *data)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("update_provider_data", *data)
     }
 
     fun listProposalsSince(rowid: Long) : List<Gtv> {

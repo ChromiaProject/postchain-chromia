@@ -5,12 +5,14 @@ import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.config.app.BaseClientConfig
+import net.postchain.mc.config.app.BaseClientConfig.Companion.fromPropertiesFile
 
 fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")
-    .convert { BaseClientConfig.fromPropertiesFile(it) }.required()
+    .convert { PostchainClientConfig.fromProperties(it) }.required()
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
 fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOptions(

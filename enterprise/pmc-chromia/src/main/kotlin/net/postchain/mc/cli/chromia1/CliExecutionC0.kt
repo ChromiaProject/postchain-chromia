@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.chromia1
 
-import net.postchain.client.core.GTXTransactionBuilder
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
@@ -9,10 +10,9 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.base.CliError
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.ClientConfig
 import java.io.File
 
-class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
+class CliExecutionC0(config: PostchainClientConfig) : CliExecution(config) {
 
     /**
      * format: Format of blockchain configuration file. Can be either xml or gtv
@@ -24,30 +24,27 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         )
     }
 
-    fun addBlockchainInternal(blockchainConfigFile: File, nodes: String, format: String?): GTXTransactionBuilder {
+    fun addBlockchainInternal(blockchainConfigFile: File, nodes: String, format: String?): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return addBc(nodes, data)
     }
 
-    fun addBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): GTXTransactionBuilder {
+    fun addBlockchainGtvInternal(blockchainConfig: Gtv, nodes: String): TransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
         return addBc(nodes, data)
     }
 
-    private fun addBc(nodes: String, data: ByteArray): GTXTransactionBuilder {
+    private fun addBc(nodes: String, data: ByteArray): TransactionBuilder {
         val nodeList = nodes.split(",").map {
             getPostchainClient().querySync(
                 "get_node",
                 gtv("pubkey" to gtv(it.hexStringToByteArray()))
             )
         }
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                 "add_blockchain",
                 gtv(data), gtv(nodeList)
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
@@ -57,15 +54,12 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         )
     }
 
-    fun stopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean): GTXTransactionBuilder {
+    fun stopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean): TransactionBuilder {
         val blockchain = blockchainGtv(blockchainRID)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                 "stop_blockchain",
                 blockchain, gtv(removeReplicas)
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun addConfiguration(blockchainRID: String, blockchainConfigFile: String, height: Long, format: String?) {
@@ -76,16 +70,13 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
     }
 
     fun addConfigurationInternal(blockchainRID: String, blockchainConfigFile: File, height: Long, format: String?):
-            GTXTransactionBuilder {
+            TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         val blockchain = blockchainGtv(blockchainRID)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                 "add_configuration",
                 blockchain, gtv(data), gtv(height)
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun addBlockchainSigners(blockchainRID: String, signers: String, heightDelay: Long) {
@@ -103,16 +94,13 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         )
     }
 
-    fun removeBlockchainSignersInternal(blockchainRID: String, signers: String): GTXTransactionBuilder {
+    fun removeBlockchainSignersInternal(blockchainRID: String, signers: String): TransactionBuilder {
         val nodeList = signers.split(",").map { nodeGtv(it) }
         val blockchain = blockchainGtv(blockchainRID)
-        return makeTransactionWithNop().apply {
-            addOperation("remove_blockchain_signers", blockchain, gtv(nodeList))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("remove_blockchain_signers", blockchain, gtv(nodeList))
     }
 
-    fun runTxAndAwaitConfirmed(doer: GTXTransactionBuilder) {
+    fun runTxAndAwaitConfirmed(doer: TransactionBuilder) {
         doInTryBlock {
             val txResult = doer.postSyncAwaitConfirmation()
             if (txResult.status == TransactionStatus.CONFIRMED) {
@@ -137,7 +125,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         )
     }
 
-    fun updateProviderInternal(key: String, name: String, beneficiary: String): GTXTransactionBuilder {
+    fun updateProviderInternal(key: String, name: String, beneficiary: String): TransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         if (name.isNotEmpty()) {
@@ -150,10 +138,7 @@ class CliExecutionC0(config: ClientConfig) : CliExecution(config) {
         } else {
             data = data.plus(GtvNull)
         }
-        return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", *data)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("update_provider_data", *data)
     }
 
     fun enableProvider(key: String) {
