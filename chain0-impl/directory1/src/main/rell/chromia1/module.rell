@@ -19,8 +19,8 @@ entity provider_beneficiary {
 	mutable beneficiary: ft3_account.account; 	 
 }
 
-operation init () {
-	initialize_module(chain_context.args.initial_provider, 100);
+operation init (initial_node_host:text, initial_node_port:integer) {
+	initialize_module(chain_context.args.initial_provider, initial_node_host, initial_node_port, 100);
 	ft3_core.register_asset("CHR", chain_context.blockchain_rid);
 }
 

@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.gtv.*
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.common0.CliExecution
 
 class CliExecutionD1(config: PostchainClientConfig) : CliExecution(config) {
@@ -16,11 +17,11 @@ class CliExecutionD1(config: PostchainClientConfig) : CliExecution(config) {
      * the module argument is registered as a first provider and enabled. Why? The system needs at least one provider,
      * that can vote for update proposals.
      */
-    fun initAsync() : TransactionBuilder {
-        return makeTransactionWithNop().addOperation("init")
+    fun initAsync(host: String, port: Long) : TransactionBuilder {
+        return makeTransactionWithNop(). addOperation("init", gtv(host), gtv(port))
     }
-    fun init() {
-        sendTxSync(initAsync(), "Initial provider added and enabled",
+    fun init(host: String, port: Long) {
+        sendTxSync(initAsync(host, port), "Initial provider added and enabled",
                 "Cannot add and enable initial provider")
     }
 

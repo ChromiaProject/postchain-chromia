@@ -856,18 +856,8 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        var data: Array<Gtv> = arrayOf(provider)
-        data = data.plus(gtv(key.hexStringToByteArray()))
-        data = data.plus(gtv(host))
-        data = data.plus(gtv(port))
-        if (clusterName != "") {
-            val cluster = clusterGtv(clusterName)
-            data = data.plus(cluster)
-        } else {
-            data = data.plus(GtvNull)
-        }
-        return makeTransactionWithNop().addOperation("add_node", *data)
+        return makeTransactionWithNop().
+            addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
     }
 
     /** Add existing provider to existing cluster

@@ -64,14 +64,11 @@ class Directory1Test : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.initAsync())
+        doAndBuildBlocks(provConfig, provExecutor.initAsync(node0Host, node0Port))
     }
 
     @Test
     fun testProposeEnableDisableProvider() {
-        //First provider adds node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubkey())
@@ -89,9 +86,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testTransferActionPoints() {
-        //First provider adds node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         val myAP = provExecutor.listProvidersActionPoints(provConfig.pubkey())
@@ -176,9 +170,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeContainerAndLimits() {
-        //add node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //add new container to system cluster
         val containerName = "container1"
         doAndBuildBlocks(
@@ -219,7 +210,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeClusterLimits() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val clusterName = "Vera"
         val providersList = provConfig.pubkey()
         // create cluster, initial providers added
@@ -254,9 +244,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetContainers() {
-        // add node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         // add new container to system cluster
         val containerName = "container1"
         doAndBuildBlocks(
@@ -294,9 +281,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainsForContainer() {
-        //add node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         val bcs = prov2Executor.listBlockchainsForContainer(systemContainerName)
         assertEquals(1, bcs.size)
         assertEquals(nodes[0].getBlockchainRid(0)!!.toHex(), bcs[0].toHex())
@@ -304,8 +288,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetContainerForBlockchain() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         val chain0Brid = nodes[0].getBlockchainRid(0)!!
         val actualContainer = prov2Executor.getContainerForBlockchain(chain0Brid.toHex())
 
@@ -314,8 +296,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetContainerForUnknownBlockchain() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         assertNull(
                 prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
         )
@@ -323,10 +303,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeAddBlockchainXmlWithDependency() {
-
-        //add node0 and bc0
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //add new container to system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
@@ -356,7 +332,6 @@ class Directory1Test : ManagedModeTest() {
      */
     @Test
     fun testCluster() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val newClusterName = "Vera"
         val providers_list = provConfig.pubkey()
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
@@ -407,7 +382,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeConfigurationAcceptGtv() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
                 provConfig.blockchainRid.toHex(), bcConfigGtvFile,
@@ -447,7 +421,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testProposeConfiguration() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
                 provConfig.blockchainRid.toHex(), bcConfig1xmlFile,
@@ -464,8 +437,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testAddBlockchainSigners_Fail_DueToMissingNewSignerPeer() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //includes prov adds prov2 to system cluster
         addSystemProv2()
 
@@ -473,8 +444,8 @@ class Directory1Test : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
         // Get next configuration height after adding new node as blockchain's signer
-        // expected next congiguration height = -1 + init + 3*addNode + porposeEnableProv + proposeBlockhain + addprov2toCluster + addNode + 5 = 12 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 12L)
+        // expected next configuration height = -1 + init + addNode + proposeEnableProv + proposeBlockhain + addprov2toCluster + addNode + 5 = 10 (with vote included in proposal)
+        assertNextConfiguration(provConfig, 10L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)
@@ -490,8 +461,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testRemoveBlockchainSigners() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         addSystemProv2()
         // Prov2 adds node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
@@ -503,8 +472,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testPauseBlockchain() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
@@ -533,7 +500,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testDeleteBlockchain() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
 
         //add new bc in new container in system cluster
         val container1 = "container1"
@@ -565,8 +531,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchainsForNode() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         var listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
         assertEquals(0, listBlockchains.size)
 
@@ -577,16 +541,14 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainLastHeight() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val h = provExecutor.getBlockchainLastHeight(provConfig.blockchainRid.toHex())
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 + vote = 3
         // expected height = -1 + init() + addNode0 + proposeBlockchain0 = 2 (vote included in proposal)
-        assertEquals(2, h)
+        assertEquals(0, h)
     }
 
     @Test
     fun testGetBlockchainConfiguration() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val blockchain = provExecutor.getBlockchainConfiguration(provConfig.blockchainRid.toHex(), 0L)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
@@ -602,8 +564,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testRemoveNode() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         // Add node1
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
         var nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
@@ -626,18 +586,16 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchains() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         val listBlockchains = provExecutor.listBlockchains(false)
         assertEquals(1, listBlockchains.size)
     }
 
     @Test
     fun testAddBlockchainReplicas() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.blockchainRid.toHex(), node1Pubkey), 5)
+        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.blockchainRid.toHex(), node1Pubkey), 1)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
 
         val listBlockchainReplicas = provExecutor.listBlockchainReplicas(provConfig.blockchainRid.toHex())
@@ -646,8 +604,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testListBlockchainSigners() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //Add second system provider
         addSystemProv2()
 
@@ -666,8 +622,6 @@ class Directory1Test : ManagedModeTest() {
      */
     @Test
     fun testListContainerReplicas() {
-        addNode0AndBc0(blockchain0ConfigGtv, provConfig)
-
         //create new cluster Vera.
         val clusterA = "A"
         val clusterB = "B"
