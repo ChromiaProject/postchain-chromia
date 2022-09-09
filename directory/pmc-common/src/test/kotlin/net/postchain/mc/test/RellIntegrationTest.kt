@@ -2,12 +2,15 @@ package net.postchain.mc.test
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.EndpointPool
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
@@ -71,18 +74,14 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
      */
     protected abstract fun chainConfSnippet(): String
 
-    protected fun cliConf(keyIndex: Int): ClientConfig {
-        val base = MapConfiguration(mapOf(
-                "pubkey" to KeyPairHelper.pubKeyHex(keyIndex),
-                "privkey" to KeyPairHelper.privKeyHex(keyIndex)
-        ))
-        return object : DelegatingClientConfig(BaseClientConfig(base)) {
-            override val apiURL: String
-                get() = "http://127.0.0.1:" + nodes[0].getRestApiHttpPort()
-
-            override val brid: String
-                get() = nodes[0].getBlockchainRid(0)!!.toHex()
-        }
+    protected fun cliConf(keyIndex: Int): PostchainClientConfig {
+        return PostchainClientConfig(
+            nodes[0].getBlockchainRid(0)!!,
+            EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
+            listOf(
+                KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
+            )
+        )
     }
 
     /**

@@ -1,20 +1,18 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.*
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.base.cryptoSystem
-import net.postchain.mc.config.app.ClientConfig
 import java.io.File
-import java.time.Instant
 
-open class CliExecution(val config: ClientConfig) {
+open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
@@ -25,14 +23,8 @@ open class CliExecution(val config: ClientConfig) {
         return GtvEncoder.encodeGtv(gtv)
     }
 
-    protected fun buildSigMaker(): SigMaker {
-        return cryptoSystem.buildSigMaker(config.pubKey.hexStringToByteArray(), config.privKey.hexStringToByteArray())
-    }
-
-    protected fun makeTransactionWithNop(): GTXTransactionBuilder {
-        return getPostchainClient().makeTransaction().apply {
-            addOperation("nop", gtv(Instant.now().toEpochMilli()))
-        }
+    protected fun makeTransactionWithNop(): TransactionBuilder {
+        return getPostchainClient().transactionBuilder().addNop()
     }
 
     private fun doInTryBlock(logError: Boolean = true, todo: () -> Unit) {
@@ -521,11 +513,11 @@ open class CliExecution(val config: ClientConfig) {
         return data
     }
 
-    fun sendTxUnconfirmed(tx: GTXTransactionBuilder): TransactionResult {
+    fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.postSync()
     }
 
-    fun sendTxSync(tx: GTXTransactionBuilder, onSuccess: String, onFail: String) {
+    fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
         doInTryBlock(false) {
             val txResult = tx.postSyncAwaitConfirmation()
             when (txResult.status) {
@@ -552,7 +544,7 @@ open class CliExecution(val config: ClientConfig) {
         )
     }
 
-    fun updateProviderAsync(key: String, name: String?, beneficiary: String?): GTXTransactionBuilder {
+    fun updateProviderAsync(key: String, name: String?, beneficiary: String?): TransactionBuilder {
         val provider = providerGtv(key)
         var data: Array<Gtv> = arrayOf(provider)
         data = if (name != null && name.isNotEmpty()) {
@@ -565,10 +557,7 @@ open class CliExecution(val config: ClientConfig) {
         } else {
             data.plus(GtvNull)
         }
-        return makeTransactionWithNop().apply {
-            addOperation("update_provider_data", *data)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("update_provider_data", *data)
     }
 
     fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
@@ -832,15 +821,12 @@ open class CliExecution(val config: ClientConfig) {
      * AddNodeAsync().
      */
 
-    fun registerProviderAsync(key: String, tier: Long): GTXTransactionBuilder {
-        val me = providerGtv(config.pubKey)
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
+        val me = providerGtv(config.signers.first().pubKey.hex())
+        return makeTransactionWithNop().addOperation(
                     "register_provider",
                     me, gtv(key.hexStringToByteArray()), GtvInteger(tier)
             )
-            sign(buildSigMaker())
-        }
     }
 
     fun createVoterSetAsync(
@@ -848,8 +834,8 @@ open class CliExecution(val config: ClientConfig) {
             providerKeys: String,
             threshold: Long,
             governorName: String?
-    ): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    ): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         var providerList: Gtv
         if (providerKeys.isEmpty()) {
             providerList = GtvNull
@@ -862,64 +848,52 @@ open class CliExecution(val config: ClientConfig) {
         } else {
             governor = voterSetGtv(governorName)
         }
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "create_voter_set",
                     meProvider, GtvString(name), GtvInteger(threshold), providerList, governor
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Add new node. Optionally, also add it to a cluster */
-    fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation("add_node", gtv(config.pubKey.hexStringToByteArray()), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
-            sign(buildSigMaker())
-        }
+    fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): TransactionBuilder {
+        return makeTransactionWithNop().
+            addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
     }
 
     /** Add existing provider to existing cluster
      * */
-    fun addProviderToClusterAsync(key: String, clusterName: String): GTXTransactionBuilder {
-        val me = providerGtv(config.pubKey)
+    fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
+        val me = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val provider = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "add_provider_to_cluster",
                     me, provider, cluster
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Add existing node to existing cluster
      * */
-    fun addNodeToClusterAsync(key: String, clusterName: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun addNodeToClusterAsync(key: String, clusterName: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val node = nodeGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "add_node_to_cluster",
                     provider,
                     gtv(key.hexStringToByteArray()), node, cluster
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Propose a new container resource limits.
      * Who can update container resource limits? Cluster's deployer voter set.
      * */
-    fun proposeContainerLimitsAsync(containerName: String, limits: Map<String, Long>): GTXTransactionBuilder {
+    fun proposeContainerLimitsAsync(containerName: String, limits: Map<String, Long>): TransactionBuilder {
         val currentLimits = listContainerLimits(containerName).toMutableMap()
         currentLimits.putAll(limits)
-        val provider = providerGtv(config.pubKey)
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val container = containerGtv(containerName)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_container_limits",
                     provider,
                     container,
@@ -927,37 +901,31 @@ open class CliExecution(val config: ClientConfig) {
                     gtv(currentLimits["cpu"]!!),
                     gtv(currentLimits["storage"]!!)
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
-    fun proposeContainerAsync(containerName: String, clusterName: String, deployerName: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun proposeContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val deployer = voterSetGtv(deployerName)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_container",
                     provider,
                     cluster, gtv(containerName), deployer
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Propose new cluster resource limits.
      * Who can update cluster limits? Cluster governance voter set.
      * */
-    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): GTXTransactionBuilder {
+    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): TransactionBuilder {
         val currentLimits = listClusterLimits(clusterName).toMutableMap()
         currentLimits.putAll(limits)
-        val provider = providerGtv(config.pubKey)
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_cluster_limits",
                     provider,
                     cluster,
@@ -965,17 +933,12 @@ open class CliExecution(val config: ClientConfig) {
                     gtv(currentLimits["cpu"]!!),
                     gtv(currentLimits["storage"]!!)
             )
-            sign(buildSigMaker())
-        }
     }
 
-    fun transferActionPointsAsync(to: String, amount: Long): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun transferActionPointsAsync(to: String, amount: Long): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val toProvider = providerGtv(to)
-        return makeTransactionWithNop().apply {
-            addOperation("transfer_action_points", meProvider, toProvider, gtv(amount))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("transfer_action_points", meProvider, toProvider, gtv(amount))
     }
 
     fun createClusterAsync(
@@ -983,96 +946,69 @@ open class CliExecution(val config: ClientConfig) {
             providerKeys: String,
             governorSet: String,
             deployerSet: String
-    ): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    ): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val initials = when {
             providerKeys.isEmpty() -> GtvNull
             else -> providersGtv(providerKeys)
         }
         val governor = voterSetGtv(governorSet)
         val deployer = voterSetGtv(deployerSet)
-        return makeTransactionWithNop().apply {
-            addOperation("create_cluster", provider, GtvString(newClusterName), initials, governor, deployer)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("create_cluster", provider, GtvString(newClusterName), initials, governor, deployer)
     }
 
-    fun addBlockchainReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("add_bc_replica", provider, blockchain, node)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("add_bc_replica", provider, blockchain, node)
     }
 
-    fun addContainerReplicaAsync(clusterName: String, containerName: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun addContainerReplicaAsync(clusterName: String, containerName: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val container = containerGtv(containerName)
-        return makeTransactionWithNop().apply {
-            addOperation("add_container_replica", provider, cluster, container)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("add_container_replica", provider, cluster, container)
     }
 
-    fun removeBlockchainReplicaAsync(blockchainRID: String, key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun removeBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("remove_bc_replica", provider, blockchain, node)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("remove_bc_replica", provider, blockchain, node)
     }
 
-    fun removeContainerReplicaAsync(clusterName: String, containerName: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
+    fun removeContainerReplicaAsync(clusterName: String, containerName: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val container = containerGtv(containerName)
-        return makeTransactionWithNop().apply {
-            addOperation("remove_bc_replica", provider, cluster, container)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("remove_bc_replica", provider, cluster, container)
     }
 
-    fun removeNodeAsync(key: String): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun removeNodeAsync(key: String): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
+        return makeTransactionWithNop().addOperation(
                     "remove_node",
                     provider, gtv(key.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
-    fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val otherProvider = providerGtv(pubKey)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_provider_is_system", meProvider, otherProvider, gtv(isSystem))
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_provider_is_system", meProvider, otherProvider, gtv(isSystem))
     }
 
-    fun proposeEnableProviderAsync(key: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeEnableProviderAsync(key: String): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val providerToBeEnabled = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_enable_provider", meProvider, providerToBeEnabled)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_enable_provider", meProvider, providerToBeEnabled)
     }
 
-    fun proposeDisableProviderAsync(key: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeDisableProviderAsync(key: String): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val providerToBeDisabled = providerGtv(key)
-        return makeTransactionWithNop().apply {
-            addOperation("propose_disable_provider", meProvider, providerToBeDisabled)
-            sign(buildSigMaker())
-        }
+        return makeTransactionWithNop().addOperation("propose_disable_provider", meProvider, providerToBeDisabled)
     }
 
     fun proposeConfigurationAsync(
@@ -1082,89 +1018,71 @@ open class CliExecution(val config: ClientConfig) {
             format: String?,
             force: Boolean
     )
-            : GTXTransactionBuilder {
+            : TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_configuration",
-                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.pubKey.hexStringToByteArray()), gtv(data), gtv(height), gtv(force)
+                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.signers.first().pubKey.key), gtv(data), gtv(height), gtv(force)
             )
-            sign(buildSigMaker())
-        }
     }
 
     /**
      * Instead of an admin node, configuration changes are made via propositions and voting. This is how a provider
      * can vote for a pending configuration.
      */
-    fun voteAsync(rowid: Long, yes: Boolean): GTXTransactionBuilder {
-        val provider = providerGtv(config.pubKey)
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun voteAsync(rowid: Long, yes: Boolean): TransactionBuilder {
+        val provider = providerGtv(config.signers.first().pubKey.hex())
+        return makeTransactionWithNop().addOperation(
                     "make_vote",
                     provider, gtv(rowid), gtv((yes))
             )
-            sign(buildSigMaker())
-        }
     }
 
     /**
      * Propose add Blockchain to an existing container
      */
-    fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String): GTXTransactionBuilder {
+    fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return proposeBc(data, container)
     }
 
-    fun proposeBlockchainGtvAsync(blockchainConfig: Gtv, container: String): GTXTransactionBuilder {
+    fun proposeBlockchainGtvAsync(blockchainConfig: Gtv, container: String): TransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
         return proposeBc(data, container)
     }
 
-    private fun proposeBc(data: ByteArray, containerName: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    private fun proposeBc(data: ByteArray, containerName: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "propose_blockchain",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(data), gtv(containerName)
+                    gtv(config.signers.first().pubKey.key), gtv(data), gtv(containerName)
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Who can pause a blockchain? Container deployer voter set
      * */
-    fun proposePauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun proposePauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "propose_pause_blockchain",
-                        gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray())
+                        gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Who can pause a blockchain? Container deployer voter set
      * */
-    fun proposeUnPauseBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun proposeUnPauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "propose_unpause_blockchain",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray())
+                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
     /** Who can delete a blockchain? Container deployer voter set
      * */
-    fun proposeDeleteBlockchainAsync(blockchainRID: String): GTXTransactionBuilder {
-        return makeTransactionWithNop().apply {
-            addOperation(
+    fun proposeDeleteBlockchainAsync(blockchainRID: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
                     "propose_delete_blockchain",
-                    gtv(config.pubKey.hexStringToByteArray()), gtv(blockchainRID.hexStringToByteArray())
+                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
             )
-            sign(buildSigMaker())
-        }
     }
 
     /**
@@ -1172,30 +1090,24 @@ open class CliExecution(val config: ClientConfig) {
      * add = true => Add this provider
      * add = false => Remove this provider from cluster
      */
-    fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val providerToAddOrRemove = providerGtv(provider)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_cluster_provider",
                     meProvider, cluster, providerToAddOrRemove, gtv(add)
             )
-            sign(buildSigMaker())
-        }
     }
 
-    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         val deployer = voterSetGtv(newDeployer)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_cluster_deployer",
                     meProvider, cluster, deployer
             )
-            sign(buildSigMaker())
-        }
     }
 
     /**
@@ -1203,29 +1115,23 @@ open class CliExecution(val config: ClientConfig) {
      * add = true => Add this provider as member to voter set
      * add = false => Remove this member from voter set
      */
-    fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val voterSetGtv = voterSetGtv(voterSet)
         val memberToAddOrRemove = providerGtv(member)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_voter_set_provider",
                     meProvider, voterSetGtv, memberToAddOrRemove, gtv(add)
             )
-            sign(buildSigMaker())
-        }
     }
 
-    fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): GTXTransactionBuilder {
-        val meProvider = providerGtv(config.pubKey)
+    fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
+        val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val vs = voterSetGtv(voterSetName)
         val newGovernorGtv = voterSetGtv(newGovernor)
-        return makeTransactionWithNop().apply {
-            addOperation(
+        return makeTransactionWithNop().addOperation(
                     "propose_voter_set_governor",
                     meProvider, vs, newGovernorGtv
             )
-            sign(buildSigMaker())
-        }
     }
 }

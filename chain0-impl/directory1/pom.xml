@@ -45,10 +45,11 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.2.3</version>
+                <version>0.3.0</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>
+                    <generateOperations>false</generateOperations>
                 </configuration>
                 <executions>
                     <execution>

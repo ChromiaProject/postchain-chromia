@@ -3,11 +3,9 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
-import net.postchain.client.core.DefaultSigner
-import net.postchain.client.core.GTXTransactionBuilder
-import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainClientFactory
-import net.postchain.common.BlockchainRid
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.*
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -15,11 +13,13 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.config.app.ClientConfig
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+fun PostchainClientConfig.pubkey() = signers.first().pubKey.hex()
+fun PostchainClientConfig.privkey() = signers.first().privKey
 
 abstract class ManagedModeTest : RellIntegrationTest() {
 
@@ -38,11 +38,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val adminKey = 10
     val providerKey = 11
     val providerKey2 = 12
-    val clientConfig = cliConf(adminKey)
-    val provConfig = cliConf(providerKey)
-    val prov2Config = cliConf(providerKey2)
-    open val provExecutor = cliExecution(provConfig)
-    open val prov2Executor = cliExecution(prov2Config)
+    val clientConfig by lazy { cliConf(adminKey) }
+    val provConfig by lazy { cliConf(providerKey) }
+    val prov2Config by lazy { cliConf(providerKey2) }
+    open val provExecutor by lazy { cliExecution(provConfig) }
+    open val prov2Executor by lazy { cliExecution(prov2Config) }
     lateinit var blockchain0ConfigGtv: Gtv
 
     // Voter sets SYSTEM and SYSTEM_P are created during initialization.
@@ -65,17 +65,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         }
     }
 
-    protected fun getPostchainClient(appConfig: ClientConfig): PostchainClient {
-        val resolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiURL)
-        val sigMaker = cryptoSystem.buildSigMaker(
-                appConfig.pubKey.hexStringToByteArray(),
-                appConfig.privKey.hexStringToByteArray()
-        )
-        val defaultSigner = DefaultSigner(sigMaker, appConfig.pubKey.hexStringToByteArray())
-        return PostchainClientFactory.getClient(resolver, BlockchainRid.buildFromHex(appConfig.brid), defaultSigner)
+    protected fun getPostchainClient(appConfig: PostchainClientConfig): PostchainClient {
+        return ConcretePostchainClientProvider().createClient(appConfig)
     }
 
-    abstract fun cliExecution(cliConfig: ClientConfig): CliExecution
+    abstract fun cliExecution(cliConfig: PostchainClientConfig): CliExecution
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
         val data = provExecutor.getProviderInfo(provPubkey).asDict()
@@ -92,20 +86,20 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun assertProviderDisabled(providerPublicKey: String) {
         val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
         assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
-        val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
+        val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(0, listReplicas.size)
 
-        val listSigners = provExecutor.listBlockchainSigners(clientConfig.brid)
+        val listSigners = provExecutor.listBlockchainSigners(clientConfig.blockchainRid.toHex())
         assertEquals(1, listSigners.size)
     }
 
-    protected fun assertNextConfiguration(config: ClientConfig, expectedHeight: Long): ByteArray {
+    protected fun assertNextConfiguration(config: PostchainClientConfig, expectedHeight: Long): ByteArray {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
         val height = client.querySync(
                 "nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to GtvFactory.gtv(expectedHeight - 1)
+                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to GtvFactory.gtv(expectedHeight - 1)
         )
         )
         assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
@@ -113,28 +107,27 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         // Get next configuration
         val bc = client.querySync(
                 "nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.brid), "height" to height
+                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to height
         )
         )
         assertk.assert(bc.asByteArray()).isNotNull()
         return bc.asByteArray()
     }
 
-
     /**
      * Add node; optionally also add it to a cluster
      */
-    fun addNode(configProv: ClientConfig, key: String, host: String, port: Long, clusterName: String) {
+    fun addNode(configProv: PostchainClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
         executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, clusterName))
         buildAndAwaitBlocks(1)
-        assertAddedNode(configProv.pubKey, key, host, port, clusterName)
+        assertAddedNode(configProv.pubkey(), key, host, port, clusterName)
     }
 
     /**
      * Add node0; optionally also add it to a cluster
      */
-    fun addNode0(configProv: ClientConfig, clusterName: String) {
+    fun addNode0(configProv: PostchainClientConfig, clusterName: String) {
         addNode(configProv, nodes[0].pubKey, node0Host, node0Port, clusterName)
     }
 
@@ -167,10 +160,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica for bc0
-        provExecutor.sendTxUnconfirmed(provExecutor.addBlockchainReplicaAsync(clientConfig.brid, node1Pubkey))
+        provExecutor.sendTxUnconfirmed(provExecutor.addBlockchainReplicaAsync(clientConfig.blockchainRid.toHex(), node1Pubkey))
         buildAndAwaitBlocks(5)
 
-        val replicas = provExecutor.listBlockchainReplicas(clientConfig.brid)
+        val replicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(1, replicas.size)
     }
 
@@ -187,12 +180,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         Thread.sleep(2000)
     }
 
-    protected fun assertBlockchainReplica(clientConfig: ClientConfig, nodePubkey: String, host: String, port: Long) {
+    protected fun assertBlockchainReplica(clientConfig: PostchainClientConfig, nodePubkey: String, host: String, port: Long) {
         val executor = cliExecution(clientConfig)
-        val listReplicas = executor.listBlockchainReplicas(clientConfig.brid)
+        val listReplicas = executor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(1, listReplicas.size)
         val bc = listReplicas.get(0).asArray()
-        assertEquals(clientConfig.brid, bc.get(0).asByteArray().toHex())
+        assertEquals(clientConfig.blockchainRid.toHex(), bc.get(0).asByteArray().toHex())
         assertEquals(nodePubkey, bc.get(1).asByteArray().toHex())
         assertEquals(host, bc.get(2).asString())
         assertEquals(port, bc.get(3).asInteger())
@@ -218,12 +211,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     protected fun assertListNodes() {
-        val providerNodes = provExecutor.listNodesByProvider(provConfig.pubKey)
+        val providerNodes = provExecutor.listNodesByProvider(provConfig.pubkey())
         assertEquals(2, providerNodes.size)
 
         val nodeList = provExecutor.listNodesWithProvider()
-        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubKey, true)
-        assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubKey, true)
+        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
+        assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubkey(), true)
 
         PrintUtils.printNodes(nodeList)
 
@@ -242,7 +235,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return strat
     }
 
-    fun doAndBuildBlocks(clientConfig: ClientConfig, f: GTXTransactionBuilder, nBlocks: Int = 1) {
+    fun doAndBuildBlocks(clientConfig: PostchainClientConfig, f: TransactionBuilder, nBlocks: Int = 1) {
         val executor = cliExecution(clientConfig)
         executor.sendTxUnconfirmed(f)
         buildAndAwaitBlocks(nBlocks)
