@@ -108,7 +108,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         doInTryBlock {
             val info = getPostchainClient().querySync(
                     "get_node_data",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()), "verbose" to gtv(false))
+                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).asDict().toMutableMap()
             val clusterInfo = getPostchainClient().querySync(
                     "list_clusters_of_node",

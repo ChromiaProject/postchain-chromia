@@ -46,3 +46,17 @@ query get_blockchains(include_inactive: boolean): list<struct<blockchain>> {
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
 }
+
+query get_blockchain_clusters(include_inactive: boolean): list<(brid:byte_array, container:name, cluster:name)> {
+	val bcs = get_blockchains(include_inactive);
+	val result = list<(brid:byte_array, container:name, cluster:name)>();
+	for (bc in bcs) {
+		val container = container_blockchain @ { .blockchain.rid == bc.rid }.container;
+		result.add((
+			brid = bc.rid,
+			container = container.name,
+			cluster = container.cluster.name
+		));
+	}
+	return result;
+}
