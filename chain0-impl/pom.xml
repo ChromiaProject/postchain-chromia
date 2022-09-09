@@ -12,8 +12,6 @@
 
     <modules>
         <module>directory1</module>
-        <module>enterprise0</module>
-        <module>chromia0</module>
     </modules>
 
     <groupId>net.postchain.chain0</groupId>
