@@ -70,13 +70,13 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
         }!!
     }
 
-    fun addNode(newNode: PostchainContainer, newNodeProvider: Gtv, cluster: Gtv, brid0: BlockchainRid) {
+    fun addNode(newNode: PostchainContainer, newNodeProvider: ByteArray, cluster: String, brid0: BlockchainRid) {
         val opName = "add_node"
         TxBuilder(brid0, newNode.sigMaker).build(opName,
-                newNodeProvider,
+                gtv(newNodeProvider),
                 gtv(newNode.pubKeyByteArray),
                 gtv(newNode.nodeHost), gtv(newNode.nodePort.toLong()),
-                cluster
+                gtv(cluster)
         ).also {
             postchainContainer.txBldr(it, opName)
         }

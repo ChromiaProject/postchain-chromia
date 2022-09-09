@@ -80,28 +80,10 @@ internal class Directory1DeploymentIT {
     @Test
     @Order(2)
     fun `Initialize network with provider1`() {
-        node1.txAsAdmin(brid, "init")
+        node1.txAsAdmin(brid, "init", gtv(node1.nodeHost), gtv(node1.nodePort.toLong()))
         node1.client(brid).querySync("get_all_providers").also {
             assert(it.asArray().size).isEqualTo(1)
         }
-    }
-
-    @Test
-    @Order(3)
-    fun `Add node1 to its own network`() {
-        consoleLogger.info("Adding node1 to its own network")
-
-        val provider = node1.chain0.getProvider()
-        val cluster = node1.chain0.getSystemCluster()
-
-        node1.txAsAdmin(
-                brid, "add_node",
-                provider,
-                gtv(node1.pubKeyByteArray),
-                gtv(node1.nodeHost), gtv(node1.nodePort.toLong()),
-                cluster
-        )
-        node1Db.awaitNewBlock()
         assert(
             node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
         ).isTrue()
@@ -112,21 +94,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(4)
-    fun `Make chain0 aware of itself`() {
-        node1.txAsAdmin(
-                brid,
-                "propose_blockchain",
-                gtv(initialProviderPubKey),
-                gtv(chain0Config.readBytes()),
-                gtv("system")
-        )
-        node1Db.awaitNewBlock()
-        assert(node1.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
-    }
-
-    @Test
-    @Order(5)
+    @Order(3)
     fun `Add new container`() {
         // Asserting that there is only one container (system) before test
         assert(node1.chain0.getAllContainers().asArray().size).isEqualTo(1)
@@ -146,7 +114,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(6)
+    @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
         val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L)
@@ -168,18 +136,17 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(7)
+    @Order(5)
     fun `Add node2 as signer to c0`() {
         consoleLogger.info("Adding node2 to the cluster")
         val provider1 = node1.chain0.getProvider()
         val cluster = node1.chain0.getSystemCluster()
 
         consoleLogger.info("Registering provider2")
-        val provider2 = Context(node1, node1Db, provider1)
-                .registerNodeAsProvider(brid, cluster, node2)
+        Context(node1, node1Db, provider1).registerNodeAsProvider(brid, cluster, node2)
 
         consoleLogger.info("Adding node2 to [node1] network")
-        node1.chain0.addNode(node2, provider2, cluster, brid)
+        node1.chain0.addNode(node2, node2.pubKeyByteArray, "system", brid)
 
         // Asserting that node2 is signers of chain0
         val c0 = node1.chain0.getBlockchainGtv(brid)
@@ -190,7 +157,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(8)
+    @Order(6)
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
         val provider1 = node1.chain0.getProvider()
@@ -198,11 +165,11 @@ internal class Directory1DeploymentIT {
         val cluster = node1.chain0.getSystemCluster()
 
         consoleLogger.info("Registering provider3")
-        val provider3 = Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
+        Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
                 .registerNodeAsProvider(brid, cluster, node3)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
-        node1.chain0.addNode(node3, provider3, cluster, brid)
+        node1.chain0.addNode(node3, node3.pubKeyByteArray, "system", brid)
 
         // Asserting that node2 is signers of chain0
         val c0 = node1.chain0.getBlockchainGtv(brid)
@@ -214,7 +181,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(9)
+    @Order(7)
     fun `Deploy new dapp`() {
         listOf(node1, node2, node3).forEach { node ->
             assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
@@ -266,7 +233,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(10)
+    @Order(8)
     fun `Subnode container has been launched`() {
         consoleLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
@@ -277,7 +244,7 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(11)
+    @Order(9)
     fun `Subnode container has resource limits`() {
         consoleLogger.info("Asserting container resource limits")
 
@@ -295,13 +262,13 @@ internal class Directory1DeploymentIT {
     }
 
     @Test
-    @Order(12)
+    @Order(10)
     fun `Transactions can be sent to dapp 100`() {
         assertThatDappProcessesTx(dapps[100]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(13)
+    @Order(11)
     fun `Transactions can be sent to dapp 101`() {
         assertThatDappProcessesTx(dapps[101]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
