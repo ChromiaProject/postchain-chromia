@@ -21,7 +21,7 @@ class CommandListBlockchains : CliktCommand(
     override fun run() {
         val client = ClientUtil.fromConfig(config)
         val blockchains = client.getBlockchainInfoList(includeInactive)
-        println("Blockchains")
+        println("Blockchains:")
         table {
             header("Name", "Rid", "Active", "Container", "Cluster")
 
