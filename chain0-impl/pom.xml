@@ -27,33 +27,6 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>rell-compile</id>
-                            <phase>compile</phase>
-                            <goals>
-                                <goal>java</goal>
-                            </goals>
-                            <configuration>
-                                <mainClass>net.postchain.rell.RellCLIKt</mainClass>
-                                <arguments>
-                                    <argument>--batch</argument>
-                                    <argument>--source-dir</argument>
-                                    <argument>${rell.directory}</argument>
-                                    <argument>${rell.main.module}</argument>
-                                </arguments>
-                                <classpathScope>test</classpathScope>
-                                <executableDependency>
-                                    <groupId>net.postchain.rell</groupId>
-                                    <artifactId>rell</artifactId>
-                                </executableDependency>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
                     <executions>

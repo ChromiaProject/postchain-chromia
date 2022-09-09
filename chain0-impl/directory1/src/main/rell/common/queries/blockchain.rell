@@ -36,13 +36,36 @@ query get_blockchain_last_height(blockchain_rid: byte_array) : integer {
 	}
 }
 
-query get_blockchains(include_inactive: boolean): list<byte_array> {
+query get_blockchains(include_inactive: boolean): list<struct<blockchain>> {
 	if (include_inactive) {
-		return blockchain @* {} .rid;
+		return blockchain @* {} ($.to_struct());
 	}
-    return blockchain @* { .active == true } .rid;
+    return blockchain @* { .active == true } ($.to_struct());
 }
 
 query get_added_blockchain_rid(tx_rid: byte_array) {
 	return blockchain_added @ { transaction @ { tx_rid } }.blockchain.rid;
+}
+
+function get_blockchains_with_container(include_inactive:boolean) {
+	if (include_inactive) {
+		return (blockchain, container_blockchain) @* {} (blockchain=blockchain, container_blockchain.container) ;
+	} else {
+		return (blockchain, container_blockchain) @* { blockchain.active == true} (blockchain=blockchain, container_blockchain.container);	
+	}
+}
+
+query get_blockchain_info_list(include_inactive: boolean): list<(rid:byte_array, name:text, active:boolean, container:name, cluster:name)> {
+	val bc_infos = get_blockchains_with_container(include_inactive);
+	val result = list<(rid:byte_array, name:text, active:boolean, container:name, cluster:name)>();
+	for (bc in bc_infos) {
+		result.add((
+			rid = bc.blockchain.rid,
+			name = bc.blockchain.name,
+			active = bc.blockchain.active,
+			container = bc.container.name,
+			cluster = bc.container.cluster.name
+		));
+	}
+	return result;
 }

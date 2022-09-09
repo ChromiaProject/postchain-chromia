@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nameOption
 
 class CommandProposeBlockchain: CliktCommand(
     name = "add",
@@ -17,7 +18,9 @@ class CommandProposeBlockchain: CliktCommand(
 
     private val container by option("-c", "--container", help = "Name of container to run in").required()
 
+    private val name by nameOption("Name of blockchain").required()
+
     override fun run() {
-            CliExecutionD1(config).proposeBlockchain(blockchainConfigFile, null, container)
+            CliExecutionD1(config).proposeBlockchain(blockchainConfigFile, null, container, name)
     }
 }
