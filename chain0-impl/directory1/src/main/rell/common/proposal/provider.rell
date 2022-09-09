@@ -2,6 +2,7 @@
 //Who can update voter set's provider list? Voter set's governor.
 operation propose_voter_set_provider(me: provider, voter_set, provider, add: boolean) {
 	//check that provider authority and that it is a vs governor
+	require(provider_state @ { provider }.tier > 0, "Cannot add a provider that has no voting right to a voter set.");
 	require_provider_auth_with_rl(me);
 	require_voter_set_governor(voter_set, me);
 	val governor = voter_set_governance @ { voter_set } .governor;
