@@ -11,16 +11,20 @@ import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 
 
-private const val ENV_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
+fun CliktCommand.configOption() = configOptionBase().required()
+fun CliktCommand.clientOption() = clientOptionBase().required()
 
-fun CliktCommand.nopClientOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = ENV_CONFIG)
-    .convert { PostchainClientConfig.fromProperties(it) }
-    .convert { ConcretePostchainClient(it) }
+fun CliktCommand.nopClientOption() = clientOptionBase()
     .convert { NopPostchainClient(it) }
     .required()
 
-fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = ENV_CONFIG)
-    .convert { PostchainClientConfig.fromProperties(it) }.required()
+private fun CliktCommand.clientOptionBase() = configOptionBase()
+    .convert { ConcretePostchainClient(it) }
+
+private fun CliktCommand.configOptionBase() =
+    option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")
+        .convert { PostchainClientConfig.fromProperties(it) }
+
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
 fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOptions(
@@ -40,5 +44,3 @@ fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
         require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
         require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
     }
-
-

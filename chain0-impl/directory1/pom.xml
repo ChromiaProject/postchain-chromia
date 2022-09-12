@@ -49,7 +49,6 @@
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>
-                    <generateOperations>false</generateOperations>
                 </configuration>
                 <executions>
                     <execution>

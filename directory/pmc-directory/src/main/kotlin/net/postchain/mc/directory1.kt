@@ -10,13 +10,13 @@ import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.node.nodeCommands
 import net.postchain.mc.cli.provider.providerCommands
 import net.postchain.mc.cli.votingupdates.voterSetCommands
+import net.postchain.mc.network.networkCommands
 
 fun main(args: Array<String>) = ManagementConsole()
     .subcommands(
         CommandKeygen(),
 
-        // Init
-        CommandInit(),
+        networkCommands(),
 
         // Voting
         proposalCommands(),

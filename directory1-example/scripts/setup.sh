@@ -9,5 +9,5 @@ tar xf "$C0_SOURCES"
 tar xf "$PMC"
 bash "$POSTCHAIN_DIR"/multigen.sh --source-dir "$D/../directory1/rell" --output-dir "$D/../out" config/run.xml
 
-echo "Setup done, add the following env to complete setup:"
-echo 'export POSTCHAIN_CLIENT_BLOCKCHAIN_RID=$(cat "out/blockchains/0/brid.txt")'
+BRID=$(cat "out/blockchains/0/brid.txt")
+echo "brid=$BRID" >> "$D/../config/prov.cfg"

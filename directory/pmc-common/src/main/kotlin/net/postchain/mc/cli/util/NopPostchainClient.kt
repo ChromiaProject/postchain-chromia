@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.util
 
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.crypto.KeyPair
 
 /**
