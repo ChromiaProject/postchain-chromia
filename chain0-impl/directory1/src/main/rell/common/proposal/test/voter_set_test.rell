@@ -1,0 +1,23 @@
+@test module;
+
+import ^^.*;
+import ^^^.test.ops.*;
+
+function setup() {
+	rell.test.tx().op(initialize_test_module(rell.test.pubkeys.alice)).run();
+	
+}
+
+function test_add_low_tier_provider() {
+	setup();
+	val p1 = provider @ { rell.test.pubkeys.alice };
+	
+	// Create a provider with tier 0, a dapp provider without voting right.
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 0)).run();
+	val dapp_provider = provider @ { rell.test.pubkeys.bob };
+	
+	// Should not be possible to add this provider to a voting set.
+	rell.test.tx()
+		.op(propose_voter_set_provider(p1, voter_set @ { "SYSTEM_P" }, dapp_provider, true))
+		.run_must_fail();
+}
