@@ -20,12 +20,11 @@ class CliExecutionD1(config: PostchainClientConfig) : CliExecution(config) {
     fun initAsync(host: String, port: Long) : TransactionBuilder {
         return makeTransactionWithNop(). addOperation("init", gtv(host), gtv(port))
     }
+
     fun init(host: String, port: Long) {
         sendTxSync(initAsync(host, port), "Initial provider added and enabled",
                 "Cannot add and enable initial provider")
     }
-
-
 
     fun updateProvider(key: String, name: String) {
         sendTxSync(updateProviderAsync(key, name), "Provider data has been updated",

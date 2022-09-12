@@ -2,7 +2,7 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.*
+import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
@@ -16,7 +16,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
-    protected fun getPostchainClient() = ClientUtil.fromConfig(config)
+    protected open fun getPostchainClient() = ClientUtil.fromConfig(config)
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
         val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
@@ -513,11 +513,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         return data
     }
 
-    fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
+    open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.postSync()
     }
 
-    fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
+    open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
         doInTryBlock(false) {
             val txResult = tx.postSyncAwaitConfirmation()
             when (txResult.status) {
@@ -628,7 +628,8 @@ open class CliExecution(val config: PostchainClientConfig) {
         sendTxSync(
                 removeNodeAsync(key),
                 "Node removed",
-                "Cannot remove node")
+                "Cannot remove node"
+        )
     }
 
     fun proposeConfiguration(
@@ -648,8 +649,14 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun vote(rowid: Long, yes: Boolean) {
         sendTxSync(
                 voteAsync(rowid, yes),
+                "Vote added successfully", "Cannot add vote"
+        )
+    }
 
-                "vote added successfully", "Cannot add vote"
+    fun revokeProposal(rowid: Long) {
+        sendTxSync(
+                revokeProposalAsync(rowid),
+                "Proposal revoked successfully", "Cannot revoke proposal"
         )
     }
 
@@ -824,9 +831,9 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
         val me = providerGtv(config.signers.first().pubKey.hex())
         return makeTransactionWithNop().addOperation(
-                    "register_provider",
-                    me, gtv(key.hexStringToByteArray()), GtvInteger(tier)
-            )
+                "register_provider",
+                me, gtv(key.hexStringToByteArray()), GtvInteger(tier)
+        )
     }
 
     fun createVoterSetAsync(
@@ -849,15 +856,14 @@ open class CliExecution(val config: PostchainClientConfig) {
             governor = voterSetGtv(governorName)
         }
         return makeTransactionWithNop().addOperation(
-                    "create_voter_set",
-                    meProvider, GtvString(name), GtvInteger(threshold), providerList, governor
-            )
+                "create_voter_set",
+                meProvider, GtvString(name), GtvInteger(threshold), providerList, governor
+        )
     }
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().
-            addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
+        return makeTransactionWithNop().addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
     }
 
     /** Add existing provider to existing cluster
@@ -867,9 +873,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val provider = providerGtv(key)
         return makeTransactionWithNop().addOperation(
-                    "add_provider_to_cluster",
-                    me, provider, cluster
-            )
+                "add_provider_to_cluster",
+                me, provider, cluster
+        )
     }
 
     /** Add existing node to existing cluster
@@ -879,10 +885,10 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val node = nodeGtv(key)
         return makeTransactionWithNop().addOperation(
-                    "add_node_to_cluster",
-                    provider,
-                    gtv(key.hexStringToByteArray()), node, cluster
-            )
+                "add_node_to_cluster",
+                provider,
+                gtv(key.hexStringToByteArray()), node, cluster
+        )
     }
 
     /** Propose a new container resource limits.
@@ -894,13 +900,13 @@ open class CliExecution(val config: PostchainClientConfig) {
         val provider = providerGtv(config.signers.first().pubKey.hex())
         val container = containerGtv(containerName)
         return makeTransactionWithNop().addOperation(
-                    "propose_container_limits",
-                    provider,
-                    container,
-                    gtv(currentLimits["ram"]!!),
-                    gtv(currentLimits["cpu"]!!),
-                    gtv(currentLimits["storage"]!!)
-            )
+                "propose_container_limits",
+                provider,
+                container,
+                gtv(currentLimits["ram"]!!),
+                gtv(currentLimits["cpu"]!!),
+                gtv(currentLimits["storage"]!!)
+        )
     }
 
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
@@ -911,10 +917,10 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val deployer = voterSetGtv(deployerName)
         return makeTransactionWithNop().addOperation(
-                    "propose_container",
-                    provider,
-                    cluster, gtv(containerName), deployer
-            )
+                "propose_container",
+                provider,
+                cluster, gtv(containerName), deployer
+        )
     }
 
     /** Propose new cluster resource limits.
@@ -926,13 +932,13 @@ open class CliExecution(val config: PostchainClientConfig) {
         val provider = providerGtv(config.signers.first().pubKey.hex())
         val cluster = clusterGtv(clusterName)
         return makeTransactionWithNop().addOperation(
-                    "propose_cluster_limits",
-                    provider,
-                    cluster,
-                    gtv(currentLimits["ram"]!!),
-                    gtv(currentLimits["cpu"]!!),
-                    gtv(currentLimits["storage"]!!)
-            )
+                "propose_cluster_limits",
+                provider,
+                cluster,
+                gtv(currentLimits["ram"]!!),
+                gtv(currentLimits["cpu"]!!),
+                gtv(currentLimits["storage"]!!)
+        )
     }
 
     fun transferActionPointsAsync(to: String, amount: Long): TransactionBuilder {
@@ -988,9 +994,9 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun removeNodeAsync(key: String): TransactionBuilder {
         val provider = providerGtv(config.signers.first().pubKey.hex())
         return makeTransactionWithNop().addOperation(
-                    "remove_node",
-                    provider, gtv(key.hexStringToByteArray())
-            )
+                "remove_node",
+                provider, gtv(key.hexStringToByteArray())
+        )
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
@@ -1005,6 +1011,12 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().addOperation("propose_enable_provider", meProvider, providerToBeEnabled)
     }
 
+    fun revokeProposalAsync(rowid: Long): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
+                "revoke_proposal", gtv(config.signers.first().pubKey.hex()), gtv(rowid)
+        )
+    }
+
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
         val meProvider = providerGtv(config.signers.first().pubKey.hex())
         val providerToBeDisabled = providerGtv(key)
@@ -1017,13 +1029,12 @@ open class CliExecution(val config: PostchainClientConfig) {
             height: Long,
             format: String?,
             force: Boolean
-    )
-            : TransactionBuilder {
+    ): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return makeTransactionWithNop().addOperation(
-                    "propose_configuration",
-                    gtv(blockchainRID.hexStringToByteArray()), gtv(config.signers.first().pubKey.key), gtv(data), gtv(height), gtv(force)
-            )
+                "propose_configuration",
+                gtv(blockchainRID.hexStringToByteArray()), gtv(config.signers.first().pubKey.key), gtv(data), gtv(height), gtv(force)
+        )
     }
 
     /**
@@ -1033,9 +1044,9 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun voteAsync(rowid: Long, yes: Boolean): TransactionBuilder {
         val provider = providerGtv(config.signers.first().pubKey.hex())
         return makeTransactionWithNop().addOperation(
-                    "make_vote",
-                    provider, gtv(rowid), gtv((yes))
-            )
+                "make_vote",
+                provider, gtv(rowid), gtv(yes)
+        )
     }
 
     /**
@@ -1053,36 +1064,36 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     private fun proposeBc(data: ByteArray, containerName: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                    "propose_blockchain",
-                    gtv(config.signers.first().pubKey.key), gtv(data), gtv(containerName)
-            )
+                "propose_blockchain",
+                gtv(config.signers.first().pubKey.key), gtv(data), gtv(containerName)
+        )
     }
 
     /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposePauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                    "propose_pause_blockchain",
-                        gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
-            )
+                "propose_pause_blockchain",
+                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+        )
     }
 
     /** Who can pause a blockchain? Container deployer voter set
      * */
     fun proposeUnPauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                    "propose_unpause_blockchain",
-                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
-            )
+                "propose_unpause_blockchain",
+                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+        )
     }
 
     /** Who can delete a blockchain? Container deployer voter set
      * */
     fun proposeDeleteBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                    "propose_delete_blockchain",
-                    gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
-            )
+                "propose_delete_blockchain",
+                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+        )
     }
 
     /**
@@ -1095,9 +1106,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val providerToAddOrRemove = providerGtv(provider)
         return makeTransactionWithNop().addOperation(
-                    "propose_cluster_provider",
-                    meProvider, cluster, providerToAddOrRemove, gtv(add)
-            )
+                "propose_cluster_provider",
+                meProvider, cluster, providerToAddOrRemove, gtv(add)
+        )
     }
 
     fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
@@ -1105,9 +1116,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val deployer = voterSetGtv(newDeployer)
         return makeTransactionWithNop().addOperation(
-                    "propose_cluster_deployer",
-                    meProvider, cluster, deployer
-            )
+                "propose_cluster_deployer",
+                meProvider, cluster, deployer
+        )
     }
 
     /**
@@ -1120,9 +1131,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         val voterSetGtv = voterSetGtv(voterSet)
         val memberToAddOrRemove = providerGtv(member)
         return makeTransactionWithNop().addOperation(
-                    "propose_voter_set_provider",
-                    meProvider, voterSetGtv, memberToAddOrRemove, gtv(add)
-            )
+                "propose_voter_set_provider",
+                meProvider, voterSetGtv, memberToAddOrRemove, gtv(add)
+        )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
@@ -1130,8 +1141,8 @@ open class CliExecution(val config: PostchainClientConfig) {
         val vs = voterSetGtv(voterSetName)
         val newGovernorGtv = voterSetGtv(newGovernor)
         return makeTransactionWithNop().addOperation(
-                    "propose_voter_set_governor",
-                    meProvider, vs, newGovernorGtv
-            )
+                "propose_voter_set_governor",
+                meProvider, vs, newGovernorGtv
+        )
     }
 }

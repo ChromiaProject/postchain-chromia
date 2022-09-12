@@ -6,8 +6,8 @@ query get_proposals_since(since: rowid) {
 }
 
 query get_proposal (rowid) {
-  return proposal @ { rowid }
-  (
+    return proposal @ { rowid }
+    (
         proposed_by = .proposed_by.pubkey,
         timestamp = .timestamp,
         proposal_type = .proposal_type,
