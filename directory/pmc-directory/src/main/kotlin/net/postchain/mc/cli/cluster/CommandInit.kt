@@ -21,6 +21,5 @@ class CommandInit : CliktCommand(
 
     override fun run() {
         CliExecutionD1(config).init(host, port.toLong())
-        println("You now have an initial provider that can vote for updates.")
     }
 }
