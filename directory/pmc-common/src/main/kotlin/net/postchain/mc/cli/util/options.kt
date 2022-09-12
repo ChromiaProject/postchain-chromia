@@ -6,12 +6,20 @@ import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
-import net.postchain.mc.config.app.BaseClientConfig
-import net.postchain.mc.config.app.BaseClientConfig.Companion.fromPropertiesFile
 
-fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")
+
+private const val ENV_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
+
+fun CliktCommand.nopClientOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = ENV_CONFIG)
+    .convert { PostchainClientConfig.fromProperties(it) }
+    .convert { ConcretePostchainClient(it) }
+    .convert { NopPostchainClient(it) }
+    .required()
+
+fun CliktCommand.configOption() = option("-cfg", "--config", help = "Configuration file for CLI", envvar = ENV_CONFIG)
     .convert { PostchainClientConfig.fromProperties(it) }.required()
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)
 
