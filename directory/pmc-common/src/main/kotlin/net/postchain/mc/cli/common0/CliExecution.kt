@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
@@ -344,17 +345,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
-        val listBlockChain = arrayListOf<ByteArray>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "get_blockchains",
-                    gtv("include_inactive" to gtv(includeInactive))
-            )
-
-                    .asArray()
-            listBlockChain.addAll(list.map { it.asByteArray() })
-        }
-        return listBlockChain
+        return getPostchainClient().getBlockchains(includeInactive).map { it.rid }
     }
 
     fun listBlockchainSigners(blockchainRID: String): List<Gtv> {
@@ -732,9 +723,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String) {
+    fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String, name: String) {
         sendTxSync(
-                proposeBlockchainAsync(File(blockchainConfigFile), format, container),
+                proposeBlockchainAsync(File(blockchainConfigFile), format, container, name),
                 "Blockchain has been proposed",
                 "Cannot add bc proposal"
         )
@@ -1052,20 +1043,20 @@ open class CliExecution(val config: PostchainClientConfig) {
     /**
      * Propose add Blockchain to an existing container
      */
-    fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String): TransactionBuilder {
+    fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(data, container)
+        return proposeBc(data, container, name)
     }
 
-    fun proposeBlockchainGtvAsync(blockchainConfig: Gtv, container: String): TransactionBuilder {
+    fun proposeBlockchainGtvAsync(blockchainConfig: Gtv, container: String, name: String): TransactionBuilder {
         val data = GtvEncoder.encodeGtv(blockchainConfig)
-        return proposeBc(data, container)
+        return proposeBc(data, container, name)
     }
 
-    private fun proposeBc(data: ByteArray, containerName: String): TransactionBuilder {
+    private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
                 "propose_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(data), gtv(containerName)
+                gtv(config.signers.first().pubKey.key), gtv(data), gtv(name), gtv(containerName)
         )
     }
 

@@ -41,6 +41,6 @@ query get_nodes_with_provider() {
         last_updated = .last_updated,
         name = .name,
         provider_active = provider_state.active,
-        provider = node.provider.pubkey
+        @sort provider = node.provider.pubkey
     );
 }

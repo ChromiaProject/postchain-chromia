@@ -1,5 +1,5 @@
 
-entity blockchain { key rid: byte_array; mutable active: boolean;}
+entity blockchain { key rid: byte_array; mutable name: text; mutable active: boolean;}
 
 entity blockchain_added { key blockchain; key transaction; }
 

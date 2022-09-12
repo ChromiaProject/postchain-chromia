@@ -5,6 +5,15 @@ query list_clusters () : list<text> {
 	return cluster@* {} .name;
 }
 
+query get_clusters() {
+	return cluster @* {} (
+		name = .name,
+		governor = .governance.name,
+		container_deployer = .deployer.name,
+		operational = .operational
+	);
+}
+
 query get_cluster_data(name) {
 	return cluster @ { name } (
 		name = .name,

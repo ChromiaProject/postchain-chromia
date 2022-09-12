@@ -5,7 +5,7 @@
  * NB: only the deployer voter set of the container can do this.
  */
 //Who can propose a new blockchain? The container deployer voter set
-operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, container_name:text) {
+operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name:text, container_name:text) {
 	val me = provider @ { my_pubkey };
 	val container = container @ { container_name };
 	require_provider_auth_with_rl(me);
@@ -13,7 +13,7 @@ operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, contain
 	//If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.deployer);
-		create pending_blockchain(prop, config_data, container);
+		create pending_blockchain(prop, bc_name, config_data, container);
 		internal_vote(me, prop, true);
 	}
 }

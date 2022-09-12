@@ -150,7 +150,7 @@ function apply_bc(proposal) {
 	val bc = pending_blockchain @ {proposal};
 	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
 	val blockchain_rid = config.hash();
-	val blockchain = create blockchain (blockchain_rid, true);
+	val blockchain = create blockchain (blockchain_rid, bc.name, true);
 	print("Added blockchain", blockchain_rid);
 	create blockchain_configuration (blockchain, 0, bc.data);
 	val nodes = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
@@ -195,6 +195,7 @@ function apply_delete_blockchain(proposal) {
 	delete blockchain_added @* { bc };
 	delete blockchain_replica_node @* { bc };
 	delete blockchain_dependency @* { .me == bc };
+	delete pending_delete_blockchain @ { proposal };
 	delete blockchain @ { bc.rid };
 }
 

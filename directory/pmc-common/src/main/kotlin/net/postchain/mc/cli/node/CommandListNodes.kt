@@ -3,7 +3,12 @@ package net.postchain.mc.cli.node
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import de.m3y.kformat.Table
+import de.m3y.kformat.table
+import net.postchain.chain0.common.queries.getNodesWithProvider
+import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
+import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
@@ -15,13 +20,15 @@ class CommandListNodes : CliktCommand(
 ) {
     private val config by configOption()
 
-    private val showProvider by option("-p", "--provider", help = "Show provider information").flag()
-
-    private val includeInactive by includeInactiveOption()
-
     override fun run() {
-        val cliExecution = CliExecution(config)
-        val nodes: List<Gtv> = cliExecution.listNodesWithProvider()
-        PrintUtils.printNodes(nodes, includeInactive, showProvider)
+        println("Nodes:")
+        table {
+            header("Pubkey", "Host", "Port", "Active", "Provided by")
+
+            ClientUtil.fromConfig(config).getNodesWithProvider().forEach {
+                row(it.pubkey.toHex(), it.host, it.port, it.nodeActive.toString(), it.provider)
+            }
+            hints {borderStyle = Table.BorderStyle.SINGLE_LINE }
+        }
     }
 }

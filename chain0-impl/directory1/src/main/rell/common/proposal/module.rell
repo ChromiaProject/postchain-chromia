@@ -107,6 +107,7 @@ entity pending_unpause_blockchain {
 // Proposed bc:s are put here while waiting for enough positive votes.
 entity pending_blockchain {
 	key proposal;
+	name;
 	data: byte_array;
 	container;
 }
@@ -149,7 +150,7 @@ function delete_proposal(prop: proposal) {
         provider_is_system  -> delete pending_provider_is_system @ { prop };
         bc_pause		    -> delete pending_pause_blockchain @ { prop };
         bc_unpause		    -> delete pending_unpause_blockchain @ { prop };
-        bc_delete		    -> delete pending_delete_blockchain @ { prop };
+        bc_delete		    -> delete pending_delete_blockchain @? { prop };
     }
     delete vote @* { .proposal == prop };
     delete proposal @ { .rowid == prop.rowid };
