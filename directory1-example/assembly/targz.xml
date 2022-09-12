@@ -37,7 +37,7 @@
         </fileSet>
         <fileSet>
             <directory>./scripts</directory>
-            <outputDirectory>./</outputDirectory>
+            <outputDirectory>./scripts</outputDirectory>
             <includes>
                 <include>*.sh</include>
             </includes>
@@ -49,22 +49,9 @@
             <outputDirectory>./config</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
+
         <fileSet>
-            <directory>../config</directory>
-            <outputDirectory>./config</outputDirectory>
-            <filtered>true</filtered>
-        </fileSet>
-        <fileSet>
-            <directory>../scripts</directory>
-            <outputDirectory>./</outputDirectory>
-            <includes>
-                <include>*.sh</include>
-            </includes>
-            <fileMode>0755</fileMode>
-            <filtered>true</filtered>
-        </fileSet>
-        <fileSet>
-            <directory>../app</directory>
+            <directory>app</directory>
             <outputDirectory>./app</outputDirectory>
             <includes>
                 <include>**/*.xml</include>
@@ -73,12 +60,8 @@
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
-            <directory>../app</directory>
-            <outputDirectory>./app</outputDirectory>
-            <includes>
-                <include>*.sh</include>
-            </includes>
-            <fileMode>0755</fileMode>
+            <directory>etc</directory>
+            <outputDirectory>.</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
     </fileSets>
