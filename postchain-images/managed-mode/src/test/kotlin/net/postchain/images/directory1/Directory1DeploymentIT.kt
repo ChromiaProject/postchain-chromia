@@ -5,6 +5,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
+import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
@@ -211,8 +212,9 @@ internal class Directory1DeploymentIT {
                 dapps[chain.iid] = blockchainRid!!
                 consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
-                val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
-                node3.tx(brid, "propose_blockchain", gtv(node3.pubKeyByteArray), configGtv, gtv(containerName))
+                node3.client(brid).transactionBuilder()
+                    .proposeBlockchainOperation(node3.pubKeyByteArray, GtvEncoder.encodeGtv(config.gtvConfig), dappName, containerName)
+                    .postSyncAwaitConfirmation()
 
                 // Voting
                 val p1 = node1.approveProposal(brid, provider1)
