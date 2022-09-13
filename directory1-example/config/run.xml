@@ -9,7 +9,7 @@
                 <app module="directory1">
                     <args module="directory1">
                         <arg key="initial_provider">
-                            <bytea>03A692CDB2FD63037D883804A2028C5FBFD5E8A7E20E08BC387071220F8AD06710</bytea>
+                            <bytea>03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05</bytea>
                         </arg>
                     </args>
                 </app>

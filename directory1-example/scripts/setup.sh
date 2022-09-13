@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu
+
+D=$(dirname "${BASH_SOURCE[0]}")
+C0_SOURCES=$(find "$D"/.. -maxdepth 1 -regex '.*directory1-[0-9]*.[0-9]*.[0-9]*.*-sources.tar.gz')
+PMC=$(find "$D"/.. -maxdepth 1 -regex '.*pmc-directory-[0-9]*.[0-9]*.[0-9]*.*-dist.tar.gz')
+tar xf "$C0_SOURCES"
+tar xf "$PMC"
+bash "$POSTCHAIN_DIR"/multigen.sh --source-dir "$D/../directory1/rell" --output-dir "$D/../out" config/run.xml
+
+echo "Setup done, add the following env to complete setup:"
+echo 'export POSTCHAIN_CLIENT_BLOCKCHAIN_RID=$(cat "out/blockchains/0/brid.txt")'

@@ -12,9 +12,9 @@
     <url>http://postchain.net</url>
 
     <modules>
-        <module>directory</module>
-        <module>managed-mode-examples</module>
         <module>chain0-impl</module>
+        <module>directory</module>
+        <module>directory1-example</module>
     </modules>
     <packaging>pom</packaging>
 
