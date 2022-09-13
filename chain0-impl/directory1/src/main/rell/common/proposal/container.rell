@@ -1,7 +1,5 @@
 
-
-
-//Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
+// Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
 operation propose_container(me: provider, cluster, name, deployer: voter_set) {
 	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
@@ -11,7 +9,7 @@ operation propose_container(me: provider, cluster, name, deployer: voter_set) {
 	internal_vote(me, prop, true);
 }
 
-//Who can update container limits? Cluster deployers' voter set.
+// Who can update container limits? Cluster deployers' voter set.
 operation propose_container_limits(me: provider, container, ram: integer, cpu: integer, storage: integer) {
 	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);

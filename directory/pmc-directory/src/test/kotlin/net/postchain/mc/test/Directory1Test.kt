@@ -500,7 +500,6 @@ class Directory1Test : ManagedModeTest() {
 
     @Test
     fun testDeleteBlockchain() {
-
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))

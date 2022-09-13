@@ -21,28 +21,10 @@ function apply_voting_result(prop: proposal) {
 			bc_unpause		  -> apply_unpause_blockchain(prop);
 			bc_delete		  -> apply_delete_blockchain(prop);
 	    }
-		delete vote @* { .proposal == prop };
-		delete proposal @ { .rowid == prop.rowid };
+		delete_proposal(prop);
 	} else if (is_proposal_rejected(prop, needed)) {
 		print("proposal rejected:", propStr);
-		when (prop.proposal_type) {
-	 		conf              -> delete pending_conf @ { prop };
-	 		bc                -> delete pending_blockchain @ { prop };
-			container         -> delete pending_container @ { prop };
-			container_limits  -> delete pending_container_limits @ { prop };
-			cluster_limits    -> delete pending_cluster_limits @ { prop };
-			cluster_provider  -> delete pending_cluster_provider @ { prop };
-			cluster_deployer  -> delete pending_cluster_deployer @ { prop };
-			voter_set_provider-> delete pending_voter_set_provider @ { prop };
-			voter_set_governor-> delete pending_voter_set_governor @ { prop };
-			provider_state    -> delete pending_provider_state @ { prop };
-			provider_is_system-> delete pending_provider_is_system @ { prop };
-			bc_pause		  -> delete pending_pause_blockchain @ { prop };
-			bc_unpause		  -> delete pending_unpause_blockchain @ { prop };
-			bc_delete		  -> delete pending_delete_blockchain @ { prop };
-	    }
-		delete vote @* { .proposal == prop };
-		delete proposal @ { .rowid == prop.rowid };
+		delete_proposal(prop);
 	} else {
 		print("proposal is still under discussion:", propStr);
 	}
@@ -58,7 +40,6 @@ function apply_container(proposal) {
 		pps.cluster,
 		pps.deployer
 	);
-	delete pending_container @ { proposal };
 }
 
 function apply_container_limits(proposal) {
@@ -66,7 +47,6 @@ function apply_container_limits(proposal) {
 	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
 	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
 	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
-	delete pending_container_limits @ { proposal };
 }
 
 function apply_cluster_limits(proposal) {
@@ -74,19 +54,16 @@ function apply_cluster_limits(proposal) {
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
-	delete pending_cluster_limits @ { proposal };
 }
 
 function apply_cluster_deployer(proposal) {
 	val pps = pending_cluster_deployer @ {proposal};
 	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
-	delete pending_cluster_deployer @ { proposal };
 }
 
 function apply_voter_set_governor(proposal) {
 	val pps = pending_voter_set_governor @ { proposal };
 	update voter_set_governance @ {.voter_set == pps.voter_set} (.governor = pps.governor);
-	delete pending_voter_set_governor @ { proposal };
 }
 
 function apply_cluster_provider(proposal) {
@@ -96,7 +73,6 @@ function apply_cluster_provider(proposal) {
 	} else {
 		delete cluster_provider @ {pps.cluster, pps.provider};
 	}
-	delete pending_cluster_provider @ { proposal };
 }
 
 function apply_voter_set_provider(proposal) {
@@ -106,7 +82,6 @@ function apply_voter_set_provider(proposal) {
 	} else {
 		delete voter_set_member @ {pps.voter_set, pps.provider};
 	}
-	delete pending_voter_set_provider @ { proposal };
 }
 
 
@@ -121,14 +96,12 @@ function apply_provider_is_system(proposal) {
 	} else {
 		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
 	}
-	delete pending_provider_is_system @ { proposal };
 }
 
 //For both enabling and disabling of providers:
 function apply_provider_state(proposal) {
 	val pps = pending_provider_state @ {proposal};
 	update_provider_state(pps.provider, pps.active);
-	delete pending_provider_state @ { proposal };
 }
 
 function update_provider_state(provider, active: boolean) {
@@ -170,7 +143,6 @@ function apply_conf(proposal) {
 	} else {
 		update blockchain_configuration @ { pc.blockchain, pc.height }(.data = pc.data);
 	}
-	delete pending_conf @* { proposal };
 }
 
 // Initial signers of new bc are the ones in cluster_node table.
@@ -188,7 +160,6 @@ function apply_bc(proposal) {
 	create blockchain_added (blockchain, op_context.transaction);
 	create container_blockchain(bc.container, blockchain);
 	add_dependencies(bc.data, blockchain_rid, 0);
-	delete pending_blockchain @* { proposal };
 }
 
 // Remove block production by inactivating bc, Keep replicas.
@@ -199,7 +170,6 @@ function apply_pause_blockchain(proposal) {
 	for (n in cluster_node @* {.cluster == cl} .node) {
 		create blockchain_replica_node(bc.blockchain, n);	
 	} */
-	delete pending_pause_blockchain @ { proposal };
 }
 
 /* restart block production (activate bc), block builders will be the ones in cluster_node.
@@ -214,7 +184,6 @@ function apply_unpause_blockchain(proposal) {
 	for (n in cluster_node @* {.cluster == cl} .node) {
 		delete blockchain_replica_node @? {bc.blockchain, n};	
 	}
-	delete pending_unpause_blockchain @ { proposal };
 }
 
 // Delete everything about this bc
