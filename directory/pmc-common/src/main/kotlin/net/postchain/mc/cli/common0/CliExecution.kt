@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.chain0.common.createClusterOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
@@ -11,6 +12,8 @@ import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.pubkey
+import org.spongycastle.asn1.x500.style.RFC4519Style.initials
 import java.io.File
 
 open class CliExecution(val config: PostchainClientConfig) {
@@ -559,14 +562,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun addCluster(name: String, providers: String, governorName: String, deployerName: String) {
-        sendTxSync(
-                createClusterAsync(name, providers, governorName, deployerName),
-                "Cluster $name added",
-                "Adding cluster $name failed"
-        )
-    }
-
     fun transferActionPoints(to: String, amount: Long) {
         sendTxSync(
                 transferActionPointsAsync(to, amount),
@@ -940,18 +935,11 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun createClusterAsync(
             newClusterName: String,
-            providerKeys: String,
+            providerKeys: String?,
             governorSet: String,
             deployerSet: String
     ): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val initials = when {
-            providerKeys.isEmpty() -> GtvNull
-            else -> providersGtv(providerKeys)
-        }
-        val governor = voterSetGtv(governorSet)
-        val deployer = voterSetGtv(deployerSet)
-        return makeTransactionWithNop().addOperation("create_cluster", provider, GtvString(newClusterName), initials, governor, deployer)
+        return makeTransactionWithNop().createClusterOperation(config.pubkey().key, newClusterName, providerKeys?.split(",")?.map { it.hexStringToByteArray() }, governorSet, deployerSet)
     }
 
     fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
