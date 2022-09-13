@@ -131,7 +131,7 @@ operation revoke_proposal(my_pubkey: pubkey, proposal_rowid: rowid) {
     require_provider_auth_with_rl(me);
     val prop = proposal @? { proposal_rowid };
     require(exists(prop), "Proposal not found: %d".format(proposal_rowid));
-    require(prop!!.proposed_by == me, "It is allowed to provider to delete only own proposals");
+    require(prop!!.proposed_by == me, "It is only allowed to revoke own proposals");
     delete_proposal(prop);
 }
 
