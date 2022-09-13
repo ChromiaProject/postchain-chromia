@@ -1,5 +1,12 @@
 import ^.proposal.*;
 
+// NB: check authority before calling this function
+function internal_vote(provider, prop: proposal, vote: boolean) {
+	create vote(prop, provider, vote);
+	print("vote added with value:", if (vote) "Yes" else "False");
+	apply_voting_result(prop);
+}
+
 function apply_voting_result(prop: proposal) {
     val propStr = proposalStr(prop);
 	val voting_result = compute_voting_result(prop);
