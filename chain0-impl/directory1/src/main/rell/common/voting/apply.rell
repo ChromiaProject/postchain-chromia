@@ -2,31 +2,33 @@ import ^.proposal.*;
 
 function apply_voting_result(prop: proposal) {
     val propStr = proposalStr(prop);
-    val needed = needed_votes(prop.voter_set);
-	if (is_consensus_achieved(prop, needed)) {
-		print("proposal approved:", propStr);
-		when (prop.proposal_type) {
-	 		conf              -> apply_conf(prop);
-	 		bc                -> apply_bc(prop);
-			container         -> apply_container(prop);
-			container_limits  -> apply_container_limits(prop);
-			cluster_limits    -> apply_cluster_limits(prop);
-			cluster_provider  -> apply_cluster_provider(prop);
-			cluster_deployer  -> apply_cluster_deployer(prop);
-			voter_set_provider-> apply_voter_set_provider(prop);
-			voter_set_governor-> apply_voter_set_governor(prop);
-			provider_state    -> apply_provider_state(prop);
-			provider_is_system-> apply_provider_is_system(prop);
-			bc_pause		  -> apply_pause_blockchain(prop);
-			bc_unpause		  -> apply_unpause_blockchain(prop);
-			bc_delete		  -> apply_delete_blockchain(prop);
-	    }
-		delete_proposal(prop);
-	} else if (is_proposal_rejected(prop, needed)) {
-		print("proposal rejected:", propStr);
-		delete_proposal(prop);
-	} else {
-		print("proposal is still under discussion:", propStr);
+	val voting_result = compute_voting_result(prop);
+	when (voting_result) {
+		pending -> print("proposal is still under discussion:", propStr);
+		rejected -> {
+			print("proposal rejected:", propStr);
+			delete_proposal(prop);
+		}
+		approved -> {
+			print("proposal approved:", propStr);
+			when (prop.proposal_type) {
+	 			conf              -> apply_conf(prop);
+	 			bc                -> apply_bc(prop);
+				container         -> apply_container(prop);
+				container_limits  -> apply_container_limits(prop);
+				cluster_limits    -> apply_cluster_limits(prop);
+				cluster_provider  -> apply_cluster_provider(prop);
+				cluster_deployer  -> apply_cluster_deployer(prop);
+				voter_set_provider-> apply_voter_set_provider(prop);
+				voter_set_governor-> apply_voter_set_governor(prop);
+				provider_state    -> apply_provider_state(prop);
+				provider_is_system-> apply_provider_is_system(prop);
+				bc_pause		  -> apply_pause_blockchain(prop);
+				bc_unpause		  -> apply_unpause_blockchain(prop);
+				bc_delete		  -> apply_delete_blockchain(prop);
+	    	}
+			delete_proposal(prop);
+		}
 	}
 }
 

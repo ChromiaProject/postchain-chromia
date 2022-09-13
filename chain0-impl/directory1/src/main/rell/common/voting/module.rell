@@ -40,4 +40,3 @@ function create_voter_set_internal(name, threshold: integer = 0, governor: voter
     }
     return vs;
 }
-
