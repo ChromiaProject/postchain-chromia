@@ -570,9 +570,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun addNode(key: String, host: String, port: Long, clusterName: String) {
+    fun addNode(key: String, host: String, port: Long, apiUrl: String, clusterName: String) {
         sendTxSync(
-                addNodeAsync(key, host, port, clusterName),
+                addNodeAsync(key, host, port, apiUrl, clusterName),
                 "Node has been enabled",
                 "Cannot add node"
         )
@@ -848,8 +848,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     /** Add new node. Optionally, also add it to a cluster */
-    fun addNodeAsync(key: String, host: String, port: Long, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), if (clusterName == "") GtvNull else gtv(clusterName))
+    fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), gtv(apiUrl), if (clusterName == "") GtvNull else gtv(clusterName))
     }
 
     /** Add existing provider to existing cluster

@@ -24,7 +24,7 @@ function test_add_node_to_cluster() {
     // must fail
     rell.test.tx()
         .op(
-            add_node(alice.pubkey, rell.test.pubkeys.bob, "localhost", 1, system_cluster.name)
+            create_test_node(alice, rell.test.pubkeys.bob, system_cluster)
         )
         .sign(rell.test.keypairs.alice)
         .run_must_fail();

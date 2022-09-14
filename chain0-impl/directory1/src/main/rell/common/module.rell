@@ -61,9 +61,9 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	val initial_node = create node(
 		provider, 
 		initial_signer_node_key, 
-		initial_node_host, 
+		host = initial_node_host, 
 		port = initial_node_port, 
-		api_port = 7740, 
+		api_url = "", 
 		last_updated = op_context.last_block_time
 	);
 	create cluster_node(system_cluster, initial_node);

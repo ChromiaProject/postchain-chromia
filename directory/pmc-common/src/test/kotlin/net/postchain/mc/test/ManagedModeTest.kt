@@ -119,7 +119,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      */
     fun addNode(configProv: PostchainClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
-        executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, clusterName))
+        executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, "", clusterName))
         buildAndAwaitBlocks(1)
         assertAddedNode(configProv.pubkey(), key, host, port, clusterName)
     }
