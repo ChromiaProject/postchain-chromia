@@ -19,7 +19,7 @@ function negative_votes(proposal) = vote @? { proposal, .vote == false } (@sum 1
 function max_votes(voter_set) = voter_set_member @ { voter_set } (@sum 1);
 
 function _compute_voting_result(yes: integer, no: integer, max: integer, threshold: integer): voting_result {
-	require (threshold >= -1, "Invalid threshold");
+	require (threshold >= -1 and threshold <= max, "Invalid threshold");
 	require (yes + no <= max, "Too many votes");
 	when (threshold) {
 		-1 -> return _compute_voting_result_majority(yes, no, max);

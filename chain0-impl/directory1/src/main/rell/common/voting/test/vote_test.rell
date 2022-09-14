@@ -2,18 +2,7 @@
 
 import ^^.*;
 
-function test_custom_limits() {
-	assert_equals(_compute_voting_result(0, 0, 10, 1), voting_result.pending);
-	assert_equals(_compute_voting_result(1, 0, 10, 1), voting_result.approved);
-	
-	assert_equals(_compute_voting_result(0, 10, 10, 1), voting_result.rejected);
-	assert_equals(_compute_voting_result(0, 9, 10, 1), voting_result.pending);
-	assert_equals(_compute_voting_result(0, 2, 7, 6), voting_result.rejected);
-
-	assert_equals(_compute_voting_result(1, 9, 10, 1), voting_result.approved);
-}
-
-function test_custom_limit() {
+function test_custom_majoriy_limit() {
 	assert_equals(_compute_voting_result(45, 0, 100, 46), voting_result.pending);
 	assert_equals(_compute_voting_result(45, 0, 100, 45), voting_result.approved);
 	assert_equals(_compute_voting_result(0, 67, 100, 44), voting_result.rejected);
@@ -31,7 +20,7 @@ function test_majority_odd() {
 	assert_equals(_compute_voting_result(0, 51, 101, -1), voting_result.rejected);
 }
 
-function test_super_majority_divisible() {
+function test_super_majority_divisible_by_3() {
 	assert_equals(_compute_voting_result(2, 0, 3, 0), voting_result.pending);
 	assert_equals(_compute_voting_result(3, 0, 3, 0), voting_result.approved);
 	assert_equals(_compute_voting_result(0, 1, 3, 0), voting_result.rejected);
@@ -40,7 +29,7 @@ function test_super_majority_divisible() {
 	assert_equals(_compute_voting_result(0, 33, 99, 0), voting_result.rejected);
 }
 
-function test_super_majority_non_divisible() {
+function test_super_majority_non_divisible_by_3() {
 	assert_equals(_compute_voting_result(2, 0, 4, 0), voting_result.pending);
 	assert_equals(_compute_voting_result(3, 0, 4, 0), voting_result.approved);
 	assert_equals(_compute_voting_result(0, 2, 4, 0), voting_result.rejected);
