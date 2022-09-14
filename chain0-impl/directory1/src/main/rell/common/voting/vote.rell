@@ -1,96 +1,52 @@
 
-/**
- * Governance semantics:
- * Anybody can create a new voter_set directly, but it consumes an action point.
- * voter_set can be updated. If voter_set_governance is defined, it will control voter set, otherwise, it is the voter set itself.
- **/
-operation create_voter_set(me: provider, name, threshold: integer, initials: list<provider>?, governor: voter_set?) {
-    require_provider_auth_with_rl(me);
-    val vs = create_voter_set_internal(name, threshold, governor);
-    if (exists(initials)) {
-        for (prov in initials) {
-            create voter_set_member(voter_set = vs, prov);
-        }
-    }
+enum voting_result {
+	pending,
+	approved,
+	rejected
 }
 
-operation make_vote(provider, prop: proposal, vote: boolean) {
-	require_provider_auth_with_rl(provider);
-	require_voter_set_member(prop.voter_set, provider);
-	require(empty(vote @? {prop, provider}), "Only one vote per pubkey is allowed");
-	internal_vote(provider, prop, vote);
+function compute_voting_result(proposal): voting_result {
+	return _compute_voting_result(
+		positive_votes(proposal),
+		negative_votes(proposal),
+		max_votes(proposal.voter_set),
+		proposal.voter_set.threshold
+	);
 }
 
-operation retract_vote(provider, prop: proposal) {
-	require_provider_auth_with_rl(provider);
-	require_voter_set_member(prop.voter_set, provider);
+function positive_votes(proposal) = vote @? { proposal, .vote == true } (@sum 1) ?: 0;
+function negative_votes(proposal) = vote @? { proposal, .vote == false } (@sum 1) ?: 0;
+function max_votes(voter_set) = voter_set_member @ { voter_set } (@sum 1);
 
-	if (exists(vote @? { prop, provider })) {
-	    delete vote @* { prop, provider };
-        print("vote for proposal retracted:", proposalStr(prop));
-        log_proposal_voting(prop);
-	} else {
-	    print("not vote for proposal to retract:", proposalStr(prop));
+function _compute_voting_result(yes: integer, no: integer, max: integer, threshold: integer): voting_result {
+	require (threshold >= -1 and threshold <= max, "Invalid threshold");
+	require (yes + no <= max, "Too many votes");
+	when (threshold) {
+		-1 -> return _compute_voting_result_majority(yes, no, max);
+		0 -> return _compute_voting_result_super_majority(yes, no, max);
+		else -> return _compute_voting_result_custom(yes, no, max, threshold);
 	}
 }
 
-// NB: check authority before calling this function
-function internal_vote(provider, prop: proposal, vote: boolean) {
-	create vote(prop, provider, vote);
-	print("vote added with value:", if (vote) "Yes" else "False");
-	log_proposal_voting(prop);
-	apply_voting_result(prop);
+function _compute_voting_result_custom(yes: integer, no: integer, max: integer, threshold: integer): voting_result {
+	return _voting_result(yes, no, max, threshold	);
 }
 
-function log_proposal_voting(proposal) {
-    val max = max_votes(proposal.voter_set);
-    val needed = needed_votes(proposal.voter_set);
-    val yes = positive_votes(proposal);
-    val no = negative_votes(proposal);
-    val msg = "voter set: %s, max votes: %d, needed: %d, positive: %d, negative: %d".format(proposal.voter_set.name, max, needed, yes, no);
-    print(msg);
+function _compute_voting_result_majority(yes: integer, no: integer, max: integer): voting_result {
+	val required = max / 2 + 1;
+	return _voting_result(yes, no, max, required);
 }
 
-function max_votes(voter_set) {
-    return (voter_set_member @* { voter_set } (@sum 1) limit 1)[0];
+function _compute_voting_result_super_majority(yes: integer, no: integer, max: integer): voting_result {
+	val required = max - (max - 1) / 3;
+	return _voting_result(yes, no, max, required);
 }
 
-function positive_votes(proposal) {
-    return vote @? { proposal, .vote == true } (@sum 1) ?: 0;
-}
-
-function negative_votes(proposal) {
-    return vote @? { proposal, .vote == false } (@sum 1) ?: 0;
-}
-
-function needed_votes(voter_set) {
-	val n = max_votes(voter_set);
-	var needed_votes = voter_set.threshold;
-	// two special cases (0 and -1):
-	when (voter_set.threshold) {
-		0  -> needed_votes = n-(n-1)/3;
-	 	-1 -> needed_votes = n/2+1;
-	}
-	return needed_votes;
-}
-
-function is_consensus_achieved(proposal, needed: integer) {
-    val positive = positive_votes(proposal);
-	if (positive > 0) {
-		return (positive >= needed);
-	} else {
-	    print("No positive votes");
-	    return false;
-	}
-}
-
-function is_proposal_rejected(proposal, needed: integer) {
-    val negative = negative_votes(proposal);
-	if (negative > 0) {
-	    val max = max_votes(proposal.voter_set);
-		return (negative > max - needed);
-	} else {
-	    print("No negative votes");
-	    return false;
-	}
+function _voting_result(yes: integer, no: integer, max: integer, required: integer): voting_result {
+	print("Votes - positive: %d, negative: %d, required: %d, maximum: %d".format(yes, no, required, max));
+	return when {
+		yes >= required -> voting_result.approved;
+		no > max - required -> voting_result.rejected;
+		else -> voting_result.pending;
+	};
 }
