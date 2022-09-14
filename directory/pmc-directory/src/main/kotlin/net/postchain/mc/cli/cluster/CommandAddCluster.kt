@@ -1,9 +1,15 @@
 package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.mc.cli.common0.CliExecution
+import com.github.ajalt.clikt.parameters.options.split
+import net.postchain.chain0.common.createClusterOperation
+import net.postchain.common.hexStringToByteArray
+import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOrGenerateOption
 
@@ -19,7 +25,7 @@ class CommandAddCluster : CliktCommand(
     private val providers by option(
             "-p", "--providers",
             help = "String of comma separated list of pubkey strings of providers that should belong to this cluster"
-    ).required()
+    ).convert { it.hexStringToByteArray() }.split(",").required()
 
     private val governorName by option(
             "-g", "--governor",
@@ -32,11 +38,13 @@ class CommandAddCluster : CliktCommand(
     ).required()
 
     override fun run() {
-        CliExecution(config).addCluster(
-                name,
-                providers,
-                governorName,
-                deployerName
-        )
+        val client = ClientUtil.nopClientFromConfig(config)
+        client.transactionBuilder()
+                .createClusterOperation(config.pubkey().key, name, providers, governorName, deployerName)
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Cluster $name added",
+                        "Could not create cluster"
+                )
     }
 }
