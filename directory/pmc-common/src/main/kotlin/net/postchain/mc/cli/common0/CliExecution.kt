@@ -1,6 +1,8 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.addNodeToClusterOperation
 import net.postchain.chain0.common.createClusterOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.client.config.PostchainClientConfig
@@ -849,7 +851,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation("add_node", gtv(config.signers.first().pubKey.key), gtv(key.hexStringToByteArray()), gtv(host), gtv(port), gtv(apiUrl), if (clusterName == "") GtvNull else gtv(clusterName))
+        return makeTransactionWithNop().addNodeOperation(config.signers.first().pubKey.key, key.hexStringToByteArray(), host, port, apiUrl, if (clusterName == "") listOf() else listOf(clusterName))
     }
 
     /** Add existing provider to existing cluster
@@ -867,13 +869,10 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Add existing node to existing cluster
      * */
     fun addNodeToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val cluster = clusterGtv(clusterName)
-        val node = nodeGtv(key)
-        return makeTransactionWithNop().addOperation(
-                "add_node_to_cluster",
+        val provider = config.signers.first().pubKey.key
+        return makeTransactionWithNop().addNodeToClusterOperation(
                 provider,
-                gtv(key.hexStringToByteArray()), node, cluster
+                key.hexStringToByteArray(), clusterName
         )
     }
 

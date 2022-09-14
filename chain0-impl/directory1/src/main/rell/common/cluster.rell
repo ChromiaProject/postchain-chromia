@@ -47,8 +47,10 @@ entity cluster_container_replica { key cluster, container; }
  * TODO: Start as replica; once it is in sync, it will become signer.
  * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node.
  * */
-operation add_node_to_cluster(provider, node_pubkey: pubkey, cluster) {
+operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, cluster_name: name) {
+	val provider = require_provider(provider_pubkey);
 	require_provider_auth_with_rl(provider);
+	val cluster = cluster @ { cluster_name };
 	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
 	//make_node_a_replica_in_cluster(cluster, node_pubkey);
 	//check if cluster now is operational, if so update the flag:
