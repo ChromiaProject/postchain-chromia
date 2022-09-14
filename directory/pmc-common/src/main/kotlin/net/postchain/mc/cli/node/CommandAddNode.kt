@@ -22,7 +22,7 @@ class CommandAddNode : CliktCommand(
 
     private val port by portOption().required()
 
-    private val apiUrl by option("--api", help = "path to api url").required()
+    private val apiUrl by option("-a", "--api-url", help = "api url").required()
 
     private val clusterName by option(
         "-c",

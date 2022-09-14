@@ -33,7 +33,7 @@ class CommandUpdateNode : CliktCommand(
 
     private val port by portOption()
 
-    private val apiUrl by option("--api", help = "path to api url")
+    private val apiUrl by option("-a", "--api-url", help = "api url")
 
     private val clusterName by option(
             "-c",
