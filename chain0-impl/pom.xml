@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>postchain-mc</artifactId>
+        <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
         <version>3.7.0-SNAPSHOT</version>
     </parent>
@@ -16,6 +16,8 @@
 
     <groupId>net.postchain.chain0</groupId>
     <artifactId>chain0-impl</artifactId>
+    <name>Chain0 - Parent</name>
+    <description>Parent module for chain0 implementations</description>
 
     <properties>
         <rell.directory>${project.basedir}/src/main/rell</rell.directory>

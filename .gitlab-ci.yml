@@ -33,7 +33,7 @@ docs:
   before_script:
     - pip install sphinx sphinx-rtd-theme
   script:
-    - sphinx-build -c doc/enterprise0 -b html doc/source managed-mode-examples/enterprise0-example/_doc
+    - sphinx-build -c doc/enterprise0 -b html doc/source directory1-example/_doc
 
 deploy:
   stage: deploy

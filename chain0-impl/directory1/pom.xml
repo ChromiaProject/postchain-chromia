@@ -11,6 +11,8 @@
     <packaging>jar</packaging>
 
     <artifactId>directory1</artifactId>
+    <name>Chain0 - D1/C1</name>
+    <description>Chain0 implementations for Directory1/Chromia1</description>
 
     <properties>
     </properties>

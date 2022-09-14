@@ -4,16 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>postchain-mc</artifactId>
+    <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
     <version>3.7.0-SNAPSHOT</version>
-    <name>postchain-mc</name>
-    <description>Postchain Management Console</description>
+    <name>Chromia</name>
+    <description>Chromia Mainnet infrastructure</description>
     <url>http://postchain.net</url>
 
     <modules>
         <module>chain0-impl</module>
-        <module>directory</module>
+        <module>postchain-mc</module>
         <module>directory1-example</module>
     </modules>
     <packaging>pom</packaging>
