@@ -8,6 +8,7 @@ import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nameOption
 
 class CommandAddNode : CliktCommand(
     name = "add",
@@ -21,6 +22,8 @@ class CommandAddNode : CliktCommand(
 
     private val port by portOption().required()
 
+    private val apiUrl by option("-a", "--api-url", help = "api url").required()
+
     private val clusterName by option(
         "-c",
         "--cluster",
@@ -28,7 +31,7 @@ class CommandAddNode : CliktCommand(
     ).required()
 
     override fun run() {
-        CliExecution(config).addNode(key, host, port.toLong(), clusterName)
+        CliExecution(config).addNode(key, host, port.toLong(), apiUrl, clusterName)
         println("Node has been added successfully")
     }
 }

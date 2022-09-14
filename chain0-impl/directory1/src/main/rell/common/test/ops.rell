@@ -11,3 +11,9 @@ operation create_test_provider(name, pubkey, tier:integer = 1) {
 	create provider_state(p, name, active = true, system = true, tier);
 	create provider_rl_state(p, points = 10000, last_update = 0);
 }
+
+operation create_test_node(provider, pubkey, cluster) {
+	val c = list<text>();
+	c.add(cluster.name);
+	add_node_internal(provider, pubkey, "", 0, "", c);
+}

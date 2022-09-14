@@ -33,7 +33,7 @@ query get_cluster_providers(name): list<(name:text, pubkey:pubkey)> {
 query get_cluster_nodes(name) {
     return node @* {
         .pubkey in cluster_node @* { cluster @ { name } }.node.pubkey
-    } (pubkey = .pubkey, host = .host, port = .port, api_port = .api_port, active = .active);
+    } (pubkey = .pubkey, host = .host, port = .port, api_url = .api_url, active = .active);
 }
 
 query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
