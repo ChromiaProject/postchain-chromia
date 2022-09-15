@@ -1,13 +1,11 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.default
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.cli.util.*
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
-import org.spongycastle.crypto.tls.ConnectionEnd.client
 
 class CommandProposeConfiguration : CliktCommand(
     name = "update",
@@ -30,7 +28,7 @@ class CommandProposeConfiguration : CliktCommand(
 
     override fun run() {
         val addToHeight = height ?: (ClientUtil.fromConfig(config).getBlockchainLastHeight(blockchainRID.data) + 5)
-        CliExecutionD1(config)
+        CliExecution(config)
             .proposeConfiguration(blockchainRID.toHex(), blockchainConfigFile, addToHeight, null, force)
         println("Configuration update has been proposed")
     }

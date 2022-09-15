@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.mc.cli.directory1.CliExecutionD1
+import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 
@@ -21,7 +21,7 @@ class CommandVote : CliktCommand(
         .flag("-n", "--revoke", default = true)
 
     override fun run() {
-        CliExecutionD1(config).vote(idx, vote)
+        CliExecution(config).vote(idx, vote)
         println("Your vote is registered")
     }
 }

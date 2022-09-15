@@ -22,7 +22,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
-    protected open fun getPostchainClient() = ClientUtil.fromConfig(config)
+    fun getPostchainClient() = ClientUtil.fromConfig(config)
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
         val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())

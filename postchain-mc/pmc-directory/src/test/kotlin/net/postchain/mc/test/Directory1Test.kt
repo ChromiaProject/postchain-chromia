@@ -3,6 +3,7 @@ package net.postchain.mc.test
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.directory1.initOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -12,8 +13,6 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.directory1.CliExecutionD1
-import net.postchain.mc.config.app.ClientConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
@@ -49,11 +48,11 @@ class Directory1Test : ManagedModeTest() {
     }
 
     override fun cliExecution(cliConfig: PostchainClientConfig): CliExecution {
-        return CliExecutionD1(cliConfig)
+        return CliExecution(cliConfig)
     }
 
-    override val provExecutor by lazy { CliExecutionD1(provConfig) }
-    override val prov2Executor by lazy { CliExecutionD1(prov2Config) }
+    override val provExecutor by lazy { CliExecution(provConfig) }
+    override val prov2Executor by lazy { CliExecution(prov2Config) }
 
     /*
     * The pre-step includes starting a single
@@ -64,7 +63,7 @@ class Directory1Test : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.initAsync(node0Host, node0Port))
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(node0Host, node0Port))
     }
 
     @Test

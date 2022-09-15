@@ -5,9 +5,7 @@ import com.github.ajalt.clikt.parameters.options.deprecated
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.voting.getVoterSets
-import net.postchain.chain0.common.voting.listVoterSets
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
