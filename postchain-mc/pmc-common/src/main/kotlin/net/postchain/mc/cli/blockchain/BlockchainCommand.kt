@@ -2,10 +2,6 @@ package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
-import net.postchain.mc.cli.proposal.CommandGetProposal
-import net.postchain.mc.cli.proposal.CommandListProposalsSince
-import net.postchain.mc.cli.proposal.CommandVote
-import net.postchain.mc.cli.proposal.ProposalCommand
 import net.postchain.mc.cli.replica.blockchainReplicaCommands
 
 class BlockchainCommand : CliktCommand("Interactions with blockchains") {

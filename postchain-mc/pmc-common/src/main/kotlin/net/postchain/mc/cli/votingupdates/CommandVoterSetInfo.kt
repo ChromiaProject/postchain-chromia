@@ -1,15 +1,10 @@
 package net.postchain.mc.cli.votingupdates
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.deprecated
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.voting.GetVoterSetInfoResult
 import net.postchain.chain0.common.voting.getVoterSetInfo
-import net.postchain.chain0.common.voting.listVoterSets
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.directory1.CliExecutionD1
-import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 

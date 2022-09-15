@@ -6,10 +6,7 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getBlockchainInfoList
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.util.ContainersPrinter
-import net.postchain.mc.cli.directory1.CliExecutionD1
 import net.postchain.mc.cli.util.configOption
-import org.spongycastle.asn1.x500.style.RFC4519Style.name
 import java.lang.StringBuilder
 
 class CommandListContainers : CliktCommand(
