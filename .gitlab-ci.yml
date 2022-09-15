@@ -11,7 +11,7 @@ image: maven:3.8.4-jdk-11
     - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
     - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT
     - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-subnode:3.7.0-SNAPSHOT
-    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-postgres:3.7.0-SNAPSHOT
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT
   artifacts:
     when: on_failure
     paths:
@@ -49,6 +49,7 @@ docs:
     - sphinx-build -c doc/enterprise0 -b html doc/source directory1-example/_doc
 
 deploy:
+  extends: .setup
   stage: deploy
   dependencies:
     - docs
@@ -60,6 +61,7 @@ deploy:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,distro deploy
 
 build:
+  extends: .setup
   stage: build
   except:
     - dev
