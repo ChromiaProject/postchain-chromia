@@ -274,6 +274,11 @@
             <name>Rell Registry</name>
             <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
         </repository>
+        <repository>
+            <id>distro</id>
+            <name>Postchain distribution Registry</name>
+            <url>https://gitlab.com/api/v4/projects/32884430/packages/maven</url>
+        </repository>
     </repositories>
 
     <distributionManagement>

@@ -45,7 +45,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int) =
         PostchainContainer(
-            DockerImageName.parse("chromaway/postchain-server:latest")
+            DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
             setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
             startupMsg = "Postchain server started, listening on 50051",
