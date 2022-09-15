@@ -9,6 +9,9 @@ image: maven:3.8.4-jdk-11
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
     - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-subnode:3.7.0-SNAPSHOT
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-postgres:3.7.0-SNAPSHOT
   artifacts:
     when: on_failure
     paths:
