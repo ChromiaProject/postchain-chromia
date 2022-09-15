@@ -1,0 +1,157 @@
+module;
+
+import ^.*;
+import ^.voting.*;
+
+enum proposal_type {
+    conf,
+    bc,
+    container,
+    container_limits,
+    cluster_limits,
+    cluster_provider,
+    cluster_deployer,
+    voter_set_provider,
+    voter_set_governor,
+    provider_state,
+    provider_is_system,
+    bc_pause,
+    bc_unpause,
+    bc_delete
+    // and a lot more
+}
+
+entity proposal {
+  index timestamp, proposal_type;
+  proposed_by: provider;
+  index voter_set; // voter set is determined at the time proposal is created
+}
+
+//Proposed configuration changes are put here while waiting for enough positive votes.
+entity pending_conf {
+    key proposal;
+    blockchain;
+	height: integer;
+	force: boolean;
+    data: byte_array;
+}
+
+entity pending_container {
+	key proposal;
+	key name;
+ 	cluster;
+ 	container_type;
+ 	deployer: voter_set;
+}
+
+entity pending_container_limits {
+	key proposal;
+	key container;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+entity pending_cluster_limits {
+	key proposal;
+	key cluster;
+	cpu: integer;
+	ram: integer;
+	storage: integer;
+}
+
+entity pending_cluster_provider {
+	key proposal;
+	key cluster;
+	provider;
+	add: boolean;
+}
+
+entity pending_cluster_deployer {
+	key proposal;
+	key cluster;
+	deployer: voter_set;
+}
+
+entity pending_voter_set_governor{
+	key proposal;
+	key voter_set;
+	governor: voter_set;
+}
+
+entity pending_voter_set_provider {
+	key proposal;
+	key voter_set;
+	provider;
+	add: boolean;
+}
+
+// Proposed destruction of bcs are put here while waiting for enough positive votes.
+entity pending_delete_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+//Proposed pauses of bcs are put here while waiting for enough positive votes.
+entity pending_pause_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+//Proposed unpauses (start building blocks again) of bcs are put here while waiting for enough positive votes.
+entity pending_unpause_blockchain {
+    key proposal;
+    key blockchain;
+}
+
+// Proposed bc:s are put here while waiting for enough positive votes.
+entity pending_blockchain {
+	key proposal;
+	name;
+	data: byte_array;
+	container;
+}
+
+// Proposed enabling/disabling of providers are put here while waiting for enough positive votes.
+entity pending_provider_state {
+	key proposal;
+	provider;
+	active: boolean;
+}
+
+// Proposed promotion/demotion of provider to/from being system provider
+entity pending_provider_is_system {
+	key proposal;
+	provider;
+	system: boolean;
+}
+
+operation revoke_proposal(my_pubkey: pubkey, proposal_rowid: rowid) {
+    val me = provider @ { my_pubkey };
+    require_provider_auth_with_rl(me);
+    val prop = proposal @? { proposal_rowid };
+    require(exists(prop), "Proposal not found: %d".format(proposal_rowid));
+    require(prop!!.proposed_by == me, "It is only allowed to revoke own proposals");
+    delete_proposal(prop);
+}
+
+function delete_proposal(prop: proposal) {
+    when (prop.proposal_type) {
+        conf                -> delete pending_conf @ { prop };
+        bc                  -> delete pending_blockchain @ { prop };
+        container           -> delete pending_container @ { prop };
+        container_limits    -> delete pending_container_limits @ { prop };
+        cluster_limits      -> delete pending_cluster_limits @ { prop };
+        cluster_provider    -> delete pending_cluster_provider @ { prop };
+        cluster_deployer    -> delete pending_cluster_deployer @ { prop };
+        voter_set_provider  -> delete pending_voter_set_provider @ { prop };
+        voter_set_governor  -> delete pending_voter_set_governor @ { prop };
+        provider_state      -> delete pending_provider_state @ { prop };
+        provider_is_system  -> delete pending_provider_is_system @ { prop };
+        bc_pause		    -> delete pending_pause_blockchain @ { prop };
+        bc_unpause		    -> delete pending_unpause_blockchain @ { prop };
+        bc_delete		    -> delete pending_delete_blockchain @? { prop };
+    }
+    delete vote @* { .proposal == prop };
+    delete proposal @ { .rowid == prop.rowid };
+}

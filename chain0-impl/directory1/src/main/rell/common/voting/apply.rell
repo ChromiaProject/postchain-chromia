@@ -1,0 +1,213 @@
+import ^.proposal.*;
+
+// NB: check authority before calling this function
+function internal_vote(provider, prop: proposal, vote: boolean) {
+	create vote(prop, provider, vote);
+	print("vote added with value:", if (vote) "Yes" else "False");
+	apply_voting_result(prop);
+}
+
+function apply_voting_result(prop: proposal) {
+    val propStr = proposalStr(prop);
+	val voting_result = compute_voting_result(prop);
+	when (voting_result) {
+		pending -> print("proposal is still under discussion:", propStr);
+		rejected -> {
+			print("proposal rejected:", propStr);
+			delete_proposal(prop);
+		}
+		approved -> {
+			print("proposal approved:", propStr);
+			when (prop.proposal_type) {
+	 			conf              -> apply_conf(prop);
+	 			bc                -> apply_bc(prop);
+				container         -> apply_container(prop);
+				container_limits  -> apply_container_limits(prop);
+				cluster_limits    -> apply_cluster_limits(prop);
+				cluster_provider  -> apply_cluster_provider(prop);
+				cluster_deployer  -> apply_cluster_deployer(prop);
+				voter_set_provider-> apply_voter_set_provider(prop);
+				voter_set_governor-> apply_voter_set_governor(prop);
+				provider_state    -> apply_provider_state(prop);
+				provider_is_system-> apply_provider_is_system(prop);
+				bc_pause		  -> apply_pause_blockchain(prop);
+				bc_unpause		  -> apply_unpause_blockchain(prop);
+				bc_delete		  -> apply_delete_blockchain(prop);
+	    	}
+			delete_proposal(prop);
+		}
+	}
+}
+
+//Apply decision on creation of new container. With default resource limits.
+//TODO: Update default values to make sense.
+function apply_container(proposal) {
+	val pps = pending_container @ {proposal};
+	create_container_with_resource_limits(
+		pps.name,
+		pps.container_type,
+		pps.cluster,
+		pps.deployer
+	);
+}
+
+function apply_container_limits(proposal) {
+	val pps = pending_container_limits @ {proposal};
+	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
+	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
+	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
+}
+
+function apply_cluster_limits(proposal) {
+	val pps = pending_cluster_limits @ {proposal};
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
+	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
+}
+
+function apply_cluster_deployer(proposal) {
+	val pps = pending_cluster_deployer @ {proposal};
+	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
+}
+
+function apply_voter_set_governor(proposal) {
+	val pps = pending_voter_set_governor @ { proposal };
+	update voter_set_governance @ {.voter_set == pps.voter_set} (.governor = pps.governor);
+}
+
+function apply_cluster_provider(proposal) {
+	val pps = pending_cluster_provider @ {proposal};
+	if (pps.add) {
+		create cluster_provider(pps.cluster, pps.provider);
+	} else {
+		delete cluster_provider @ {pps.cluster, pps.provider};
+	}
+}
+
+function apply_voter_set_provider(proposal) {
+	val pps = pending_voter_set_provider @ {proposal};
+	if (pps.add) {
+		create voter_set_member(pps.voter_set, pps.provider);
+	} else {
+		delete voter_set_member @ {pps.voter_set, pps.provider};
+	}
+}
+
+
+//For promotion and demotion of system providers
+function apply_provider_is_system(proposal) {
+	val pps = pending_provider_is_system @ {proposal};
+	update provider_state @ { pps.provider } ( .system = pps.system );
+
+	//If promotion, update SYSTEM_P voter set
+	if (provider_state @ { pps.provider }.system) {
+		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
+	} else {
+		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
+	}
+}
+
+//For both enabling and disabling of providers:
+function apply_provider_state(proposal) {
+	val pps = pending_provider_state @ {proposal};
+	update_provider_state(pps.provider, pps.active);
+}
+
+function update_provider_state(provider, active: boolean) {
+	update provider_state @ { provider } ( .active = active );
+	if (active == false) {
+		update node @* { provider } ( .active = false );
+		for (cl in cluster_provider @* { .provider == provider } (.cluster)) {
+			for (n in node @* { provider }) {
+				delete cluster_node @* { n };
+			}
+			update_configuration_signers(cl);
+		}
+		node_list.last_update = op_context.last_block_time;
+		//remove disabled provider from voter_set_member table
+		delete voter_set_member @* { .provider == provider};
+		//TODO: Delete all replicas of the provider?
+		delete blockchain_replica_node @* { .node.provider == provider };
+	} else { //enable
+		//If enabled provider is a system provider, update SYSTEM_P voter set
+		if (provider_state @ { provider }.system) {
+			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
+		}
+	}
+}
+
+function apply_conf(proposal) {
+	val pc = pending_conf @ {proposal};
+	require(get_last_height(pc.blockchain) < pc.height);
+	if (not(pc.force)) {
+		require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));
+	}
+	if (not(exists(blockchain_configuration @? {pc.blockchain, pc.height} ))) {
+		create blockchain_configuration(
+			pc.blockchain,
+			pc.height,
+			data = pc.data
+		);
+		add_dependencies(pc.data, pc.blockchain.rid, pc.height);
+	} else {
+		update blockchain_configuration @ { pc.blockchain, pc.height }(.data = pc.data);
+	}
+}
+
+// Initial signers of new bc are the ones in cluster_node table.
+function apply_bc(proposal) {
+	val bc = pending_blockchain @ {proposal};
+	val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
+	val blockchain_rid = config.hash();
+	val blockchain = create blockchain (blockchain_rid, bc.name, true);
+	print("Added blockchain", blockchain_rid);
+	create blockchain_configuration (blockchain, 0, bc.data);
+	val nodes = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
+	// do not write new configuration when size is 0 since it's impossible to recover from that
+	require(nodes.size() > 0, "Cluster must have at least one node");
+	create blockchain_configuration_signers(blockchain, 0, nodes.to_gtv().to_bytes());
+	create blockchain_added (blockchain, op_context.transaction);
+	create container_blockchain(bc.container, blockchain);
+	add_dependencies(bc.data, blockchain_rid, 0);
+}
+
+// Remove block production by inactivating bc, Keep replicas.
+function apply_pause_blockchain(proposal) {
+	val bc = pending_pause_blockchain @ { proposal };
+	update blockchain @ { bc.blockchain.rid } (.active = false);
+	/* val cl = container_blockchain @ {bc.blockchain}.container.cluster;
+	for (n in cluster_node @* {.cluster == cl} .node) {
+		create blockchain_replica_node(bc.blockchain, n);	
+	} */
+}
+
+/* restart block production (activate bc), block builders will be the ones in cluster_node.
+ * cluster nodes are removed from blockchain_replica_node table. To ensure that signers 
+are not also replicas.
+* 
+*/
+function apply_unpause_blockchain(proposal) {
+	val bc = pending_unpause_blockchain @ { proposal };
+	update blockchain @ { bc.blockchain.rid } (.active = true);
+	val cl = container_blockchain @ {bc.blockchain}.container.cluster;
+	for (n in cluster_node @* {.cluster == cl} .node) {
+		delete blockchain_replica_node @? {bc.blockchain, n};	
+	}
+}
+
+// Delete everything about this bc
+function apply_delete_blockchain(proposal) {
+	val bc = pending_delete_blockchain @ { proposal } .blockchain;
+	delete container_blockchain @ { bc };
+	delete blockchain_configuration @* { bc };
+	delete blockchain_configuration_signers @* { bc };
+	delete blockchain_added @* { bc };
+	delete blockchain_replica_node @* { bc };
+	delete blockchain_dependency @* { .me == bc };
+	delete pending_delete_blockchain @ { proposal };
+	delete blockchain @ { bc.rid };
+}
+
+function proposalStr(prop: proposal) {
+    return "%s:%d".format(prop.proposal_type, prop.rowid);
+}

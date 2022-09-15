@@ -1,0 +1,40 @@
+entity anchored_block {
+	key blockchain, height: integer;
+	key block_rid: byte_array;
+}
+
+entity anchored_block_signer { key anchored_block, node; }
+
+struct base_block_header {
+	blockchain_rid: byte_array;
+	prev_block_rid: byte_array;
+	merkle_root_hash: byte_array;
+	timestamp: timestamp;
+	height: integer;
+	dependencies: gtv;
+	extra: map<text, gtv>;
+}
+
+operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
+	val blockchain = blockchain @ { header.blockchain_rid };
+	val existing_ab = anchored_block @? { blockchain, header.height };
+	require(not exists(existing_ab));
+
+	val all_signers = set<pubkey>.from_gtv(
+	    get_signers_for_configuration(blockchain, header.height)
+    );
+
+	val block_rid = header.hash();
+	print("block rid", block_rid);
+
+	for (i in range(0, signers.size())) {
+		require(all_signers.contains(signers[i]));
+		print("s", signers[i], signatures[i]);
+		require(verify_signature(block_rid, signers[i], signatures[i]));
+	}
+
+	val block = create anchored_block ( blockchain, header.height, block_rid );
+	for (signer in signers) {
+		create anchored_block_signer(block, node @ { signer });
+	}
+}

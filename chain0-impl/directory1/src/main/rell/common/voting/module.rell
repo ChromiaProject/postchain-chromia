@@ -1,0 +1,79 @@
+module;
+
+import ^.*;
+
+entity voter_set {
+    key name;
+    mutable threshold: integer = 0;
+	// special values for threshold:
+	// 	0: super-majority of voters, specifically  `n - (n - 1) / 3` (which is usually around 67%)
+	// -1: simple majority
+	// positive number: that many voters
+}
+
+// Who is allowed to change a voter set?
+// If not defined, it is the voter set itself
+entity voter_set_governance {
+	key voter_set;
+	mutable governor: voter_set;
+}
+
+entity voter_set_member {
+    key voter_set, provider;
+}
+
+entity vote {
+    key proposal, provider;
+	vote: boolean; // yes | no
+}
+
+function require_voter_set(name) = require(voter_set @? { name }, "Voter set " + name + " does not exist");
+
+function require_voter_set_member(voter_set, provider) {
+	require (exists(voter_set_member @* { voter_set, provider}), "Provider is not a member of voter set " + voter_set.name);
+}
+
+function create_voter_set_internal(name, threshold: integer = 0, governor: voter_set? = null) {
+	val vs = create voter_set(name, threshold);
+    if (exists(governor)) {
+        create voter_set_governance(voter_set = vs, governor = governor);
+    } else {
+        create voter_set_governance(voter_set = vs, governor = vs);
+    }
+    return vs;
+}
+
+/**
+ * Governance semantics:
+ * Anybody can create a new voter_set directly, but it consumes an action point.
+ * voter_set can be updated. If voter_set_governance is defined, it will control voter set, otherwise, it is the voter set itself.
+ **/
+operation create_voter_set(me: provider, name, threshold: integer, initials: list<provider>?, governor: voter_set?) {
+    require_provider_auth_with_rl(me);
+    val vs = create_voter_set_internal(name, threshold, governor);
+    if (exists(initials)) {
+        for (prov in initials) {
+            create voter_set_member(voter_set = vs, prov);
+        }
+    }
+}
+
+operation make_vote(provider, prop: proposal, vote: boolean) {
+	require_provider_auth_with_rl(provider);
+	require_voter_set_member(prop.voter_set, provider);
+	require(empty(vote @? {prop, provider}), "Only one vote per pubkey is allowed");
+	internal_vote(provider, prop, vote);
+}
+
+operation retract_vote(provider, prop: proposal) {
+	require_provider_auth_with_rl(provider);
+	require_voter_set_member(prop.voter_set, provider);
+
+	if (exists(vote @? { prop, provider })) {
+	    delete vote @* { prop, provider };
+        print("vote for proposal retracted:", proposalStr(prop));
+        apply_voting_result(prop);
+	} else {
+	    print("no vote for proposal to retract:", proposalStr(prop));
+	}
+}

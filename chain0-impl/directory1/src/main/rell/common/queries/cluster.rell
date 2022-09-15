@@ -1,0 +1,41 @@
+
+query get_cluster (name) = cluster @ { name };
+
+query list_clusters () : list<text> {
+	return cluster@* {} .name;
+}
+
+query get_clusters() {
+	return cluster @* {} (
+		name = .name,
+		governor = .governance.name,
+		container_deployer = .deployer.name,
+		operational = .operational
+	);
+}
+
+query get_cluster_data(name) {
+	return cluster @ { name } (
+		name = .name,
+     	governor = .governance.name,
+     	deployer = .deployer.name,
+     	is_operational = .operational
+	);
+}
+
+query get_cluster_providers(name): list<(name:text, pubkey:pubkey)> {
+	val cluster = require(cluster @? { name }, "Cluster " + name + " not found");
+    return provider_state @* {
+        .provider in cluster_provider @* { cluster }.provider
+    } (name = .name, pubkey = .provider.pubkey);
+}
+
+query get_cluster_nodes(name) {
+    return node @* {
+        .pubkey in cluster_node @* { cluster @ { name } }.node.pubkey
+    } (pubkey = .pubkey, host = .host, port = .port, api_url = .api_url, active = .active);
+}
+
+query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
+    return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
+}

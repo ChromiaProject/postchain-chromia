@@ -1,0 +1,44 @@
+enum container_type {
+	naked, // running directly on the node
+	isolated // container with resource limits
+}
+
+
+enum resource_limit_type {
+	cpu,
+	ram,
+	storage
+}
+
+entity container {
+	key name;
+	index cluster;
+	container_type;
+	index deployer: voter_set; //  who can deploy and update bcs in this container
+}
+ 
+entity container_resource_limit {
+	key container, resource_limit_type;
+	mutable value: integer;
+}
+
+//Defines which container a blockchain belongs to
+entity container_blockchain { key container, blockchain; }
+
+operation add_container_replica(me: provider, cluster, container) {
+	require_provider_auth_with_rl(me);
+	create cluster_container_replica(cluster, container);
+}
+
+operation remove_container_replica(me: provider, cluster, container) {
+	require_provider_auth_with_rl(me);
+	delete cluster_container_replica @ {cluster, container};
+}
+
+function create_container_with_resource_limits(name, container_type, cluster, voter_set, cpu: integer = -1, ram: integer = -1, storage: integer = -1): container {
+	val c = create container(name, cluster, container_type, voter_set);
+    create container_resource_limit(c, resource_limit_type.cpu , cpu);
+    create container_resource_limit(c, resource_limit_type.ram , ram);
+    create container_resource_limit(c, resource_limit_type.storage , storage);
+    return c;
+}
