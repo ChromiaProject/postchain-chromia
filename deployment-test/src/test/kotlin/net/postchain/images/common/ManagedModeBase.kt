@@ -36,7 +36,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     val network: Network = Network.newNetwork()
 
-    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer()
+    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT"))
         .withNetwork(network)
 
     val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)

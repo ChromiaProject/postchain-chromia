@@ -11,6 +11,8 @@ image: maven:3.8.4-jdk-11
     - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
   artifacts:
     when: on_failure
+    paths:
+      - "**/*.log"
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
