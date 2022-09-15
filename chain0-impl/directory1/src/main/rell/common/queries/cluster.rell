@@ -39,3 +39,8 @@ query get_cluster_nodes(name) {
 query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
     return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
 }
+
+query get_cluster_api_urls(name) {
+	val cluster = cluster @ { name };
+	return cluster_node @* { cluster } ( .node.api_url );
+}

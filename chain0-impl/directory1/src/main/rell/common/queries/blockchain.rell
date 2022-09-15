@@ -69,3 +69,9 @@ query get_blockchain_info_list(include_inactive: boolean): list<(rid:byte_array,
 	}
 	return result;
 }
+
+query get_blockchain_cluster(blockchain_rid: byte_array) {
+	val bc = blockchain @ { blockchain_rid };
+	return container_blockchain @ { bc }.container.cluster.name;
+}
+
