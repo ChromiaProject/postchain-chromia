@@ -15,6 +15,7 @@
         <module>chain0-impl</module>
         <module>postchain-mc</module>
         <module>directory1-example</module>
+        <module>deployment-test</module>
     </modules>
     <packaging>pom</packaging>
 

@@ -75,8 +75,8 @@ class Directory1Helper(private val postchainContainer: PostchainContainer, priva
         TxBuilder(brid0, newNode.sigMaker).build(opName,
                 gtv(newNodeProvider),
                 gtv(newNode.pubKeyByteArray),
-                gtv(newNode.nodeHost), gtv(newNode.nodePort.toLong()),
-                gtv(cluster)
+                gtv(newNode.nodeHost), gtv(newNode.nodePort.toLong()), gtv(""),
+                gtv(gtv(cluster))
         ).also {
             postchainContainer.txBldr(it, opName)
         }
