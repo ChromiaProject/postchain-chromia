@@ -69,7 +69,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify -Dtest=Directory1DeploymentIT -DfailIfNoTests=false
 
 release:
   stage: release
