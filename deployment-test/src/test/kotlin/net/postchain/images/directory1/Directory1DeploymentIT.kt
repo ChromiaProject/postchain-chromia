@@ -19,14 +19,17 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
 @Testcontainers
+@DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentIT {
 
