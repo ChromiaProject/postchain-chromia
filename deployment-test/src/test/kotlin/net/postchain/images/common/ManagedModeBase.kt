@@ -28,7 +28,7 @@ import java.io.File
 open class ManagedModeBase(rellFolder: String) {
 
     val consoleLogger = KotlinLogging.logger("TestLogger")
-    private val logger = KotlinLogging.logger {}
+    val logger = KotlinLogging.logger {}
 
     val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
     val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
