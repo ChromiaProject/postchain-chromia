@@ -1,8 +1,21 @@
 image: maven:3.8.4-jdk-11
 
 .setup:
+  before_script:
+    - apt-get update && apt-get install -y docker.io
+    - mkdir -p $HOME/.docker/cli-plugins/
+    - wget -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
+    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
+    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
+    - mkdir -p $TEST_MOUNT_DIRECTORY
+    - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-subnode:3.7.0-SNAPSHOT
+    - docker image pull registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT
   artifacts:
     when: on_failure
+    paths:
+      - "**/*.log"
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
@@ -36,6 +49,7 @@ docs:
     - sphinx-build -c doc/enterprise0 -b html doc/source directory1-example/_doc
 
 deploy:
+  extends: .setup
   stage: deploy
   dependencies:
     - docs
@@ -47,6 +61,7 @@ deploy:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,distro deploy
 
 build:
+  extends: .setup
   stage: build
   except:
     - dev
@@ -105,9 +120,24 @@ variables:
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+  # Instruct Testcontainers to use the daemon of DinD.
+  DOCKER_HOST: tcp://docker:2375
+  # Instruct Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # Improve performance with overlayfs.
+  DOCKER_DRIVER: overlay2
+  DOCKER_CLI_EXPERIMENTAL: enabled
+  BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
+  TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
+  # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GB free, therefore we remove the check to avoid failing.
+  TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
   - postgres
+  - name: docker:20-dind
+    alias: docker
+    # explicitly disable tls to avoid docker startup interruption
+    command: [ "--tls=false" , "--experimental"]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
