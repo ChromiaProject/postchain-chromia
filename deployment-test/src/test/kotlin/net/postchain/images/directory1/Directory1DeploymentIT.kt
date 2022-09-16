@@ -219,6 +219,7 @@ internal class Directory1DeploymentIT {
                 dapps[chain.iid] = blockchainRid!!
                 consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
+                node3Db.awaitNewBlock()
                 node3.client(brid).transactionBuilder()
                     .proposeBlockchainOperation(node3.pubKeyByteArray, GtvEncoder.encodeGtv(config.gtvConfig), dappName, containerName)
                     .postSyncAwaitConfirmation()
