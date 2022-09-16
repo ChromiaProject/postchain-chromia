@@ -17,6 +17,7 @@ import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.adminPubKey
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.GtxBuilder
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -221,9 +222,8 @@ internal class Directory1DeploymentIT {
                 consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
                 node3Db.awaitNewBlock()
-                node3.client(brid).transactionBuilder()
-                    .proposeBlockchainOperation(node3.pubKeyByteArray, GtvEncoder.encodeGtv(config.gtvConfig), dappName, containerName)
-                    .postSyncAwaitConfirmation()
+                val configGtv = gtv(GtvEncoder.encodeGtv(config.gtvConfig))
+                node3.tx(brid, "propose_blockchain", gtv(node3.pubKeyByteArray), configGtv, gtv("c0"), gtv(containerName))
 
                 // Voting
                 val p1 = node1.approveProposal(brid, provider1)
