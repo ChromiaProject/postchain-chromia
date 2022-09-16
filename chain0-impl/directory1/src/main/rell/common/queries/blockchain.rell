@@ -75,3 +75,14 @@ query get_blockchain_cluster(blockchain_rid: byte_array) {
 	    ( container_blockchain.container.cluster.name );
 }
 
+query get_blockchain_api_urls(blockchain_rid: byte_array): list<text> {
+	return (blockchain, container_blockchain, cluster_node) @*
+	{
+		blockchain.rid == blockchain_rid and
+		container_blockchain.blockchain.rid == blockchain.rid and
+		container_blockchain.container.cluster == cluster_node.cluster
+	} (
+		cluster_node.node.api_url
+	);
+}
+
