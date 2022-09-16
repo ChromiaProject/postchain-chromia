@@ -41,6 +41,5 @@ query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text
 }
 
 query get_cluster_api_urls(name) {
-	val cluster = cluster @ { name };
-	return cluster_node @* { cluster } ( .node.api_url );
+	return (cluster_node, cluster) @* { cluster.name == name and cluster == cluster_node.cluster } ( cluster_node.node.api_url );
 }
