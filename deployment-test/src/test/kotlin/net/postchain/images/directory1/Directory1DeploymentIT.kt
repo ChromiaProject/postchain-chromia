@@ -5,6 +5,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
+import mu.KotlinLogging
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -19,6 +20,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.BindMode
+import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
 
@@ -29,6 +31,8 @@ internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 internal class Directory1DeploymentIT {
 
     companion object : ManagedModeBase("/directory1/rell") {
+        val subnodelogger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "subnode")
+        val subnodeLogger = KotlinLogging.logger("SubNode")
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
@@ -58,6 +62,7 @@ internal class Directory1DeploymentIT {
         @JvmStatic
         @AfterAll
         fun breakdown() {
+            printSubnodeLogs(dockerClient, subnodeLogger)
             stopNodes()
             removeSubnodeContainers()
         }

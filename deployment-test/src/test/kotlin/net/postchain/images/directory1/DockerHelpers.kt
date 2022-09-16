@@ -2,6 +2,7 @@ package net.postchain.images.directory1
 
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.LogsParam
+import mu.KLogger
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_HOST
@@ -41,19 +42,17 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
 }
 
 // Keeping this for future debugging purposes
-internal fun printSubnodeLogs(dockerClient: DockerClient) {
+internal fun printSubnodeLogs(dockerClient: DockerClient, logger: KLogger) {
     val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
     val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
     if (subnodeContainer != null) {
-        println("------------------------- CONTAINER LOGS ---------------------")
-        println()
-        println(
+        logger.info("------------------------- CONTAINER LOGS ---------------------\n")
+        logger.info(
             dockerClient.logs(subnodeContainer.id(), LogsParam.stdout(), LogsParam.stderr(), LogsParam.tail(100))
                 .readFully()
         )
-        println()
-        println("------------------------- END OF CONTAINER LOGS --------------")
+        logger.info("\n------------------------- END OF CONTAINER LOGS --------------")
     } else {
-        println("No subcontainer is launched")
+        logger.info("No subcontainer is launched")
     }
 }
