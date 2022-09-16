@@ -13,9 +13,10 @@
 
     <modules>
         <module>chain0-impl</module>
-        <module>postchain-mc</module>
-        <module>directory1-example</module>
+        <module>chromia-client</module>
         <module>deployment-test</module>
+        <module>directory1-example</module>
+        <module>postchain-mc</module>
     </modules>
     <packaging>pom</packaging>
 

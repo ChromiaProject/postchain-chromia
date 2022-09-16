@@ -39,3 +39,11 @@ query get_cluster_nodes(name) {
 query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
     return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
 }
+
+query get_cluster_blockchains(name) {
+	return (container_blockchain) @* { .container.cluster.name == name } ( .blockchain.rid );
+}
+
+query get_cluster_api_urls(name) {
+	return (cluster_node, cluster) @* { cluster.name == name and cluster == cluster_node.cluster } ( cluster_node.node.api_url );
+}
