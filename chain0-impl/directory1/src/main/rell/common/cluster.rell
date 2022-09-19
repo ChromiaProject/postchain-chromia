@@ -70,10 +70,12 @@ operation add_provider_to_cluster(me: provider, provider, cluster) {
 
 /* When all providers have provided a node each, cluster goes operational */
 function check_operational(cl: cluster) {
-	val providers = cluster_provider @* {cl}.provider;
-	val nodes = cluster_node @* {cl}.node;
-	if (nodes.size() == providers.size()) {
-		update cluster @ {cl.name} (.operational = true);
+	val providers = cluster_provider @* { cl }.provider;
+	val was_operational = cluster @ { cl.name }.operational;
+	val nodes = cluster_node @* { cl }.node;
+	val is_operational = nodes.size() == providers.size();
+	if (was_operational != is_operational) {
+		update cluster @ { cl.name } (.operational = is_operational);
 	}
 }
 

@@ -21,7 +21,28 @@ operation add_node(provider_key:pubkey, node_pubkey: pubkey, host: text, port: i
 	print("-----------------------------------");
 }
 
-function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, api_url: text, clusters: list<text>) {
+operation replace_node(provider_key:pubkey, old_node_key:pubkey, new_node_key:pubkey, new_host:text?, new_port:integer?, new_api_url:text?) {
+	print("-------------Replace-Node--------------");
+	val provider = provider @ { provider_key };
+	require_provider_auth_with_rl(provider);
+	require_is_signer(old_node_key);
+	require_is_signer(new_node_key);
+	val old_node = node @ { old_node_key };
+	require(old_node.provider == provider, "Node must be owned by provider");
+
+	val host = if (new_host != null) new_host else old_node.host;
+	val port = if (new_port != null) new_port else old_node.port;
+	val api_url = if (new_api_url != null) new_api_url else old_node.api_url;
+
+	val cluster_names = cluster_node @* { old_node }.cluster.name;
+	delete cluster_node @* { old_node };
+	add_node_internal(provider, new_node_key, host, port, api_url, cluster_names);
+	delete old_node;
+	node_list.last_update = op_context.last_block_time;
+	print("---------------------------------------");
+}
+
+function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, api_url: text, clusters: list<text>): node {
 	val existing_node = node @? { node_pubkey };
 	if (exists(existing_node)) {
 		require(existing_node.provider == provider, "Must be provider of node to update its state");
@@ -40,6 +61,7 @@ function add_node_internal(provider, node_pubkey: pubkey, host: text, port: inte
 	for (cluster_name in clusters) {
 		add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster @ { cluster_name });
 	}
+	return node @ { node_pubkey };
 }
 
 operation remove_node(provider, node_pubkey: pubkey) {

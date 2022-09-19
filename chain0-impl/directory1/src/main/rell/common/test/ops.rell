@@ -2,6 +2,9 @@ module;
 
 import ^^.*;
 
+val initial_signer_privkey = byte_array.from_hex("4242424242424242424242424242424242424242424242424242424242424242");
+val initial_signer_pubkey = byte_array.from_hex("0324653EAC434488002CC06BBFB7F10FE18991E35F9FE4302DBEA6D2353DC0AB1C");
+
 operation initialize_test_module(pubkey, majority_threshold:integer = 0) {
 	initialize_module(pubkey, "localhost", 9870, 1000, majority_threshold);
 }
