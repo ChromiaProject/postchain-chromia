@@ -18,3 +18,14 @@ operation propose_container_limits(me: provider, container, ram: integer, cpu: i
 	create pending_container_limits(prop, container, cpu, ram, storage);
 	internal_vote(me, prop, true);
 }
+
+operation propose_remove_container(my_pubkey: pubkey, name) {
+    val me = require_provider(my_pubkey);
+    require_provider_auth_with_rl(me);
+    val cont = require(container @? { name }, "Unknown container %s".format(name));
+    require_cluster_deployer(cont.cluster, me);
+    require_container_available_for_removal(cont);
+    val prop = create proposal(op_context.last_block_time, proposal_type.container_remove, me, cont.cluster.deployer);
+    create pending_remove_container(prop, cont);
+    internal_vote(me, prop, true);
+}

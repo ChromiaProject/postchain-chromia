@@ -41,3 +41,11 @@ function create_container_with_resource_limits(name, container_type, cluster, vo
     create container_resource_limit(c, resource_limit_type.storage , storage);
     return c;
 }
+
+function require_container_available_for_removal(container) {
+    require(container.name != "system", "System cluster can't be deleted");
+    require(
+        empty(container_blockchain @* { container }),
+        "Container %s is not empty and can't be deleted. Delete blockchains first".format(container.name)
+    );
+}

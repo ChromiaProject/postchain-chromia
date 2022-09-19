@@ -8,6 +8,7 @@ enum proposal_type {
     bc,
     container,
     container_limits,
+    container_remove,
     cluster_limits,
     cluster_provider,
     cluster_deployer,
@@ -51,6 +52,11 @@ entity pending_container_limits {
 	cpu: integer;
 	ram: integer;
 	storage: integer;
+}
+
+entity pending_remove_container {
+	key proposal;
+	key container;
 }
 
 entity pending_cluster_limits {
@@ -147,6 +153,7 @@ function delete_proposal(prop: proposal) {
         bc                  -> delete pending_blockchain @ { prop };
         container           -> delete pending_container @ { prop };
         container_limits    -> delete pending_container_limits @ { prop };
+        container_remove    -> delete pending_remove_container @? { prop };
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };

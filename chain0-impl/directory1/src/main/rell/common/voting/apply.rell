@@ -23,6 +23,7 @@ function apply_voting_result(prop: proposal) {
 	 			bc                -> apply_bc(prop);
 				container         -> apply_container(prop);
 				container_limits  -> apply_container_limits(prop);
+				container_remove  -> apply_container_remove(prop);
 				cluster_limits    -> apply_cluster_limits(prop);
 				cluster_provider  -> apply_cluster_provider(prop);
 				cluster_deployer  -> apply_cluster_deployer(prop);
@@ -57,6 +58,13 @@ function apply_container_limits(proposal) {
 	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
 	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
 	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
+}
+
+function apply_container_remove(proposal) {
+    val cont = pending_remove_container @ { proposal } .container;
+    delete container_resource_limit @* { cont };
+    delete pending_remove_container @ { proposal };
+    delete container @ { cont.name };
 }
 
 function apply_cluster_limits(proposal) {
