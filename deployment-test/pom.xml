@@ -32,13 +32,13 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
-            <version>${project.version}</version>
+            <version>${postchain.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.postchain.images</groupId>
             <artifactId>postgres</artifactId>
-            <version>${project.version}</version>
+            <version>${postchain.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -47,7 +47,7 @@
             <classifier>tests</classifier>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>${project.version}</version>
+            <version>${postchain.version}</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
