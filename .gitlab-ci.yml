@@ -74,13 +74,25 @@ build:
 release:
   stage: release
   script:
+    - set -eu
     - *git_setup
+    # Create support branch
     - git fetch --tags
-    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" refs/tags)
+    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" "refs/tags/ver-")
     - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
+    # Checkout development branch
     - git checkout $CI_COMMIT_REF_NAME
-    - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
-    - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+    # Bump rell and postchain versions for release
+    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${POSTCHAIN_VERSION:-$VERSION}
+    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$RELL_VERSION
+    - git commit -am "Updating dependencies before release"
+    # Perform release steps
+    - mvn -B gitflow:release -DskipTestProject=true -DreleaseVersion=$VERSION -DdevelopmentVersion=$NEXT_VERSION
+    # Bump rell and postchain versions for development
+    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${NEXT_POSTCHAIN_VERSION:-$NEXT_VERSION}
+    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$NEXT_RELL_VERSION
+    - git commit -am "Updating dependencies after release"
+    - git push origin HEAD
   only:
     - dev
   when: manual

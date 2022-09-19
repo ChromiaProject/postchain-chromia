@@ -21,7 +21,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>${project.version}</postchain.version>
+        <postchain.version>3.7.0-SNAPSHOT</postchain.version>
         <rellr.version>0.10.11-SNAPSHOT</rellr.version>
         <kotlin.version>1.6.10</kotlin.version>
         <junit.version>5.8.2</junit.version>
