@@ -18,3 +18,15 @@ operation propose_cluster_limits(me: provider, cluster, ram: integer, cpu: integ
 	create pending_cluster_limits(prop, cluster, cpu, ram, storage);
 	internal_vote(me, prop, true);
 }
+
+operation propose_remove_cluster(my_pubkey: pubkey, name) {
+    val me = require_provider(my_pubkey);
+    require_provider_auth_with_rl(me);
+    val c = require(cluster @? { name }, "Unknown cluster %s".format(name));
+    require_cluster_governor(c, me);
+    require_cluster_available_for_removal(c);
+
+    val prop = create proposal(op_context.last_block_time, proposal_type.cluster_remove, me, c.governance);
+    create pending_remove_cluster(prop, c);
+    internal_vote(me, prop, true);
+}

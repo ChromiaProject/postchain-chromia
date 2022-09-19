@@ -3,7 +3,6 @@ enum container_type {
 	isolated // container with resource limits
 }
 
-
 enum resource_limit_type {
 	cpu,
 	ram,
