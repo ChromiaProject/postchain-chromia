@@ -15,6 +15,7 @@
     <description>Chain0 implementations for Directory1/Chromia1</description>
 
     <properties>
+        <rellTestModules>common</rellTestModules>
     </properties>
 
     <dependencies>
@@ -47,7 +48,7 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.4.0</version>
+                <version>0.4.1</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>
@@ -59,7 +60,7 @@
                             <goal>rell-test</goal>
                         </goals>
                         <configuration>
-                            <testModule>common</testModule>
+                            <testModule>${rellTestModules}</testModule>
                             <skip>${skipTests}</skip>
                             <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
                         </configuration>
