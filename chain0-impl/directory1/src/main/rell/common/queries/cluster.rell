@@ -48,32 +48,3 @@ query get_cluster_api_urls(name) {
 	return (cluster_node, cluster) @* { cluster.name == name and cluster == cluster_node.cluster } ( cluster_node.node.api_url );
 }
 
-// Gets addresses to all peers 
-query get_all_cluster_peers(): list<(name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>)>  {
-	val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
-		cluster_node.cluster == cluster,
-		anchoring_chain.cluster == cluster
-	} (
-		name = cluster.name,
-		anchoring_chain = anchoring_chain.blockchain.rid,
-		peer = cluster_node.node.pubkey,
-		peer_api_url = cluster_node.node.api_url
-	);
-	val result_map = map<name, (name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>)>();
-	for (cp in cluster_peer) {
-		if (not(result_map.contains(cp.name))) {
-			val peers = list<(pubkey:pubkey, api_url:text)>();
-			result_map[cp.name] = (
-				name = cp.name,
-				anchoring_chain = cp.anchoring_chain,
-				peers = peers
-			);
-		}
-		val cluster_peers = result_map[cp.name].peers;
-		cluster_peers.add(
-			(pubkey = cp.peer,
-			api_url = cp.peer_api_url)
-		);
-	}
-	return result_map.values();
-}

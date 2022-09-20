@@ -21,4 +21,11 @@ function test_create_anchoring_chain() {
     rell.test.tx().op(
         create_anchoring_chain_op("system")
     ).run_must_fail();
+
+    val clusters = cm_get_all_clusters();
+    assert_equals(clusters.size(), 1);
+
+    val cluster_info = cm_get_cluster_info("system");
+    assert_equals(cluster_info.anchoring_chain, anchoring_chain.rid);
+    assert_equals(cluster_info.peers.size(), 1);
 }
