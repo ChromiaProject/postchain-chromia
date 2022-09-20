@@ -15,7 +15,6 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
-import org.spongycastle.asn1.x500.style.RFC4519Style.initials
 import java.io.File
 
 open class CliExecution(val config: PostchainClientConfig) {
@@ -688,6 +687,14 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
+    fun proposeRemoveCluster(clusterName: String) {
+        sendTxSync(
+                proposeRemoveClusterAsync(clusterName),
+                "Cluster removal proposed",
+                "Failed proposing cluster removal"
+        )
+    }
+
     fun proposeVoterSetGovernor(name: String, new: String) {
         sendTxSync(
                 proposeVoterSetGovernorAsync(name, new),
@@ -712,6 +719,14 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
+    fun proposeRemoveContainer(containerName: String) {
+        sendTxSync(
+                proposeRemoveContainerAsync(containerName),
+                "Container removal proposed",
+                "Failed proposing container removal"
+        )
+    }
+
     fun proposeContainer(containerName: String, clusterName: String, deployerName: String) {
         sendTxSync(
                 proposeContainerAsync(containerName, clusterName, deployerName),
@@ -731,7 +746,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposePauseBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposePauseBlockchainAsync(blockchainRID),
-                "blockchain pause proposition was added successfully",
+                "Blockchain pause proposition was added successfully",
                 "Cannot add proposal for pausing blockchain"
         )
     }
@@ -739,7 +754,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeUnPauseBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposeUnPauseBlockchainAsync(blockchainRID),
-                "blockchain un-pause proposition was added successfully",
+                "Blockchain un-pause proposition was added successfully",
                 "Cannot add proposal for un-pausing blockchain"
         )
     }
@@ -747,7 +762,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeDeleteBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposeDeleteBlockchainAsync(blockchainRID),
-                "blockchain delete proposition was added successfully",
+                "Blockchain delete proposition was added successfully",
                 "Cannot add proposal for deleting blockchain"
         )
     }
@@ -891,6 +906,14 @@ open class CliExecution(val config: PostchainClientConfig) {
                 gtv(currentLimits["ram"]!!),
                 gtv(currentLimits["cpu"]!!),
                 gtv(currentLimits["storage"]!!)
+        )
+    }
+
+    fun proposeRemoveContainerAsync(containerName: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
+                "propose_remove_container",
+                gtv(config.pubkey().key),
+                gtv(containerName)
         )
     }
 
@@ -1096,6 +1119,13 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().addOperation(
                 "propose_cluster_deployer",
                 meProvider, cluster, deployer
+        )
+    }
+
+    fun proposeRemoveClusterAsync(clusterName: String): TransactionBuilder {
+        return makeTransactionWithNop().addOperation(
+                "propose_remove_cluster",
+                gtv(config.pubkey().key), gtv(clusterName)
         )
     }
 

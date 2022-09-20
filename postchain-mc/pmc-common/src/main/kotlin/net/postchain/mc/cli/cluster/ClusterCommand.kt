@@ -14,5 +14,6 @@ fun clusterCommands() = ClusterCommand().subcommands(
         CommandListClusterContainers(),
         CommandProposeClusterProvider(),
         CommandProposeClusterDeployer(),
-        CommandProposeClusterResourceLimits()
+        CommandProposeClusterResourceLimits(),
+        CommandProposeRemoveCluster()
 )
