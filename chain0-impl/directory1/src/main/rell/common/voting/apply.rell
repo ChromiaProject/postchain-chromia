@@ -80,12 +80,13 @@ function apply_cluster_deployer(proposal) {
 }
 
 function apply_remove_cluster(proposal) {
-	val pps = pending_remove_cluster @ {proposal};
-	delete cluster_resource_limit @* { pps.cluster };
-	delete cluster_node @* { pps.cluster };
-	delete cluster_provider @* { pps.cluster };
-	delete cluster_container_replica @* { pps.cluster };
-    delete cluster @* { pps.cluster.name };
+	val cl = pending_remove_cluster @ { proposal } .cluster;
+	delete cluster_resource_limit @* { cl };
+	delete cluster_node @* { cl };
+	delete cluster_provider @* { cl };
+	delete cluster_container_replica @* { cl };
+	delete pending_remove_cluster @ { proposal };
+    delete cluster @* { cl.name };
 }
 
 function apply_voter_set_governor(proposal) {

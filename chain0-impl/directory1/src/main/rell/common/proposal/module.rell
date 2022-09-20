@@ -157,7 +157,7 @@ function delete_proposal(prop: proposal) {
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
-        cluster_remove      -> delete pending_remove_cluster @ { prop };
+        cluster_remove      -> delete pending_remove_cluster @? { prop };
         voter_set_provider  -> delete pending_voter_set_provider @ { prop };
         voter_set_governor  -> delete pending_voter_set_governor @ { prop };
         provider_state      -> delete pending_provider_state @ { prop };
