@@ -47,3 +47,4 @@ query get_cluster_blockchains(name) {
 query get_cluster_api_urls(name) {
 	return (cluster_node, cluster) @* { cluster.name == name and cluster == cluster_node.cluster } ( cluster_node.node.api_url );
 }
+
