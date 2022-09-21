@@ -2,6 +2,7 @@
 
 import ^^.*;
 import ^^.test.ops.*;
+import ^.util.constants.*;
 
 function setup() {
 	rell.test.tx().op(
@@ -18,7 +19,7 @@ function test_add_node_to_cluster() {
     // asserting node added
     assert_equals(
         cluster_node @ { system_cluster } .node,
-        node @ { } limit 1
+        node @ { initial_signer.pub }
     );
 
     // must fail

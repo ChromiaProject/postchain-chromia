@@ -30,9 +30,9 @@ operation replace_node(provider_key:pubkey, old_node_key:pubkey, new_node_key:pu
 	val old_node = node @ { old_node_key };
 	require(old_node.provider == provider, "Node must be owned by provider");
 
-	val host = if (new_host != null) new_host else old_node.host;
-	val port = if (new_port != null) new_port else old_node.port;
-	val api_url = if (new_api_url != null) new_api_url else old_node.api_url;
+	val host = new_host ?: old_node.host;
+	val port = new_port ?: old_node.port;
+	val api_url = new_api_url ?: old_node.api_url;
 
 	val cluster_names = cluster_node @* { old_node }.cluster.name;
 	delete cluster_node @* { old_node };

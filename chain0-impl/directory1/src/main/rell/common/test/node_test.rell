@@ -3,11 +3,12 @@
 import ^^.*;
 import ^.ops.*;
 import ^.util.constants.*;
+import ^.util.*;
 
 function test_replace_node() {
     val provider = rell.test.keypairs.alice;
     rell.test.tx().op(initialize_test_module(provider.pub, 100)).run();
-    assert_not_null(node @? { initial_signer_pubkey });
+    assert_not_null(node @? { initial_signer.pub });
 
     val node2 = rell.test.keypairs.trudy;
 
@@ -25,4 +26,7 @@ function test_replace_node() {
     assert_not_null(new_node);
     assert_equals(new_node.host, "localhost"); // From initialize_test_module
     assert_equals(new_node.port, 123);
+
+    assert_true(get_signers_of_cluster_name("system").contains(node2.pub));
+    assert_false(get_signers_of_cluster_name("system").contains(initial_signer.pub));
 }
