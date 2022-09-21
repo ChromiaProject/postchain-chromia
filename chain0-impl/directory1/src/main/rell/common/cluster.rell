@@ -37,7 +37,7 @@ entity cluster_resource_limit {
  	key cluster, resource_limit_type;
  	mutable value: integer;
 }
-  
+
 // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
 entity cluster_container_replica { key cluster, container; }
 
@@ -133,4 +133,12 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 			create cluster_provider(c, prov);
 		}
 	}
+}
+
+function require_cluster_available_for_removal(cluster) {
+    require(cluster.name != "system", "System cluster can't be deleted");
+    require(
+        empty(container @* { cluster }),
+        "Cluster %s is not empty and can't be deleted. Delete containers first".format(cluster.name)
+    );
 }

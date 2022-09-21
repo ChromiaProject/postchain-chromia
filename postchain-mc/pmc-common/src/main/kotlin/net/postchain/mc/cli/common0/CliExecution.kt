@@ -15,14 +15,13 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
-import org.spongycastle.asn1.x500.style.RFC4519Style.initials
 import java.io.File
 
 open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
-    fun getPostchainClient() = ClientUtil.fromConfig(config)
+    open fun getPostchainClient() = ClientUtil.fromConfig(config)
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
         val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
@@ -731,7 +730,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposePauseBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposePauseBlockchainAsync(blockchainRID),
-                "blockchain pause proposition was added successfully",
+                "Blockchain pause proposition was added successfully",
                 "Cannot add proposal for pausing blockchain"
         )
     }
@@ -739,7 +738,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeUnPauseBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposeUnPauseBlockchainAsync(blockchainRID),
-                "blockchain un-pause proposition was added successfully",
+                "Blockchain un-pause proposition was added successfully",
                 "Cannot add proposal for un-pausing blockchain"
         )
     }
@@ -747,7 +746,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeDeleteBlockchain(blockchainRID: String) {
         sendTxSync(
                 proposeDeleteBlockchainAsync(blockchainRID),
-                "blockchain delete proposition was added successfully",
+                "Blockchain delete proposition was added successfully",
                 "Cannot add proposal for deleting blockchain"
         )
     }

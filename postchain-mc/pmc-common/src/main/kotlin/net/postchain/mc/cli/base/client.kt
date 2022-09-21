@@ -1,14 +1,12 @@
 package net.postchain.mc.cli.base
 
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
+import net.postchain.client.core.ConcretePostchainClient
+import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.TransactionResult
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.crypto.SigMaker
 import net.postchain.mc.cli.util.NopPostchainClient
-import net.postchain.mc.config.app.ClientConfig
 
 fun TransactionResult.printResult(onSuccess: String, onFail: String) {
     when (status) {

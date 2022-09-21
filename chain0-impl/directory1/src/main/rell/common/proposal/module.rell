@@ -8,9 +8,11 @@ enum proposal_type {
     bc,
     container,
     container_limits,
+    container_remove,
     cluster_limits,
     cluster_provider,
     cluster_deployer,
+    cluster_remove,
     voter_set_provider,
     voter_set_governor,
     provider_state,
@@ -52,6 +54,11 @@ entity pending_container_limits {
 	storage: integer;
 }
 
+entity pending_remove_container {
+	key proposal;
+	key container;
+}
+
 entity pending_cluster_limits {
 	key proposal;
 	key cluster;
@@ -71,6 +78,11 @@ entity pending_cluster_deployer {
 	key proposal;
 	key cluster;
 	deployer: voter_set;
+}
+
+entity pending_remove_cluster {
+	key proposal;
+	key cluster;
 }
 
 entity pending_voter_set_governor{
@@ -141,9 +153,11 @@ function delete_proposal(prop: proposal) {
         bc                  -> delete pending_blockchain @ { prop };
         container           -> delete pending_container @ { prop };
         container_limits    -> delete pending_container_limits @ { prop };
+        container_remove    -> delete pending_remove_container @? { prop };
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
+        cluster_remove      -> delete pending_remove_cluster @? { prop };
         voter_set_provider  -> delete pending_voter_set_provider @ { prop };
         voter_set_governor  -> delete pending_voter_set_governor @ { prop };
         provider_state      -> delete pending_provider_state @ { prop };
