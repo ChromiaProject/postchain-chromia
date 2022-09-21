@@ -25,9 +25,8 @@ query get_cluster_data(name) {
 
 query get_cluster_providers(name): list<(name:text, pubkey:pubkey)> {
 	val cluster = require(cluster @? { name }, "Cluster " + name + " not found");
-    return provider_state @* {
-        .provider in cluster_provider @* { cluster }.provider
-    } (name = .name, pubkey = .provider.pubkey);
+    return cluster_provider @* { cluster }
+    (name = .provider.name, pubkey = .provider.pubkey);
 }
 
 query get_cluster_nodes(name) {

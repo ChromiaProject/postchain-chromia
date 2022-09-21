@@ -20,23 +20,10 @@ query get_provider_clusters(pubkey) : list<text> {
 }
 
 query get_provider_data (pubkey) {
-    return provider_state @ {
-        provider @ { pubkey }
-    } (
-        pubkey = .provider.pubkey,
-        name = .name,
-        active = .active,
-        system = .system,
-        tier = .tier
-    );
+    return 
+        provider @ { pubkey } ($.to_struct());
 }
 
-query get_all_providers() {
-    return provider_state @* {} (
-        pubkey = .provider.pubkey,
-        name = .name,
-        active = .active,
-        system = .system,
-        tier = .tier
-    );
+query get_all_providers(): list<struct<provider>> {
+    return provider @* {} ($.to_struct());
 }

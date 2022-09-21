@@ -115,10 +115,10 @@ function apply_voter_set_provider(proposal) {
 //For promotion and demotion of system providers
 function apply_provider_is_system(proposal) {
 	val pps = pending_provider_is_system @ {proposal};
-	update provider_state @ { pps.provider } ( .system = pps.system );
+	pps.provider.system = pps.system;
 
 	//If promotion, update SYSTEM_P voter set
-	if (provider_state @ { pps.provider }.system) {
+	if (pps.provider.system) {
 		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
 	} else {
 		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
@@ -132,7 +132,7 @@ function apply_provider_state(proposal) {
 }
 
 function update_provider_state(provider, active: boolean) {
-	update provider_state @ { provider } ( .active = active );
+	provider.active = active;
 	if (active == false) {
 		update node @* { provider } ( .active = false );
 		for (cl in cluster_provider @* { .provider == provider } (.cluster)) {
@@ -148,7 +148,7 @@ function update_provider_state(provider, active: boolean) {
 		delete blockchain_replica_node @* { .node.provider == provider };
 	} else { //enable
 		//If enabled provider is a system provider, update SYSTEM_P voter set
-		if (provider_state @ { provider }.system) {
+		if (provider.system) {
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}

@@ -33,14 +33,14 @@ query get_node_containers(pubkey): list<(cluster:text, name:text, deployer:text)
 }
 
 query get_nodes_with_provider() {
-    return (node, provider_state) @* { node.provider == provider_state.provider } (
+    return node @* {} (
         pubkey = .pubkey,
         node_active = node.active,
         host = .host,
         port = .port,
         last_updated = .last_updated,
-        name = .name,
-        provider_active = provider_state.active,
-        @sort provider = node.provider.pubkey
+        name = .provider.name,
+        provider_active = .provider.active,
+        @sort provider = .provider.pubkey
     );
 }

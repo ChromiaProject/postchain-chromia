@@ -122,9 +122,8 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
     if (approver != null) vote_for_last_proposal(approver);
 
     // Asserting that provider is enabled and system
-    val prov_state = provider_state @ { prov };
-    assert_true(prov_state.active);
-    assert_true(prov_state.system);
+    assert_true(prov.active);
+    assert_true(prov.system);
 }
 
 function vote_for_last_proposal(approver: rell.test.keypair) {
