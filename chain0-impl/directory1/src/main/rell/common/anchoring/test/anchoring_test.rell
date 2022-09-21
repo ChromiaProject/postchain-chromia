@@ -1,7 +1,7 @@
 @test module;
 
 import ^^.*;
-import ^.ops.*;
+import ^^^.test.ops.*;
 
 function test_create_anchoring_chain() {
     val provider = rell.test.keypairs.alice;

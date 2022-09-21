@@ -1,6 +1,7 @@
 module;
 
 import .model.*;
+import .anchoring.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
