@@ -21,7 +21,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     companion object : KLogging()
 
-    fun getPostchainClient() = ClientUtil.fromConfig(config)
+    open fun getPostchainClient() = ClientUtil.fromConfig(config)
 
     protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
         val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
@@ -687,14 +687,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeRemoveCluster(clusterName: String) {
-        sendTxSync(
-                proposeRemoveClusterAsync(clusterName),
-                "Cluster removal proposed",
-                "Failed proposing cluster removal"
-        )
-    }
-
     fun proposeVoterSetGovernor(name: String, new: String) {
         sendTxSync(
                 proposeVoterSetGovernorAsync(name, new),
@@ -716,14 +708,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 proposeContainerLimitsAsync(containerName, limitMap),
                 "Container limits proposed",
                 "Failed proposing new container limits"
-        )
-    }
-
-    fun proposeRemoveContainer(containerName: String) {
-        sendTxSync(
-                proposeRemoveContainerAsync(containerName),
-                "Container removal proposed",
-                "Failed proposing container removal"
         )
     }
 
@@ -906,14 +890,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 gtv(currentLimits["ram"]!!),
                 gtv(currentLimits["cpu"]!!),
                 gtv(currentLimits["storage"]!!)
-        )
-    }
-
-    fun proposeRemoveContainerAsync(containerName: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "propose_remove_container",
-                gtv(config.pubkey().key),
-                gtv(containerName)
         )
     }
 
@@ -1119,13 +1095,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().addOperation(
                 "propose_cluster_deployer",
                 meProvider, cluster, deployer
-        )
-    }
-
-    fun proposeRemoveClusterAsync(clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "propose_remove_cluster",
-                gtv(config.pubkey().key), gtv(clusterName)
         )
     }
 
