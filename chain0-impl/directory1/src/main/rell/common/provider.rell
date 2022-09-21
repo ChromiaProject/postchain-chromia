@@ -1,31 +1,4 @@
 
-entity provider { 
-	key pubkey; 
-	mutable name: text;
-	mutable active: boolean;
-	mutable system: boolean; // NEW. System provider has extra permissions.
-    mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
-}
-
-// type of quota for a provider
-enum provider_quota_type {
-	max_nodes,
-	max_actions_per_day
-}
-
-entity provider_quota {
-	index tier: integer, provider_quota_type;
-	mutable value: integer;
-}
-
-// Limit how much stuff provider can do to prevent abuse,
-// such as starting billion nodes, etc.
-entity provider_rl_state {
-	key provider;
-	mutable points: integer;
-	mutable last_update: integer;
-}
-
 // Registers and enables a provider
 operation register_provider(me: provider, pubkey, tier: integer) {
 	require_provider_auth_with_rl(me);
