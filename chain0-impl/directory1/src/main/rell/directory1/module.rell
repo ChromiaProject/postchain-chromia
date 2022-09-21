@@ -20,8 +20,6 @@ operation init (initial_node_host:text, initial_node_port:integer) {
 operation update_provider_data (provider, name?) {
 	require_provider_auth_with_rl(provider);
 	if (exists(name)) {
-		update provider_state @ {provider} (
-			.name = name
-		);		
+		provider.name = name;		
 	}
 }

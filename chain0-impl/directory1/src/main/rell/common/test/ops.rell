@@ -7,8 +7,7 @@ operation initialize_test_module(pubkey, majority_threshold:integer = 0) {
 }
 
 operation create_test_provider(name, pubkey, tier:integer = 1) {
-	val p = create provider(pubkey);
-	create provider_state(p, name, active = true, system = true, tier);
+	val p = create provider(pubkey, name, active = true, system = true, tier);
 	create provider_rl_state(p, points = 10000, last_update = 0);
 }
 

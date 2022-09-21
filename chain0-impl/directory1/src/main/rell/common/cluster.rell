@@ -62,7 +62,7 @@ operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, clus
 operation add_provider_to_cluster(me: provider, provider, cluster) {
 	require_provider_auth_with_rl(me);
 	require(
-	    (provider_state @ {me}.tier > 0 and provider_state @ {provider}.tier == 0) or (provider_state @ {me}.system),
+	    (me.tier > 0 and provider.tier == 0) or me.system,
 		"Must be system provider or have higher tier to add a provider to a cluster."
 	);
 	create cluster_provider(cluster, provider);
