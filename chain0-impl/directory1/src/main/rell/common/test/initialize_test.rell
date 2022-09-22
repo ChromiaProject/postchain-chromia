@@ -38,8 +38,7 @@ function test_initialization() {
 	assert_not_null(container1);
 	assert_equals(container1.cluster, cluster1);
 	assert_equals(container1.container_type, container_type.naked);
-	
-	
+
 	val summary = get_summary();
 	assert_equals(1, summary.providers);
 	assert_equals(1, summary.clusters);

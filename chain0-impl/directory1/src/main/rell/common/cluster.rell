@@ -1,6 +1,4 @@
 
-//entity cluster_signer_list { key cluster_node;}
-
 /**Adding a node to a cluster automatically makes it signer of all bc in this cluster. Only one node per provider and cluster.
  * TODO: Start as replica; once it is in sync, it will become signer.
  * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node.
@@ -91,4 +89,12 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 			create cluster_provider(c, prov);
 		}
 	}
+}
+
+function require_cluster_available_for_removal(cluster) {
+    require(cluster.name != "system", "System cluster can't be deleted");
+    require(
+        empty(container @* { cluster }),
+        "Cluster %s is not empty and can't be deleted. Delete containers first".format(cluster.name)
+    );
 }
