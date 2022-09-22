@@ -1,6 +1,7 @@
 module;
 
 import ^.model.*;
+import ^.util.*;
 
 // Creates an anchoring chain for a given cluster
 function create_anchoring_chain(cluster) {
@@ -15,7 +16,7 @@ function create_anchoring_chain(cluster) {
 		"anchoring_" + cluster.name,
 		container_type.naked,
 		cluster = cluster,
-		voter_set = voter_set @ { "SYSTEM" }
+		voter_set = system_voter_set()
 	);
 	val signers = cluster_node @* { cluster }.node.pubkey;
 	create blockchain_configuration_signers(blockchain, 0, signers.to_gtv().to_bytes());

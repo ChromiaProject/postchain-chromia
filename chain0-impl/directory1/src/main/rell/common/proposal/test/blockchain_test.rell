@@ -2,6 +2,7 @@
 
 import ^^.*;
 import ^^^.test.ops.*;
+import ^^^.util.*;
 import ^^^.voting.test.ops.*;
 
 function setup() {
@@ -11,11 +12,11 @@ function setup() {
 
 function test_propose_blockchain() {
 	setup();
-	val cl = cluster @ { "system" };
-	val co = container @ { "system" };
+	val cl = system_cluster();
+	val co = system_container();
 	val p1 = provider @ { rell.test.pubkeys.alice };
 	val p2 = provider @ { rell.test.pubkeys.bob };
-	rell.test.tx().op(add_test_member(voter_set @ { "SYSTEM_P" }, p2)).run();
+	rell.test.tx().op(add_test_member(system_p_voter_set(), p2)).run();
 
 	var conf = map<text, text>();
     rell.test.tx()
@@ -27,7 +28,7 @@ function test_propose_blockchain() {
 	// Proposal is pending
 	val config_proposal = get_blockchain_proposal(prop.rowid);
 	assert_not_null(config_proposal);
-	assert_equals(config_proposal.container, "system");
+	assert_equals(config_proposal.container, system.container_name);
 	
 	rell.test.tx()
 		.op(create_test_node(p1, rell.test.pubkeys.alice, cl))

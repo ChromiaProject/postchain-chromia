@@ -2,6 +2,7 @@
 
 import ^^.*;
 import ^^.test.ops.*;
+import ^^.util.*;
 
 function setup() {
 	rell.test.tx().op(
@@ -12,7 +13,7 @@ function setup() {
 function test_add_node_to_cluster() {
     setup();
 
-    val system_cluster = cluster @ { "system" };
+    val system_cluster = system_cluster();
     val alice = provider @ { rell.test.pubkeys.alice };
 
     // asserting node added

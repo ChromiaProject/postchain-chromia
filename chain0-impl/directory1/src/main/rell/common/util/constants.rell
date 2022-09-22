@@ -1,0 +1,15 @@
+module;
+
+namespace system {
+    val cluster_name = "system";
+    val container_name = "system";
+    val voter_set_name = "SYSTEM";
+}
+
+namespace system_p {
+    val voter_set_name = "SYSTEM_P";    
+}
+
+namespace c0 {
+    val name = "c0";
+}
