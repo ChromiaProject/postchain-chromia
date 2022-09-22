@@ -10,10 +10,11 @@ class NodeCommand : CliktCommand("Node commands") {
 fun nodeCommands() = NodeCommand().subcommands(
         CommandAddNode(),
         CommandUpdateNode(),
+        CommandReplaceNode(),
+        CommandRemoveNode(),
         CommandGetNodeInfo(),
         CommandGetNodeListVersion(),
         CommandListBlockchainsForNode(),
         CommandListContainersForNode(),
         CommandListNodes(),
-        CommandRemoveNode()
 )

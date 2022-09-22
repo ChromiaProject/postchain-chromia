@@ -74,4 +74,4 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	node_list.last_update = op_context.last_block_time;
 	print("---------------------------------------------------------------");
 }
- 
+
