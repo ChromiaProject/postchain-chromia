@@ -17,9 +17,7 @@ enum proposal_type {
     voter_set_governor,
     provider_state,
     provider_is_system,
-    bc_pause,
-    bc_unpause,
-    bc_delete
+    blockchain_action
     // and a lot more
 }
 
@@ -98,22 +96,10 @@ entity pending_voter_set_provider {
 	add: boolean;
 }
 
-// Proposed destruction of bcs are put here while waiting for enough positive votes.
-entity pending_delete_blockchain {
+entity pending_blockchain_action {
     key proposal;
     key blockchain;
-}
-
-//Proposed pauses of bcs are put here while waiting for enough positive votes.
-entity pending_pause_blockchain {
-    key proposal;
-    key blockchain;
-}
-
-//Proposed unpauses (start building blocks again) of bcs are put here while waiting for enough positive votes.
-entity pending_unpause_blockchain {
-    key proposal;
-    key blockchain;
+    action: blockchain_action;
 }
 
 // Proposed bc:s are put here while waiting for enough positive votes.
@@ -162,9 +148,7 @@ function delete_proposal(prop: proposal) {
         voter_set_governor  -> delete pending_voter_set_governor @ { prop };
         provider_state      -> delete pending_provider_state @ { prop };
         provider_is_system  -> delete pending_provider_is_system @ { prop };
-        bc_pause		    -> delete pending_pause_blockchain @ { prop };
-        bc_unpause		    -> delete pending_unpause_blockchain @ { prop };
-        bc_delete		    -> delete pending_delete_blockchain @? { prop };
+        blockchain_action   -> delete pending_blockchain_action @? { prop };
     }
     delete vote @* { .proposal == prop };
     delete proposal @ { .rowid == prop.rowid };
