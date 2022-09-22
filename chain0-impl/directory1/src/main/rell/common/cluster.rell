@@ -1,47 +1,3 @@
-/* Governance semantics:
- *
- * Anybody can create a cluster, but it consumes an action point.
- *
- * A cluster defines a list of providers involved in it. Each provider is supposed to contribute one node.
- * Cluster is considered operational only once every provider specified in a cluster have provided a node.
- * Cluster composition (providers) can change, operational status does not change if new provider is added.
- *
- * Cluster composition can be changed by its 'governance' voter set, they can vote to add or remove providers
- *
- * a provider can add at most one node to a cluster he is a member of. he can also replace his node.
- *
- * Cluster's deployer can add containers, specifying their resource limits. He can change limits for existing containers.
- *
- * Container deployer can deploy, update and stop blockchains in the container.
- *
- *
- * Node can belong to multiple clusters. Although it is not recommended, but permitted.
- *
- * blockchain_signer_node records are not needed for blockchains which run on a cluster, as list
- * of signer nodes can be deduced from list of nodes of a cluster.
- *
- */
-
-// node cluster
-entity cluster {
-    key name;
-    governance: voter_set; // who controls the cluster
-    mutable deployer: voter_set; // who can deploy containers
-    mutable operational: boolean = false; // cluster goes operational when all providers provide a node
-}
-
-entity cluster_provider { key cluster, provider; }
-entity cluster_node { key cluster, node; }
-
-entity cluster_resource_limit {
- 	key cluster, resource_limit_type;
- 	mutable value: integer;
-}
-  
-// Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
-entity cluster_container_replica { key cluster, container; }
-
-//entity cluster_signer_list { key cluster_node;}
 
 /**Adding a node to a cluster automatically makes it signer of all bc in this cluster. Only one node per provider and cluster.
  * TODO: Start as replica; once it is in sync, it will become signer.
@@ -62,7 +18,7 @@ operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, clus
 operation add_provider_to_cluster(me: provider, provider, cluster) {
 	require_provider_auth_with_rl(me);
 	require(
-	    (provider_state @ {me}.tier > 0 and provider_state @ {provider}.tier == 0) or (provider_state @ {me}.system),
+	    (me.tier > 0 and provider.tier == 0) or me.system,
 		"Must be system provider or have higher tier to add a provider to a cluster."
 	);
 	create cluster_provider(cluster, provider);
@@ -135,4 +91,12 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 			create cluster_provider(c, prov);
 		}
 	}
+}
+
+function require_cluster_available_for_removal(cluster) {
+    require(cluster.name != "system", "System cluster can't be deleted");
+    require(
+        empty(container @* { cluster }),
+        "Cluster %s is not empty and can't be deleted. Delete containers first".format(cluster.name)
+    );
 }

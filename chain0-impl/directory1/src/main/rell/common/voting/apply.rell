@@ -23,9 +23,11 @@ function apply_voting_result(prop: proposal) {
 	 			bc                -> apply_bc(prop);
 				container         -> apply_container(prop);
 				container_limits  -> apply_container_limits(prop);
+				container_remove  -> apply_container_remove(prop);
 				cluster_limits    -> apply_cluster_limits(prop);
 				cluster_provider  -> apply_cluster_provider(prop);
 				cluster_deployer  -> apply_cluster_deployer(prop);
+				cluster_remove    -> apply_remove_cluster(prop);
 				voter_set_provider-> apply_voter_set_provider(prop);
 				voter_set_governor-> apply_voter_set_governor(prop);
 				provider_state    -> apply_provider_state(prop);
@@ -58,6 +60,13 @@ function apply_container_limits(proposal) {
 	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
 }
 
+function apply_container_remove(proposal) {
+    val cont = pending_remove_container @ { proposal } .container;
+    delete container_resource_limit @* { cont };
+    delete pending_remove_container @ { proposal };
+    delete container @ { cont.name };
+}
+
 function apply_cluster_limits(proposal) {
 	val pps = pending_cluster_limits @ {proposal};
 	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
@@ -68,6 +77,16 @@ function apply_cluster_limits(proposal) {
 function apply_cluster_deployer(proposal) {
 	val pps = pending_cluster_deployer @ {proposal};
 	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
+}
+
+function apply_remove_cluster(proposal) {
+	val cl = pending_remove_cluster @ { proposal } .cluster;
+	delete cluster_resource_limit @* { cl };
+	delete cluster_node @* { cl };
+	delete cluster_provider @* { cl };
+	delete cluster_container_replica @* { cl };
+	delete pending_remove_cluster @ { proposal };
+    delete cluster @* { cl.name };
 }
 
 function apply_voter_set_governor(proposal) {
@@ -93,14 +112,13 @@ function apply_voter_set_provider(proposal) {
 	}
 }
 
-
 //For promotion and demotion of system providers
 function apply_provider_is_system(proposal) {
 	val pps = pending_provider_is_system @ {proposal};
-	update provider_state @ { pps.provider } ( .system = pps.system );
+	pps.provider.system = pps.system;
 
 	//If promotion, update SYSTEM_P voter set
-	if (provider_state @ { pps.provider }.system) {
+	if (pps.provider.system) {
 		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
 	} else {
 		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
@@ -114,7 +132,7 @@ function apply_provider_state(proposal) {
 }
 
 function update_provider_state(provider, active: boolean) {
-	update provider_state @ { provider } ( .active = active );
+	provider.active = active;
 	if (active == false) {
 		update node @* { provider } ( .active = false );
 		for (cl in cluster_provider @* { .provider == provider } (.cluster)) {
@@ -130,7 +148,7 @@ function update_provider_state(provider, active: boolean) {
 		delete blockchain_replica_node @* { .node.provider == provider };
 	} else { //enable
 		//If enabled provider is a system provider, update SYSTEM_P voter set
-		if (provider_state @ { provider }.system) {
+		if (provider.system) {
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}

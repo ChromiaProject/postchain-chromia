@@ -1,8 +1,12 @@
 module;
 
+import .model.*;
+import .anchoring.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
+import .util.*;
+import .util.constants.*;
 
 query directory_solution_version() = "0.1";
 
@@ -14,16 +18,16 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	print("Creating SYSTEM voter set");
-	create_voter_set_internal("SYSTEM", 1);
+	create_voter_set_internal(voter_sets.system, 1);
 	/** 
 	 * System provider create a ‘system’ cluster which will include ‘system’ nodes and has a ‘system’ naked container 
 	 * which will run the directory bc.
 	 */
 	print("Creating SYSTEM_P voter set");
-	val system_voter_set = create_voter_set_internal("SYSTEM_P", majority_threshold);
+	val system_voter_set = create_voter_set_internal(voter_sets.system_p, majority_threshold);
 	
 	print("Creating system cluster with SYSTEM_P as governor");
-	val system_cluster = create cluster("system", governance=system_voter_set, deployer=system_voter_set, false);
+	val system_cluster = create cluster(clusters.system, governance=system_voter_set, deployer=system_voter_set, false);
 	
 	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
 	register_and_enable_provider(
@@ -38,7 +42,7 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	
 	print("Creating naked system container");
 	val system_container = create_container_with_resource_limits(
-		"system",
+		containers.system,
 		container_type.naked,
 		cluster = system_cluster,
 		voter_set = system_voter_set
@@ -47,7 +51,7 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	print("Adding c0 blockchain to system container");
 	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
 	val c0_signers_gtv = c0_config["signers"];
-	val blockchain = create blockchain (chain_context.blockchain_rid, "c0", true);
+	val blockchain = create blockchain (chain_context.blockchain_rid, blockchains.c0, true);
 	create blockchain_configuration (blockchain, 0, chain_context.raw_config.to_bytes());
 	create blockchain_configuration_signers(blockchain, 0, c0_signers_gtv.to_bytes());
 	create blockchain_added (blockchain, op_context.transaction);

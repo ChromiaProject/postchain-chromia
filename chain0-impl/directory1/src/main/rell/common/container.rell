@@ -1,29 +1,3 @@
-enum container_type {
-	naked, // running directly on the node
-	isolated // container with resource limits
-}
-
-
-enum resource_limit_type {
-	cpu,
-	ram,
-	storage
-}
-
-entity container {
-	key name;
-	index cluster;
-	container_type;
-	index deployer: voter_set; //  who can deploy and update bcs in this container
-}
- 
-entity container_resource_limit {
-	key container, resource_limit_type;
-	mutable value: integer;
-}
-
-//Defines which container a blockchain belongs to
-entity container_blockchain { key container, blockchain; }
 
 operation add_container_replica(me: provider, cluster, container) {
 	require_provider_auth_with_rl(me);
@@ -41,4 +15,12 @@ function create_container_with_resource_limits(name, container_type, cluster, vo
     create container_resource_limit(c, resource_limit_type.ram , ram);
     create container_resource_limit(c, resource_limit_type.storage , storage);
     return c;
+}
+
+function require_container_available_for_removal(container) {
+    require(container.name != "system", "System cluster can't be deleted");
+    require(
+        empty(container_blockchain @* { container }),
+        "Container %s is not empty and can't be deleted. Delete blockchains first".format(container.name)
+    );
 }

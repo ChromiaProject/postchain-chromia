@@ -29,7 +29,7 @@ function test_initialization() {
 	/* Initial provider is a provider of system cluster */
 	val p1 = provider @? { rell.test.pubkeys.alice };
 	assert_not_null(p1);
-	assert_true(provider_state @ { p1 }.active);
+	assert_true(p1.active);
 	assert_equals(cluster_provider @ { cluster1 }.provider, p1);
 	assert_equals(voter_set_member @ { system_p }.provider, p1);
 	
@@ -38,8 +38,7 @@ function test_initialization() {
 	assert_not_null(container1);
 	assert_equals(container1.cluster, cluster1);
 	assert_equals(container1.container_type, container_type.naked);
-	
-	
+
 	val summary = get_summary();
 	assert_equals(1, summary.providers);
 	assert_equals(1, summary.clusters);

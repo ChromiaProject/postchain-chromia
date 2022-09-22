@@ -7,8 +7,7 @@ operation initialize_test_module(pubkey, majority_threshold:integer = 0) {
 }
 
 operation create_test_provider(name, pubkey, tier:integer = 1) {
-	val p = create provider(pubkey);
-	create provider_state(p, name, active = true, system = true, tier);
+	val p = create provider(pubkey, name, active = true, system = true, tier);
 	create provider_rl_state(p, points = 10000, last_update = 0);
 }
 
@@ -16,4 +15,9 @@ operation create_test_node(provider, pubkey, cluster) {
 	val c = list<text>();
 	c.add(cluster.name);
 	add_node_internal(provider, pubkey, "", 0, "", c);
+}
+
+// This operation is not accessible in the app. It is only the system itself who can create anchoring chain
+operation create_anchoring_chain_op(cluster_name: text) {
+	create_anchoring_chain(cluster @ { cluster_name });
 }

@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
-import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
@@ -17,15 +16,12 @@ import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.adminPubKey
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GtxBuilder
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
@@ -94,11 +90,11 @@ internal class Directory1DeploymentIT {
             assert(it.asArray().size).isEqualTo(1)
         }
         assert(
-            node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
+                node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
         ).isTrue()
 
         assert(
-            node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asDict()["active"]!!.asInteger()
+                node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asDict()["active"]!!.asInteger()
         ).isEqualTo(1L)
     }
 
