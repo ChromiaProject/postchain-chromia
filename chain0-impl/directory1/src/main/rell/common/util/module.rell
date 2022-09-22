@@ -4,6 +4,10 @@ import ^.model.*;
 import ^.voting.*;
 import .constants.*;
 
+function require_is_signer(pubkey) {
+    require(op_context.is_signer(pubkey), "Operation must be signed by " + pubkey.to_hex());
+}
+
 function require_provider(pubkey) = require(provider @? { pubkey }, "Unknown provider %s".format(pubkey.to_hex()));
 
 // This is the function we should use for auth

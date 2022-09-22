@@ -75,7 +75,3 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	print("---------------------------------------------------------------");
 }
 
-function require_is_signer(pubkey) {
-    require(op_context.is_signer(pubkey), "Operation must be signed by " + pubkey.to_hex());
-}
- 
