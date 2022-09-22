@@ -5,6 +5,7 @@ import .anchoring.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
+import .util.*;
 
 query directory_solution_version() = "0.1";
 

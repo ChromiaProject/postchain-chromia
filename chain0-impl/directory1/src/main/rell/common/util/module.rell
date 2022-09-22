@@ -1,0 +1,37 @@
+module;
+
+import ^.model.*;
+import ^.voting.*;
+
+function require_provider(pubkey) = require(provider @? { pubkey }, "Unknown provider %s".format(pubkey.to_hex()));
+
+// This is the function we should use for auth
+function require_provider_auth_with_rl (provider) {
+	require_provider_auth(provider);
+	provider_rate_limit(provider);
+}
+
+function require_provider_auth(provider) {
+    require(op_context.is_signer(provider.pubkey), "Provider must sign this operation");
+}
+
+function require_cluster_deployer(cluster, provider) {
+	require_voter_set_member(cluster.deployer, provider);	
+}
+
+function require_system_p_member(provider) {
+	require_voter_set_member(voter_set @ {"SYSTEM_P"}, provider);	
+}
+
+function require_cluster_governor(cluster, provider) {
+	require_voter_set_member(cluster.governance, provider);
+}
+
+function require_voter_set_governor(voter_set, provider) {
+	val governor = voter_set_governance @ { voter_set } .governor;
+	require_voter_set_member(governor, provider);
+}
+
+function require_container_deployer(container, provider) {
+	require_voter_set_member(container.deployer, provider);
+}
