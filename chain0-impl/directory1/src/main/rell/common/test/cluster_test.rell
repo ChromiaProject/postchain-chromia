@@ -2,6 +2,7 @@
 
 import ^^.*;
 import ^^.test.ops.*;
+import ^^.util.*;
 
 function setup() {
 	rell.test.tx().op(
@@ -12,7 +13,7 @@ function setup() {
 function test_add_node_to_cluster() {
     setup();
 
-    val system_cluster = cluster @ { "system" };
+    val system_cluster = system_cluster();
     val alice = provider @ { rell.test.pubkeys.alice };
 
     // asserting node added
@@ -35,7 +36,7 @@ function test_remove_cluster() {
 
     // 1. Deleting system cluster. Must fail.
     rell.test.tx().op(
-        propose_remove_cluster(rell.test.pubkeys.alice, "system")
+        propose_remove_cluster(rell.test.pubkeys.alice, clusters.system)
     ).sign(rell.test.keypairs.alice).run_must_fail();
 
     // 2. Deleting unknown cluster. Must fail.
@@ -45,7 +46,7 @@ function test_remove_cluster() {
 
     // 3. Adding a new cluster
     rell.test.tx().op(
-        create_cluster(rell.test.pubkeys.alice, "cluster1", list(), "SYSTEM_P", "SYSTEM_P")
+        create_cluster(rell.test.pubkeys.alice, "cluster1", list(), voter_sets.system_p, voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting cluster1 added
@@ -67,7 +68,7 @@ function test_remove_cluster() {
 
     // Adding container
     rell.test.tx().op(
-        propose_container(alice, cluster1, "container1", voter_set @ { "SYSTEM_P" })
+        propose_container(alice, cluster1, "container1", system_p_voter_set())
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting container1 is added
