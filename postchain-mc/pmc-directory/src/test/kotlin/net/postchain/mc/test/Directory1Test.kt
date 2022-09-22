@@ -489,7 +489,7 @@ class Directory1Test : ManagedModeTest() {
         // try building blocks of pause bc
         assertBuildBlockFailure()
 
-        doAndBuildBlocks(provConfig, provExecutor.proposeUnPauseBlockchainAsync(bridToPause))
+        doAndBuildBlocks(provConfig, provExecutor.proposeResumeBlockchainAsync(bridToPause))
         bcs = provExecutor.listBlockchains(false)
         assertEquals(2, bcs.size)
 

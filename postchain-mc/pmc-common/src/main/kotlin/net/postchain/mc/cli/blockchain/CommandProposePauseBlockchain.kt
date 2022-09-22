@@ -6,8 +6,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposePauseBlockchain : CliktCommand(
-    name = "stop",
-    help = "Propose stopping a blockchain from building blocks"
+        name = "stop",
+        help = "Propose stopping a blockchain from building blocks"
 ) {
     private val config by configOption()
 

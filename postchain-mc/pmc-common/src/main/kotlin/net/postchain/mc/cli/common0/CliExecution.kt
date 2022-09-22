@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.addNodeToClusterOperation
 import net.postchain.chain0.common.createClusterOperation
+import net.postchain.chain0.common.model.BlockchainAction
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
@@ -735,11 +736,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeUnPauseBlockchain(blockchainRID: String) {
+    fun proposeResumeBlockchain(blockchainRID: String) {
         sendTxSync(
-                proposeUnPauseBlockchainAsync(blockchainRID),
-                "Blockchain un-pause proposition was added successfully",
-                "Cannot add proposal for un-pausing blockchain"
+                proposeResumeBlockchainAsync(blockchainRID),
+                "Blockchain resume proposition was added successfully",
+                "Cannot add proposal for resuming blockchain"
         )
     }
 
@@ -1050,17 +1051,21 @@ open class CliExecution(val config: PostchainClientConfig) {
      * */
     fun proposePauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                "propose_pause_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+                "propose_blockchain_action",
+                gtv(config.signers.first().pubKey.key),
+                gtv(blockchainRID.hexStringToByteArray()),
+                gtv(BlockchainAction.pause.ordinal.toLong())
         )
     }
 
     /** Who can pause a blockchain? Container deployer voter set
      * */
-    fun proposeUnPauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
+    fun proposeResumeBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                "propose_unpause_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+                "propose_blockchain_action",
+                gtv(config.signers.first().pubKey.key),
+                gtv(blockchainRID.hexStringToByteArray()),
+                gtv(BlockchainAction.resume.ordinal.toLong())
         )
     }
 
@@ -1068,8 +1073,10 @@ open class CliExecution(val config: PostchainClientConfig) {
      * */
     fun proposeDeleteBlockchainAsync(blockchainRID: String): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
-                "propose_delete_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
+                "propose_blockchain_action",
+                gtv(config.signers.first().pubKey.key),
+                gtv(blockchainRID.hexStringToByteArray()),
+                gtv(BlockchainAction.remove.ordinal.toLong())
         )
     }
 

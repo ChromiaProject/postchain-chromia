@@ -6,8 +6,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposeDeleteBlockchain : CliktCommand(
-    name = "remove",
-    help = "Propose removal of blockchain. Command is irreversible"
+        name = "remove",
+        help = "Propose removal of blockchain. Command is irreversible"
 ) {
     private val config by configOption()
 
