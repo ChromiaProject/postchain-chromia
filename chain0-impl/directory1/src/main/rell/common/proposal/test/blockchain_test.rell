@@ -28,7 +28,7 @@ function test_propose_blockchain() {
 	// Proposal is pending
 	val config_proposal = get_blockchain_proposal(prop.rowid);
 	assert_not_null(config_proposal);
-	assert_equals(config_proposal.container, system.container_name);
+	assert_equals(config_proposal.container, containers.system);
 	
 	rell.test.tx()
 		.op(create_test_node(p1, rell.test.pubkeys.alice, cl))

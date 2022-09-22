@@ -36,7 +36,7 @@ function test_remove_cluster() {
 
     // 1. Deleting system cluster. Must fail.
     rell.test.tx().op(
-        propose_remove_cluster(rell.test.pubkeys.alice, system.cluster_name)
+        propose_remove_cluster(rell.test.pubkeys.alice, clusters.system)
     ).sign(rell.test.keypairs.alice).run_must_fail();
 
     // 2. Deleting unknown cluster. Must fail.
@@ -46,7 +46,7 @@ function test_remove_cluster() {
 
     // 3. Adding a new cluster
     rell.test.tx().op(
-        create_cluster(rell.test.pubkeys.alice, "cluster1", list(), system_p.voter_set_name, system_p.voter_set_name)
+        create_cluster(rell.test.pubkeys.alice, "cluster1", list(), voter_sets.system_p, voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting cluster1 added

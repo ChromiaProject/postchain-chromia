@@ -1,15 +1,18 @@
 module;
 
-namespace system {
-    val cluster_name = "system";
-    val container_name = "system";
-    val voter_set_name = "SYSTEM";
+namespace blockchains {
+    val c0 = "c0";
 }
 
-namespace system_p {
-    val voter_set_name = "SYSTEM_P";    
+namespace containers {
+    val system = "system";
 }
 
-namespace c0 {
-    val name = "c0";
+namespace clusters {
+    val system = "system";
+}
+
+namespace voter_sets {
+    val system = "SYSTEM";
+    val system_p = "SYSTEM_P";
 }
