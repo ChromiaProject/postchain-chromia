@@ -4,6 +4,7 @@ import ^^.*;
 import ^.ops.*;
 import ^.util.constants.*;
 import ^.util.*;
+import ^^.util.constants.*;
 
 function test_replace_node() {
     val provider = rell.test.keypairs.alice;
@@ -27,6 +28,6 @@ function test_replace_node() {
     assert_equals(new_node.host, "localhost"); // From initialize_test_module
     assert_equals(new_node.port, 123);
 
-    assert_true(get_signers_of_cluster_name("system").contains(node2.pub));
-    assert_false(get_signers_of_cluster_name("system").contains(initial_signer.pub));
+    assert_true(get_signers_of_cluster_name(clusters.system).contains(node2.pub));
+    assert_false(get_signers_of_cluster_name(clusters.system).contains(initial_signer.pub));
 }
