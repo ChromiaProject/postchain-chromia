@@ -15,13 +15,14 @@ function test_add_low_tier_provider() {
 	
 	// Should not be possible to add this provider to a voting set.
 	rell.test.tx()
-		.op(propose_voter_set_provider(p1, voter_set @ { "SYSTEM_P" }, dapp_provider, true))
+		.op(propose_update_voter_set(p1.pubkey, voter_sets.system_p, null, null, dapp_provider.pubkey, null))
+		.sign(rell.test.keypairs.alice)
 		.run_must_fail();
 }
 
 function test_update_voter_set() {
 	setup_module();
-	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 0)).run();
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 1)).run();
 	val p1 = rell.test.keypairs.alice;
 	val p2 = rell.test.keypairs.bob;
 	rell.test.tx()

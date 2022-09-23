@@ -29,8 +29,6 @@ function apply_voting_result(prop: proposal) {
 				cluster_deployer  -> apply_cluster_deployer(prop);
 				cluster_remove    -> apply_remove_cluster(prop);
 				voter_set_update  -> apply_voter_set_update(prop);
-				voter_set_provider-> apply_voter_set_provider(prop);
-				voter_set_governor-> apply_voter_set_governor(prop);
 				provider_state    -> apply_provider_state(prop);
 				provider_is_system-> apply_provider_is_system(prop);
 				bc_pause		  -> apply_pause_blockchain(prop);
@@ -90,26 +88,12 @@ function apply_remove_cluster(proposal) {
     delete cluster @* { cl.name };
 }
 
-function apply_voter_set_governor(proposal) {
-	val pps = pending_voter_set_governor @ { proposal };
-	update voter_set_governance @ {.voter_set == pps.voter_set} (.governor = pps.governor);
-}
-
 function apply_cluster_provider(proposal) {
 	val pps = pending_cluster_provider @ {proposal};
 	if (pps.add) {
 		create cluster_provider(pps.cluster, pps.provider);
 	} else {
 		delete cluster_provider @ {pps.cluster, pps.provider};
-	}
-}
-
-function apply_voter_set_provider(proposal) {
-	val pps = pending_voter_set_provider @ {proposal};
-	if (pps.add) {
-		create voter_set_member(pps.voter_set, pps.provider);
-	} else {
-		delete voter_set_member @ {pps.voter_set, pps.provider};
 	}
 }
 

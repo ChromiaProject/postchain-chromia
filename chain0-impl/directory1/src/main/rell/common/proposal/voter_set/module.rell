@@ -50,21 +50,6 @@ function delete_pending_voter_set_update(proposal) {
     delete p;
 }
 
-//Who can change voter set governor? Voter set governor.
-operation propose_voter_set_governor(me: provider, voter_set, new_governor: voter_set) {
-	//check that provider authority and that it is in cluster's governor voter set
-	require_provider_auth_with_rl(me);
-	require_voter_set_governor(voter_set, me);
-	val prop = create proposal(
-	    op_context.last_block_time,
-	    proposal_type.voter_set_governor,
-	    me,
-	    voter_set_governance @ { voter_set }.governor
-	);
-	create pending_voter_set_governor(prop, voter_set, .governor = new_governor);
-	internal_vote(me, prop, true);
-}
-
 operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_threshold: integer?, new_governor: name?, new_member: pubkey?, remove_member: pubkey?) {
 	val provider = require_is_provider_with_rl(my_pubkey);
 	val voter_set = require_voter_set(voter_set_name);
@@ -87,6 +72,7 @@ operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_
     }
 	if (new_member != null) { 
         val p = require_provider(new_member);
+        require(p.tier > 0, "Cannot add a provider that has no voting right to a voter set");
         create voter_set_update.new_member(update_prop, p);
     }
     if (remove_member != null) { 

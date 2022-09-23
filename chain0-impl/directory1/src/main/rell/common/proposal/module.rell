@@ -15,8 +15,6 @@ enum proposal_type {
     cluster_deployer,
     cluster_remove,
     voter_set_update,
-    voter_set_provider,
-    voter_set_governor,
     provider_state,
     provider_is_system,
     bc_pause,
@@ -87,19 +85,6 @@ entity pending_remove_cluster {
 	key cluster;
 }
 
-entity pending_voter_set_governor{
-	key proposal;
-	key voter_set;
-	governor: voter_set;
-}
-
-entity pending_voter_set_provider {
-	key proposal;
-	key voter_set;
-	provider;
-	add: boolean;
-}
-
 // Proposed destruction of bcs are put here while waiting for enough positive votes.
 entity pending_delete_blockchain {
     key proposal;
@@ -161,8 +146,6 @@ function delete_proposal(prop: proposal) {
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
         cluster_remove      -> delete pending_remove_cluster @? { prop };
         voter_set_update    -> delete_pending_voter_set_update(prop);
-        voter_set_provider  -> delete pending_voter_set_provider @ { prop };
-        voter_set_governor  -> delete pending_voter_set_governor @ { prop };
         provider_state      -> delete pending_provider_state @ { prop };
         provider_is_system  -> delete pending_provider_is_system @ { prop };
         bc_pause		    -> delete pending_pause_blockchain @ { prop };

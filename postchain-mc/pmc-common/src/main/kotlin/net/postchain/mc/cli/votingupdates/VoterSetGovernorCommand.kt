@@ -10,5 +10,4 @@ class VoterSetGovernorCommand : NoOpCliktCommand(
 
 fun governorCommands() = VoterSetGovernorCommand().subcommands(
     CommandGetVoterSetGovernor(),
-    CommandProposeVoterSetGovernor()
 )
