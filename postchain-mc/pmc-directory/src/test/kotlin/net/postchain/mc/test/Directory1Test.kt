@@ -7,6 +7,7 @@ import net.postchain.chain0.common.model.BlockchainAction
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -324,11 +325,7 @@ class Directory1Test : ManagedModeTest() {
         assertEquals(container1, listOfDependencies[0].second)
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
-        provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, listOfBcs[1], BlockchainAction.remove
-        ).also {
-            doAndBuildBlocks(provConfig, it)
-        }
+        proposeBlockchainAction(provClient, listOfBcs[1], BlockchainAction.remove)
         assertEquals(3, provExecutor.listBlockchains(false).size)
     }
 
@@ -485,12 +482,7 @@ class Directory1Test : ManagedModeTest() {
         //pause new bc
         var bcs = provExecutor.listBlockchains(false)
         val bridToPause = bcs[1]
-
-        provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, bridToPause, BlockchainAction.pause
-        ).also {
-            doAndBuildBlocks(provConfig, it)
-        }
+        proposeBlockchainAction(provClient, bridToPause, BlockchainAction.pause)
 
         bcs = provExecutor.listBlockchains(true)
         assertEquals(2, bcs.size)
@@ -500,11 +492,7 @@ class Directory1Test : ManagedModeTest() {
         // try building blocks of pause bc
         assertBuildBlockFailure()
 
-        provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, bridToPause, BlockchainAction.resume
-        ).also {
-            doAndBuildBlocks(provConfig, it)
-        }
+        proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
         bcs = provExecutor.listBlockchains(false)
         assertEquals(2, bcs.size)
 
@@ -523,11 +511,7 @@ class Directory1Test : ManagedModeTest() {
         assertEquals(2, bcs.size)
 
         // delete new bc
-        provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, bcs[1], BlockchainAction.remove
-        ).also {
-            doAndBuildBlocks(provConfig, it)
-        }
+        proposeBlockchainAction(provClient, bcs[1], BlockchainAction.remove)
 
         bcs = provExecutor.listBlockchains(true)
         assertEquals(1, bcs.size)
@@ -700,4 +684,11 @@ class Directory1Test : ManagedModeTest() {
         return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
     }
 
+    private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
+        provClient.transactionBuilder().proposeBlockchainActionOperation(
+                provClient.config.signers.first().pubKey.key, brid, action
+        ).also {
+            doAndBuildBlocks(provClient.config, it)
+        }
+    }
 }
