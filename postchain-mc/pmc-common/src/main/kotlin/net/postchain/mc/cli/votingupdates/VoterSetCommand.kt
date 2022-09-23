@@ -10,6 +10,7 @@ class VoterSetCommand : NoOpCliktCommand(
 
 fun voterSetCommands() = VoterSetCommand().subcommands(
 
+    CommandProposeVoterSetUpdate(),
     CommandCreateVoterSet(),
     CommandListVoterSets(),
     CommandVoterSetInfo(),
