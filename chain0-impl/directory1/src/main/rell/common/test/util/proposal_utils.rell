@@ -1,0 +1,4 @@
+
+function _get_last_proposal(): proposal {
+    return proposal @ {} limit 1;
+}

@@ -188,11 +188,11 @@ function apply_bc(proposal) {
 }
 
 function apply_blockchain_action(proposal) {
-    val pa = pending_blockchain_action @ { proposal };
-    when (pa.action) {
-        pause -> _apply_pause_blockchain(pa, proposal);
-        resume -> _apply_resume_blockchain(pa, proposal);
-        remove -> _apply_delete_blockchain(pa, proposal);
+    val pba = pending_blockchain_action @ { proposal };
+    when (pba.action) {
+        pause -> _apply_pause_blockchain(pba, proposal);
+        resume -> _apply_resume_blockchain(pba, proposal);
+        remove -> _apply_delete_blockchain(pba, proposal);
     }
 }
 
