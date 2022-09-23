@@ -1,0 +1,7 @@
+@test module;
+
+import o: ^.ops;
+
+function setup_module() {
+    rell.test.tx().op(o.initialize_test_module(rell.test.pubkeys.alice)).run();
+}

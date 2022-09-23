@@ -28,6 +28,7 @@ function apply_voting_result(prop: proposal) {
 				cluster_provider  -> apply_cluster_provider(prop);
 				cluster_deployer  -> apply_cluster_deployer(prop);
 				cluster_remove    -> apply_remove_cluster(prop);
+				voter_set_update  -> apply_voter_set_update(prop);
 				voter_set_provider-> apply_voter_set_provider(prop);
 				voter_set_governor-> apply_voter_set_governor(prop);
 				provider_state    -> apply_provider_state(prop);
@@ -87,6 +88,13 @@ function apply_remove_cluster(proposal) {
 	delete cluster_container_replica @* { cl };
 	delete pending_remove_cluster @ { proposal };
     delete cluster @* { cl.name };
+}
+
+function apply_voter_set_update(proposal) {
+	val vsp = pending_voter_set_update @ { proposal };
+	if (vsp.new_threshold >= -1) vsp.voter_set.threshold = vsp.new_threshold;
+	if (vsp.new_governor != "") update voter_set_governance @ { .voter_set == vsp.voter_set } (.governor = voter_set @ { vsp.new_governor });
+	if (vsp.new_member != x"") create voter_set_member(vsp.voter_set, provider @ { vsp.new_member });
 }
 
 function apply_voter_set_governor(proposal) {

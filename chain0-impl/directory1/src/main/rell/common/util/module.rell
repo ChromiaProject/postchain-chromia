@@ -10,14 +10,16 @@ function require_is_signer(pubkey) {
 
 function require_provider(pubkey) = require(provider @? { pubkey }, "Unknown provider %s".format(pubkey.to_hex()));
 
-// This is the function we should use for auth
-function require_provider_auth_with_rl (provider) {
-	require_provider_auth(provider);
-	provider_rate_limit(provider);
+function require_is_provider_with_rl(pubkey) {
+	val provider = require_provider(pubkey);
+	require_provider_auth_with_rl(provider);
+	return provider;
 }
 
-function require_provider_auth(provider) {
-    require(op_context.is_signer(provider.pubkey), "Provider must sign this operation");
+// This is the function we should use for auth
+function require_provider_auth_with_rl (provider) {
+	require_is_signer(provider.pubkey);
+	provider_rate_limit(provider);
 }
 
 function require_cluster_deployer(cluster, provider) {
