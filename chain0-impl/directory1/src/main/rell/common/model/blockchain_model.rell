@@ -33,7 +33,7 @@ entity blockchain_dependency {
 }
 
 enum blockchain_action {
-	pause,
-	resume,
-	remove
+    pause,
+    resume,
+    remove
 }
