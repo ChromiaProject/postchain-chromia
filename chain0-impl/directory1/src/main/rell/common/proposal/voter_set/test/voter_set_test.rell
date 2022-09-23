@@ -1,0 +1,40 @@
+@test module;
+
+import ^^.*;
+import ^^^^.test.ops.*;
+import ^^^^.test.util.constants.*;
+import ^^^^.test.setup.*;
+
+function test_add_low_tier_provider() {
+	setup_module();
+	val p1 = provider @ { rell.test.pubkeys.alice };
+	
+	// Create a provider with tier 0, a dapp provider without voting right.
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 0)).run();
+	val dapp_provider = provider @ { rell.test.pubkeys.bob };
+	
+	// Should not be possible to add this provider to a voting set.
+	rell.test.tx()
+		.op(propose_voter_set_provider(p1, voter_set @ { "SYSTEM_P" }, dapp_provider, true))
+		.run_must_fail();
+}
+
+function test_update_voter_set() {
+	setup_module();
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 0)).run();
+	val p1 = rell.test.keypairs.alice;
+	val p2 = rell.test.keypairs.bob;
+	rell.test.tx()
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, null, null))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, p2.pub, null))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, null, p1.pub))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, system_voter_set().name, null, null))
+		.sign(p1)
+		.run();
+
+	val vs = system_p_voter_set();
+	assert_equals(vs.threshold, 1);
+	assert_equals(voter_set_governance @ { .voter_set == vs }.governor, system_voter_set());
+	assert_not_null(voter_set_member @? { vs, provider @ { p2.pub } });
+	assert_null(voter_set_member @? { vs, provider @ { p1.pub } });
+}

@@ -2,6 +2,7 @@ module;
 
 import ^.*;
 import ^.voting.*;
+import .voter_set.*;
 
 enum proposal_type {
     conf,
@@ -86,13 +87,6 @@ entity pending_remove_cluster {
 	key cluster;
 }
 
-entity pending_voter_set_update {
-    key proposal, voter_set;
-    new_threshold: integer;
-    new_governor: name;
-    new_member: pubkey;
-}
-
 entity pending_voter_set_governor{
 	key proposal;
 	key voter_set;
@@ -166,7 +160,7 @@ function delete_proposal(prop: proposal) {
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
         cluster_remove      -> delete pending_remove_cluster @? { prop };
-        voter_set_update    -> delete pending_voter_set_update @ { prop };
+        voter_set_update    -> delete_pending_voter_set_update(prop);
         voter_set_provider  -> delete pending_voter_set_provider @ { prop };
         voter_set_governor  -> delete pending_voter_set_governor @ { prop };
         provider_state      -> delete pending_provider_state @ { prop };
