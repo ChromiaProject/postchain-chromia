@@ -127,11 +127,10 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
 }
 
 function vote_for_last_proposal(approver: rell.test.keypair) {
-    val prop = proposal @ {};
-    val prov = provider @ { approver.pub };
+    val prop = proposal @ {}.rowid;
     rell.test.tx().op(
-        make_vote(prov, prop, true)
-    ).sign(approver.priv).run();
+        make_vote(approver.pub, integer_from_rowid(prop), true)
+    ).sign(approver).run();
 }
 
 function propose_new_container() {

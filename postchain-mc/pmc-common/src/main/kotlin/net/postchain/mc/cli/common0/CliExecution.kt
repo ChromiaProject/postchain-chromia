@@ -981,10 +981,9 @@ open class CliExecution(val config: PostchainClientConfig) {
      * can vote for a pending configuration.
      */
     fun voteAsync(rowid: Long, yes: Boolean): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
         return makeTransactionWithNop().addOperation(
                 "make_vote",
-                provider, gtv(rowid), gtv(yes)
+                gtv(config.pubkey().key), gtv(rowid), gtv(yes)
         )
     }
 

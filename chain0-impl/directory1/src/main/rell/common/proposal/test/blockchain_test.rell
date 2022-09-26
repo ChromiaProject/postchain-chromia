@@ -26,8 +26,8 @@ function test_propose_blockchain() {
     ).sign(rell.test.keypairs.alice).run();
 
     // Proposal is pending
-    val prop = last_proposal();
-    val config_proposal = get_blockchain_proposal(prop.rowid);
+    val prop = get_proposal(null)!!;
+    val config_proposal = get_blockchain_proposal(prop.id);
     assert_not_null(config_proposal);
     assert_equals(config_proposal.container, containers.system);
     
@@ -74,7 +74,7 @@ function alice_proposes_action(bc: blockchain, action: blockchain_action) {
 function bob_votes() {
     val bob = provider @ { rell.test.pubkeys.bob };
     rell.test.tx().op(
-        make_vote(bob, last_proposal(), true)
+        make_vote(rell.test.pubkeys.bob, get_proposal(null)!!.id, true)
     ).sign(rell.test.keypairs.bob).run();
 }
 

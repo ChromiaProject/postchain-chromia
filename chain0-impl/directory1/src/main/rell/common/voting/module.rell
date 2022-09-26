@@ -40,11 +40,13 @@ operation create_voter_set(me: provider, name, threshold: integer, initials: lis
     }
 }
 
-operation make_vote(provider, prop: proposal, vote: boolean) {
+operation make_vote(my_pubkey: pubkey, proposal_id: integer, vote: boolean) {
+    val provider = require_provider(my_pubkey);
 	require_provider_auth_with_rl(provider);
-	require_voter_set_member(prop.voter_set, provider);
-	require(empty(vote @? {prop, provider}), "Only one vote per pubkey is allowed");
-	internal_vote(provider, prop, vote);
+    val proposal = proposal @ { rowid.from_gtv(proposal_id.to_gtv()) };
+	require_voter_set_member(proposal.voter_set, provider);
+	require(empty(vote @? {proposal, provider}), "Only one vote per pubkey is allowed");
+	internal_vote(provider, proposal, vote);
 }
 
 operation retract_vote(provider, prop: proposal) {

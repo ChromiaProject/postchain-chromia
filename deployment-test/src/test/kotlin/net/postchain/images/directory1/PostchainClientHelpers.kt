@@ -4,6 +4,7 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.PubKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -30,10 +31,10 @@ internal fun Context.registerNodeAsProvider(brid: BlockchainRid, cluster: Gtv, n
 
     node.txAsAdmin(brid, "propose_enable_provider", provider, newProvider)
     db.awaitNewBlock()
-    approverNode?.approveProposal(brid, approver)
+    //approverNode?.approveProposal(brid, approver)
 
     node.txAsAdmin(brid, "propose_provider_is_system", provider, newProvider, gtv(true))
-    approverNode?.approveProposal(brid, approver)
+    //approverNode?.approveProposal(brid, approver)
 
     // Asserting: provider2 is added correctly
     val newProviderData = awaitQueryResult {
@@ -46,18 +47,15 @@ internal fun Context.registerNodeAsProvider(brid: BlockchainRid, cluster: Gtv, n
     return newProvider
 }
 
-internal fun PostchainContainer.approveProposal(brid: BlockchainRid, provider: Gtv?): Gtv? {
-    var proposal: Gtv? = null
-    if (provider != null) {
-        proposal = client(brid).getProposal()
+internal fun PostchainContainer.approveProposal(brid: BlockchainRid, provider: PubKey): Gtv {
+        val proposal = client(brid).getProposal()
 
         // FYI: if (node == node1) then use node.txAsAdmin()
         if (networkAliases.contains("node1")) {
-            txAsAdmin(brid, "make_vote", provider, proposal!!, gtv(true))
+            //txAsAdmin(brid, "make_vote", provider, proposal!!, gtv(true))
         } else {
-            tx(brid, "make_vote", provider, proposal!!, gtv(true))
+            //tx(brid, "make_vote", provider, proposal!!, gtv(true))
         }
-    }
     return proposal
 }
 
