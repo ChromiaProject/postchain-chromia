@@ -483,7 +483,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         doInTryBlock {
             val prop = getPostchainClient().querySync(
                     "get_proposal", gtv(
-                    "rowid" to gtv(rowid)
+                    "id" to gtv(rowid)
             )
             )
 

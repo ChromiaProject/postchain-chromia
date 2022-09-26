@@ -42,12 +42,12 @@ class CommandGetProposal : CliktCommand(
     fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.proposalType) {
             ProposalType.bc ->  {
-                val p = client.getBlockchainProposal(proposal.rowid) ?: return ""
+                val p = client.getBlockchainProposal(proposal.id) ?: return ""
                 val conf = GtvDecoder.decodeGtv(p.data)
                 "Container: ${p.container}\nData: $conf"
             }
             ProposalType.conf -> {
-                val p = client.getConfigurationProposal(proposal.rowid) ?: return ""
+                val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
                 val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
