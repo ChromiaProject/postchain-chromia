@@ -478,20 +478,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnList
     }
 
-    fun getProposal(rowid: Long): Gtv {
-        var returnValue: Gtv? = null
-        doInTryBlock {
-            val prop = getPostchainClient().querySync(
-                    "get_proposal", gtv(
-                    "id" to gtv(rowid)
-            )
-            )
-
-            returnValue = prop
-        }
-        return returnValue!!
-    }
-
     protected fun readConfigurationFile(blockchainConfigFile: File, format: String?): ByteArray {
         var fmt = format
         if (fmt == null) {

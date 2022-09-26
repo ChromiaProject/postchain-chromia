@@ -5,6 +5,8 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.chain0.common.model.BlockchainAction
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.proposal.ProposalType
+import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
@@ -661,17 +663,17 @@ class Directory1Test : ManagedModeTest() {
         //Propose degradation of prov2 again
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), false))
 
-        val type = "provider_is_system"
+        val type = ProposalType.provider_is_system.toString()
         val id = assertProposalTypeAndGetRowid(type)
-        val proposal = provExecutor.getProposal(id).asDict()
-        val actualType = (proposal["proposal_type"] as GtvString).string
-        val propid = (proposal["id"] as GtvInteger).asInteger()
-        val timestamp = (proposal["timestamp"] as GtvInteger).asInteger()
-        val proposedBy = proposal["proposed_by"]!!.asByteArray().toHex()
+        val proposal = provExecutor.getPostchainClient().getProposal(id)
+        val actualType = proposal.proposalType
+        val propid = proposal.id
+        val timestamp = proposal.timestamp
+        val proposedBy = proposal.proposedBy.toHex()
 
         assertEquals(provConfig.pubkey(), proposedBy, "wrong proposed_by")
         assertEquals(id, propid, "wrong idx")
-        assertEquals(type, actualType, "Wrong proposal type")
+        assertEquals(ProposalType.provider_is_system, actualType, "Wrong proposal type")
         assertNotEquals(0, timestamp, "timestamp is 0")
 
     }
