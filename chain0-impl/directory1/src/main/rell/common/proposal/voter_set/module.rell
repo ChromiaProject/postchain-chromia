@@ -81,3 +81,17 @@ operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_
     }
 	internal_vote(provider, prop, true);
 }
+
+query get_voter_set_update_proposal(id: integer) {
+	val p = proposal @? { rowid_from_integer(id) };
+    if (p == null) return null;
+	val pvsu = pending_voter_set_update @? { p };
+    if (pvsu == null) return null;
+    return (
+        voter_set = pvsu.voter_set.name,
+        threshold = voter_set_update.threshold @? { pvsu },
+        governor = voter_set_update.governor @? { pvsu } .governor.name,
+        add_member = voter_set_update.new_member @? { pvsu } .provider.pubkey,
+        remove_member = voter_set_update.remove_member @? { pvsu } .provider.pubkey
+    );
+}
