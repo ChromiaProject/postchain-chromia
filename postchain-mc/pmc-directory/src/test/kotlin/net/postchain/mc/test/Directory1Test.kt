@@ -665,7 +665,7 @@ class Directory1Test : ManagedModeTest() {
         val id = assertProposalTypeAndGetRowid(type)
         val proposal = provExecutor.getProposal(id).asDict()
         val actualType = (proposal["proposal_type"] as GtvString).string
-        val propid = (proposal["rowid"] as GtvInteger).asInteger()
+        val propid = (proposal["id"] as GtvInteger).asInteger()
         val timestamp = (proposal["timestamp"] as GtvInteger).asInteger()
         val proposedBy = proposal["proposed_by"]!!.asByteArray().toHex()
 
