@@ -727,30 +727,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposePauseBlockchain(blockchainRID: String) {
-        sendTxSync(
-                proposePauseBlockchainAsync(blockchainRID),
-                "Blockchain pause proposition was added successfully",
-                "Cannot add proposal for pausing blockchain"
-        )
-    }
-
-    fun proposeUnPauseBlockchain(blockchainRID: String) {
-        sendTxSync(
-                proposeUnPauseBlockchainAsync(blockchainRID),
-                "Blockchain un-pause proposition was added successfully",
-                "Cannot add proposal for un-pausing blockchain"
-        )
-    }
-
-    fun proposeDeleteBlockchain(blockchainRID: String) {
-        sendTxSync(
-                proposeDeleteBlockchainAsync(blockchainRID),
-                "Blockchain delete proposition was added successfully",
-                "Cannot add proposal for deleting blockchain"
-        )
-    }
-
     private fun voterSetGtv(name: String): Gtv {
         return getPostchainClient().querySync(
                 "get_voter_set", gtv(
@@ -1043,33 +1019,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().addOperation(
                 "propose_blockchain",
                 gtv(config.signers.first().pubKey.key), gtv(data), gtv(name), gtv(containerName)
-        )
-    }
-
-    /** Who can pause a blockchain? Container deployer voter set
-     * */
-    fun proposePauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "propose_pause_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
-        )
-    }
-
-    /** Who can pause a blockchain? Container deployer voter set
-     * */
-    fun proposeUnPauseBlockchainAsync(blockchainRID: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "propose_unpause_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
-        )
-    }
-
-    /** Who can delete a blockchain? Container deployer voter set
-     * */
-    fun proposeDeleteBlockchainAsync(blockchainRID: String): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "propose_delete_blockchain",
-                gtv(config.signers.first().pubKey.key), gtv(blockchainRID.hexStringToByteArray())
         )
     }
 

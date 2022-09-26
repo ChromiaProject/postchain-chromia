@@ -11,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
+import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -42,6 +43,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val provConfig by lazy { cliConf(providerKey) }
     val prov2Config by lazy { cliConf(providerKey2) }
     open val provExecutor by lazy { cliExecution(provConfig) }
+    open val provClient by lazy { ClientUtil.fromConfig(provConfig) }
     open val prov2Executor by lazy { cliExecution(prov2Config) }
     lateinit var blockchain0ConfigGtv: Gtv
 
@@ -235,9 +237,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return strat
     }
 
-    fun doAndBuildBlocks(clientConfig: PostchainClientConfig, f: TransactionBuilder, nBlocks: Int = 1) {
+    fun doAndBuildBlocks(clientConfig: PostchainClientConfig, txBuilder: TransactionBuilder, nBlocks: Int = 1) {
         val executor = cliExecution(clientConfig)
-        executor.sendTxUnconfirmed(f)
+        executor.sendTxUnconfirmed(txBuilder)
         buildAndAwaitBlocks(nBlocks)
     }
 

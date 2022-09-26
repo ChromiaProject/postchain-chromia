@@ -8,9 +8,9 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
 
-class CommandProposeDeleteBlockchain : CliktCommand(
-        name = "remove",
-        help = "Propose removal of blockchain. Command is irreversible"
+class CommandProposeResumeBlockchain : CliktCommand(
+        name = "start",
+        help = "Propose starting a chain that has previously been stopped."
 ) {
     private val client by nopClientOption()
 
@@ -21,12 +21,12 @@ class CommandProposeDeleteBlockchain : CliktCommand(
                 .proposeBlockchainActionOperation(
                         client.config.pubkey().key,
                         blockchainRID.data,
-                        BlockchainAction.remove
+                        BlockchainAction.resume
                 )
                 .postSyncAwaitConfirmation()
                 .printResult(
-                        "Blockchain delete proposition was added successfully",
-                        "Cannot add proposal for deleting blockchain"
+                        "Blockchain resume proposition was added successfully",
+                        "Cannot add proposal for resuming blockchain"
                 )
     }
 }
