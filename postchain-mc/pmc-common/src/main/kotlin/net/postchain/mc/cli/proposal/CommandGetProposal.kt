@@ -29,10 +29,10 @@ class CommandGetProposal : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val proposal = client.getProposal(idx)
+        val proposal = client.getProposal(idx) ?: return println("Proposal $idx not found")
         val proposedBy = client.getProviderData(proposal.proposedBy)
         println("""
-            Proposal: $idx - ${proposal.proposalType.name}
+            Proposal: $idx - ${proposal.type.name}
             Proposed by ${proposedBy.name} - ${proposedBy.pubkey.toHex()}
             Time: ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
         """.trimIndent())
@@ -40,7 +40,7 @@ class CommandGetProposal : CliktCommand(
     }
     
     fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
-        return when (proposal.proposalType) {
+        return when (proposal.type) {
             ProposalType.bc ->  {
                 val p = client.getBlockchainProposal(proposal.id) ?: return ""
                 val conf = GtvDecoder.decodeGtv(p.data)

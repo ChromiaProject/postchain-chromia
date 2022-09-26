@@ -665,8 +665,8 @@ class Directory1Test : ManagedModeTest() {
 
         val type = ProposalType.provider_is_system.toString()
         val id = assertProposalTypeAndGetRowid(type)
-        val proposal = provExecutor.getPostchainClient().getProposal(id)
-        val actualType = proposal.proposalType
+        val proposal = provExecutor.getPostchainClient().getProposal(id)!!
+        val actualType = proposal.type
         val propid = proposal.id
         val timestamp = proposal.timestamp
         val proposedBy = proposal.proposedBy.toHex()
