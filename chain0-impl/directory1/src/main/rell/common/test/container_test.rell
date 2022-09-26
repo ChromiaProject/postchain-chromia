@@ -52,7 +52,7 @@ function test_remove_container() {
 
     // Deleting blockchain
     rell.test.tx().op(
-        propose_delete_blockchain(rell.test.pubkeys.alice, bcFoo.rid)
+        propose_blockchain_action(rell.test.pubkeys.alice, bcFoo.rid, blockchain_action.remove)
     ).sign(rell.test.keypairs.alice).run();
 
     // Trying to remove container1

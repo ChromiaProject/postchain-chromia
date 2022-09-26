@@ -1,5 +1,3 @@
-
-
 /*
  * Proposes a new blockchain to a container.
  * NB: only the deployer voter set of the container can do this.
@@ -43,40 +41,13 @@ operation propose_configuration(blockchain_rid:byte_array, my_pubkey: pubkey, co
 	internal_vote(me, prop, true);
 }
 
-operation propose_pause_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
-	val me = provider @ { my_pubkey };
-	val blockchain = blockchain @ { blockchain_rid };
-	require_provider_auth_with_rl (me);
-	val container = container_blockchain @ {blockchain} .container;
-	require_container_deployer(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_pause, me, container.deployer);
-	create pending_pause_blockchain(prop, blockchain);
-	internal_vote(me, prop, true);
-}
-
-operation propose_unpause_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
-	val me = provider @ { my_pubkey };
-	val blockchain = blockchain @ { blockchain_rid };
-	require_provider_auth_with_rl (me);
-	val container = container_blockchain @ {blockchain} .container;
-	require_container_deployer(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_unpause, me, container.deployer);
-	create pending_unpause_blockchain(prop, blockchain);
-	internal_vote(me, prop, true);
-}
-
-/*
- * Proposes deletion of a blockchain.
- * NB: Cannot be done if other blockchains depends on it.
- */
-operation propose_delete_blockchain(my_pubkey: pubkey, blockchain_rid: byte_array) {
-	val me = provider @ { my_pubkey };
-	val blockchain = blockchain @ { blockchain_rid };
-	require_no_dependencies_on_me(blockchain);
-	require_provider_auth_with_rl (me);
-	val container = container_blockchain @ {blockchain} .container;
-	require_container_deployer(container, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.bc_delete, me, container.deployer);
-	create pending_delete_blockchain(prop, blockchain);
-	internal_vote(me, prop, true);
+operation propose_blockchain_action(my_pubkey: pubkey, blockchain_rid: byte_array, action: blockchain_action) {
+    val me = provider @ { my_pubkey };
+    val blockchain = blockchain @ { blockchain_rid };
+    require_provider_auth_with_rl (me);
+    val container = container_blockchain @ {blockchain} .container;
+    require_container_deployer(container, me);
+    val prop = create proposal(op_context.last_block_time, proposal_type.blockchain_action, me, container.deployer);
+    create pending_blockchain_action(prop, blockchain, action);
+    internal_vote(me, prop, true);
 }

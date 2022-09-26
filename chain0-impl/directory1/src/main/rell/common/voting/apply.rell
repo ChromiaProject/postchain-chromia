@@ -31,9 +31,7 @@ function apply_voting_result(prop: proposal) {
 				voter_set_update  -> apply_voter_set_update(prop);
 				provider_state    -> apply_provider_state(prop);
 				provider_is_system-> apply_provider_is_system(prop);
-				bc_pause		  -> apply_pause_blockchain(prop);
-				bc_unpause		  -> apply_unpause_blockchain(prop);
-				bc_delete		  -> apply_delete_blockchain(prop);
+				blockchain_action -> apply_blockchain_action(prop);
 	    	}
 			delete_proposal(prop);
 		}
@@ -174,10 +172,18 @@ function apply_bc(proposal) {
 	add_dependencies(bc.data, blockchain_rid, 0);
 }
 
+function apply_blockchain_action(proposal) {
+    val pba = pending_blockchain_action @ { proposal };
+    when (pba.action) {
+        pause -> _apply_pause_blockchain(pba, proposal);
+        resume -> _apply_resume_blockchain(pba, proposal);
+        remove -> _apply_delete_blockchain(pba, proposal);
+    }
+}
+
 // Remove block production by inactivating bc, Keep replicas.
-function apply_pause_blockchain(proposal) {
-	val bc = pending_pause_blockchain @ { proposal };
-	update blockchain @ { bc.blockchain.rid } (.active = false);
+function _apply_pause_blockchain(action: pending_blockchain_action, proposal) {
+	update blockchain @ { action.blockchain.rid } (.active = false);
 	/* val cl = container_blockchain @ {bc.blockchain}.container.cluster;
 	for (n in cluster_node @* {.cluster == cl} .node) {
 		create blockchain_replica_node(bc.blockchain, n);	
@@ -186,28 +192,26 @@ function apply_pause_blockchain(proposal) {
 
 /* restart block production (activate bc), block builders will be the ones in cluster_node.
  * cluster nodes are removed from blockchain_replica_node table. To ensure that signers 
-are not also replicas.
-* 
+ * are not also replicas.
 */
-function apply_unpause_blockchain(proposal) {
-	val bc = pending_unpause_blockchain @ { proposal };
-	update blockchain @ { bc.blockchain.rid } (.active = true);
-	val cl = container_blockchain @ {bc.blockchain}.container.cluster;
-	for (n in cluster_node @* {.cluster == cl} .node) {
-		delete blockchain_replica_node @? {bc.blockchain, n};	
+function _apply_resume_blockchain(action: pending_blockchain_action, proposal) {
+	update blockchain @ { action.blockchain.rid } (.active = true);
+	val cl = container_blockchain @ { action.blockchain }.container.cluster;
+	for (n in cluster_node @* { .cluster == cl } .node) {
+		delete blockchain_replica_node @? { action.blockchain, n };
 	}
 }
 
 // Delete everything about this bc
-function apply_delete_blockchain(proposal) {
-	val bc = pending_delete_blockchain @ { proposal } .blockchain;
+function _apply_delete_blockchain(action: pending_blockchain_action, proposal) {
+	val bc = action.blockchain;
 	delete container_blockchain @ { bc };
 	delete blockchain_configuration @* { bc };
 	delete blockchain_configuration_signers @* { bc };
 	delete blockchain_added @* { bc };
 	delete blockchain_replica_node @* { bc };
 	delete blockchain_dependency @* { .me == bc };
-	delete pending_delete_blockchain @ { proposal };
+	delete pending_blockchain_action @ { proposal };
 	delete blockchain @ { bc.rid };
 }
 

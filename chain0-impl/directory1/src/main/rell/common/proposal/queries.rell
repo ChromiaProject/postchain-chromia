@@ -5,19 +5,15 @@ query get_proposals_since(since: rowid) {
   return proposal @* { .rowid >= since } (.rowid, .proposal_type) limit 10;
 }
 
-query get_proposal (rowid) {
-    return proposal @ { rowid }
-    (
-        proposed_by = .proposed_by.pubkey,
-        timestamp = .timestamp,
-        proposal_type = .proposal_type,
-        rowid = .rowid
-    );
-}
-
-query get_last_proposal(proposal_type, proposed_by:pubkey?): rowid? {
-	if (proposed_by == null) return proposal @ { proposal_type } ( @max .rowid );
-	return proposal @ { proposal_type, .proposed_by == provider @ { proposed_by } } ( @max .rowid );
+query get_proposal (id: rowid?): (id :rowid, timestamp: integer, type :proposal_type, proposed_by :pubkey)? {
+	val result = if (id == null) proposal @? {} (@sort_desc @omit .rowid, $) limit 1 else proposal @? { id };
+	if (result == null) return null;
+	return (
+		id = result.rowid,
+		timestamp = result.timestamp,
+		type = result.proposal_type,
+		proposed_by = result.proposed_by.pubkey
+	);
 }
 
 query get_blockchain_proposal(rowid): (data:byte_array, container:text)? {
