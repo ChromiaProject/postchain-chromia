@@ -83,7 +83,7 @@ class Directory1Test : ManagedModeTest() {
 
         //First provider proposes Disable prov2. Prov2 agrees:
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
-        val id = assertProposalTypeAndGetRowid("provider_state")
+        val id = assertProposalTypeAndGetRowid(ProposalType.provider_state)
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         assertProviderDisabled(prov2Config.pubkey())
     }
@@ -124,7 +124,7 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
 
         // Prov votes no
-        voteNo("provider_is_system")
+        voteNo(ProposalType.provider_is_system)
         val listVoterset = provExecutor.listVoterSetMembers(voterSetSystemP)
         assertEquals(2, listVoterset.size)
     }
@@ -156,14 +156,14 @@ class Directory1Test : ManagedModeTest() {
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), false))
-        var id = assertProposalTypeAndGetRowid("voter_set_provider")
+        var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update)
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         members = provExecutor.listVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey()), members.map { it.asByteArray().toHex() })
 
         //Make Ellen her own governor.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
-        id = assertProposalTypeAndGetRowid("voter_set_governor")
+        id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update)
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
@@ -434,7 +434,7 @@ class Directory1Test : ManagedModeTest() {
         assertNextConfiguration(provConfig, 20L)
     }
 
-    private fun voteNo(proposalType: String) {
+    private fun voteNo(proposalType: ProposalType) {
         val id = assertProposalTypeAndGetRowid(proposalType)
         doAndBuildBlocks(provConfig, provExecutor.voteAsync(id, false))
     }
@@ -663,7 +663,7 @@ class Directory1Test : ManagedModeTest() {
         //Propose degradation of prov2 again
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), false))
 
-        val type = ProposalType.provider_is_system.toString()
+        val type = ProposalType.provider_is_system
         val id = assertProposalTypeAndGetRowid(type)
         val proposal = provExecutor.getPostchainClient().getProposal(id)!!
         val actualType = proposal.type
@@ -679,10 +679,10 @@ class Directory1Test : ManagedModeTest() {
     }
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
-    private fun assertProposalTypeAndGetRowid(expectedType: String): Long {
+    private fun assertProposalTypeAndGetRowid(expectedType: ProposalType): Long {
         val proposals = provExecutor.listProposalsSince(0)
         val type = (proposals[0].asDict()["proposal_type"] as GtvString).string
-        assertEquals(expectedType, type, "Wrong proposal type")
+        assertEquals(expectedType.toString(), type, "Wrong proposal type")
         return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
     }
 
