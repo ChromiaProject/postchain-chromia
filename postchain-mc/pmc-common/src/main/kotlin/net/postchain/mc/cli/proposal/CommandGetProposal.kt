@@ -86,8 +86,8 @@ class CommandGetProposal : CliktCommand(
                     row("Voter set:", vsu.voterSet)
                     row("Governor update", vsu.governor ?: "")
                     row("Majority threshold update", vsu.threshold ?: "")
-                    row("New member", vsu.addMember?.toHex() ?: "")
-                    row("Remove member", vsu.removeMember?.toHex() ?: "")
+                    row("New member", vsu.addMember.joinToString(", ") { it.toHex() })
+                    row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
                 }.render()
                 return t.toString()
             }

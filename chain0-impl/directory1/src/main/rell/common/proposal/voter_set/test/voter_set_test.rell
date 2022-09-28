@@ -14,8 +14,10 @@ function test_add_low_tier_provider() {
 	val dapp_provider = provider @ { rell.test.pubkeys.bob };
 	
 	// Should not be possible to add this provider to a voting set.
+	val add_providers = list<pubkey>();
+	add_providers.add(dapp_provider.pubkey);
 	rell.test.tx()
-		.op(propose_update_voter_set(p1.pubkey, voter_sets.system_p, null, null, dapp_provider.pubkey, null))
+		.op(propose_update_voter_set(p1.pubkey, voter_sets.system_p, null, null, add_providers, list<pubkey>()))
 		.sign(rell.test.keypairs.alice)
 		.run_must_fail();
 }
@@ -25,11 +27,16 @@ function test_update_voter_set() {
 	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 1)).run();
 	val p1 = rell.test.keypairs.alice;
 	val p2 = rell.test.keypairs.bob;
+
+	val add_providers = list<pubkey>();
+	add_providers.add(p2.pub);
+	val remove_providers = list<pubkey>();
+	remove_providers.add(p1.pub);
 	rell.test.tx()
-		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, null, null))
-		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, p2.pub, null))
-		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, null, p1.pub))
-		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, system_voter_set().name, null, null))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), list<pubkey>()))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, add_providers, list<pubkey>()))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), remove_providers))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, system_voter_set().name, list<pubkey>(), list<pubkey>()))
 		.sign(p1)
 		.run();
 

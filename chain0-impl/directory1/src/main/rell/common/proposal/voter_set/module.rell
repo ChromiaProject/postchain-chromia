@@ -19,12 +19,12 @@ namespace voter_set_update {
     }
 
     entity new_member {
-        key pending_voter_set_update;
+        index pending_voter_set_update;
         provider;
     }
 
     entity remove_member {
-        key pending_voter_set_update;
+        index pending_voter_set_update;
         provider;
     }
 }
@@ -35,22 +35,26 @@ function apply_voter_set_update(proposal) {
 	if (threshold != null) vsp.voter_set.threshold = threshold;
     val governor = voter_set_update.governor @? { vsp }.governor;
 	if (governor != null) update voter_set_governance @ { .voter_set == vsp.voter_set } (.governor = governor);
-    val new_member = voter_set_update.new_member @? { vsp }.provider;
-	if (new_member != null) create voter_set_member(vsp.voter_set, new_member);
-    val remove_member = voter_set_update.remove_member @? { vsp }.provider;
-	if (remove_member != null) delete voter_set_member @ { vsp.voter_set, remove_member };
+    val new_member = voter_set_update.new_member @* { vsp }.provider;
+    for (m in new_member) {
+        create voter_set_member(vsp.voter_set, m);
+    }
+    val remove_member = voter_set_update.remove_member @* { vsp }.provider;
+    for (m in remove_member) {
+	    delete voter_set_member @ { vsp.voter_set, m };
+    }
 }
 
 function delete_pending_voter_set_update(proposal) {
     val p = pending_voter_set_update @ { proposal };
     delete voter_set_update.threshold @? { p };
     delete voter_set_update.governor  @? { p };
-    delete voter_set_update.new_member  @? { p };
-    delete voter_set_update.remove_member  @? { p };
+    delete voter_set_update.new_member  @* { p };
+    delete voter_set_update.remove_member  @* { p };
     delete p;
 }
 
-operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_threshold: integer?, new_governor: name?, new_member: pubkey?, remove_member: pubkey?) {
+operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_threshold: integer?, new_governor: name?, new_member: list<pubkey>, remove_member: list<pubkey>) {
 	val provider = require_is_provider_with_rl(my_pubkey);
 	val voter_set = require_voter_set(voter_set_name);
 
@@ -70,13 +74,13 @@ operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: name, new_
         val g = require_voter_set(new_governor);
         create voter_set_update.governor(update_prop, g);
     }
-	if (new_member != null) { 
-        val p = require_provider(new_member);
+    for (m in new_member) {
+        val p = require_provider(m);
         require(p.tier > 0, "Cannot add a provider that has no voting right to a voter set");
         create voter_set_update.new_member(update_prop, p);
     }
-    if (remove_member != null) { 
-        val p = require_provider(remove_member);
+    for (m in remove_member) {
+        val p = require_provider(m);
         create voter_set_update.remove_member(update_prop, p);
     }
 	internal_vote(provider, prop, true);
@@ -91,7 +95,7 @@ query get_voter_set_update_proposal(id: integer) {
         voter_set = pvsu.voter_set.name,
         threshold = voter_set_update.threshold @? { pvsu },
         governor = voter_set_update.governor @? { pvsu } .governor.name,
-        add_member = voter_set_update.new_member @? { pvsu } .provider.pubkey,
-        remove_member = voter_set_update.remove_member @? { pvsu } .provider.pubkey
+        add_member = voter_set_update.new_member @* { pvsu } .provider.pubkey,
+        remove_member = voter_set_update.remove_member @* { pvsu } .provider.pubkey
     );
 }

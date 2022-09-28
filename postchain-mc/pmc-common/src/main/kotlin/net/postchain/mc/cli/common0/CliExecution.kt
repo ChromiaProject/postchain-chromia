@@ -1040,19 +1040,16 @@ open class CliExecution(val config: PostchainClientConfig) {
      * add = false => Remove this member from voter set
      */
     fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        val voterSetGtv = voterSetGtv(voterSet)
-        val memberToAddOrRemove = providerGtv(member)
         val newMember = if (add) member else null
         val removeMember = if (!add) member else null
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().key, voterSet, null, null, newMember?.hexStringToByteArray(), removeMember?.hexStringToByteArray()
+            config.pubkey().key, voterSet, null, null, newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(), removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
         )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().key, voterSetName, null, newGovernor, null, null
+            config.pubkey().key, voterSetName, null, newGovernor, listOf(), listOf()
         )
     }
 }
