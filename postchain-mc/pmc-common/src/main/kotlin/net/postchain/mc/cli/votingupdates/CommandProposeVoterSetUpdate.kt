@@ -26,11 +26,11 @@ class CommandProposeVoterSetUpdate : CliktCommand(
 
     private val threshold by option("--threshold", help = "New threshold").long()
     private val governor by option("--governor", help = "Name of new governor")
-    private val newMember by option("--add-member", help = "Provider pubkey to add to voter set")
+    private val newMember by option("--add-member", help = "Provider pubkey(s) to add to voter set")
         .convert { it.hexStringToByteArray() }
         .split(",")
         .default(listOf())
-    private val removeMember by option("--remove-member", help = "Provider pubkey to remove from voter set")
+    private val removeMember by option("--remove-member", help = "Provider pubkey(s) to remove from voter set")
         .convert { it.hexStringToByteArray() }
         .split(",")
         .default(listOf())
