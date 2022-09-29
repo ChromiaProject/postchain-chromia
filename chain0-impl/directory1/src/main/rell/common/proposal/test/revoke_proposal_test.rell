@@ -91,7 +91,7 @@ function setupD1() {
 }
 
 function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.test.keypair?) {
-    val alice = provider @ { rell.test.pubkeys.alice };
+    val alice = rell.test.pubkeys.alice;
     val initial_providers = provider @* {} (@sort .pubkey);
 
     // Registering a new provider
@@ -107,37 +107,36 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
     );
 
     // Proposing provider to be enabled.
-    val prov = provider @ { provider_pk };
     rell.test.tx().op(
-        propose_enable_provider(alice, prov)
+        propose_enable_provider(alice, provider_pk)
     ).sign(rell.test.keypairs.alice).run();
 
     if (approver != null) vote_for_last_proposal(approver);
 
     // Proposing provider to be a system provider.
     rell.test.tx().op(
-        propose_provider_is_system(alice, prov, true)
+        propose_provider_is_system(alice, provider_pk, true)
     ).sign(rell.test.keypairs.alice).run();
 
     if (approver != null) vote_for_last_proposal(approver);
 
     // Asserting that provider is enabled and system
+    val prov = provider @ { provider_pk };
     assert_true(prov.active);
     assert_true(prov.system);
 }
 
 function vote_for_last_proposal(approver: rell.test.keypair) {
-    val prop = proposal @ {};
-    val prov = provider @ { approver.pub };
+    val proposal_id = integer_from_rowid(proposal @ {}.rowid);
     rell.test.tx().op(
-        make_vote(prov, prop, true)
+        make_vote(approver.pub, proposal_id, true)
     ).sign(approver.priv).run();
 }
 
 function propose_new_container() {
-    val alice = provider @ { rell.test.pubkeys.alice };
+    val alice = rell.test.pubkeys.alice;
     val my_container = "my_container";
     rell.test.tx().op(
-        propose_container(alice, cluster @ { "system" }, my_container, voter_set @ { "SYSTEM_P" })
+        propose_container(alice, clusters.system, my_container, voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run();
 }

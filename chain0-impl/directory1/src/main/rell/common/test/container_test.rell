@@ -25,7 +25,7 @@ function test_remove_container() {
     // 3. Adding a new container
     val alice = provider @ { rell.test.pubkeys.alice };
     rell.test.tx().op(
-        propose_container(alice, cluster @ { "system" }, "container1", voter_set @ { "SYSTEM_P" })
+        propose_container(alice.pubkey, clusters.system, "container1", voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting container is added

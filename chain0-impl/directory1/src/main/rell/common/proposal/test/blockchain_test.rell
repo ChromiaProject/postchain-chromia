@@ -72,9 +72,9 @@ function alice_proposes_action(bc: blockchain, action: blockchain_action) {
 }
 
 function bob_votes() {
-    val bob = provider @ { rell.test.pubkeys.bob };
+    val bob = rell.test.pubkeys.bob;
     rell.test.tx().op(
-        make_vote(bob, last_proposal(), true)
+        make_vote(bob, integer_from_rowid(last_proposal().rowid), true)
     ).sign(rell.test.keypairs.bob).run();
 }
 

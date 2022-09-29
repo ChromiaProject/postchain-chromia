@@ -3,7 +3,7 @@
  * TODO: Start as replica; once it is in sync, it will become signer.
  * (by adding it to blockchain_configuration_signers) Go thought all bcs in cluster and update their configurations with the new node.
  * */
-operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, cluster_name: name) {
+operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, cluster_name: text) {
 	val provider = require_provider(provider_pubkey);
 	require_provider_auth_with_rl(provider);
 	val cluster = cluster @ { cluster_name };
@@ -15,7 +15,10 @@ operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, clus
 
 //Updates of cluster providers are controlled by its governor voter set.
 //TODO: Change this to propose_* or propose_update_cluster_providers(...)
-operation add_provider_to_cluster(me: provider, provider, cluster) {
+operation add_provider_to_cluster(my_pubkey: pubkey, provider_pubkey: pubkey, cluster_name: text) {
+	val me = require_provider(my_pubkey);
+	val provider = require_provider(provider_pubkey);
+	val cluster = require_cluster(cluster_name);
 	require_provider_auth_with_rl(me);
 	require(
 	    (me.tier > 0 and provider.tier == 0) or me.system,
@@ -73,7 +76,7 @@ function update_configuration_signers(cluster) {
 }
 
 // Who can create a cluster? Any provider
-operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, governance_name: name, deployer_name: name) {
+operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, governance_name: text, deployer_name: text) {
 	val me = require_provider(my_pubkey);
 	val governor = require_voter_set(governance_name);
 	val deployer = require_voter_set(deployer_name);

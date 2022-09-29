@@ -104,11 +104,7 @@ internal class Directory1DeploymentIT {
         // Asserting that there is only one container (system) before test
         assert(node1.chain0.getAllContainers().asArray().size).isEqualTo(1)
 
-        val provider = node1.chain0.getProvider()
-        val cluster = node1.chain0.getSystemCluster()
-        val deployer = node1.chain0.getSystemDeployer()
-
-        node1.txAsAdmin(brid, "propose_container", provider, cluster, gtv(foobarContainer), deployer)
+        node1.txAsAdmin(brid, "propose_container", gtv(adminPubKey.hexStringToByteArray()), gtv(systemContainer), gtv(foobarContainer), gtv("SYSTEM_P"))
 
         awaitUntilAsserted {
             val containers = node1.chain0.getAllContainers().asArray()
@@ -127,9 +123,7 @@ internal class Directory1DeploymentIT {
         assertEquals(expectedLimits, actualLimits)
 
         // Changing resource limits
-        val provider = node1.chain0.getProvider()
-        val container = node1.chain0.getContainer(foobarContainer)
-        node1.txAsAdmin(brid, "propose_container_limits", provider, container,
+        node1.txAsAdmin(brid, "propose_container_limits", gtv(adminPubKey.hexStringToByteArray()), gtv(foobarContainer),
                 gtv(foobarResourceLimitsValues.first),
                 gtv(foobarResourceLimitsValues.second),
                 gtv(foobarResourceLimitsValues.third)
@@ -144,11 +138,8 @@ internal class Directory1DeploymentIT {
     @Order(5)
     fun `Add node2 as signer to c0`() {
         consoleLogger.info("Adding node2 to the cluster")
-        val provider1 = node1.chain0.getProvider()
-        val cluster = node1.chain0.getSystemCluster()
-
         consoleLogger.info("Registering provider2")
-        Context(node1, node1Db, provider1).registerNodeAsProvider(brid, cluster, node2)
+        Context(node1, node1Db, gtv(adminPubKey.hexStringToByteArray())).registerNodeAsProvider(brid, "system", node2)
 
         consoleLogger.info("Adding node2 to [node1] network")
         node1.chain0.addNode(node2, node2.pubKeyByteArray, "system", brid)
@@ -165,13 +156,9 @@ internal class Directory1DeploymentIT {
     @Order(6)
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
-        val provider1 = node1.chain0.getProvider()
-        val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
-        val cluster = node1.chain0.getSystemCluster()
-
         consoleLogger.info("Registering provider3")
-        Context(node1, node1Db, provider1, approverNode = node2, approver = provider2)
-                .registerNodeAsProvider(brid, cluster, node3)
+        Context(node1, node1Db, gtv(adminPubKey.hexStringToByteArray()), approverNode = node2, approver = node2.pubKeyByteArray)
+                .registerNodeAsProvider(brid, "system", node3)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
         node1.chain0.addNode(node3, node3.pubKeyByteArray, "system", brid)
@@ -206,8 +193,6 @@ internal class Directory1DeploymentIT {
 
         val rellConfig = compileDapp(dappName)
 
-        val provider1 = node1.chain0.getProvider()
-        val provider2 = node2.chain0.getProvider(node2.pubKeyByteArray)
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
             consoleLogger.info { "Adding test dapp $dappName:${chain.iid}" }
@@ -221,10 +206,10 @@ internal class Directory1DeploymentIT {
                 node3.tx(brid, "propose_blockchain", gtv(node3.pubKeyByteArray), configGtv, gtv("c0"), gtv(containerName))
 
                 // Voting
-                val p1 = node1.approveProposal(brid, provider1)
+                val p1 = node1.approveProposal(brid, adminPubKey.hexStringToByteArray())
                 consoleLogger.info { "node1 voted for proposal: $p1" }
 
-                val p2 = node2.approveProposal(brid, provider2)
+                val p2 = node2.approveProposal(brid, node2.pubKeyByteArray)
                 consoleLogger.info { "node2 voted for proposal: $p2" }
             }
         }
