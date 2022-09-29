@@ -1,0 +1,58 @@
+@test module;
+
+import ^^.*;
+import ^^.model.*;
+import ^.setup.*;
+
+function test_system_and_tier_0_add() {
+    setup_module();
+
+    // System provider adds tier 0 becomes active
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.alice, rell.test.pubkeys.bob, 0))
+        .sign(rell.test.keypairs.alice)
+        .run();
+
+    assert_true(provider @ { rell.test.pubkeys.bob }.active);
+
+    // System provider adds tier 1 becomes active
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.alice, x"0312", 1))
+        .sign(rell.test.keypairs.alice)
+        .run();
+
+    assert_true(provider @ { x"0312" }.active); 
+
+    // Non system provider adds tier 0 becomes inactive
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.bob, rell.test.pubkeys.trudy, 0))
+        .sign(rell.test.keypairs.bob)
+        .run();
+
+    assert_false(provider @ { rell.test.pubkeys.trudy }.active); 
+}
+
+function test_non_system_provider_add_provider() {
+    setup_module();
+
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.alice, rell.test.pubkeys.bob, 1))
+        .sign(rell.test.keypairs.alice)
+        .run();
+
+    // System provider adds tier 1 becomes inactive
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.bob, rell.test.pubkeys.trudy, 1))
+        .sign(rell.test.keypairs.bob)
+        .run();
+
+    assert_false(provider @ { rell.test.pubkeys.trudy }.active); 
+
+        // System provider adds tier 1 becomes inactive
+    rell.test.tx()
+        .op(register_provider(rell.test.pubkeys.bob, x"0312", 0))
+        .sign(rell.test.keypairs.bob)
+        .run();
+
+    assert_true(provider @ { x"0312" }.active);
+}

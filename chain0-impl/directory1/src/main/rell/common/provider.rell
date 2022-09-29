@@ -3,13 +3,12 @@
 operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
     val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
-	require((me.tier > 0 and tier == 0) or me.system);
 	register_and_enable_provider(pubkey, 
 		is_system = false, 
 		tier = tier, 
 		cluster = null, 
 		voter_set = null, 
-		enabled_by_default = tier == 0
+		enabled_by_default = (me.tier > 0 and tier == 0) or me.system
 	);
 }
 
