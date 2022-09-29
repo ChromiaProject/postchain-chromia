@@ -83,7 +83,7 @@ class Directory1Test : ManagedModeTest() {
 
         //First provider proposes Disable prov2. Prov2 agrees:
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
-        val id = assertProposalTypeAndGetRowid(ProposalType.provider_state)
+        val id = assertProposalTypeAndGetRowid(ProposalType.provider_update)
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         assertProviderDisabled(prov2Config.pubkey())
     }
@@ -124,7 +124,7 @@ class Directory1Test : ManagedModeTest() {
         doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
 
         // Prov votes no
-        voteNo(ProposalType.provider_is_system)
+        voteNo(ProposalType.provider_update)
         val listVoterset = provExecutor.listVoterSetMembers(voterSetSystemP)
         assertEquals(2, listVoterset.size)
     }
@@ -663,7 +663,7 @@ class Directory1Test : ManagedModeTest() {
         //Propose degradation of prov2 again
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), false))
 
-        val type = ProposalType.provider_is_system
+        val type = ProposalType.provider_update
         val id = assertProposalTypeAndGetRowid(type)
         val proposal = provExecutor.getPostchainClient().getProposal(id)!!
         val actualType = proposal.type
@@ -673,7 +673,7 @@ class Directory1Test : ManagedModeTest() {
 
         assertEquals(provConfig.pubkey(), proposedBy, "wrong proposed_by")
         assertEquals(id, propid, "wrong idx")
-        assertEquals(ProposalType.provider_is_system, actualType, "Wrong proposal type")
+        assertEquals(ProposalType.provider_update, actualType, "Wrong proposal type")
         assertNotEquals(0, timestamp, "timestamp is 0")
 
     }

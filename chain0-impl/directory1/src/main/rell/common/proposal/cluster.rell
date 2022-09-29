@@ -12,6 +12,19 @@ operation propose_cluster_deployer(my_pubkey: pubkey, cluster_name: text, new_de
 	internal_vote(me, prop, true);
 }
 
+//Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
+operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: text, provider_pubkey: pubkey, add: boolean) {
+	val me = require_provider(my_pubkey);
+	val cluster = require_cluster(cluster_name);
+	val provider = require_provider(provider_pubkey);
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_provider, me, cluster.governance);
+	create pending_cluster_provider(prop, cluster, provider, add);
+	internal_vote(me, prop, true);
+}
+
 // Who can update cluster limits? Cluster governance voter set.
 operation propose_cluster_limits(my_pubkey: pubkey, cluster_name: text, ram: integer, cpu: integer, storage: integer) {
 	val me = require_provider(my_pubkey);

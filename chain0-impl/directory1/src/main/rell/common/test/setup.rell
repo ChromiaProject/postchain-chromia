@@ -2,6 +2,8 @@
 
 import o: ^.ops;
 
+val initial_provider = rell.test.keypairs.alice;
+
 function setup_module() {
-    rell.test.tx().op(o.initialize_test_module(rell.test.pubkeys.alice)).run();
+    rell.test.tx().op(o.initialize_test_module(initial_provider.pub)).run();
 }

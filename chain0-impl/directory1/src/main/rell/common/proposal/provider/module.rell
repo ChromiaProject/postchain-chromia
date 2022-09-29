@@ -1,0 +1,79 @@
+module;
+
+import ^^.*;
+
+entity pending_provider_update {
+	key proposal;
+	provider;
+}
+
+namespace provider_update {
+	entity active {
+		key pending_provider_update;
+		active: boolean;
+	}
+
+	entity system {
+		key pending_provider_update;
+		system: boolean;
+	}
+}
+
+function apply_provider_update(proposal) {
+	val p = pending_provider_update @ { proposal };
+	val active = provider_update.active @? { p }.active;
+	if (active != null) {
+		p.provider.active = active;
+		update_provider_state(p.provider, active);
+	}
+	val system = provider_update.system @? { p }.system;
+	if (system != null) {
+		p.provider.system = system;
+		if (system) {
+			create voter_set_member(system_p_voter_set(), p.provider);
+		} else {
+			delete voter_set_member @? {system_p_voter_set(), p.provider};
+		}
+	}
+}
+
+function delete_pending_provider_update(proposal) {
+	val p = pending_provider_update @ { proposal };
+	delete provider_update.active @? { p };
+	delete provider_update.system @? { p };
+	delete p;
+}
+
+operation propose_provider_update(my_pubkey: pubkey, provider_pubkey: pubkey, active: boolean?, system: boolean?) {
+	val me = require_provider(my_pubkey);
+	val provider = require_provider(provider_pubkey);
+	require_provider_auth_with_rl(me);	
+	require(active != null or system != null, "No update proposed");
+	
+	// Enable tier 0 provider
+	if (active != null and active == true and provider.tier == 0 and me.tier > 0) {
+		require(system == null, "Cannot make tier 0 provider a system provider");
+		update_provider_state(provider, active);
+		return;
+	}
+	val p = create proposal(
+		op_context.last_block_time,
+		proposal_type.provider_update,
+		me,
+		system_p_voter_set()
+	);
+	val update_p = create pending_provider_update(p, provider);
+	require(me.tier > 0, "You must have higher tier to propose updates");
+	if (active != null) {
+		if (active == false) require_system_p_member(me); // Only system p can disable providers
+		require(active != provider.active, "No new state for provider is proposed");
+		create provider_update.active(update_p, active);
+	}
+	if (system != null) {
+		require_system_p_member(me);
+		require(provider.tier > 0, "Cannot make tier 0 provider a system provider");
+		require(system != provider.system, "No new state for provider is proposed");
+		create provider_update.system(update_p, system);
+	}
+	internal_vote(me, p, true);
+}

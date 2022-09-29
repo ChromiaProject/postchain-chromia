@@ -1,0 +1,46 @@
+@test module;
+
+import ^^.*;
+import ^^^^.test.setup.*;
+import ^^^^.test.ops.*;
+
+function test_propose_provider_update() {
+    setup_module();
+
+    // No Change must fail    
+    rell.test.tx()
+        .op(register_provider(initial_provider.pub, rell.test.pubkeys.bob, 0))
+        .sign(initial_provider)
+        .run();
+    rell.test.tx()
+        .op(propose_provider_update(initial_provider.pub, rell.test.pubkeys.bob, null, null))
+        .sign(initial_provider)
+        .run_must_fail();
+
+    assert_true(provider @ { rell.test.pubkeys.bob}.active);
+    assert_false(provider @ { rell.test.pubkeys.bob}.system);
+
+    rell.test.tx()
+        .op(propose_provider_update(initial_provider.pub, rell.test.pubkeys.bob, false, null))
+        .sign(initial_provider)
+        .run();
+
+    assert_false(provider @ { rell.test.pubkeys.bob}.active);
+    assert_false(provider @ { rell.test.pubkeys.bob}.system);
+
+
+    // tier 0 cannot be system
+    rell.test.tx()
+        .op(propose_provider_update(initial_provider.pub, rell.test.pubkeys.bob, null, true))
+        .sign(initial_provider)
+        .run_must_fail();
+
+    rell.test.tx()
+        .op(register_provider(initial_provider.pub, rell.test.pubkeys.trudy, 1))
+        .op(propose_provider_update(initial_provider.pub, rell.test.pubkeys.trudy, true, true))
+        .sign(initial_provider)
+        .run();
+    
+    assert_true(provider @ { rell.test.pubkeys.trudy }.active);
+    assert_true(provider @ { rell.test.pubkeys.trudy }.system);
+}

@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.chain0.common.*
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.proposal.provider.proposeProviderUpdateOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.client.config.PostchainClientConfig
@@ -907,11 +908,11 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().proposeProviderIsSystemOperation(config.pubkey().key, pubKey.hexStringToByteArray(), isSystem)
+        return makeTransactionWithNop().proposeProviderUpdateOperation(config.pubkey().key, pubKey.hexStringToByteArray(), null, isSystem)
     }
 
     fun proposeEnableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeEnableProviderOperation(config.pubkey().key, key.hexStringToByteArray())
+        return makeTransactionWithNop().proposeProviderUpdateOperation(config.pubkey().key, key.hexStringToByteArray(), true, null)
     }
 
     fun revokeProposalAsync(rowid: Long): TransactionBuilder {
@@ -921,7 +922,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeDisableProviderOperation(config.pubkey().key, key.hexStringToByteArray())
+        return makeTransactionWithNop().proposeProviderUpdateOperation(config.pubkey().key, key.hexStringToByteArray(), false, null)
     }
 
     fun proposeConfigurationAsync(

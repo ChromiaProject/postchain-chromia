@@ -58,6 +58,7 @@ operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: text, new_
 	val provider = require_is_provider_with_rl(my_pubkey);
 	val voter_set = require_voter_set(voter_set_name);
     require(empty(proposal @* { voter_set }), "Cannot have more than one pending proposal involving this voter set.");
+    require(new_threshold != null or new_governor != null or not(empty(new_member)) or not(empty(remove_member)));
 
 	val prop = create proposal(
 		op_context.last_block_time,

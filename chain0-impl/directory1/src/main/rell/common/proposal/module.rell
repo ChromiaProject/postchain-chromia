@@ -3,6 +3,7 @@ module;
 import ^.*;
 import ^.voting.*;
 import .voter_set.*;
+import .provider.*;
 
 enum proposal_type {
     conf,
@@ -15,8 +16,7 @@ enum proposal_type {
     cluster_deployer,
     cluster_remove,
     voter_set_update,
-    provider_state,
-    provider_is_system,
+    provider_update,
     blockchain_action
     // and a lot more
 }
@@ -110,20 +110,6 @@ entity pending_blockchain {
 	container;
 }
 
-// Proposed enabling/disabling of providers are put here while waiting for enough positive votes.
-entity pending_provider_state {
-	key proposal;
-	provider;
-	active: boolean;
-}
-
-// Proposed promotion/demotion of provider to/from being system provider
-entity pending_provider_is_system {
-	key proposal;
-	provider;
-	system: boolean;
-}
-
 operation revoke_proposal(my_pubkey: pubkey, proposal_rowid: rowid) {
     val me = provider @ { my_pubkey };
     require_provider_auth_with_rl(me);
@@ -145,8 +131,7 @@ function delete_proposal(prop: proposal) {
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
         cluster_remove      -> delete pending_remove_cluster @? { prop };
         voter_set_update    -> delete_pending_voter_set_update(prop);
-        provider_state      -> delete pending_provider_state @ { prop };
-        provider_is_system  -> delete pending_provider_is_system @ { prop };
+        provider_update     -> delete_pending_provider_update(prop);
         blockchain_action   -> delete pending_blockchain_action @? { prop };
     }
     delete vote @* { .proposal == prop };
