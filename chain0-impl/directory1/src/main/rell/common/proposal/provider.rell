@@ -1,6 +1,9 @@
 
 //Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
-operation propose_cluster_provider(me: provider, cluster, provider, add: boolean) {
+operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: name, provider_pubkey: pubkey, add: boolean) {
+	val me = require_provider(my_pubkey);
+	val cluster = require_cluster(cluster_name);
+	val provider = require_provider(provider_pubkey);
 	//check that provider authority and that it is a cluster governor
 	require_provider_auth_with_rl(me);
 	require_cluster_governor(cluster, me);
@@ -11,7 +14,10 @@ operation propose_cluster_provider(me: provider, cluster, provider, add: boolean
 
 //Who can enable providers with tier=0? Any existing provider with tier > 0.
 //Who can enable providers with tier > 0? SYSTEM_P voter set.
-operation propose_enable_provider(me: provider, other_prov: provider) {
+operation propose_enable_provider(my_pubkey: pubkey, enable_pubkey: pubkey) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(enable_pubkey);
+
 	require_provider_auth_with_rl(me);
 	if (other_prov.tier == 0 and me.tier > 0) {
 		update_provider_state(other_prov, true);		
@@ -28,7 +34,9 @@ operation propose_enable_provider(me: provider, other_prov: provider) {
 }
 
 //Who can disable provider? SYSTEM_P voter set.
-operation propose_disable_provider(me: provider, other_prov: provider) {
+operation propose_disable_provider(my_pubkey: pubkey, disable_pubkey: pubkey) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(disable_pubkey);
 	require_provider_auth_with_rl(me);
 	require_system_p_member(me);
 	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
@@ -40,7 +48,9 @@ operation propose_disable_provider(me: provider, other_prov: provider) {
 }
 
 //Who can promote/demote a provider? SYSTEM_P voter set.
-operation propose_provider_is_system(me: provider, other_prov: provider, promote: boolean) {
+operation propose_provider_is_system(my_pubkey: pubkey, provider_pubkey: pubkey, promote: boolean) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(provider_pubkey);
 	print("propose_provider_is_system");
 	require_provider_auth_with_rl(me);
 	require_system_p_member(me);

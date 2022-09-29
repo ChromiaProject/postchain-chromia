@@ -57,7 +57,7 @@ function test_remove_cluster() {
     val alice = provider @ { rell.test.pubkeys.alice };
     val node = node @ { .provider == alice };
     rell.test.tx().op(
-        add_provider_to_cluster(alice, alice, cluster1),
+        add_provider_to_cluster(alice.pubkey, alice.pubkey, cluster1.name),
         add_node_to_cluster(rell.test.pubkeys.alice, node.pubkey, "cluster1")
     ).sign(rell.test.keypairs.alice).run();
 
@@ -68,7 +68,7 @@ function test_remove_cluster() {
 
     // Adding container
     rell.test.tx().op(
-        propose_container(alice, cluster1, "container1", system_p_voter_set())
+        propose_container(alice.pubkey, cluster1.name, "container1", voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting container1 is added

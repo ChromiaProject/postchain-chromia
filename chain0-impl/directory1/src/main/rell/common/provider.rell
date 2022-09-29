@@ -1,6 +1,7 @@
 
 // Registers and enables a provider
-operation register_provider(me: provider, pubkey, tier: integer) {
+operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
+    val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
 	require((me.tier > 0 and tier == 0) or me.system);
 	register_and_enable_provider(pubkey, 
