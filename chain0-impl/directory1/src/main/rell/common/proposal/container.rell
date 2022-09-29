@@ -1,6 +1,6 @@
 
 // Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
-operation propose_container(my_pubkey: pubkey, cluster_name: name, name, deployer_name: name) {
+operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deployer_name: text) {
 	val me = require_provider(my_pubkey);
 	val cluster = require_cluster(cluster_name);
 	val deployer = require_voter_set(deployer_name);
@@ -13,7 +13,7 @@ operation propose_container(my_pubkey: pubkey, cluster_name: name, name, deploye
 }
 
 // Who can update container limits? Cluster deployers' voter set.
-operation propose_container_limits(my_pubkey: pubkey, container_name: name, ram: integer, cpu: integer, storage: integer) {
+operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram: integer, cpu: integer, storage: integer) {
 	val me = require_provider(my_pubkey);
 	val container = require_container(container_name);
 	//check that provider authority and that it is cluster's deployer

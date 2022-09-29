@@ -1,6 +1,6 @@
 
 //Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
-operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: name, provider_pubkey: pubkey, add: boolean) {
+operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: text, provider_pubkey: pubkey, add: boolean) {
 	val me = require_provider(my_pubkey);
 	val cluster = require_cluster(cluster_name);
 	val provider = require_provider(provider_pubkey);

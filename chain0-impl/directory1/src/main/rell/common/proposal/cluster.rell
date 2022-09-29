@@ -1,6 +1,6 @@
 
 // Who can change cluster deployer? Cluster governor.
-operation propose_cluster_deployer(my_pubkey: pubkey, cluster_name: name, new_deployer: name) {
+operation propose_cluster_deployer(my_pubkey: pubkey, cluster_name: text, new_deployer: name) {
 	val me = require_provider(my_pubkey);
 	//check that provider authority and that it is in cluster's governor voter set
 	require_provider_auth_with_rl(me);
@@ -13,7 +13,7 @@ operation propose_cluster_deployer(my_pubkey: pubkey, cluster_name: name, new_de
 }
 
 // Who can update cluster limits? Cluster governance voter set.
-operation propose_cluster_limits(my_pubkey: pubkey, cluster_name: name, ram: integer, cpu: integer, storage: integer) {
+operation propose_cluster_limits(my_pubkey: pubkey, cluster_name: text, ram: integer, cpu: integer, storage: integer) {
 	val me = require_provider(my_pubkey);
 	//check that provider authority and that it is a cluster governor
 	require_provider_auth_with_rl(me);
