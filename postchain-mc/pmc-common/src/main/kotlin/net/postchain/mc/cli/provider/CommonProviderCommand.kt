@@ -15,5 +15,4 @@ fun commonProviderCommands() = CommonProviderCommand().subcommands(
     CommandListProviderNodes(),
     CommandListProviders(),
     CommandRegisterProvider(),
-    CommandUpdateProvider(),
 )

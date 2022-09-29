@@ -518,30 +518,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun updateProvider(key: String, name: String?, beneficiary: String?) {
-        sendTxSync(
-                updateProviderAsync(key, name, beneficiary),
-                "Provider data has been updated",
-                "Cannot update provider"
-        )
-    }
-
-    fun updateProviderAsync(key: String, name: String?, beneficiary: String?): TransactionBuilder {
-        val provider = providerGtv(key)
-        var data: Array<Gtv> = arrayOf(provider)
-        data = if (name != null && name.isNotEmpty()) {
-            data.plus(gtv(name))
-        } else {
-            data.plus(GtvNull)
-        }
-        data = if (beneficiary != null && beneficiary.isNotEmpty()) {
-            data.plus(gtv(beneficiary))
-        } else {
-            data.plus(GtvNull)
-        }
-        return makeTransactionWithNop().addOperation("update_provider_data", *data)
-    }
-
     fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
         sendTxSync(
                 createVoterSetAsync(name, providers, threshold, governorName),

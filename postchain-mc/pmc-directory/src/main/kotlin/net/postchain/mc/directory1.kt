@@ -8,6 +8,7 @@ import net.postchain.mc.cli.cluster.*
 import net.postchain.mc.cli.container.containerCommands
 import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.node.nodeCommands
+import net.postchain.mc.cli.provider.CommandUpdateProvider
 import net.postchain.mc.cli.provider.providerCommands
 import net.postchain.mc.cli.votingupdates.voterSetCommands
 import net.postchain.mc.network.networkCommands
@@ -29,7 +30,8 @@ fun main(args: Array<String>) = ManagementConsole()
         clusterCommands(),
 
         // Provider
-        providerCommands(),
+        providerCommands()
+            .subcommands(CommandUpdateProvider()),
 
         // Container
         containerCommands(),
