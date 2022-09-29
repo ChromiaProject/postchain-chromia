@@ -1,6 +1,7 @@
 module;
 
 import ^.common.*;
+import .proposal.*;
 
 /*
  * Directory1 is an enterprise dapp where the d1 dapp manages and controls creating and deleting clusters, containers and blockchains.
