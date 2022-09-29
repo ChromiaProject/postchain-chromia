@@ -26,7 +26,7 @@ class CommandListNodes : CliktCommand(
             header("Pubkey", "Host", "Port", "Active", "Provided by")
 
             ClientUtil.fromConfig(config).getNodesWithProvider().forEach {
-                row(it.pubkey.toHex(), it.host, it.port, it.nodeActive.toString(), it.provider)
+                row(it.pubkey.toHex(), it.host, it.port.toString(), it.nodeActive.toString(), it.provider.toHex())
             }
             hints {borderStyle = Table.BorderStyle.SINGLE_LINE }
         }
