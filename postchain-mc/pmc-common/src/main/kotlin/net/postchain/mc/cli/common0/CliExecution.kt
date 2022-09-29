@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.addNodeToClusterOperation
 import net.postchain.chain0.common.createClusterOperation
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
@@ -1039,22 +1040,16 @@ open class CliExecution(val config: PostchainClientConfig) {
      * add = false => Remove this member from voter set
      */
     fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        val voterSetGtv = voterSetGtv(voterSet)
-        val memberToAddOrRemove = providerGtv(member)
-        return makeTransactionWithNop().addOperation(
-                "propose_voter_set_provider",
-                meProvider, voterSetGtv, memberToAddOrRemove, gtv(add)
+        val newMember = if (add) member else null
+        val removeMember = if (!add) member else null
+        return makeTransactionWithNop().proposeUpdateVoterSetOperation(
+            config.pubkey().key, voterSet, null, null, newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(), removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
         )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        val vs = voterSetGtv(voterSetName)
-        val newGovernorGtv = voterSetGtv(newGovernor)
-        return makeTransactionWithNop().addOperation(
-                "propose_voter_set_governor",
-                meProvider, vs, newGovernorGtv
+        return makeTransactionWithNop().proposeUpdateVoterSetOperation(
+            config.pubkey().key, voterSetName, null, newGovernor, listOf(), listOf()
         )
     }
 }

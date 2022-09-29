@@ -2,6 +2,7 @@ module;
 
 import ^.*;
 import ^.voting.*;
+import .voter_set.*;
 
 enum proposal_type {
     conf,
@@ -13,8 +14,7 @@ enum proposal_type {
     cluster_provider,
     cluster_deployer,
     cluster_remove,
-    voter_set_provider,
-    voter_set_governor,
+    voter_set_update,
     provider_state,
     provider_is_system,
     blockchain_action
@@ -144,8 +144,7 @@ function delete_proposal(prop: proposal) {
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
         cluster_remove      -> delete pending_remove_cluster @? { prop };
-        voter_set_provider  -> delete pending_voter_set_provider @ { prop };
-        voter_set_governor  -> delete pending_voter_set_governor @ { prop };
+        voter_set_update    -> delete_pending_voter_set_update(prop);
         provider_state      -> delete pending_provider_state @ { prop };
         provider_is_system  -> delete pending_provider_is_system @ { prop };
         blockchain_action   -> delete pending_blockchain_action @? { prop };

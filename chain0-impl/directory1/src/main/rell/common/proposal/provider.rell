@@ -1,16 +1,4 @@
 
-//Who can update voter set's provider list? Voter set's governor.
-operation propose_voter_set_provider(me: provider, voter_set, provider, add: boolean) {
-	//check that provider authority and that it is a vs governor
-	require(provider.tier > 0, "Cannot add a provider that has no voting right to a voter set.");
-	require_provider_auth_with_rl(me);
-	require_voter_set_governor(voter_set, me);
-	val governor = voter_set_governance @ { voter_set } .governor;
-	val prop = create proposal(op_context.last_block_time, proposal_type.voter_set_provider, me, governor);
-	create pending_voter_set_provider(prop, voter_set, provider, add);
-	internal_vote(me, prop, true);
-}
-
 //Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
 operation propose_cluster_provider(me: provider, cluster, provider, add: boolean) {
 	//check that provider authority and that it is a cluster governor

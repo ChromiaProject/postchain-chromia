@@ -1,0 +1,48 @@
+@test module;
+
+import ^^.*;
+import ^^^^.test.ops.*;
+import ^^^^.test.util.constants.*;
+import ^^^^.test.setup.*;
+
+function test_add_low_tier_provider() {
+	setup_module();
+	val p1 = provider @ { rell.test.pubkeys.alice };
+	
+	// Create a provider with tier 0, a dapp provider without voting right.
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 0)).run();
+	val dapp_provider = provider @ { rell.test.pubkeys.bob };
+	
+	// Should not be possible to add this provider to a voting set.
+	val add_providers = list<pubkey>();
+	add_providers.add(dapp_provider.pubkey);
+	rell.test.tx()
+		.op(propose_update_voter_set(p1.pubkey, voter_sets.system_p, null, null, add_providers, list<pubkey>()))
+		.sign(rell.test.keypairs.alice)
+		.run_must_fail();
+}
+
+function test_update_voter_set() {
+	setup_module();
+	rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob, 1)).run();
+	val p1 = rell.test.keypairs.alice;
+	val p2 = rell.test.keypairs.bob;
+
+	val add_providers = list<pubkey>();
+	add_providers.add(p2.pub);
+	val remove_providers = list<pubkey>();
+	remove_providers.add(p1.pub);
+	rell.test.tx()
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), list<pubkey>()))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, add_providers, list<pubkey>()))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), remove_providers))
+		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, system_voter_set().name, list<pubkey>(), list<pubkey>()))
+		.sign(p1)
+		.run();
+
+	val vs = system_p_voter_set();
+	assert_equals(vs.threshold, 1);
+	assert_equals(voter_set_governance @ { .voter_set == vs }.governor, system_voter_set());
+	assert_not_null(voter_set_member @? { vs, provider @ { p2.pub } });
+	assert_null(voter_set_member @? { vs, provider @ { p1.pub } });
+}

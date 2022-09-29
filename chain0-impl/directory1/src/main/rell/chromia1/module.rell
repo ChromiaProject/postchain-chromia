@@ -41,7 +41,7 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 }
 
 operation update_provider_data (provider, name?, beneficiary_account_id: byte_array?) {
-	require_provider_auth(provider);
+	require_is_signer(provider.pubkey);
 	if (exists(name)) {
 		provider.name = name;
 	}

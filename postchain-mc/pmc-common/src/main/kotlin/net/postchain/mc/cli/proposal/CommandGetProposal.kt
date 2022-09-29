@@ -4,7 +4,9 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import de.m3y.kformat.table
 import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
@@ -77,6 +79,17 @@ class CommandGetProposal : CliktCommand(
                     ----------------------------------
                     ${diff.entries.joinToString("\n") { (k, v) -> "$k: \nfrom - ${v.first}\nto - ${v.second}" }}
                 """.trimIndent()
+            }
+            ProposalType.voter_set_update -> {
+                val vsu = client.getVoterSetUpdateProposal(proposal.id) ?: return ""
+                val t = table {
+                    row("Voter set:", vsu.voterSet)
+                    row("Governor update", vsu.governor ?: "")
+                    row("Majority threshold update", vsu.threshold ?: "")
+                    row("New member", vsu.addMember.joinToString(", ") { it.toHex() })
+                    row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
+                }.render()
+                return t.toString()
             }
 
             else -> ""
