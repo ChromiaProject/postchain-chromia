@@ -19,6 +19,7 @@ function apply_voting_result(prop: proposal) {
 		approved -> {
 			print("proposal approved:", propStr);
 			when (prop.proposal_type) {
+				other			  -> apply_other_voting_result(prop);
 	 			conf              -> apply_conf(prop);
 	 			bc                -> apply_bc(prop);
 				container         -> apply_container(prop);
@@ -37,6 +38,8 @@ function apply_voting_result(prop: proposal) {
 		}
 	}
 }
+
+@extendable function apply_other_voting_result(proposal) { /* Should be extended */ }
 
 //Apply decision on creation of new container. With default resource limits.
 //TODO: Update default values to make sense.
