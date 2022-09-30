@@ -27,7 +27,7 @@
 | add_bc_replica             | node provider                         | actions    ||
 | remove_bc_replica          | node provider                         | actions    ||
 | make_vote                  | voter set member                      | actions    | only one vote                                                                     |
-| retract_vote               | voter set member                      | actiosn    | must exist..                                                                      |
+| retract_vote               | voter set member                      | actions    | must exist..                                                                      |
 | propose_cluster_provider   | cluster governor                      | actions    | Supersedes add_provider_to_cluster?                                               |
 | propose_enable_provider    | system                                | actions    | tier 1 can enable tier 0 without voting                                           |
 | propose_disable_provider   | system                                | actions    | will disable all nodes as well                                                    |
@@ -41,7 +41,7 @@
 | propose_blockchain         | container deployer                    | actions    ||
 | propose_configuration      | container deployer                    | actions    ||
 | propose_blockchain_action  | container deployer                    | actions    | I can basically stop other blockchains if we use same container                   |
-| propose_update_voter_set   | no                                    | no         | should be voter set governor and actions?                                         |
+| propose_update_voter_set   | voter set governor                    | actions    |                                                                                   |
 | anchor_block               | no                                    | no         | attack vector? Hard to make but perhaps we need some verification?                |
 
 

@@ -36,8 +36,9 @@ function test_update_voter_set() {
 		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), list<pubkey>()))
 		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, add_providers, list<pubkey>()))
 		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, null, list<pubkey>(), remove_providers))
-		.op(propose_update_voter_set(p1.pub, voter_sets.system_p, 1, system_voter_set().name, list<pubkey>(), list<pubkey>()))
+		.op(propose_update_voter_set(p2.pub, voter_sets.system_p, 1, system_voter_set().name, list<pubkey>(), list<pubkey>()))
 		.sign(p1)
+		.sign(p2)
 		.run();
 
 	val vs = system_p_voter_set();
