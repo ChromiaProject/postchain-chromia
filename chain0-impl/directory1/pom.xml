@@ -48,7 +48,7 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.4.1</version>
+                <version>0.4.2</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>
@@ -66,22 +66,15 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-client-gen-d1</id>
+                        <id>rell-client-gen</id>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <mainModule>directory1</mainModule>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>rell-client-gen-c1</id>
-                        <goals>
-                            <goal>rell-generate-client</goal>
-                        </goals>
-                        <configuration>
-                            <force>true</force>
-                            <mainModule>chromia1</mainModule>
+                            <mainModules>
+                                <mainModule>directory1</mainModule>
+                                <mainModule>chromia1</mainModule>
+                            </mainModules>
                         </configuration>
                     </execution>
                 </executions>
