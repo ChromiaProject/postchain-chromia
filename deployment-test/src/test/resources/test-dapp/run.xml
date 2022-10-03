@@ -6,6 +6,7 @@
         <chain name="city" iid="100">
             <config height="0">
                 <app module="main" />
+                <gtv path="configurationfactory"><string>net.postchain.managed.config.DappBlockchainConfigurationFactory</string></gtv>
                 <gtv path="blockstrategy/blockdelay"><int>2000</int></gtv>
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <gtv path="blockstrategy/maxblocktransactions"><int>500</int></gtv>
