@@ -1,0 +1,64 @@
+
+//Who can update cluster provider list? Cluster governance voter set. If add = false, provider should be removed.
+operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: text, provider_pubkey: pubkey, add: boolean) {
+	val me = require_provider(my_pubkey);
+	val cluster = require_cluster(cluster_name);
+	val provider = require_provider(provider_pubkey);
+	//check that provider authority and that it is a cluster governor
+	require_provider_auth_with_rl(me);
+	require_cluster_governor(cluster, me);
+	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_provider, me, cluster.governance);
+	create pending_cluster_provider(prop, cluster, provider, add);
+	internal_vote(me, prop, true);
+}
+
+//Who can enable providers with tier=0? Any existing provider with tier > 0.
+//Who can enable providers with tier > 0? SYSTEM_P voter set.
+operation propose_enable_provider(my_pubkey: pubkey, enable_pubkey: pubkey) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(enable_pubkey);
+
+	require_provider_auth_with_rl(me);
+	if (other_prov.tier == 0 and me.tier > 0) {
+		update_provider_state(other_prov, true);		
+	} else {
+		require_system_p_member(me);
+		//If proposal already exist, do not add again.
+		if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
+			val system_voter_set = voter_set @ {"SYSTEM_P"};
+			val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
+			create pending_provider_state(prop, other_prov, .active = true);
+			internal_vote(me, prop, true);
+		}
+	}
+}
+
+//Who can disable provider? SYSTEM_P voter set.
+operation propose_disable_provider(my_pubkey: pubkey, disable_pubkey: pubkey) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(disable_pubkey);
+	require_provider_auth_with_rl(me);
+	require_system_p_member(me);
+	if (empty(pending_provider_state @* { .provider == other_prov, .active == false } limit 1)) {
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_state, me, system_voter_set);
+		create pending_provider_state(prop, other_prov, .active = false);
+		internal_vote(me, prop, true);
+	}
+}
+
+//Who can promote/demote a provider? SYSTEM_P voter set.
+operation propose_provider_is_system(my_pubkey: pubkey, provider_pubkey: pubkey, promote: boolean) {
+	val me = require_provider(my_pubkey);
+	val other_prov = require_provider(provider_pubkey);
+	print("propose_provider_is_system");
+	require_provider_auth_with_rl(me);
+	require_system_p_member(me);
+	//If proposal already exist, do not add again.
+	if (empty(pending_provider_is_system @* { .provider == other_prov, .system == promote } limit 1)) {
+		val system_voter_set = voter_set @ {"SYSTEM_P"};
+		val prop = create proposal(op_context.last_block_time, proposal_type.provider_is_system, me, system_voter_set);
+		create pending_provider_is_system(prop, other_prov, .system = promote);
+		internal_vote(me, prop, true);
+	}
+}

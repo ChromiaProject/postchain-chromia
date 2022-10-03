@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>postchain-mc</artifactId>
+        <groupId>net.postchain</groupId>
+        <version>3.7.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>pmc-directory</artifactId>
+    <name>Management Console - Directory1</name>
+    <description>CLI for d1 dapp</description>
+
+    <properties>
+        <main-class>net.postchain.mc.Directory1Kt</main-class>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <!-- CliKt Utils -->
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.postchain</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>pmc-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>pmc-common</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.chain0</groupId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.chain0</groupId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>directory1</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <mainClass>${main-class}</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>distro</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
