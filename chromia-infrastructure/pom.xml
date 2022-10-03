@@ -2,14 +2,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <parent>
-        <artifactId>postchain</artifactId>
+        <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
         <version>3.7.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>postchain-d1-infrastructure</artifactId>
-    <name>Postchain Directory1 Module</name>
+    <artifactId>chromia-infrastructure</artifactId>
+    <name>Chromia infrastructure module</name>
 
     <dependencies>
         <!-- Postchain -->
@@ -57,34 +57,11 @@
         </dependency>
 
         <dependency>
-            <groupId>net.postchain.rell</groupId>
-            <artifactId>rell</artifactId>
-            <version>0.10.11-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <repositories>
-        <repository>
-            <id>rellr</id>
-            <name>Rell Runtime Registry</name>
-            <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
-        </repository>
-        <repository>
-            <id>central</id>
-            <name>Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-            <layout>default</layout>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
 
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>
