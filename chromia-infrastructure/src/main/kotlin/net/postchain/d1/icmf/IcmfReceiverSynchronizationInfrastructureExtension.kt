@@ -1,10 +1,12 @@
 package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
 import net.postchain.gtx.GTXModule
@@ -13,16 +15,18 @@ import net.postchain.managed.config.DappBlockchainConfiguration
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     private val receivers = mutableMapOf<Long, GlobalTopicIcmfReceiver>()
     private val dbOperations = IcmfDatabaseOperationsImpl()
+    private val cryptoSystem = Secp256K1CryptoSystem() // TODO inject CryptoSystem
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-/*  TODO fix this       if (configuration is DappBlockchainConfiguration) {
+        if (configuration is DappBlockchainConfiguration) {
             getIcmfReceiverSpecialTxExtension(configuration.module)?.let { txExt ->
-                val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
+                // TODO get hold of BlockchainConfigurationData
+                val topics = listOf<String>() // configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
                 val clusterManagement = createClusterManagement(configuration)
                 val receiver = GlobalTopicIcmfReceiver(topics,
-                        configuration.cryptoSystem,
+                        cryptoSystem,
                         engine.storage,
                         configuration.chainID,
                         clusterManagement,
@@ -33,7 +37,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 txExt.receiver = receiver
                 txExt.clusterManagement = clusterManagement
             }
-        } */
+        }
     }
 
     open fun createClientProvider(): PostchainClientProvider = ConcretePostchainClientProvider()
