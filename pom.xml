@@ -17,6 +17,7 @@
         <module>deployment-test</module>
         <module>directory1-example</module>
         <module>postchain-mc</module>
+        <module>chromia-infrastructure</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -77,6 +78,11 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-jdk8</artifactId>
                 <version>${kotlin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core</artifactId>
+                <version>1.6.4</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
