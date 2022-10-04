@@ -2,35 +2,6 @@
  * Cluster Management api used by postchain to get information about cluster anchoring chains
 */
 
-query cm_get_all_clusters(): list<(name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>)>  {
-    val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
-        cluster_node.cluster == cluster,
-        anchoring_chain.cluster == cluster
-    } (
-        name = cluster.name,
-        anchoring_chain = anchoring_chain.blockchain.rid,
-        peer = cluster_node.node.pubkey,
-        peer_api_url = cluster_node.node.api_url
-    );
-    val result_map = map<name, (name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>)>();
-    for (cp in cluster_peer) {
-        if (not(result_map.contains(cp.name))) {
-            val peers = list<(pubkey:pubkey, api_url:text)>();
-            result_map[cp.name] = (
-                name = cp.name,
-                anchoring_chain = cp.anchoring_chain,
-                peers = peers
-            );
-        }
-        val cluster_peers = result_map[cp.name].peers;
-        cluster_peers.add(
-            (pubkey = cp.peer,
-            api_url = cp.peer_api_url)
-        );
-    }
-    return result_map.values();
-}
-
 query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>) {
        val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
         cluster_node.cluster == cluster,
@@ -53,5 +24,20 @@ query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: 
         name = cluster_peer[0].name,
         anchoring_chain = cluster_peer[0].anchoring_chain,
         peers = peers
+    );
+}
+
+query cm_get_cluster_names(): list<text> {
+    return cluster @* { .operational == true } ( .name );
+}
+
+query cm_get_cluster_blockchains(name): list<byte_array> {
+    return get_cluster_blockchains(name);
+}
+
+// Returns signers of blockchain at specific height
+query cm_get_peer_info(brid: byte_array, height: integer): set<pubkey> {
+    return set<pubkey>.from_gtv(
+        get_signers_for_configuration(blockchain @ { brid }, height)
     );
 }
