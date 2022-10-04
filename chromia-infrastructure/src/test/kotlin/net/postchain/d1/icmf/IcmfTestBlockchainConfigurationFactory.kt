@@ -6,10 +6,13 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 open class IcmfTestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {
 
+    /*
+    TODO fix this
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
         return IcmfTestBlockchainConfiguration(
                 configurationData as BlockchainConfigurationData,
                 createGtxModule(configurationData.context.blockchainRID, configurationData)
         )
     }
+     */
 }

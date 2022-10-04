@@ -5,7 +5,7 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
-import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 
 open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
@@ -24,7 +24,7 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
 
         if (cfg is DappBlockchainConfiguration) {
             // create receiver when blockchain has anchoring STE
-            getAnchorSpecialTxExtension(cfg)?.let {
+            getAnchorSpecialTxExtension(cfg.module)?.let {
                 localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
                 it.clusterManagement = createClusterManagement(cfg)
             }
@@ -39,8 +39,8 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
      * Note: having more than one [AnchorSpecialTxExtension] tied to the Anchor process would be wrong I guess, but
      * we don't care about that here.
      */
-    private fun getAnchorSpecialTxExtension(cfg: GTXBlockchainConfiguration): AnchorSpecialTxExtension? {
-        return cfg.module.getSpecialTxExtensions().firstOrNull { ext ->
+    private fun getAnchorSpecialTxExtension(module: GTXModule): AnchorSpecialTxExtension? {
+        return module.getSpecialTxExtensions().firstOrNull { ext ->
             (ext is AnchorSpecialTxExtension)
         } as AnchorSpecialTxExtension?
     }

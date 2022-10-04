@@ -9,8 +9,10 @@ class IcmfTestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
         module: GTXModule
 ) : TestBlockchainConfiguration(configData, module) {
+    /* TODO test this
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
         module.initializeDB(ctx)
     }
+     */
 }
