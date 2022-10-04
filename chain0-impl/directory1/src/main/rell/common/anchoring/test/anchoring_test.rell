@@ -24,7 +24,7 @@ function test_create_anchoring_chain() {
         create_anchoring_chain_op(clusters.system)
     ).run_must_fail();
 
-    val clusters = cm_get_all_clusters();
+    val clusters = cm_get_cluster_names();
     assert_equals(clusters.size(), 1);
 
     val cluster_info = cm_get_cluster_info(constants.clusters.system);
