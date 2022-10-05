@@ -17,8 +17,11 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.MapListHandler
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.jooq.impl.DSL.field
+import org.jooq.impl.DSL.table
+import org.jooq.util.postgres.PostgresDataType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
@@ -94,22 +97,23 @@ class AnchorIT : ManagedModeTest() {
 
         withReadConnection(anchorChain.nodes()[0].postchainContext.storage, anchorChain.chain) {
             val db = DatabaseAccess.of(it)
-            val queryRunner = QueryRunner()
 
-            val res = queryRunner.query(
-                    it.conn,
-                    "SELECT blockchain_rid, block_height FROM ${db.tableName(it, "anchor_block")}",
-                    MapListHandler()
-            )
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
+            val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
             assertEquals(4, res.size)
-            assertContentEquals(blockchainRID.data, res[0]["blockchain_rid"] as ByteArray)
-            assertEquals(0L, res[0]["block_height"])
-            assertContentEquals(blockchainRID.data, res[1]["blockchain_rid"] as ByteArray)
-            assertEquals(1L, res[1]["block_height"])
-            assertContentEquals(blockchainRID.data, res[2]["blockchain_rid"] as ByteArray)
-            assertEquals(2L, res[2]["block_height"])
-            assertContentEquals(blockchainRID.data, res[3]["blockchain_rid"] as ByteArray)
-            assertEquals(3L, res[3]["block_height"])
+            assertContentEquals(blockchainRID.data, res[0][blockchainRidColumn])
+            assertEquals(0L, res[0][blockHeightColumn])
+            assertContentEquals(blockchainRID.data, res[1][blockchainRidColumn])
+            assertEquals(1L, res[1][blockHeightColumn])
+            assertContentEquals(blockchainRID.data, res[2][blockchainRidColumn])
+            assertEquals(2L, res[2][blockHeightColumn])
+            assertContentEquals(blockchainRID.data, res[3][blockchainRidColumn])
+            assertEquals(3L, res[3][blockHeightColumn])
 
             val headers =
                     query(

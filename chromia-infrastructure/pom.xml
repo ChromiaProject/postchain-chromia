@@ -37,6 +37,12 @@
             <artifactId>kotlinx-coroutines-core</artifactId>
         </dependency>
 
+        <!-- Jooq -->
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+        </dependency>
+
         <!-- Test Dependency -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

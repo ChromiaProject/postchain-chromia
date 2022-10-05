@@ -5,11 +5,19 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
-import org.apache.commons.dbutils.QueryRunner
+import org.jooq.Field
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.jooq.impl.DSL.constraint
+import org.jooq.impl.DSL.table
+import org.jooq.util.postgres.PostgresDataType
 
 class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
         Unit,
@@ -19,15 +27,23 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
 
     companion object {
         const val testMessageTable = "test_messages"
+
+        val COLUMN_ID: Field<Long> = DSL.field("id", PostgresDataType.BIGSERIAL.nullable(false))
+        val COLUMN_SENDER: Field<ByteArray> = DSL.field("sender", PostgresDataType.BYTEA.nullable(false))
+        val COLUMN_TOPIC: Field<String> = DSL.field("topic", PostgresDataType.TEXT.nullable(false))
+        val COLUMN_BODY: Field<ByteArray> = DSL.field("body", PostgresDataType.BYTEA.nullable(false))
     }
 
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
-            val queryRunner = QueryRunner()
-            queryRunner.update(
-                    ctx.conn,
-                    "CREATE TABLE IF NOT EXISTS ${tableName(ctx, testMessageTable)} (id BIGSERIAL PRIMARY KEY, sender BYTEA, topic TEXT, body BYTEA)"
-            )
+            val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+            jooq.createTableIfNotExists(table(tableName(ctx, testMessageTable)))
+                    .column(COLUMN_ID)
+                    .column(COLUMN_SENDER)
+                    .column(COLUMN_TOPIC)
+                    .column(COLUMN_BODY)
+                    .constraint(constraint("PK").primaryKey(COLUMN_ID))
+                    .execute()
         }
     }
 
@@ -40,14 +56,12 @@ class IcmfMessageOp(u: Unit, private val opdata: ExtOpData) : GTXOperation(opdat
 
     override fun apply(ctx: TxEContext): Boolean {
         DatabaseAccess.of(ctx).apply {
-            val queryRunner = QueryRunner()
-            queryRunner.update(
-                    ctx.conn,
-                    "INSERT INTO ${tableName(ctx, testMessageTable)} (sender, topic, body) VALUES (?, ?, ?)",
-                    opdata.args[0].asByteArray(),
-                    opdata.args[1].asString(),
-                    GtvEncoder.encodeGtv(opdata.args[2])
-            )
+            val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+            jooq.insertInto(table(tableName(ctx, testMessageTable)))
+                    .set(COLUMN_SENDER, opdata.args[0].asByteArray())
+                    .set(COLUMN_TOPIC, opdata.args[1].asString())
+                    .set(COLUMN_BODY, GtvEncoder.encodeGtv(opdata.args[2]))
+                    .execute()
         }
         return true
     }
