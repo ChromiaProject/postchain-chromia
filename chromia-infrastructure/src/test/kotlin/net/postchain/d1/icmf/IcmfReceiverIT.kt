@@ -6,6 +6,9 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.gtv.GtvEncoder
@@ -14,10 +17,10 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.MapListHandler
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -102,17 +105,16 @@ class IcmfReceiverIT : ManagedModeTest() {
             for (node in dappChain.nodes()) {
                 withReadConnection(node.postchainContext.storage, dappChain.chain) {
                     DatabaseAccess.of(it).apply {
-                        val messages = QueryRunner().query(
-                                it.conn,
-                                "SELECT * FROM ${tableName(it, testMessageTable)}",
-                                MapListHandler()
-                        )
+                        val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+                        val messages = jooq.select()
+                                .from(tableName(it, testMessageTable))
+                                .fetch()
 
                         assertEquals(1, messages.size)
                         val message = messages[0]
-                        assertContentEquals(senderChainRid.data, message["sender"] as ByteArray)
-                        assertEquals("my-topic", message["topic"] as String)
-                        assertContentEquals(encodedMessageBody, message["body"] as ByteArray)
+                        assertContentEquals(senderChainRid.data, message[COLUMN_SENDER])
+                        assertEquals("my-topic", message[COLUMN_TOPIC])
+                        assertContentEquals(encodedMessageBody, message[COLUMN_BODY])
                     }
                 }
             }
