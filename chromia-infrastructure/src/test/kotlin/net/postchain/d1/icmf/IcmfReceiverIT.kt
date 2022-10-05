@@ -16,15 +16,17 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-@Disabled // TODO enable IcmfReceiverIT
 class IcmfReceiverIT : ManagedModeTest() {
 
     @BeforeEach
@@ -33,6 +35,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     }
 
     @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
     fun happyReceiver() {
         val anchorChainRid = BlockchainRid.buildRepeat(0)
         val senderChainRid = BlockchainRid.buildRepeat(1)
@@ -94,21 +97,23 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
-        buildBlock(dappChain, 0)
-        for (node in dappChain.nodes()) {
-            withReadConnection(node.postchainContext.storage, dappChain.chain) {
-                DatabaseAccess.of(it).apply {
-                    val messages = QueryRunner().query(
-                            it.conn,
-                            "SELECT * FROM ${tableName(it, testMessageTable)}",
-                            MapListHandler()
-                    )
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
+            buildBlock(dappChain)
+            for (node in dappChain.nodes()) {
+                withReadConnection(node.postchainContext.storage, dappChain.chain) {
+                    DatabaseAccess.of(it).apply {
+                        val messages = QueryRunner().query(
+                                it.conn,
+                                "SELECT * FROM ${tableName(it, testMessageTable)}",
+                                MapListHandler()
+                        )
 
-                    assertEquals(1, messages.size)
-                    val message = messages[0]
-                    assertContentEquals(senderChainRid.data, message["sender"] as ByteArray)
-                    assertEquals("my-topic", message["topic"] as String)
-                    assertContentEquals(encodedMessageBody, message["body"] as ByteArray)
+                        assertEquals(1, messages.size)
+                        val message = messages[0]
+                        assertContentEquals(senderChainRid.data, message["sender"] as ByteArray)
+                        assertEquals("my-topic", message["topic"] as String)
+                        assertContentEquals(encodedMessageBody, message["body"] as ByteArray)
+                    }
                 }
             }
         }

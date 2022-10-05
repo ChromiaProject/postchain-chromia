@@ -17,16 +17,17 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-@Disabled // TODO enable IcmfSenderIT
 class IcmfSenderIT : ManagedModeTest() {
 
     @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
