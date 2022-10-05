@@ -34,9 +34,10 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
 
     private val routes = topics.map { GlobalTopicRoute(it) }
     private val pipes: ConcurrentMap<Pair<String, GlobalTopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
-    private val job: Job
+    private val jobSynchronizer = Object()
+    private var job: Job? = null
 
-    init {
+    private fun start(): Job {
         val lastMessageHeights = withReadConnection(storage, chainID) {
             dbOperations.loadAllLastMessageHeights(it)
         }
@@ -48,7 +49,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             }
         }
 
-        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
+        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (isActive) {
                 delay(pollInterval)
                 try {
@@ -91,10 +92,19 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                 lastMessageHeights)
     }
 
-    override fun getRelevantPipes(): List<ClusterGlobalTopicPipe> = pipes.values.toList()
+    override fun getRelevantPipes(): List<ClusterGlobalTopicPipe> {
+        synchronized(jobSynchronizer) {
+            if (job == null) {
+                job = start()
+            }
+        }
+        return pipes.values.toList()
+    }
 
     override fun shutdown() {
-        job.cancel()
+        synchronized(jobSynchronizer) {
+            job?.cancel()
+        }
         for (pipe in pipes.values) {
             pipe.shutdown()
         }

@@ -53,28 +53,26 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
     private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
-    private var job: Job? = null
-    private val jobSynchronizer = Object()
+    private val job: Job
 
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
-    }
 
-    private fun startBackgroundFetch(): Job =
-            CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
-                while (isActive) {
-                    try {
-                        logger.info("Fetching messages")
-                        fetchMessages()
-                        logger.info("Fetched messages")
-                    } catch (e: CancellationException) {
-                        break
-                    } catch (e: Exception) {
-                        logger.error("Message fetch failed: ${e.message}", e)
-                    }
-                    delay(pollInterval)
+        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
+            while (isActive) {
+                try {
+                    logger.info("Fetching messages")
+                    fetchMessages()
+                    logger.info("Fetched messages")
+                } catch (e: CancellationException) {
+                    break
+                } catch (e: Exception) {
+                    logger.error("Message fetch failed: ${e.message}", e)
                 }
+                delay(pollInterval)
             }
+        }
+    }
 
     private suspend fun fetchMessages() {
         val cluster = clusterManagement.getClusterInfo(clusterName)
@@ -201,23 +199,10 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         }
     }
 
-    override fun mightHaveNewPackets(): Boolean {
-        startJobIfNotStarted()
-        return packets.isNotEmpty()
-    }
+    override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? {
-        startJobIfNotStarted()
-        return packets.higherEntry(currentPointer)?.value
-    }
-
-    private fun startJobIfNotStarted() {
-        synchronized(jobSynchronizer) {
-            if (job == null) {
-                job = startBackgroundFetch()
-            }
-        }
-    }
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? =
+            packets.higherEntry(currentPointer)?.value
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
@@ -228,9 +213,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
     }
 
     override fun shutdown() {
-        synchronized(jobSynchronizer) {
-            job?.cancel()
-        }
+        job.cancel()
     }
 
     data class SignedBlockHeaderWithAnchorHeight(
