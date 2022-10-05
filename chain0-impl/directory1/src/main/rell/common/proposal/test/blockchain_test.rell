@@ -2,12 +2,13 @@
 
 import ^^.*;
 import ^^^.test.ops.*;
+import ^^^.test.setup.*;
 import ^^^.test.util.*;
 import ^^^.util.*;
 import ^^^.voting.test.ops.*;
 
 function setup() {
-    rell.test.tx().op(initialize_test_module(rell.test.pubkeys.alice)).run();
+    setup_module();
     rell.test.tx().op(create_test_provider("bob", rell.test.pubkeys.bob)).run();
 }
 
@@ -83,4 +84,37 @@ function assert_action_proposed(action: blockchain_action) {
         pending_blockchain_action @ { last_proposal() } .action,
         action
     );
+}
+
+function test_propose_configuration() {
+    setup_module();
+
+    val alice = rell.test.keypairs.alice;
+
+    var conf = map<text, text>();
+    rell.test.tx().op(
+        propose_blockchain(alice.pub, conf.to_gtv().to_bytes(), "foo_chain", containers.system)
+    ).sign(alice).run(); 
+    val bc = blockchain @? { conf.hash() };
+    assert_not_null(bc);
+
+    //force == false: only configs for heights > next config height can be added:
+    alice_propose_conf(bc.rid, conf, 10, false).run();
+    assert_not_null(blockchain_configuration @? { bc, .height == 10 });
+    alice_propose_conf(bc.rid, conf, 8, false).run_must_fail();
+
+
+    //force == true: OK to add configs at all heights > current height
+    alice_propose_conf(bc.rid, conf, 8, true).run();
+    assert_not_null(blockchain_configuration @? { bc, .height == 8 });
+    //force == true: OK to override a configuration
+    alice_propose_conf(bc.rid, conf, 10, true).run();
+}
+
+function alice_propose_conf(brid: byte_array, conf: map<text, text>, height: integer, force: boolean) {
+    val alice = rell.test.keypairs.alice;
+    return rell.test.tx().op(
+        propose_configuration(brid, alice.pub, conf.to_gtv().to_bytes(), height, force)
+    )  
+    .sign(alice);
 }
