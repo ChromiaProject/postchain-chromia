@@ -19,6 +19,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.test.assertContentEquals
@@ -33,6 +34,7 @@ import kotlin.test.assertTrue
  * Produce blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
+@Disabled // TODO enable AnchorIT
 class AnchorIT : ManagedModeTest() {
     companion object {
         val messagesHash = ByteArray(32) { i -> i.toByte() }

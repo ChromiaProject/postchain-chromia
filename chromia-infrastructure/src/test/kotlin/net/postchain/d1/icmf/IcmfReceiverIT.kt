@@ -17,12 +17,14 @@ import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
+@Disabled // TODO enable IcmfReceiverIT
 class IcmfReceiverIT : ManagedModeTest() {
 
     @BeforeEach

@@ -27,7 +27,7 @@ import java.nio.file.Paths
 import java.util.Comparator.naturalOrder
 import kotlin.test.*
 
-class Directory1Test : ManagedModeTest() {
+class Directory1IT : ManagedModeTest() {
 
     override fun chainConfSnippet(): String {
         val module = "directory1"
