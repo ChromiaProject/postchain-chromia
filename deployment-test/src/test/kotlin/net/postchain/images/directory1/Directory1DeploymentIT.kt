@@ -157,6 +157,7 @@ internal class Directory1DeploymentIT {
     fun `Add node3 as signer to c0`() {
         consoleLogger.info("Adding node3 to the cluster")
         consoleLogger.info("Registering provider3")
+        node1Db.awaitNewBlock()
         Context(node1, node1Db, gtv(adminPubKey.hexStringToByteArray()), approverNode = node2, approver = node2.pubKeyByteArray)
                 .registerNodeAsProvider(brid, "system", node3)
 
