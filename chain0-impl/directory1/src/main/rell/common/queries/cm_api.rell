@@ -41,3 +41,7 @@ query cm_get_peer_info(brid: byte_array, height: integer): set<pubkey> {
         get_signers_for_configuration(blockchain @ { brid }, height)
     );
 }
+
+query cm_get_blockchain_cluster(brid: byte_array): text {
+    return get_blockchain_cluster(brid);
+}

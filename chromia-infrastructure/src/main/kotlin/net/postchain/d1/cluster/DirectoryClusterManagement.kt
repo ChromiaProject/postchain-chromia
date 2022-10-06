@@ -18,14 +18,20 @@ class DirectoryClusterManagement(private val query: (String, Gtv) -> Gtv) : Clus
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<D1PeerInfo> {
         return query("cm_get_peer_info", gtv(mapOf(
-                "name" to gtv(blockchainRid),
+                "brid" to gtv(blockchainRid),
                 "height" to gtv(height)
         ))).toList()
     }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
-        return query("get_cluster_blockchains", gtv(mapOf(
+        return query("cm_get_cluster_blockchains", gtv(mapOf(
                 "name" to gtv(clusterName)
         ))).asArray().map { BlockchainRid(it.asByteArray()) }
+    }
+
+    override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
+        return query("cm_get_blockchain_cluster", gtv(mapOf(
+                "brid" to gtv(blockchainRid)
+        ))).asString()
     }
 }
