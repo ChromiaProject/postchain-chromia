@@ -4,6 +4,7 @@ import net.postchain.PostchainContext
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
@@ -27,11 +28,13 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(postchainContext: 
                 val clusterManagement = createClusterManagement(configuration)
                 txExt.clusterManagement = clusterManagement
 
-                val topics = configuration.rawConfig["icmf"]!!["receiver"]!!["global"]!!["topics"]!!.asArray()
-                    .map { it.asString() }.distinct()
-                if (topics.isNotEmpty()) {
+                val rawIcmfReceiverConfig = configuration.rawConfig["icmf"]?.get("receiver")
+                        ?: throw UserMistake("Missing configuration key icmf/receiver")
+                val config = IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig)
+
+                if (config.global != null && config.global.topics.isNotEmpty()) {
                     val globalTopicIcmfReceiver = GlobalTopicIcmfReceiver(
-                        topics.associateWith { listOf() },
+                        config.global.topics.distinct().associateWith { listOf() },
                         cryptoSystem,
                         engine.storage,
                         configuration.chainID,
@@ -43,11 +46,9 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(postchainContext: 
                     txExt.receivers.add(globalTopicIcmfReceiver)
                 }
 
-                val blockchains = configuration.rawConfig["icmf"]!!["receiver"]!!["blockchain"]!!.asArray()
-                    .map { BlockchainRid(it["bc-rid"]!!.asByteArray()) to it["topic"]!!.asString() }
-                if (blockchains.isNotEmpty()) {
+                if (!config.blockchains.isNullOrEmpty()) {
                     val specificChainReceiver = GlobalTopicIcmfReceiver(
-                        blockchains.groupBy { it.second }.mapValues { it.value.map { x -> x.first }.distinct() },
+                        config.blockchains.groupBy { it.topic }.mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
                         cryptoSystem,
                         engine.storage,
                         configuration.chainID,
