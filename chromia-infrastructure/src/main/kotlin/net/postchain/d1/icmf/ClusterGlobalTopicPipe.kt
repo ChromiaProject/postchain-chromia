@@ -105,13 +105,22 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         for (header in signedBlockHeaderWithAnchorHeights) {
             val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
+            val blockchainRid = BlockchainRid(decodedHeader.getBlockchainRid())
+
+            if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
+                continue // we only read from specific chains
+            }
+
             val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
             val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.rawHeader, header.rawWitness, blockRid, cryptoSystem, clusterManagement)
                     ?: return
 
             val topicData = topicHeaderData[route.topic]
             if (topicData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
+                logger.warn(
+                    "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${
+                        blockchainRid.toHex()
+                    } at height: ${decodedHeader.getHeight()}")
                 return
             }
 
@@ -120,17 +129,20 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
                 continue // already processed in previous block, skip it here
             } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${decodedHeader.getBlockchainRid().toHex()}")
+                logger.warn(
+                    "$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${
+                        blockchainRid.toHex()
+                    }")
                 return
             }
 
-            val bodies = fetchMessageBodies(cluster.peers, BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topicData.hash)
+            val bodies = fetchMessageBodies(cluster.peers, blockchainRid, decodedHeader.getHeight(), topicData.hash)
 
             if (bodies.isNotEmpty()) {
                 currentPackets.add(
                         IcmfPacket(
                                 height = decodedHeader.getHeight(),
-                                sender = BlockchainRid(decodedHeader.getBlockchainRid()),
+                                sender = blockchainRid,
                                 topic = route.topic,
                                 blockRid = blockRid,
                                 rawHeader = header.rawHeader,

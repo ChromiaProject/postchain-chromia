@@ -7,4 +7,5 @@ interface ClusterManagement {
     fun getAllClusters(): Collection<String>
     fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<D1PeerInfo>
     fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid>
+    fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String
 }

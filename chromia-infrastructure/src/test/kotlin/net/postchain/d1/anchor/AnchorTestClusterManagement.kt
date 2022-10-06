@@ -26,4 +26,8 @@ class AnchorTestClusterManagement : ClusterManagement {
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
         throw NotImplementedError("Not yet implemented")
     }
+
+    override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
+        throw NotImplementedError("Not yet implemented")
+    }
 }

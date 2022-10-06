@@ -24,7 +24,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     private val _relevantOps = setOf(HeaderOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
-    lateinit var receiver: GlobalTopicIcmfReceiver
+    val receivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     lateinit var clusterManagement: ClusterManagement
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
@@ -42,7 +42,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val pipes = receiver.getRelevantPipes()
+        val pipes = receivers.flatMap { it.getRelevantPipes() }
 
         val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 

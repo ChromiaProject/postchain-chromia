@@ -28,4 +28,8 @@ class DirectoryClusterManagement(private val query: (String, Gtv) -> Gtv) : Clus
                 "name" to gtv(clusterName)
         ))).asArray().map { BlockchainRid(it.asByteArray()) }
     }
+
+    override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
+        TODO("Not yet implemented")
+    }
 }
