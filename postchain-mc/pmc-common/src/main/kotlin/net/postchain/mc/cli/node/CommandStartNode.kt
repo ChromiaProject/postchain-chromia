@@ -17,6 +17,7 @@ import net.postchain.container.docker.DockerPostchainContainerClient
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.crypto.PubKey
 import net.postchain.server.config.PostchainServerConfig
+import net.postchain.server.config.TlsConfig
 import net.postchain.server.service.AddPeerRequest
 import net.postchain.server.service.InitializeBlockchainRequest
 import net.postchain.server.service.PeerServiceGrpc
@@ -80,6 +81,8 @@ class CommandStartNode : CliktCommand(
 
     private val genesisPeerOptions by GenesisPeerOptions().cooccurring()
 
+    private val tlsOptions by TlsOptions().cooccurring()
+
     private val debug by option(help = "Enable debug api").flag()
 
     override fun run() {
@@ -103,7 +106,7 @@ class CommandStartNode : CliktCommand(
                 imageName = image,
                 containerName = name,
                 configFileName = config,
-                serverConfig = PostchainServerConfig(port),
+                serverConfig = tlsOptions?.let { PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile)) } ?: PostchainServerConfig(port),
                 hostName = host,
                 volumes = mapOf(*options.volumes.toTypedArray()),
                 resourceLimits = ContainerResourceLimits.default(),
