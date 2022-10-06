@@ -14,11 +14,8 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
     fun connectReceiver(chainID: Long, receiver: ClusterAnchorReceiver) {
         receivers[chainID] = receiver
         chains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
-            receiver.localPipes[currentChainID] = ClusterAnchorPipe(
-                    brid,
-                    storage,
-                    currentChainID
-            )
+            receiver.localPipes[currentChainID] = ClusterAnchorLocalPipe(
+                    currentChainID, brid, storage)
         }
     }
 
@@ -27,15 +24,22 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values.forEach {
-            it.localPipes[chainID] = ClusterAnchorPipe(
-                    brid,
-                    storage,
-                    chainID
-            )
-        }
+        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values
+                .forEach {
+                    it.localPipes[chainID] = ClusterAnchorLocalPipe(chainID, brid, storage)
+                }
 
         chains[chainID] = brid
+    }
+
+    // TODO: [POS-358]: Subnode OR Remote ?
+    fun connectSubnodeChain(pipe: ClusterAnchorSubnodePipe) {
+        receivers.filter { it.key != pipe.chainId && (pipe.chainId !in it.value.localPipes) }.values
+                .forEach {
+                    it.localPipes[pipe.chainId] = pipe
+                }
+
+        chains[pipe.chainId] = pipe.blockchainRid
     }
 
     fun disconnectChain(chainID: Long) {
@@ -44,6 +48,13 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
             it.localPipes.remove(chainID)
         }
         chains.remove(chainID)
+    }
+
+    fun disconnectSubnodeChain(chainId: Long) {
+        receivers.values.forEach {
+            it.localPipes.remove(chainId)
+        }
+        chains.remove(chainId)
     }
 
     fun afterCommit(chainID: Long, height: Long) {
