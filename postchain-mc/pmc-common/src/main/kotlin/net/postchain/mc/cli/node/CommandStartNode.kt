@@ -3,41 +3,26 @@ package net.postchain.mc.cli.node
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktHelpFormatter
-import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.groups.*
 import com.github.ajalt.clikt.parameters.options.*
-import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.int
-import com.github.ajalt.clikt.parameters.types.long
 import com.google.protobuf.ByteString
 import io.grpc.Channel
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
-import io.restassured.RestAssured.port
-import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.cli.util.*
 import net.postchain.common.hexStringToByteArray
-import net.postchain.config.app.AppConfig
 import net.postchain.container.PostchainContainerConfig
 import net.postchain.container.docker.DockerPostchainContainerClient
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.crypto.PubKey
-import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.service.AddPeerRequest
 import net.postchain.server.service.InitializeBlockchainRequest
 import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
-import org.apache.commons.configuration2.PropertiesConfiguration
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
-import org.apache.commons.configuration2.builder.fluent.Parameters
-import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
-import org.checkerframework.checker.units.qual.m
 import java.io.File
 import java.lang.Thread.sleep
-import kotlin.io.path.extension
 
 sealed class RunnerOptions(name: String, help: String) : OptionGroup(name, help)
 class DockerOptions : RunnerOptions("Docker options", "Options for the docker runner") {
@@ -104,25 +89,7 @@ class CommandStartNode : CliktCommand(
         }
         if (!started) throw RuntimeException("Failed to start container")
         genesisPeerOptions?.let { addGenesisPeer(it) }
-        startChain?.let {
-            sleep(5000) // TODO: Await start properly
-            withChannel { channel ->
-                val service = PostchainServiceGrpc.newBlockingStub(channel)
-
-                val requestBuilder = InitializeBlockchainRequest.newBuilder()
-                    .setChainId(it.chainId.toLong())
-                    .setOverride(true)
-
-                val configFile = File(it.bcConfig)
-                when (configFile.extension) {
-                    "gtv" -> requestBuilder.gtv = ByteString.copyFrom(configFile.readBytes())
-                    "xml" -> requestBuilder.xml = configFile.readText()
-                    else -> throw IllegalArgumentException("File must be xml or gtv file")
-                }
-                val reply = service.initializeBlockchain(requestBuilder.build())
-                println(reply.message)
-            }
-        }
+        startChain?.let { startBlockchain(it) }
     }
 
     private fun startDockerContainer(options: DockerOptions): Boolean {
@@ -149,7 +116,7 @@ class CommandStartNode : CliktCommand(
     }
 
     private fun addGenesisPeer(options: GenesisPeerOptions) {
-        sleep(5000)
+        sleep(5000) // TODO: Await start properly
         withChannel {
             with(options) {
                 val service = PeerServiceGrpc.newBlockingStub(it)
@@ -162,6 +129,26 @@ class CommandStartNode : CliktCommand(
                 )
                 println(reply.message)
             }
+        }
+    }
+
+    private fun startBlockchain(options: StartChainOptions) {
+        if (genesisPeerOptions == null) sleep(5000) // TODO: Await start properly
+        withChannel { channel ->
+            val service = PostchainServiceGrpc.newBlockingStub(channel)
+
+            val requestBuilder = InitializeBlockchainRequest.newBuilder()
+                .setChainId(options.chainId.toLong())
+                .setOverride(true)
+
+            val configFile = File(options.bcConfig)
+            when (configFile.extension) {
+                "gtv" -> requestBuilder.gtv = ByteString.copyFrom(configFile.readBytes())
+                "xml" -> requestBuilder.xml = configFile.readText()
+                else -> throw IllegalArgumentException("File must be xml or gtv file")
+            }
+            val reply = service.initializeBlockchain(requestBuilder.build())
+            println(reply.message)
         }
     }
 
