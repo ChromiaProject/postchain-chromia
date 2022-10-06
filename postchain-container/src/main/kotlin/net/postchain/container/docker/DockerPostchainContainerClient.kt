@@ -46,8 +46,8 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
         val apiPort = config.restApiConfig.port
         // rest-api-port
         val restApiPort = "${apiPort}/tcp"
-        if (apiPort > -1) {
-            portBindings[restApiPort] = listOf(PortBinding.of(config.hostName, apiPort)) // TODO: apiPort == 0
+        if (apiPort > 0) { // TODO: apiPort == 0 (Must know what port to expose, 0 indicates "any available port"
+            portBindings[restApiPort] = listOf(PortBinding.of(config.hostName, apiPort))
         }
         // admin-rpc-port
         val adminPort = config.serverConfig.port
@@ -87,7 +87,7 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
             .exposedPorts(portBindings.keys)
             .env("POSTCHAIN_DEBUG=${config.debug}")
             .env("POSTCHAIN_CONFIG=/config/${configFile.name}")
-            .cmd("run-server", "-c", config.activeChainIds.joinToString(","))
+            .cmd("run-server", "-c", config.activeChainIds.joinToString(","), "--port", config.serverConfig.port.toString())
             .build()
 
         val container = config.containerName?.let { client.createContainer(dockerConfig, it) } ?: client.createContainer(dockerConfig)

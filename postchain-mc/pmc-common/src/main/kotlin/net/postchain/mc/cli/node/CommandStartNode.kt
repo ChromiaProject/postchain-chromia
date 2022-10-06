@@ -16,15 +16,19 @@ import io.grpc.InsecureChannelCredentials
 import io.restassured.RestAssured.port
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.cli.util.*
+import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.container.PostchainContainerConfig
 import net.postchain.container.docker.DockerPostchainContainerClient
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.server.config.PostchainServerConfig
+import net.postchain.server.service.AddPeerRequest
 import net.postchain.server.service.InitializeBlockchainRequest
+import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -40,9 +44,12 @@ class DockerOptions : RunnerOptions("Docker options", "Options for the docker ru
     val name by option(help = "Container name").default("postchain")
     val image by option("--image", help = "Image name")
         .default("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
-    val volumes by option("-v", "--volume", help = "Volume mounts (<from>:<to>)").convert { v -> v.split(":", limit = 2) }.convert { it[0] to it[1] }
+    val volumes by option("-v", "--volume", help = "Volume mounts [<from>:<to>]")
+        .convert { it.split(":", limit = 2) }
+        .convert { it[0] to it[1] }
         .multiple()
 }
+
 class CliOptions : RunnerOptions("cli", "Options for the cli runner") {
 
 }
@@ -51,6 +58,16 @@ class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Block
     val chainId by option().int().default(0)
     val bcConfig by option("-bc", "--blockchain-config", help = "Blockchain config to start directly").required()
 
+}
+
+class GenesisPeerOptions :
+    OptionGroup(name = "Genesis peer options", help = "Peer information to a node in the network to connect to") {
+    val pubkey by option(help = "Public key to the genesis peer").convert { PubKey(it.hexStringToByteArray()) }
+        .required()
+    val genesisPeer by option(help = "Peer to add after container startup [<host>:<port>]")
+        .convert { it.split(":", limit = 2) }
+        .convert { it[0] to it[1] }
+        .required()
 }
 
 class CommandStartNode : CliktCommand(
@@ -76,13 +93,17 @@ class CommandStartNode : CliktCommand(
 
     private val startChain by StartChainOptions().cooccurring()
 
+    private val genesisPeerOptions by GenesisPeerOptions().cooccurring()
+
     private val debug by debugOption()
 
     override fun run() {
-        when (val it = runner) {
+        val started = when (val it = runner) {
             is DockerOptions -> startDockerContainer(it)
             else -> throw IllegalArgumentException("Runner not supported")
         }
+        if (!started) throw RuntimeException("Failed to start container")
+        genesisPeerOptions?.let { addGenesisPeer(it) }
         startChain?.let {
             sleep(5000) // TODO: Await start properly
             withChannel { channel ->
@@ -123,7 +144,24 @@ class CommandStartNode : CliktCommand(
                 debug = debug,
             )
             val container = client.createContainer(conf)
-            return client.startContainer(container.name)
+            return client.startContainer(container.name).also { if (!it) client.removeContainer(container.name) }
+        }
+    }
+
+    private fun addGenesisPeer(options: GenesisPeerOptions) {
+        sleep(5000)
+        withChannel {
+            with(options) {
+                val service = PeerServiceGrpc.newBlockingStub(it)
+                val reply = service.addPeer(
+                    AddPeerRequest.newBuilder()
+                        .setPubkey(pubkey.hex())
+                        .setHost(genesisPeer.first)
+                        .setPort(genesisPeer.second.toInt())
+                        .build()
+                )
+                println(reply.message)
+            }
         }
     }
 
