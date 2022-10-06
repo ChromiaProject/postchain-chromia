@@ -100,7 +100,7 @@ class CommandStartNode : CliktCommand(
     override fun run() {
         val started = when (val it = runner) {
             is DockerOptions -> startDockerContainer(it)
-            else -> throw IllegalArgumentException("Runner not supported")
+            is CliOptions -> throw NotImplementedError("Running a unix process is not implemented")
         }
         if (!started) throw RuntimeException("Failed to start container")
         genesisPeerOptions?.let { addGenesisPeer(it) }
