@@ -40,8 +40,8 @@ class CliOptions : RunnerOptions("cli", "Options for the cli runner") {
 }
 
 class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Blockchain to start immediately") {
-    val chainId by option().int().default(0)
-    val bcConfig by option("-bc", "--blockchain-config", help = "Blockchain config to start directly").required()
+    val chainId by option(help = "Internal chain id to start the blockchain for").int().default(0)
+    val bcConfig by option("-bc", "--blockchain-config", help = "Blockchain configuration to start directly (.xml or .gtv)").required()
 
 }
 
@@ -65,7 +65,7 @@ class CommandStartNode : CliktCommand(
 
     private val config by nodeConfigOption()
 
-    private val runner by option(help = "How the node should be hosted")
+    private val runner by option(help = "How the node should be hosted (default: --docker)")
         .groupSwitch(
             "--docker" to DockerOptions(),
             "--cli" to CliOptions()
@@ -80,7 +80,7 @@ class CommandStartNode : CliktCommand(
 
     private val genesisPeerOptions by GenesisPeerOptions().cooccurring()
 
-    private val debug by option(help = "Enable debug api").flag(default = true)
+    private val debug by option(help = "Enable debug api").flag()
 
     override fun run() {
         val started = when (val it = runner) {
