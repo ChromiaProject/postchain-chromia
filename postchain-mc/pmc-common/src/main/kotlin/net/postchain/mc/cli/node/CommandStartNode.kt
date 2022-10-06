@@ -62,7 +62,7 @@ class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Block
 
 class GenesisPeerOptions :
     OptionGroup(name = "Genesis peer options", help = "Peer information to a node in the network to connect to") {
-    val pubkey by option(help = "Public key to the genesis peer").convert { PubKey(it.hexStringToByteArray()) }
+    val genesisPubkey by option(help = "Public key to the genesis peer").convert { PubKey(it.hexStringToByteArray()) }
         .required()
     val genesisPeer by option(help = "Peer to add after container startup [<host>:<port>]")
         .convert { it.split(":", limit = 2) }
@@ -95,7 +95,7 @@ class CommandStartNode : CliktCommand(
 
     private val genesisPeerOptions by GenesisPeerOptions().cooccurring()
 
-    private val debug by debugOption()
+    private val debug by option(help = "Enable debug api").flag(default = true)
 
     override fun run() {
         val started = when (val it = runner) {
@@ -135,7 +135,7 @@ class CommandStartNode : CliktCommand(
             val conf = PostchainContainerConfig(
                 imageName = image,
                 containerName = name,
-                configFile = config,
+                configFileName = config,
                 serverConfig = PostchainServerConfig(port),
                 hostName = host,
                 volumes = mapOf(*options.volumes.toTypedArray()),
@@ -155,7 +155,7 @@ class CommandStartNode : CliktCommand(
                 val service = PeerServiceGrpc.newBlockingStub(it)
                 val reply = service.addPeer(
                     AddPeerRequest.newBuilder()
-                        .setPubkey(pubkey.hex())
+                        .setPubkey(genesisPubkey.hex())
                         .setHost(genesisPeer.first)
                         .setPort(genesisPeer.second.toInt())
                         .build()

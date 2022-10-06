@@ -2,6 +2,7 @@ package net.postchain.container.docker
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.DockerClient.BuildParam.memory
 import com.spotify.docker.client.exceptions.DockerRequestException
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
@@ -66,10 +67,9 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
 
         // Host config
         val resources = config.resourceLimits
-        val configFile = File(config.configFile)
         val hostConfig = HostConfig.builder()
             .appendBinds(*volumes.toTypedArray())
-            .appendBinds(HostConfig.Bind.from(configFile.parentFile.absolutePath).to("/config").build())
+            .appendBinds(HostConfig.Bind.from(config.configFile.parentFile.absolutePath).to("/config").build())
             .portBindings(portBindings)
             .publishAllPorts(true)
             .apply {
@@ -86,7 +86,7 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
             .hostConfig(hostConfig)
             .exposedPorts(portBindings.keys)
             .env("POSTCHAIN_DEBUG=${config.debug}")
-            .env("POSTCHAIN_CONFIG=/config/${configFile.name}")
+            .env("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
             .cmd("run-server", "-c", config.activeChainIds.joinToString(","), "--port", config.serverConfig.port.toString())
             .build()
 
