@@ -41,7 +41,7 @@ class DockerOptions : RunnerOptions("Docker options", "Options for the docker ru
         .multiple()
 }
 
-class PlainNodeOptions : RunnerOptions("Plain node options", "Options for the plain runner") {
+class NativeOptions : RunnerOptions("Native node options", "Options for the native runner") {
     val postchainPath by option(help = "Path to the postchain executable", envvar = "POSTCHAIN_PATH").required()
 }
 
@@ -77,7 +77,7 @@ class CommandStartNode : CliktCommand(
     private val runner by option(help = "How the node should be hosted (default: --docker)")
         .groupSwitch(
             "--docker" to DockerOptions(),
-            "--plain" to PlainNodeOptions()
+            "--native" to NativeOptions()
         )
         .defaultByName("--docker")
 
@@ -98,7 +98,7 @@ class CommandStartNode : CliktCommand(
     override fun run() {
         val started = when (val it = runner) {
             is DockerOptions -> startDockerContainer(it)
-            is PlainNodeOptions -> startPostchainProcess(it)
+            is NativeOptions -> startPostchainProcess(it)
         }
         if (!started) throw RuntimeException("Failed to start postchain")
         genesisPeerOptions?.let { addGenesisPeer(it) }
@@ -138,7 +138,7 @@ class CommandStartNode : CliktCommand(
         }
     }
 
-    private fun startPostchainProcess(options: PlainNodeOptions): Boolean {
+    private fun startPostchainProcess(options: NativeOptions): Boolean {
         val args = mutableListOf(options.postchainPath, "run-server")
         log4jFile?.let {
             args.add("-Dlog4j2.configurationFile")
