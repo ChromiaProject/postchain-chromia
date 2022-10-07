@@ -81,7 +81,7 @@ class CommandStartNode : CliktCommand(
         )
         .defaultByName("--docker")
 
-    private val host by option(help = "Hostname to access this node").default("localhost")
+    private val host by option(help = "Hostname to access this node via rpc client").default("localhost")
 
     private val port by option(help = "Exposed port for rpc client").int().default(50051)
 
@@ -123,7 +123,6 @@ class CommandStartNode : CliktCommand(
                 serverConfig = tlsOptions?.let {
                     PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
                 } ?: PostchainServerConfig(port),
-                hostName = host,
                 volumes = mapOf(*options.volumes.toTypedArray()),
                 resourceLimits = ContainerResourceLimits.default(),
                 activeChainIds = listOf(startChain?.chainId ?: 0),

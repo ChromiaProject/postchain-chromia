@@ -11,7 +11,6 @@ data class PostchainContainerConfig(
     val containerName: String?,
     private val configFileName: String,
     val serverConfig: PostchainServerConfig = PostchainServerConfig(),
-    val hostName: String = "localhost",
     val volumes: Map<String, String> = mapOf(),
     val resourceLimits: ContainerResourceLimits = ContainerResourceLimits.default(),
     val activeChainIds: List<Int> = listOf(0),
