@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.groups.*
 import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.google.protobuf.ByteString
 import io.grpc.Channel
@@ -36,13 +37,17 @@ class DockerOptions : RunnerOptions("Docker options", "Options for the docker ru
         .multiple()
 }
 
-class CliOptions : RunnerOptions("cli", "Options for the cli runner") {
-
+class PlainNodeOptions : RunnerOptions("Plain node options", "Options for the plain runner") {
+    val postchainPath by option(help = "Path to the postchain executable", envvar = "POSTCHAIN_PATH").required()
+    val logFile by option(help = "File to append logs to").file(canBeDir = false)
 }
 
 class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Blockchain to start immediately") {
     val chainId by option(help = "Internal chain id to start the blockchain for").int().default(0)
-    val bcConfig by option("-bc", "--blockchain-config", help = "Blockchain configuration to start directly (.xml or .gtv)").required()
+    val bcConfig by option(
+        "-bc", "--blockchain-config",
+        help = "Blockchain configuration to start directly (.xml or .gtv)"
+    ).required()
 
 }
 
@@ -69,7 +74,7 @@ class CommandStartNode : CliktCommand(
     private val runner by option(help = "How the node should be hosted (default: --docker)")
         .groupSwitch(
             "--docker" to DockerOptions(),
-            "--cli" to CliOptions()
+            "--plain" to PlainNodeOptions()
         )
         .defaultByName("--docker")
 
@@ -88,9 +93,9 @@ class CommandStartNode : CliktCommand(
     override fun run() {
         val started = when (val it = runner) {
             is DockerOptions -> startDockerContainer(it)
-            is CliOptions -> throw NotImplementedError("Running a unix process is not implemented")
+            is PlainNodeOptions -> startPostchainProcess(it)
         }
-        if (!started) throw RuntimeException("Failed to start container")
+        if (!started) throw RuntimeException("Failed to start postchain")
         genesisPeerOptions?.let { addGenesisPeer(it) }
         startChain?.let { startBlockchain(it) }
     }
@@ -106,7 +111,9 @@ class CommandStartNode : CliktCommand(
                 imageName = image,
                 containerName = name,
                 configFileName = config,
-                serverConfig = tlsOptions?.let { PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile)) } ?: PostchainServerConfig(port),
+                serverConfig = tlsOptions?.let {
+                    PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
+                } ?: PostchainServerConfig(port),
                 hostName = host,
                 volumes = mapOf(*options.volumes.toTypedArray()),
                 resourceLimits = ContainerResourceLimits.default(),
@@ -115,6 +122,30 @@ class CommandStartNode : CliktCommand(
             )
             val container = client.createContainer(conf)
             return client.startContainer(container.name).also { if (!it) client.removeContainer(container.name) }
+        }
+    }
+
+    private fun startPostchainProcess(options: PlainNodeOptions): Boolean {
+        val args = mutableListOf(
+            options.postchainPath, "run-server",
+            "--node-config", config,
+            "-c", "${startChain?.chainId ?: 0}",
+            "--port", "$port",
+        )
+        if (debug) args.add("--debug")
+
+        println("Starting process with args $args")
+        val process = ProcessBuilder(args).apply {
+            options.logFile?.let {
+                redirectOutput(it)
+                redirectErrorStream(true)
+            }
+        }
+            .start()
+        return process.isAlive.also { alive ->
+            if (!alive) println(
+                process.errorStream.bufferedReader().readText()
+            ) else println("Started postchain with pid ${process.pid()}")
         }
     }
 
