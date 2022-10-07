@@ -6,24 +6,24 @@ import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
-import net.postchain.core.RemoteBlockchainProcess
 import java.lang.Long.max
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorSubnodePipe(
-        val process: RemoteBlockchainProcess
+        override val chainID: Long,
+        override val blockchainRid: BlockchainRid,
+        val restApiUrl: String
 ) : ClusterAnchorPipe {
 
-    override val chainId = process.chainId
-    override val blockchainRid = process.blockchainRid
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
     private val client = ConcretePostchainClientProvider().createClient(
             PostchainClientConfig(
                     blockchainRid = blockchainRid,
-                    endpointPool = EndpointPool.singleUrl(process.restApiUrl),
+                    endpointPool = EndpointPool.singleUrl(restApiUrl),
                     failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
             )
     )
@@ -34,13 +34,13 @@ class ClusterAnchorSubnodePipe(
 
     // TODO: [POS-358]: Make it async
     override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
-        val block = client.blockAtHeightSync(currentPointer + 1)
+        val block = client.blockAtHeightSync(currentPointer)
 
         return if (!block.isNull()) {
-            highestSeen.getAndUpdate { max(it, currentPointer + 1) }
+            highestSeen.getAndUpdate { max(it, currentPointer) }
 
             ClusterAnchorPacket(
-                    currentPointer, // TODO: [POS-358]: +1 ?
+                    currentPointer,
                     block["rid"]!!.asByteArray(),
                     block["header"]!!.asByteArray(),
                     block["witness"]!!.asByteArray()

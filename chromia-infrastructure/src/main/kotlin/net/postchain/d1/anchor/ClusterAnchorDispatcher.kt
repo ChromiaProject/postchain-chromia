@@ -24,22 +24,25 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values
-                .forEach {
-                    it.localPipes[chainID] = ClusterAnchorLocalPipe(chainID, brid, storage)
-                }
-
-        chains[chainID] = brid
+        connectChainInternal(chainID, brid) {
+            ClusterAnchorLocalPipe(chainID, brid, storage)
+        }
     }
 
     // TODO: [POS-358]: Subnode OR Remote ?
-    fun connectSubnodeChain(pipe: ClusterAnchorSubnodePipe) {
-        receivers.filter { it.key != pipe.chainId && (pipe.chainId !in it.value.localPipes) }.values
+    fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
+        connectChainInternal(chainID, brid) {
+            ClusterAnchorSubnodePipe(chainID, brid, restApiUrl)
+        }
+    }
+
+    private fun connectChainInternal(chainID: Long, brid: BlockchainRid, pipeSupplier: () -> ClusterAnchorPipe) {
+        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values
                 .forEach {
-                    it.localPipes[pipe.chainId] = pipe
+                    it.localPipes[chainID] = pipeSupplier()
                 }
 
-        chains[pipe.chainId] = pipe.blockchainRid
+        chains[chainID] = brid
     }
 
     fun disconnectChain(chainID: Long) {
@@ -50,11 +53,11 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
         chains.remove(chainID)
     }
 
-    fun disconnectSubnodeChain(chainId: Long) {
+    fun disconnectSubnodeChain(chainID: Long) {
         receivers.values.forEach {
-            it.localPipes.remove(chainId)
+            it.localPipes.remove(chainID)
         }
-        chains.remove(chainId)
+        chains.remove(chainID)
     }
 
     fun afterCommit(chainID: Long, height: Long) {

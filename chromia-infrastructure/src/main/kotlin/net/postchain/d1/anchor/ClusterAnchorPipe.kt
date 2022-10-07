@@ -6,7 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 
 interface ClusterAnchorPipe {
-    val chainId: Long
+    val chainID: Long
     val blockchainRid: BlockchainRid
     fun setHighestSeenHeight(height: Long)
     fun mightHaveNewPackets(): Boolean

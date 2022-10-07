@@ -73,8 +73,7 @@ open class AnchorProcessManagerExtension(
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         localDispatcher.connectSubnodeChain(
-                ClusterAnchorSubnodePipe(process)
-        )
+                process.chainId, process.blockchainRid, process.restApiUrl)
     }
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {

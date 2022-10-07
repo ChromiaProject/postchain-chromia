@@ -11,7 +11,7 @@ import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorLocalPipe(
-        override val chainId: Long,
+        override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         private val storage: Storage
 ) : ClusterAnchorPipe {
@@ -24,7 +24,7 @@ class ClusterAnchorLocalPipe(
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
     override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
-        return withReadConnection(storage, chainId) { eContext ->
+        return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
             val blockRID = dba.getBlockRID(eContext, currentPointer)
