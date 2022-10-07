@@ -95,11 +95,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val blockchainRid = pipe.blockchainRid
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
+            currentHeight++ // Try next height
             val clusterAnchorPacket = pipe.fetchNext(currentHeight)
             if (clusterAnchorPacket != null) {
                 packets.add(clusterAnchorPacket)
                 pipe.markTaken(clusterAnchorPacket.height, bctx)
-                currentHeight++ // Try next height
             } else {
                 break // Nothing more to find
             }
