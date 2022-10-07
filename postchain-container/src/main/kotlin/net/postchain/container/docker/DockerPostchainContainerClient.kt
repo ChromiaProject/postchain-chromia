@@ -13,6 +13,7 @@ import net.postchain.container.PostchainContainer
 import net.postchain.container.PostchainContainerClient
 import net.postchain.container.PostchainContainerClientFactory
 import net.postchain.container.PostchainContainerConfig
+import net.postchain.container.exception.ContainerStartupException
 import org.glassfish.jersey.client.RequestEntityProcessing
 import java.time.Duration
 import java.time.Instant
@@ -71,14 +72,17 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
             }
             .build()
 
+        val env = config.env.map { "${it.key}=${it.value}" }.toMutableList()
+            .also {
+                it.add("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
+                it.add("POSTCHAIN_SERVER_PORT=$adminPort")
+            }
         val builder = ContainerConfig.builder()
             .image(config.imageName)
             .hostConfig(hostConfig)
             .exposedPorts(portBindings.keys)
-        config.env.forEach { builder.env("${it.key}=${it.value}") }
         val dockerConfig = builder
-            .env("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
-            .env("POSTCHAIN_SERVER_PORT=$adminPort")
+            .env(env)
             .cmd(config.command)
             .build()
 
@@ -125,10 +129,14 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
         ) {
             while (hasNext() && Instant.now() < startTime.plus(timeOut)) {
                 val log = UTF_8.decode(next().content()).toString()
-                if (log.contains(awaitMessage)) return true
+                if (log.contains(awaitMessage)) break
             }
         }
-        return false
+        val info = client.inspectContainer(name)
+        if (!info.state().running()) {
+            throw ContainerStartupException(client.logs(name, DockerClient.LogsParam.stderr()).readFully())
+        }
+        return true
     }
 
     override fun stopContainer(name: String): Boolean {

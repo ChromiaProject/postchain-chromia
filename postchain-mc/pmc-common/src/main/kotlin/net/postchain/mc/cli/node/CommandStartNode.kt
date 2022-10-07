@@ -26,6 +26,9 @@ import net.postchain.server.service.InitializeBlockchainRequest
 import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 import java.io.File
+import java.io.InputStreamReader
+import java.time.Duration
+import java.time.Instant
 
 sealed class RunnerOptions(name: String, help: String) : OptionGroup(name, help)
 class DockerOptions : RunnerOptions("Docker options", "Options for the docker runner") {
@@ -40,7 +43,6 @@ class DockerOptions : RunnerOptions("Docker options", "Options for the docker ru
 
 class PlainNodeOptions : RunnerOptions("Plain node options", "Options for the plain runner") {
     val postchainPath by option(help = "Path to the postchain executable", envvar = "POSTCHAIN_PATH").required()
-    val logFile by option(help = "File to append logs to").file(canBeDir = false)
 }
 
 class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Blockchain to start immediately") {
@@ -89,6 +91,8 @@ class CommandStartNode : CliktCommand(
 
     private val tlsOptions by TlsOptions().cooccurring()
 
+    private val log4jFile by option(help = "File to configure log4j logging").file(canBeDir = false)
+
     private val debug by option(help = "Enable debug api").flag()
 
     override fun run() {
@@ -124,40 +128,55 @@ class CommandStartNode : CliktCommand(
                 } ?: PostchainServerConfig(port),
                 volumes = mapOf(*options.volumes.toTypedArray()),
                 resourceLimits = ContainerResourceLimits.default(),
-                env = mapOf(
-                    "POSTCHAIN_DEBUG" to debug,
-                    "POSTCHAIN_INITIAL_CHAIN_IDS" to (startChain?.chainId ?: 0),
-                ),
+                env = environment(),
                 debug = debug,
             )
             val container = client.createContainer(conf)
-            return client.startContainer(container.name, serverStartupMessage).also { if (!it) client.removeContainer(container.name) }
+            return client.startContainer(container.name, serverStartupMessage).also { if (!it) {
+                client.removeContainer(container.name)
+            } }
         }
     }
 
     private fun startPostchainProcess(options: PlainNodeOptions): Boolean {
-        val args = mutableListOf(
-            options.postchainPath, "run-server",
-            "--node-config", config,
-            "-c", "${startChain?.chainId ?: 0}",
-            "--port", "$port",
-        )
-        if (debug) args.add("--debug")
-
-        println("Starting process with args $args")
-        val process = ProcessBuilder(args).apply {
-            options.logFile?.let {
-                redirectOutput(it)
-                redirectErrorStream(true)
-            }
+        val args = mutableListOf(options.postchainPath, "run-server")
+        log4jFile?.let {
+            args.add("-Dlog4j2.configurationFile")
+            args.add(it.absolutePath)
         }
-            .start()
+        val processBuilder = ProcessBuilder(args)
+        processBuilder.environment().apply {
+            putAll(environment())
+            put("POSTCHAIN_CONFIG", config)
+            put("POSTCHAIN_SERVER_PORT", port.toString())
+        }
+        val process = processBuilder.start()
         return process.isAlive.also { alive ->
+            val startTime = Instant.now()
+            val serverStartupMessage = "Postchain server started, listening on"
+            awaitProcess(process, serverStartupMessage, startTime, Duration.ofSeconds(5))
             if (!alive) println(
                 process.errorStream.bufferedReader().readText()
             ) else println("Started postchain with pid ${process.pid()}")
         }
     }
+
+    private fun awaitProcess(
+        process: Process,
+        serverStartupMessage: String,
+        startTime: Instant,
+        timeOut: Duration = Duration.ofSeconds(5)
+    ) {
+        val br = InputStreamReader(process.inputStream).buffered()
+        while (Instant.now() < startTime.plus(timeOut)) {
+            if (br.readLine().contains(serverStartupMessage)) break
+        }
+    }
+
+    private fun environment() = mapOf(
+        "POSTCHAIN_DEBUG" to debug.toString(),
+        "POSTCHAIN_INITIAL_CHAIN_IDS" to (startChain?.chainId ?: 0).toString()
+    )
 
     private fun addGenesisPeer(options: GenesisPeerOptions) {
         withChannel {
