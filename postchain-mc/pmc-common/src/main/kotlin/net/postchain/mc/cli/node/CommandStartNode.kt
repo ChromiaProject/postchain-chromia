@@ -17,6 +17,7 @@ import net.postchain.cli.util.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.container.PostchainContainerConfig
 import net.postchain.container.docker.DockerPostchainContainerClient
+import net.postchain.container.exception.ContainerStartupException
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.crypto.PubKey
 import net.postchain.server.config.PostchainServerConfig
@@ -51,7 +52,6 @@ class StartChainOptions : OptionGroup(name = "Blockchain options", help = "Block
         "-bc", "--blockchain-config",
         help = "Blockchain configuration to start directly (.xml or .gtv)"
     ).required()
-
 }
 
 class GenesisPeerOptions :
@@ -100,7 +100,7 @@ class CommandStartNode : CliktCommand(
             is DockerOptions -> startDockerContainer(it)
             is NativeOptions -> startPostchainProcess(it)
         }
-        if (!started) throw RuntimeException("Failed to start postchain")
+        if (!started) throw ContainerStartupException("Failed to start postchain")
         genesisPeerOptions?.let { addGenesisPeer(it) }
         startChain?.let { startBlockchain(it) }
     }
@@ -132,9 +132,8 @@ class CommandStartNode : CliktCommand(
                 debug = debug,
             )
             val container = client.createContainer(conf)
-            return client.startContainer(container.name, serverStartupMessage).also { if (!it) {
-                client.removeContainer(container.name)
-            } }
+            return client.startContainer(container.name, serverStartupMessage)
+                .also { if (!it) client.removeContainer(container.name) }
         }
     }
 

@@ -31,7 +31,8 @@ For a full list of available flags, use `--help`
 
 To start postchain using docker, set the database url to `jdbc:postgresql://host.docker.internal:5432/postchain` and set `--docker` flag.
 Additionally, you can set the name, image (if other than default) and mount volumes.
+If the genesis node is also run using the same docker daemon, use `--genesis-peer host.docker.internal:<port>` since they will both be part of dockers internal network.
 
 ## Native process
 
-Using the `--plain` flag, postchain will start as a native process. Supply the path to the postchain binary (postchain.sh) using `--postchain-path` or environment variable `POSTCHAIN_PATH`. 
+Using the `--native` flag, postchain will start as a native process. Supply the path to the postchain binary (postchain.sh) using `--postchain-path` or environment variable `POSTCHAIN_PATH`. 
