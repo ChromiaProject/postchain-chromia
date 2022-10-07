@@ -37,19 +37,19 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
+class ClusterGlobalTopicPipe(override val route: TopicRoute,
                              val clusterName: String,
                              private val cryptoSystem: CryptoSystem,
                              lastAnchorHeight: Long,
                              private val postchainClientProvider: PostchainClientProvider,
                              private val clusterManagement: ClusterManagement,
-                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<GlobalTopicRoute, Long>, Shutdownable {
+                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 10 * 1024 * 1024 // 10 MiB
     }
 
-    private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>()
+    private val packets = ConcurrentSkipListMap<Long, Pair<IcmfPackets<Long>, Int>>()
     private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
@@ -157,7 +157,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         val packetsSizeBytes = currentPackets.sumOf { it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size } }
         if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {
-            packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets, packetsSizeBytes)
+            packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets) to packetsSizeBytes
             currentQueueSizeBytes.addAndGet(packetsSizeBytes)
 
             lastAnchorHeight.set(currentAnchorHeight)
@@ -214,12 +214,12 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? =
-            packets.higherEntry(currentPointer)?.value
+        packets.higherEntry(currentPointer)?.value?.first
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             packets.remove(currentPointer)?.let {
-                currentQueueSizeBytes.addAndGet(-it.sizeBytes)
+                currentQueueSizeBytes.addAndGet(-it.second)
             }
         }
     }
