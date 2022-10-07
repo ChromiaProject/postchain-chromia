@@ -27,9 +27,9 @@ class ClusterAnchorPipe(
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
-            val blockRID = dba.getBlockRID(eContext, currentPointer + 1)
+            val blockRID = dba.getBlockRID(eContext, currentPointer)
             if (blockRID != null) {
-                highestSeen.getAndUpdate { max(it, currentPointer + 1) }
+                highestSeen.getAndUpdate { max(it, currentPointer) }
                 // Get raw data
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
