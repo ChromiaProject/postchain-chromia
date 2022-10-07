@@ -11,6 +11,9 @@ import com.google.protobuf.ByteString
 import io.grpc.Channel
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.restassured.RestAssured.port
 import net.postchain.cli.util.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.container.PostchainContainerConfig
@@ -104,8 +107,14 @@ class CommandStartNode : CliktCommand(
         val name = options.name
         val image = options.image
         DockerPostchainContainerClient.create().use { client ->
-            if (!client.findImage(image)) client.pull(image)
-            if (client.findContainer(name)) return client.startContainer(name)
+            if (!client.findImage(image)) {
+                println("Pulling image $image")
+                client.pull(image)
+            }
+            if (client.findContainer(name)) {
+                println("Container $name already exists, starting..")
+                return client.startContainer(name)
+            }
 
             val conf = PostchainContainerConfig(
                 imageName = image,
@@ -154,14 +163,22 @@ class CommandStartNode : CliktCommand(
         withChannel {
             with(options) {
                 val service = PeerServiceGrpc.newBlockingStub(it)
-                val reply = service.addPeer(
-                    AddPeerRequest.newBuilder()
-                        .setPubkey(genesisPubkey.hex())
-                        .setHost(genesisPeer.first)
-                        .setPort(genesisPeer.second.toInt())
-                        .build()
-                )
-                println(reply.message)
+                try {
+                    val reply = service.addPeer(
+                        AddPeerRequest.newBuilder()
+                            .setPubkey(genesisPubkey.hex())
+                            .setHost(genesisPeer.first)
+                            .setPort(genesisPeer.second.toInt())
+                            .build()
+                    )
+                    println(reply.message)
+                } catch (e: StatusRuntimeException) {
+                    if (e.status == Status.ALREADY_EXISTS) {
+                        println("Genesis peer information already exists in db")
+                        return@withChannel
+                    }
+                    throw e
+                }
             }
         }
     }
