@@ -23,6 +23,19 @@
             <artifactId>postchain-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-admin-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-container</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-base</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
