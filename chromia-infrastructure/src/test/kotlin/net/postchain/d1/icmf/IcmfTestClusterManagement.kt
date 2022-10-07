@@ -17,19 +17,23 @@ class IcmfTestClusterManagement : ClusterManagement {
     }
 
     private val peers = listOf(
-            D1PeerInfo("http://127.0.0.1:7740/", pubKey.key),
+        D1PeerInfo("http://127.0.0.1:7740/", pubKey.key),
     )
 
-    override fun getAllClusters() = listOf("cluster1")
+    override fun getClusterNames() = listOf("cluster1")
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long) =
-            peers
+        peers.map { it.pubkey }
 
     override fun getClusterInfo(clusterName: String) =
-            D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(0), peers)
+        D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(0), peers)
+
+    override fun getBlockchainApiUrls(blockchainRid: BlockchainRid): Collection<String> {
+        throw NotImplementedError("Not yet implemented")
+    }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
-            listOf(BlockchainRid.buildRepeat(0), BlockchainRid.buildRepeat(1))
+        listOf(BlockchainRid.buildRepeat(0), BlockchainRid.buildRepeat(1))
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String = "cluster1"
 }

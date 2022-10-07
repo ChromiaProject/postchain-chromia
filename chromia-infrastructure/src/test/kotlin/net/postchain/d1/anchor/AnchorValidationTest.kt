@@ -11,7 +11,6 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -38,7 +37,7 @@ class AnchorValidationTest {
     private val signerPrivKey = PrivKey(cryptoSystem.getRandomBytes(32))
     private val signerPubKey = PubKey(secp256k1_derivePubKey(signerPrivKey.key))
     private val clusterManagement: ClusterManagement = mock {
-        on { getBlockchainPeers(eq(blockchainRID), any()) }.doReturn(listOf(D1PeerInfo("", signerPubKey.key)))
+        on { getBlockchainPeers(eq(blockchainRID), any()) }.doReturn(listOf(signerPubKey))
     }
 
     @Test

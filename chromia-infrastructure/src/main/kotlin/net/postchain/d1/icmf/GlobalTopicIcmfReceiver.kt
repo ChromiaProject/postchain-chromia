@@ -42,7 +42,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
             dbOperations.loadAllLastMessageHeights(it)
         }
 
-        val allClusters = clusterManagement.getAllClusters()
+        val allClusters = clusterManagement.getClusterNames()
         for (route in routes) {
             if (route.chains.isNotEmpty()) {
                 route.chains.map { clusterManagement.getClusterOfBlockchain(it) }.distinct().forEach { clusterName ->
@@ -79,7 +79,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
 
     private fun updateClusters() {
         val currentClusters = pipes.keys.map { it.first }.toSet()
-        val updatedClusters = clusterManagement.getAllClusters().toSet()
+        val updatedClusters = clusterManagement.getClusterNames().toSet()
         val removedClusters = currentClusters - updatedClusters
         val addedClusters = updatedClusters - currentClusters
         for (clusterName in removedClusters) {
