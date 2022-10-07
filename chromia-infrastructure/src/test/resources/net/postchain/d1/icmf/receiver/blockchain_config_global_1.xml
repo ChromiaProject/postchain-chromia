@@ -27,10 +27,14 @@
         <dict>
             <entry key="receiver">
                 <dict>
-                    <entry key="topics">
-                        <array>
-                            <string>my-topic</string>
-                        </array>
+                    <entry key="global">
+                        <dict>
+                            <entry key="topics">
+                                <array>
+                                    <string>my-topic</string>
+                                </array>
+                            </entry>
+                        </dict>
                     </entry>
                 </dict>
             </entry>

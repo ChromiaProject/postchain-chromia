@@ -31,7 +31,5 @@ class IcmfTestClusterManagement : ClusterManagement {
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
             listOf(BlockchainRid.buildRepeat(0), BlockchainRid.buildRepeat(1))
 
-    override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
-        TODO("Not yet implemented")
-    }
+    override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String = "cluster1"
 }

@@ -7,16 +7,12 @@ import net.postchain.common.BlockchainRid
 sealed class Route
 
 /**
- * Route messages from a specific topic of a specific chain.
- */
-data class SpecificChainRoute(
-        val brid: BlockchainRid,
-        val topics: List<String>
-) : Route()
-
-/**
  * Route messages from entire network matching specific topic
  */
 data class GlobalTopicRoute(
-        val topic: String
+    val topic: String,
+    /**
+     * Empty list means all chains.
+     */
+    val chains: List<BlockchainRid>
 ) : Route()

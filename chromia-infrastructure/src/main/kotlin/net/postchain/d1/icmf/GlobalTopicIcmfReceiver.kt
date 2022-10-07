@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(topics: List<String>,
+class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
                               private val chainID: Long,
@@ -32,7 +32,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
         val pollInterval = 1.minutes
     }
 
-    private val routes = topics.map { GlobalTopicRoute(it) }
+    private val routes = topics.map { GlobalTopicRoute(it.key, it.value) }
     private val pipes: ConcurrentMap<Pair<String, GlobalTopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
@@ -42,10 +42,22 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             dbOperations.loadAllLastMessageHeights(it)
         }
 
-        val clusters = clusterManagement.getAllClusters()
-        for (clusterName in clusters) {
-            for (route in routes) {
-                pipes[clusterName to route] = createPipe(clusterName, route, lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+        val allClusters = clusterManagement.getAllClusters()
+        for (route in routes) {
+            if (route.chains.isNotEmpty()) {
+                route.chains.map { clusterManagement.getClusterOfBlockchain(it) }.distinct().forEach { clusterName ->
+                    pipes[clusterName to route] = createPipe(
+                        clusterName,
+                        route,
+                        lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                }
+            } else {
+                for (clusterName in allClusters) {
+                    pipes[clusterName to route] = createPipe(
+                        clusterName,
+                        route,
+                        lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                }
             }
         }
 
