@@ -173,7 +173,7 @@ class CommandStartNode : CliktCommand(
                     )
                     println(reply.message)
                 } catch (e: StatusRuntimeException) {
-                    if (e.status == Status.ALREADY_EXISTS) {
+                    if (e.status.code == Status.ALREADY_EXISTS.code) {
                         println("Genesis peer information already exists in db")
                         return@withChannel
                     }

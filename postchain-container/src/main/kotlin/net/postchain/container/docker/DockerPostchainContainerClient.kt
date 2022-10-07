@@ -2,7 +2,6 @@ package net.postchain.container.docker
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.DockerClient.BuildParam.memory
 import com.spotify.docker.client.exceptions.DockerRequestException
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
@@ -13,7 +12,6 @@ import net.postchain.container.PostchainContainerClient
 import net.postchain.container.PostchainContainerClientFactory
 import net.postchain.container.PostchainContainerConfig
 import org.glassfish.jersey.client.RequestEntityProcessing
-import java.io.File
 
 class DockerPostchainContainerClient(val client: DockerClient) : PostchainContainerClient {
 
@@ -101,6 +99,11 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
 
     override fun startContainer(name: String): Boolean {
         return tryCatch {
+            val c = client.inspectContainer(name)
+            if (c.state().running()) {
+                println("Container $name already running")
+                return@tryCatch
+            }
             client.startContainer(name)
         }
     }
@@ -113,14 +116,15 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
         return client.listContainers().map { it.id() }
     }
 
-    override fun findContainer(name: String): Boolean {
-        return client.listContainers().find { it.id() == name }?.let { true } ?: false
-    }
+    override fun findContainer(name: String) =
+        client.listContainers(DockerClient.ListContainersParam("name", name)).isNotEmpty()
+
 
     override fun findImage(imageName: String): Boolean {
         return try {
-            client.searchImages(imageName).isNotEmpty()
+            client.listImages(DockerClient.ListImagesParam.filter("reference", imageName)).isNotEmpty()
         } catch (e: DockerRequestException) {
+            println(e.message)
             false
         }
     }
