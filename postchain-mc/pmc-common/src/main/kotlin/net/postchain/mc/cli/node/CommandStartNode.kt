@@ -13,7 +13,6 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
-import io.restassured.RestAssured.port
 import net.postchain.cli.util.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.container.PostchainContainerConfig
@@ -27,7 +26,6 @@ import net.postchain.server.service.InitializeBlockchainRequest
 import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 import java.io.File
-import java.lang.Thread.sleep
 
 sealed class RunnerOptions(name: String, help: String) : OptionGroup(name, help)
 class DockerOptions : RunnerOptions("Docker options", "Options for the docker runner") {
@@ -111,9 +109,10 @@ class CommandStartNode : CliktCommand(
                 println("Pulling image $image")
                 client.pull(image)
             }
+            val serverStartupMessage = "Postchain server started, listening on"
             if (client.findContainer(name)) {
                 println("Container $name already exists, starting..")
-                return client.startContainer(name)
+                return client.startContainer(name, serverStartupMessage)
             }
 
             val conf = PostchainContainerConfig(
@@ -129,7 +128,7 @@ class CommandStartNode : CliktCommand(
                 debug = debug,
             )
             val container = client.createContainer(conf)
-            return client.startContainer(container.name).also { if (!it) client.removeContainer(container.name) }
+            return client.startContainer(container.name, serverStartupMessage).also { if (!it) client.removeContainer(container.name) }
         }
     }
 
@@ -158,7 +157,6 @@ class CommandStartNode : CliktCommand(
     }
 
     private fun addGenesisPeer(options: GenesisPeerOptions) {
-        sleep(5000) // TODO: Await start properly
         withChannel {
             with(options) {
                 val service = PeerServiceGrpc.newBlockingStub(it)
@@ -183,7 +181,6 @@ class CommandStartNode : CliktCommand(
     }
 
     private fun startBlockchain(options: StartChainOptions) {
-        if (genesisPeerOptions == null) sleep(5000) // TODO: Await start properly
         withChannel { channel ->
             val service = PostchainServiceGrpc.newBlockingStub(channel)
 

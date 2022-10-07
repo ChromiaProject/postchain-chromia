@@ -1,5 +1,6 @@
 package net.postchain.container.docker
 
+import com.google.common.base.Charsets.UTF_8
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.ListContainersFilterParam
@@ -13,6 +14,8 @@ import net.postchain.container.PostchainContainerClient
 import net.postchain.container.PostchainContainerClientFactory
 import net.postchain.container.PostchainContainerConfig
 import org.glassfish.jersey.client.RequestEntityProcessing
+import java.time.Duration
+import java.time.Instant
 
 class DockerPostchainContainerClient(val client: DockerClient) : PostchainContainerClient {
 
@@ -96,16 +99,33 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
         }
     }
 
-    override fun startContainer(name: String): Boolean {
+    override fun startContainer(name: String, awaitMessage: String): Boolean {
         return tryCatch {
-            val c = client.inspectContainer(name)
-            if (c.state().running()) {
+            if (client.inspectContainer(name).state().running()) {
                 println("Container $name already running")
                 return@tryCatch true
             }
+            val now = Instant.now()
             client.startContainer(name)
-            true
+            return@tryCatch awaitServerStarted(name, now, awaitMessage)
         }
+    }
+
+    private fun awaitServerStarted(name: String, now: Instant, awaitMessage: String): Boolean {
+        with(
+            client.logs(
+                name,
+                DockerClient.LogsParam.stdout(),
+                DockerClient.LogsParam.since(now.epochSecond.toInt()),
+                DockerClient.LogsParam.follow()
+            )
+        ) {
+            while (hasNext() && Instant.now() < now.plus(Duration.ofSeconds(5))) {
+                val log = UTF_8.decode(next().content()).toString()
+                if (log.contains(awaitMessage)) return true
+            }
+        }
+        return false
     }
 
     override fun stopContainer(name: String): Boolean {
