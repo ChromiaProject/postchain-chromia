@@ -10,11 +10,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.withReadConnection
-import net.postchain.client.core.PostchainClientProvider
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -25,7 +25,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
                               private val storage: Storage,
                               private val chainID: Long,
                               private val clusterManagement: ClusterManagement,
-                              private val postchainClientProvider: PostchainClientProvider,
+                              private val clientProvider: ChromiaClientProvider,
                               private val dbOperations: IcmfDatabaseOperations)
     : IcmfReceiver<GlobalTopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
@@ -99,7 +99,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
             dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
         }
 
-        return ClusterGlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
+        return ClusterGlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
                 clusterManagement,
                 lastMessageHeights)
     }
