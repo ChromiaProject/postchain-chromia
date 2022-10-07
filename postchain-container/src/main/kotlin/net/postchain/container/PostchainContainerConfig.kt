@@ -10,10 +10,11 @@ data class PostchainContainerConfig(
     val imageName: String,
     val containerName: String?,
     private val configFileName: String,
+    val command: List<String> = listOf("run-server"),
     val serverConfig: PostchainServerConfig = PostchainServerConfig(),
     val volumes: Map<String, String> = mapOf(),
+    val env: Map<String, Any> = mapOf(),
     val resourceLimits: ContainerResourceLimits = ContainerResourceLimits.default(),
-    val activeChainIds: List<Int> = listOf(0),
     val debug: Boolean = true
 ) {
     val configFile = File(configFileName)

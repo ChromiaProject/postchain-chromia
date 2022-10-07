@@ -71,17 +71,15 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
             }
             .build()
 
-        val dockerConfig = ContainerConfig.builder()
+        val builder = ContainerConfig.builder()
             .image(config.imageName)
             .hostConfig(hostConfig)
             .exposedPorts(portBindings.keys)
-            .env("POSTCHAIN_DEBUG=${config.debug}")
+        config.env.forEach { builder.env("${it.key}=${it.value}") }
+        val dockerConfig = builder
             .env("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
-            .cmd(
-                "run-server",
-                "-c", config.activeChainIds.joinToString(","),
-                "--port", config.serverConfig.port.toString()
-            )
+            .env("POSTCHAIN_SERVER_PORT=$adminPort")
+            .cmd(config.command)
             .build()
 
         val container =
@@ -107,20 +105,25 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
             }
             val now = Instant.now()
             client.startContainer(name)
-            return@tryCatch awaitServerStarted(name, now, awaitMessage)
+            return@tryCatch awaitServerStarted(name, awaitMessage, now)
         }
     }
 
-    private fun awaitServerStarted(name: String, now: Instant, awaitMessage: String): Boolean {
+    private fun awaitServerStarted(
+        name: String,
+        awaitMessage: String,
+        startTime: Instant,
+        timeOut: Duration = Duration.ofSeconds(5)
+    ): Boolean {
         with(
             client.logs(
                 name,
                 DockerClient.LogsParam.stdout(),
-                DockerClient.LogsParam.since(now.epochSecond.toInt()),
+                DockerClient.LogsParam.since(startTime.epochSecond.toInt()),
                 DockerClient.LogsParam.follow()
             )
         ) {
-            while (hasNext() && Instant.now() < now.plus(Duration.ofSeconds(5))) {
+            while (hasNext() && Instant.now() < startTime.plus(timeOut)) {
                 val log = UTF_8.decode(next().content()).toString()
                 if (log.contains(awaitMessage)) return true
             }

@@ -124,7 +124,10 @@ class CommandStartNode : CliktCommand(
                 } ?: PostchainServerConfig(port),
                 volumes = mapOf(*options.volumes.toTypedArray()),
                 resourceLimits = ContainerResourceLimits.default(),
-                activeChainIds = listOf(startChain?.chainId ?: 0),
+                env = mapOf(
+                    "POSTCHAIN_DEBUG" to debug,
+                    "POSTCHAIN_INITIAL_CHAIN_IDS" to (startChain?.chainId ?: 0),
+                ),
                 debug = debug,
             )
             val container = client.createContainer(conf)
