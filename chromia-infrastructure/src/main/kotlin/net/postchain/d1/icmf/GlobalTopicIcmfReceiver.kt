@@ -27,13 +27,13 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
                               private val clusterManagement: ClusterManagement,
                               private val postchainClientProvider: PostchainClientProvider,
                               private val dbOperations: IcmfDatabaseOperations)
-    : IcmfReceiver<GlobalTopicRoute, Long>, Shutdownable {
+    : IcmfReceiver<TopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
 
-    private val routes = topics.map { GlobalTopicRoute(it.key, it.value) }
-    private val pipes: ConcurrentMap<Pair<String, GlobalTopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
+    private val routes = topics.map { TopicRoute(it.key, it.value) }
+    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
 
@@ -94,7 +94,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
         }
     }
 
-    private fun createPipe(clusterName: String, route: GlobalTopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
+    private fun createPipe(clusterName: String, route: TopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
         val lastAnchorHeight = withReadConnection(storage, chainID) {
             dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
         }
