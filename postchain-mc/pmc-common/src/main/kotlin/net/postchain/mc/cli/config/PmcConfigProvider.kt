@@ -14,9 +14,10 @@ const val configFileName = ".pmc/config"
 
 object PmcConfigProvider {
 
-    fun getOrCreate(create: Boolean = false, promtp: Boolean = false): PostchainClientConfig {
+    fun read(create: Boolean = false, promtp: Boolean = false): PostchainClientConfig {
 
         when {
+            envConfigurationFile().exists() -> return  PostchainClientConfig.fromProperties(envConfigurationFile().absolutePath)
             localConfigurationFile().exists() -> return PostchainClientConfig.fromProperties(configFileName)
             globalConfigurationFile().exists() -> return PostchainClientConfig.fromProperties(globalConfigurationFile().absolutePath)
         }
@@ -63,4 +64,5 @@ object PmcConfigProvider {
 
     fun globalConfigurationFile() = File("${System.getProperty("user.home")}/$configFileName")
     fun localConfigurationFile() = File(configFileName)
+    fun envConfigurationFile() = File(System.getenv("POSTCHAIN_CLIENT_CONFIG"))
 }
