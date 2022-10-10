@@ -3,7 +3,6 @@ package net.postchain.mc.cli.proposal
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 
@@ -12,7 +11,7 @@ class CommandListProposalsSince : CliktCommand(
     help = "List all active proposals since a given index"
 ) {
 
-    private val config by lazy { read() }
+    private val config by configOption()
     private val idx by proposalIndexOption().default(0L)
 
     override fun run() {

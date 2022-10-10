@@ -7,7 +7,6 @@ import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getClusters
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
@@ -15,7 +14,7 @@ class CommandListClusters : CliktCommand(
     name = "list",
     help = "List all existing clusters"
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
     private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
 
     override fun run() {

@@ -6,13 +6,13 @@ import net.postchain.chain0.common.proposal.proposeRemoveClusterOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.nopPostchainClient
+import net.postchain.mc.cli.util.nopClientOption
 
 class CommandProposeRemoveCluster : CliktCommand(
         name = "remove",
         help = "Propose removal of cluster. Command is irreversible"
 ) {
-    private val client by lazy { nopPostchainClient() }
+    private val client by nopClientOption()
 
     private val name by nameOption("Cluster name to remove").required()
 

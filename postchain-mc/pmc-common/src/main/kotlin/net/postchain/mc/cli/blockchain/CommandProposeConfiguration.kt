@@ -5,7 +5,6 @@ import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.cli.util.*
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposeConfiguration : CliktCommand(
@@ -17,7 +16,7 @@ class CommandProposeConfiguration : CliktCommand(
         at a height < previously approved config heights. Change will be applied after voting.
         """.trimIndent()
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val blockchainConfigFile by blockchainConfigOption()
 

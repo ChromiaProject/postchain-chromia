@@ -14,7 +14,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 import java.time.Instant
@@ -24,7 +23,7 @@ class CommandGetProposal : CliktCommand(
     name = "info",
     help = "Gets information of a given proposal"
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val idx by proposalIndexOption().required()
 

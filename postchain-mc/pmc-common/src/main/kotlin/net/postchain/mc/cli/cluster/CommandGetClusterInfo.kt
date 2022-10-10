@@ -6,7 +6,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.*
 import net.postchain.mc.cli.util.PrintUtils.printClusters
 
@@ -15,7 +14,7 @@ class CommandGetClusterInfo : CliktCommand(
         help = "Get information about a cluster"
 ) {
 
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val name by nameOption("Cluster Name").required().validate(validateAlphaNumeric())
 

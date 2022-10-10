@@ -9,7 +9,6 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
@@ -20,7 +19,7 @@ class CommandListProviderNodes : CliktCommand(
     name = "nodes",
     help = "List nodes by provider"
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val key by requiredPubkeyOption()
 

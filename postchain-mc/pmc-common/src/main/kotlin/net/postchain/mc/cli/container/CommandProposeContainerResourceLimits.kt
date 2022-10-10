@@ -5,7 +5,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
@@ -14,7 +13,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
     help = "Propose new resource limits for given container There are three types of limits. " +
             "Proposal can contain one, two, or all three types."
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val containerName by nameOption("Container name").required()
 

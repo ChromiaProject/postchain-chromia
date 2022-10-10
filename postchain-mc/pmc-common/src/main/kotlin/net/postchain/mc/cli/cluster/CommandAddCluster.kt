@@ -10,7 +10,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOrGenerateOption
 
@@ -19,7 +18,7 @@ class CommandAddCluster : CliktCommand(
         help = "Create a new cluster that can hold containers with blockchains."
 ) {
 
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val name by nameOrGenerateOption("Cluster name")
 

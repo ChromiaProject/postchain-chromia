@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOrGenerateOption
 
@@ -12,7 +11,7 @@ class CommandProposeContainer : CliktCommand(
     name = "add",
     help = "propose a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it."
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val name by nameOrGenerateOption("Container name")
 

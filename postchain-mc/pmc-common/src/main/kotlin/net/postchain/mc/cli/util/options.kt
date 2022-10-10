@@ -9,18 +9,22 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
-import net.postchain.mc.cli.config.PmcConfigProvider.read
+import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
 
 
-fun CliktCommand.configOption() = configOptionBase().required()
-fun postchainClient() = clientOptionBase()
+fun CliktCommand.configOption() = configOptionBase().default(fromSystemConfig())
+fun CliktCommand.clientOption() = clientOptionBase()
+    .default(ConcretePostchainClient(fromSystemConfig()))
 
-fun nopPostchainClient() = NopPostchainClient(clientOptionBase())
+fun CliktCommand.nopClientOption() = clientOptionBase()
+    .convert { NopPostchainClient(it) }
+    .default(NopPostchainClient(ConcretePostchainClient(fromSystemConfig())))
 
-private fun clientOptionBase() = ConcretePostchainClient(read())
+private fun CliktCommand.clientOptionBase() = configOptionBase()
+    .convert { ConcretePostchainClient(it) }
 
 private fun CliktCommand.configOptionBase() =
-    option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")
+    option("-cfg", "--config", help = "Configuration file for PMC (overrides system configuration)", envvar = "POSTCHAIN_CLIENT_CONFIG")
         .convert { PostchainClientConfig.fromProperties(it) }
 
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)

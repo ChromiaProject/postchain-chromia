@@ -14,25 +14,13 @@ const val configFileName = ".pmc/config"
 
 object PmcConfigProvider {
 
-    fun read(create: Boolean = false, promtp: Boolean = false): PostchainClientConfig {
-
-        when {
-            envConfigurationFile().exists() -> return  PostchainClientConfig.fromProperties(envConfigurationFile().absolutePath)
-            localConfigurationFile().exists() -> return PostchainClientConfig.fromProperties(configFileName)
-            globalConfigurationFile().exists() -> return PostchainClientConfig.fromProperties(globalConfigurationFile().absolutePath)
+    fun fromSystemConfig(): PostchainClientConfig {
+        return when {
+            envConfigurationFile().exists() -> PostchainClientConfig.fromProperties(envConfigurationFile().absolutePath)
+            localConfigurationFile().exists() -> PostchainClientConfig.fromProperties(configFileName)
+            globalConfigurationFile().exists() -> PostchainClientConfig.fromProperties(globalConfigurationFile().absolutePath)
+            else -> throw IllegalArgumentException("Configuration file for pmc was not found")
         }
-
-        if (create && shouldCreate(promtp)) {
-            return createConfigFile(localConfigurationFile(), null)
-        }
-        throw IllegalArgumentException("Configuration file for pmc must be found")
-    }
-
-    private fun shouldCreate(promtp: Boolean): Boolean {
-        if (!promtp) return true
-        val read = Scanner(System.`in`)
-        println("No configuration file found, would you like to create one? (Y/n)")
-        return read.nextBoolean()
     }
 
     fun createConfigFile(file: File, blockchainRid: BlockchainRid?): PostchainClientConfig {

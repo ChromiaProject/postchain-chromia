@@ -4,14 +4,13 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandRemoveContainerReplica : CliktCommand(
     name = "remove",
     help = "remove replica of this container from this cluster"
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     private val clusterName by option("-cl", "--cluster", help = "Cluster name").required()
 

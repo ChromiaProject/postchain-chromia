@@ -6,13 +6,13 @@ import net.postchain.chain0.directory1.updateProviderOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.nopPostchainClient
+import net.postchain.mc.cli.util.nopClientOption
 
 class CommandUpdateProvider : CliktCommand(
     name = "update",
     help = "update provider information"
 ) {
-    private val client by lazy { nopPostchainClient() }
+    private val client by nopClientOption()
 
     private val name by nameOption("Provider name").required()
 

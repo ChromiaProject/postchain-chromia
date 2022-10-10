@@ -6,7 +6,6 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getAllProviders
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
@@ -14,7 +13,7 @@ class CommandListProviders : CliktCommand(
     name = "list",
     help = "List all providers"
 ) {
-    private val config by lazy { read() }
+    private val config by configOption()
 
     override fun run() {
         println("Providers:")

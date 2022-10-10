@@ -6,13 +6,13 @@ import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.util.nopPostchainClient
+import net.postchain.mc.cli.util.nopClientOption
 
 class CommandProposeResumeBlockchain : CliktCommand(
         name = "start",
         help = "Propose starting a chain that has previously been stopped."
 ) {
-    private val client by lazy { nopPostchainClient() }
+    private val client by nopClientOption()
 
     private val blockchainRID by blockchainRidOption()
 
