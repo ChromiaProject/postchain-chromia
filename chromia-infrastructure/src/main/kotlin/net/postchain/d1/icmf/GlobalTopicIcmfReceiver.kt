@@ -20,20 +20,20 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(topics: List<String>,
+class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
                               private val chainID: Long,
                               private val clusterManagement: ClusterManagement,
                               private val postchainClientProvider: PostchainClientProvider,
                               private val dbOperations: IcmfDatabaseOperations)
-    : IcmfReceiver<GlobalTopicRoute, Long>, Shutdownable {
+    : IcmfReceiver<TopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
 
-    private val routes = topics.map { GlobalTopicRoute(it) }
-    private val pipes: ConcurrentMap<Pair<String, GlobalTopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
+    private val routes = topics.map { TopicRoute(it.key, it.value) }
+    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
 
@@ -42,10 +42,22 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             dbOperations.loadAllLastMessageHeights(it)
         }
 
-        val clusters = clusterManagement.getAllClusters()
-        for (clusterName in clusters) {
-            for (route in routes) {
-                pipes[clusterName to route] = createPipe(clusterName, route, lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+        val allClusters = clusterManagement.getAllClusters()
+        for (route in routes) {
+            if (route.chains.isNotEmpty()) {
+                route.chains.map { clusterManagement.getClusterOfBlockchain(it) }.distinct().forEach { clusterName ->
+                    pipes[clusterName to route] = createPipe(
+                        clusterName,
+                        route,
+                        lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                }
+            } else {
+                for (clusterName in allClusters) {
+                    pipes[clusterName to route] = createPipe(
+                        clusterName,
+                        route,
+                        lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                }
             }
         }
 
@@ -82,7 +94,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
         }
     }
 
-    private fun createPipe(clusterName: String, route: GlobalTopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
+    private fun createPipe(clusterName: String, route: TopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
         val lastAnchorHeight = withReadConnection(storage, chainID) {
             dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
         }

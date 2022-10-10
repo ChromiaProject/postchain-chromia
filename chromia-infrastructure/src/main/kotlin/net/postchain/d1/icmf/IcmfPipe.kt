@@ -4,7 +4,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.core.BlockEContext
 
-interface IcmfPipe<RT : Route, PtrT> {
+interface IcmfPipe<out RT : Route, PtrT> {
     val route: RT
     fun mightHaveNewPackets(): Boolean
 

@@ -18,6 +18,7 @@
         <module>directory1-example</module>
         <module>postchain-mc</module>
         <module>chromia-infrastructure</module>
+        <module>postchain-container</module>
     </modules>
     <packaging>pom</packaging>
 

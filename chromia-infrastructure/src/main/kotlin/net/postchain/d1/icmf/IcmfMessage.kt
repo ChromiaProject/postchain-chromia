@@ -21,6 +21,5 @@ data class IcmfPacket(
 
 data class IcmfPackets<PtrT>(
         val currentPointer: PtrT,
-        val packets: List<IcmfPacket>,
-        val sizeBytes: Int
+        val packets: List<IcmfPacket>
 )

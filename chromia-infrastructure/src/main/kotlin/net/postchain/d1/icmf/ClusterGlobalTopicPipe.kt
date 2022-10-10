@@ -37,19 +37,19 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
+class ClusterGlobalTopicPipe(override val route: TopicRoute,
                              val clusterName: String,
                              private val cryptoSystem: CryptoSystem,
                              lastAnchorHeight: Long,
                              private val postchainClientProvider: PostchainClientProvider,
                              private val clusterManagement: ClusterManagement,
-                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<GlobalTopicRoute, Long>, Shutdownable {
+                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 10 * 1024 * 1024 // 10 MiB
     }
 
-    private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>()
+    private val packets = ConcurrentSkipListMap<Long, Pair<IcmfPackets<Long>, Int>>()
     private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
@@ -105,13 +105,22 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         for (header in signedBlockHeaderWithAnchorHeights) {
             val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
+            val blockchainRid = BlockchainRid(decodedHeader.getBlockchainRid())
+
+            if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
+                continue // we only read from specific chains
+            }
+
             val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
             val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.rawHeader, header.rawWitness, blockRid, cryptoSystem, clusterManagement)
                     ?: return
 
             val topicData = topicHeaderData[route.topic]
             if (topicData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
+                logger.warn(
+                    "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${
+                        blockchainRid.toHex()
+                    } at height: ${decodedHeader.getHeight()}")
                 return
             }
 
@@ -120,17 +129,20 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
                 continue // already processed in previous block, skip it here
             } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${decodedHeader.getBlockchainRid().toHex()}")
+                logger.warn(
+                    "$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${
+                        blockchainRid.toHex()
+                    }")
                 return
             }
 
-            val bodies = fetchMessageBodies(cluster.peers, BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topicData.hash)
+            val bodies = fetchMessageBodies(cluster.peers, blockchainRid, decodedHeader.getHeight(), topicData.hash)
 
             if (bodies.isNotEmpty()) {
                 currentPackets.add(
                         IcmfPacket(
                                 height = decodedHeader.getHeight(),
-                                sender = BlockchainRid(decodedHeader.getBlockchainRid()),
+                                sender = blockchainRid,
                                 topic = route.topic,
                                 blockRid = blockRid,
                                 rawHeader = header.rawHeader,
@@ -145,7 +157,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         val packetsSizeBytes = currentPackets.sumOf { it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size } }
         if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {
-            packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets, packetsSizeBytes)
+            packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets) to packetsSizeBytes
             currentQueueSizeBytes.addAndGet(packetsSizeBytes)
 
             lastAnchorHeight.set(currentAnchorHeight)
@@ -202,12 +214,12 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? =
-            packets.higherEntry(currentPointer)?.value
+        packets.higherEntry(currentPointer)?.value?.first
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             packets.remove(currentPointer)?.let {
-                currentQueueSizeBytes.addAndGet(-it.sizeBytes)
+                currentQueueSizeBytes.addAndGet(-it.second)
             }
         }
     }

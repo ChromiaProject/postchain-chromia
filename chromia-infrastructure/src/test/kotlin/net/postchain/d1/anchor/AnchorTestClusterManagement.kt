@@ -28,6 +28,6 @@ class AnchorTestClusterManagement : ClusterManagement {
     }
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
-        TODO("Not yet implemented")
+        throw NotImplementedError("Not yet implemented")
     }
 }
