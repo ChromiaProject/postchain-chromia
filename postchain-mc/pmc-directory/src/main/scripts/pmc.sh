@@ -2,6 +2,6 @@
 
 set -eu
 
-scriptdir=$(dirname "${BASH_SOURCE[0]}")
+SCRIPT_DIR=$(dirname "$(dirname "${BASH_SOURCE[0]}")")
 
-${RELL_JAVA:-java} -cp "$scriptdir/lib/*" net.postchain.mc.Directory1Kt "$@"
+${RELL_JAVA:-java} -cp "$SCRIPT_DIR/lib/*" net.postchain.mc.Directory1Kt "$@"

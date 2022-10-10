@@ -3,4 +3,4 @@
 set -eu
 
 D=$(dirname "${BASH_SOURCE[0]}")
-bash "$D/../pmc/pmc.sh" "$@"
+bash "$D/../pmc/bin/pmc.sh" "$@"
