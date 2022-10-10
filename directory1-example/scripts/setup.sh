@@ -10,4 +10,7 @@ tar xf "$PMC"
 bash "$POSTCHAIN_DIR"/multigen.sh --source-dir "$D/../directory1/rell" --output-dir "$D/../out" config/run.xml
 
 BRID=$(cat "out/blockchains/0/brid.txt")
-echo "brid=$BRID" >> "$D/../config/prov.cfg"
+echo "brid=$BRID" >> "$D/../provider/alpha/.pmc/config"
+echo "brid=$BRID" >> "$D/../provider/beta/.pmc/config"
+echo "brid=$BRID" >> "$D/../provider/gamma/.pmc/config"
+echo "brid=$BRID" >> "$D/../provider/delta/.pmc/config"

@@ -49,6 +49,11 @@
             <outputDirectory>./config</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
+        <fileSet>
+            <directory>./provider</directory>
+            <outputDirectory>./provider</outputDirectory>
+            <filtered>true</filtered>
+        </fileSet>
 
         <fileSet>
             <directory>app</directory>
