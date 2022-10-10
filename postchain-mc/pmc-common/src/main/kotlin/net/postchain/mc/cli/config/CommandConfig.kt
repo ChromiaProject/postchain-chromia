@@ -17,7 +17,7 @@ class CommandConfig : CliktCommand(
     override fun run() {
         if (show) {
             config.readLines()
-                .joinToString("\n") { if (it.startsWith("privkey")) "privkey=**********" else it }
+                .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
                 .also { println(it) }
             return
         }

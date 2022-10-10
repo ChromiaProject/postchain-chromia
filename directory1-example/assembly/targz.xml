@@ -36,7 +36,7 @@
             <filtered>false</filtered>
         </fileSet>
         <fileSet>
-            <directory>${project.build.scriptSourceDirectory}</directory>
+            <directory>./scripts</directory>
             <outputDirectory>./scripts</outputDirectory>
             <includes>
                 <include>*.sh</include>
@@ -47,6 +47,11 @@
         <fileSet>
             <directory>./config</directory>
             <outputDirectory>./config</outputDirectory>
+            <filtered>true</filtered>
+        </fileSet>
+        <fileSet>
+            <directory>./provider</directory>
+            <outputDirectory>./provider</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
 
