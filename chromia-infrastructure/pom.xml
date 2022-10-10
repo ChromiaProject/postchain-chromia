@@ -26,6 +26,15 @@
             <artifactId>postchain-client</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-client</artifactId>
+        </dependency>
+
         <!-- Kotlin -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

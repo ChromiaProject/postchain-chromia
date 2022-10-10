@@ -9,7 +9,7 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.DirectoryClusterManagement
+import net.postchain.d1.cluster.ClusterManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 import java.time.Duration
@@ -66,7 +66,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(postchainContext: 
     }
 
     open fun createClusterManagement(configuration: DappBlockchainConfiguration): ClusterManagement =
-        DirectoryClusterManagement(configuration.dataSource::query)
+        ClusterManagementImpl(configuration.dataSource::query)
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(
         failOverConfig = FailOverConfig(
