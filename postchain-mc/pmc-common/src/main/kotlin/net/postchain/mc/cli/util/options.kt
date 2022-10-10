@@ -12,19 +12,21 @@ import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
 
 
-fun CliktCommand.configOption() = configOptionBase().default(fromSystemConfig())
+const val POSTCHAIN_CLIENT_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
+
+fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
-    .default(ConcretePostchainClient(fromSystemConfig()))
+    .defaultLazy { ConcretePostchainClient(fromSystemConfig()) }
 
 fun CliktCommand.nopClientOption() = clientOptionBase()
     .convert { NopPostchainClient(it) }
-    .default(NopPostchainClient(ConcretePostchainClient(fromSystemConfig())))
+    .defaultLazy { NopPostchainClient(ConcretePostchainClient(fromSystemConfig())) }
 
 private fun CliktCommand.clientOptionBase() = configOptionBase()
     .convert { ConcretePostchainClient(it) }
 
 private fun CliktCommand.configOptionBase() =
-    option("-cfg", "--config", help = "Configuration file for PMC (overrides system configuration)", envvar = "POSTCHAIN_CLIENT_CONFIG")
+    option("-cfg", "--config", help = "Configuration file for PMC (overrides system configuration)", envvar = POSTCHAIN_CLIENT_CONFIG)
         .convert { PostchainClientConfig.fromProperties(it) }
 
 fun CliktCommand.nameOption(helpMessage: String) = option("-n", "--name", help = helpMessage)

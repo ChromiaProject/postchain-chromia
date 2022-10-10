@@ -5,6 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
+import net.postchain.mc.cli.util.POSTCHAIN_CLIENT_CONFIG
 import org.bitcoinj.crypto.MnemonicCode
 import java.awt.Desktop
 import java.io.File
@@ -52,5 +53,5 @@ object PmcConfigProvider {
 
     fun globalConfigurationFile() = File("${System.getProperty("user.home")}/$configFileName")
     fun localConfigurationFile() = File(configFileName)
-    fun envConfigurationFile() = System.getenv()["POSTCHAIN_CLIENT_CONFIG"]?.let { File(it) } ?: File("")
+    fun envConfigurationFile() = System.getenv()[POSTCHAIN_CLIENT_CONFIG]?.let { File(it) } ?: File("")
 }
