@@ -67,7 +67,7 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
         /**
          * Builds an instance of [ChromiaClientProvider] that uses a http client to query chain0
          */
-        fun buildFromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
+        fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
             val httpClient = ApacheAsyncClient()
             val chain0Client: PostchainClient = ConcretePostchainClient(config, httpClient)
             val clusterManagement = ClusterManagementImpl(chain0Client::querySync)
