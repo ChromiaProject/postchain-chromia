@@ -23,7 +23,7 @@ data class TopicHeaderData(val hash: ByteArray, val prevMessageBlockHeight: Long
             val chainPeers = clusterManagement.getBlockchainPeers(BlockchainRid(header.getBlockchainRid()), header.getHeight())
             val witness = BaseBlockWitness.fromBytes(rawWitness)
 
-            if (!Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, chainPeers.map { it.pubkey }, witness)) {
+            if (!Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, chainPeers, witness)) {
                 logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${header.getBlockchainRid().toHex()} at height: ${header.getHeight()}")
                 return null
             }

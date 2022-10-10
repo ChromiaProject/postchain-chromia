@@ -18,14 +18,12 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-            <type>pom</type>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-client</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
+            <artifactId>chromia-core</artifactId>
         </dependency>
     </dependencies>
 </project>

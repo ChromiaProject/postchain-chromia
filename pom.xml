@@ -17,6 +17,7 @@
         <module>deployment-test</module>
         <module>directory1-example</module>
         <module>postchain-mc</module>
+        <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
     </modules>
@@ -73,6 +74,16 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>pmc-chromia</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>chromia-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>chromia-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

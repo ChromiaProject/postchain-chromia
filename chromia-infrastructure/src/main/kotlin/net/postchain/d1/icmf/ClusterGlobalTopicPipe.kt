@@ -10,26 +10,21 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.client.config.FailOverConfig
-import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainClientProvider
-import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.io.IOException
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListMap
@@ -41,7 +36,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                              val clusterName: String,
                              private val cryptoSystem: CryptoSystem,
                              lastAnchorHeight: Long,
-                             private val postchainClientProvider: PostchainClientProvider,
+                             private val clientProvider: ChromiaClientProvider,
                              private val clusterManagement: ClusterManagement,
                              _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
@@ -77,14 +72,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     private suspend fun fetchMessages() {
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
-        // TODO use net.postchain.client.chromia.ChromiaClientProvider
-        val anchoringClient = postchainClientProvider.createClient(
-                PostchainClientConfig(
-                        blockchainRid = cluster.anchoringChain,
-                        endpointPool = EndpointPool.default(cluster.peers.map { it.restApiUrl }),
-                        failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
-                )
-        )
+        val clusterClient = clientProvider.cluster(clusterName)
+        val anchoringClient = clusterClient.blockchain(cluster.anchoringChain)
 
         val currentAnchorHeight = anchoringClient.currentBlockHeightSync()
 
@@ -136,7 +125,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 return
             }
 
-            val bodies = fetchMessageBodies(cluster.peers, blockchainRid, decodedHeader.getHeight(), topicData.hash)
+            val bodies = fetchMessageBodies(clusterClient, blockchainRid, decodedHeader.getHeight(), topicData.hash)
 
             if (bodies.isNotEmpty()) {
                 currentPackets.add(
@@ -166,15 +155,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         }
     }
 
-    private suspend fun fetchMessageBodies(peers: Collection<D1PeerInfo>, blockchainRid: BlockchainRid, height: Long, expectedMessagesHash: ByteArray): List<Gtv> {
-        // TODO use net.postchain.client.chromia.ChromiaClientProvider
-        val client = postchainClientProvider.createClient(
-                PostchainClientConfig(
-                        blockchainRid = blockchainRid,
-                        endpointPool = EndpointPool.default(peers.map { it.restApiUrl }),
-                        failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
-                )
-        )
+    private suspend fun fetchMessageBodies(clusterClient: ChromiaClientProvider.ClusterPostchainClient, blockchainRid: BlockchainRid, height: Long, expectedMessagesHash: ByteArray): List<Gtv> {
+        val client = clusterClient.blockchain(blockchainRid)
 
         while (true) {
             logger.info("Fetching messages from ${blockchainRid.toHex()} at height $height")
