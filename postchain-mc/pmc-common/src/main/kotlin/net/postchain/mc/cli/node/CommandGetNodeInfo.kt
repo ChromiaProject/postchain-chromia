@@ -7,13 +7,14 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetNodeInfo : CliktCommand(
     name = "info",
     help = "Get node info for given node pubkey"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val key by requiredPubkeyOption()
 

@@ -7,6 +7,7 @@ import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
@@ -14,7 +15,7 @@ class CommandAddNode : CliktCommand(
     name = "add",
     help = "Add or update node information"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val key by requiredPubkeyOption()
 

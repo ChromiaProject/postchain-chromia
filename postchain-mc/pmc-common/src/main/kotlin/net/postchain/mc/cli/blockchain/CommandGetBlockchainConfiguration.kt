@@ -7,13 +7,14 @@ import net.postchain.cli.util.heightOption
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetBlockchainConfiguration : CliktCommand(
     name = "get",
     help = "Get blockchain configuration"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val blockchainRID by blockchainRidOption()
 

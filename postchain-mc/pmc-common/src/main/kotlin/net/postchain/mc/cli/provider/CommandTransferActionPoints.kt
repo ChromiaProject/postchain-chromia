@@ -6,13 +6,14 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandTransferActionPoints : CliktCommand(
     name = "transfer-action-points",
     help = "transfer some of your action points to another provider"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val pubkey by requiredPubkeyOption()
 

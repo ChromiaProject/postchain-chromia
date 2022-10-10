@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
@@ -14,7 +15,7 @@ class CommandCreateVoterSet : CliktCommand(
     name = "create",
     help = "Create a new voter set with a list of providers."
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val name by nameOption("Name of new voter set").required()
 

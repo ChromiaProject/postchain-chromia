@@ -6,13 +6,13 @@ import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.nopPostchainClient
 
 class CommandProposePauseBlockchain : CliktCommand(
         name = "stop",
         help = "Propose stopping a blockchain from building blocks"
 ) {
-    private val client by nopClientOption()
+    private val client by lazy { nopPostchainClient() }
 
     private val blockchainRID by blockchainRidOption()
 

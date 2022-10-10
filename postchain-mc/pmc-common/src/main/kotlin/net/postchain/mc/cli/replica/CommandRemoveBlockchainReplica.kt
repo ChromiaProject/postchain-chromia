@@ -4,13 +4,14 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandRemoveBlockchainReplica : CliktCommand(
     name = "remove",
     help = "remove replica of a blockchain"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val blockchainRID by blockchainRidOption()
 

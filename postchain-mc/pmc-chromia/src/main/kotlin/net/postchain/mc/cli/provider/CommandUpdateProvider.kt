@@ -8,13 +8,13 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.nopPostchainClient
 
 class CommandUpdateProvider : CliktCommand(
     name = "update",
     help = "update provider information"
 ) {
-    private val client by nopClientOption()
+    private val client by lazy { nopPostchainClient() }
 
     private val name by nameOption("Provider name")
 

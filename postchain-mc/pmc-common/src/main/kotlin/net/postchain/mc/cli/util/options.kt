@@ -9,17 +9,15 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 
 
 fun CliktCommand.configOption() = configOptionBase().required()
-fun CliktCommand.clientOption() = clientOptionBase().required()
+fun postchainClient() = clientOptionBase()
 
-fun CliktCommand.nopClientOption() = clientOptionBase()
-    .convert { NopPostchainClient(it) }
-    .required()
+fun nopPostchainClient() = NopPostchainClient(clientOptionBase())
 
-private fun CliktCommand.clientOptionBase() = configOptionBase()
-    .convert { ConcretePostchainClient(it) }
+private fun clientOptionBase() = ConcretePostchainClient(read())
 
 private fun CliktCommand.configOptionBase() =
     option("-cfg", "--config", help = "Configuration file for CLI", envvar = "POSTCHAIN_CLIENT_CONFIG")

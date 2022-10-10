@@ -10,7 +10,7 @@ import net.postchain.cli.util.portOption
 import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.nopPostchainClient
 
 class CommandReplaceNode : CliktCommand(
     name = "replace",
@@ -20,7 +20,7 @@ class CommandReplaceNode : CliktCommand(
         privkey=<key>,<old-node-key>,<new-node-key>
     """.trimIndent()
 ) {
-    private val client by nopClientOption()
+    private val client by lazy { nopPostchainClient() }
 
     private val old by option("--old-key", help = "Public key of the node to replace").convert { PubKey(it) }.required()
     private val new by option("--new-key", help = "Public key of the new node").convert { PubKey(it) }.required()

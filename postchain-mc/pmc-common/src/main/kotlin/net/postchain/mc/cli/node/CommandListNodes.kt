@@ -11,6 +11,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 
@@ -18,7 +19,7 @@ class CommandListNodes : CliktCommand(
     name = "list",
     help = "List all nodes"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     override fun run() {
         println("Nodes:")

@@ -6,13 +6,13 @@ import net.postchain.chain0.common.proposal.proposeRemoveContainerOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
-import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.nopPostchainClient
 
 class CommandProposeRemoveContainer : CliktCommand(
         name = "remove",
         help = "Propose removal of container. Command is irreversible"
 ) {
-    private val client by nopClientOption()
+    private val client by lazy { nopPostchainClient() }
 
     private val name by nameOption("Container name to remove").required()
 

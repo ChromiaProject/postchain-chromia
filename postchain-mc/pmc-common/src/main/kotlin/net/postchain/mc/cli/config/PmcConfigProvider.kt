@@ -64,5 +64,5 @@ object PmcConfigProvider {
 
     fun globalConfigurationFile() = File("${System.getProperty("user.home")}/$configFileName")
     fun localConfigurationFile() = File(configFileName)
-    fun envConfigurationFile() = File(System.getenv("POSTCHAIN_CLIENT_CONFIG"))
+    fun envConfigurationFile() = System.getenv()["POSTCHAIN_CLIENT_CONFIG"]?.let { File(it) } ?: File("")
 }

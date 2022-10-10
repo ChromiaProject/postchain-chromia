@@ -4,14 +4,14 @@ import com.github.ajalt.clikt.core.CliktCommand
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getSummary
-import net.postchain.mc.cli.util.clientOption
+import net.postchain.mc.cli.util.postchainClient
 import java.lang.StringBuilder
 
 class SummaryCommand : CliktCommand(
     help = "Show summary of the network"
 ) {
 
-    val client by clientOption()
+    private val client by lazy { postchainClient() }
 
     override fun run() {
         val summary = client.getSummary()

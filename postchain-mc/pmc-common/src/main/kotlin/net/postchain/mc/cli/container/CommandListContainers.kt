@@ -6,6 +6,7 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getBlockchainInfoList
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
@@ -13,7 +14,7 @@ class CommandListContainers : CliktCommand(
         name = "list",
         help = "List all existing containers"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)

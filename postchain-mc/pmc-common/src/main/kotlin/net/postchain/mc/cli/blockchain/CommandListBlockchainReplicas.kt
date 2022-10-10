@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 
@@ -11,7 +12,7 @@ class CommandListBlockchainReplicas : CliktCommand(
     name = "replicas",
     help = "List blockchain replicas"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val blockchainRID by blockchainRidOption()
 

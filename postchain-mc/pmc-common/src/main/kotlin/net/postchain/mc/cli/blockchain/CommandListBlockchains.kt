@@ -6,6 +6,7 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getBlockchainInfoList
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
@@ -14,7 +15,7 @@ class CommandListBlockchains : CliktCommand(
     name = "list",
     help = "List blockchains"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val includeInactive by includeInactiveOption()
 

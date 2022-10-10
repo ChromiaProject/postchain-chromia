@@ -6,13 +6,14 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.config.PmcConfigProvider.read
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposeClusterProvider : CliktCommand(
     name = "provider",
     help = "proposes an update of a cluster's providers. add = false => remove provider from cluster. Cluster governance voter set has authority to update a cluster's providers"
 ) {
-    private val config by configOption()
+    private val config by lazy { read() }
 
     private val provider by requiredPubkeyOption()
 
