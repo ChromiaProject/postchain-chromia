@@ -45,7 +45,7 @@ object MasterClientProvider {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
         return URL("http",
                 containerNodeConfig.masterHost,
-                restApiConfig.port,
+                containerNodeConfig.masterRestApiPort,
                 restApiConfig.basePath
         ).toString()
     }
