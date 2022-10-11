@@ -24,13 +24,4 @@
         <module>pmc-directory</module>
     </modules>
     <packaging>pom</packaging>
-
-    <dependencies>
-        <dependency>
-            <groupId>de.m3y.kformat</groupId>
-            <artifactId>kformat</artifactId>
-            <version>0.9</version>
-        </dependency>
-    </dependencies>
-
 </project>

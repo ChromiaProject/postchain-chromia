@@ -16,6 +16,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
             <version>${postchain.version}</version>
@@ -23,7 +28,6 @@
         <dependency>
             <groupId>com.spotify</groupId>
             <artifactId>docker-client</artifactId>
-            <version>8.16.0</version>
         </dependency>
     </dependencies>
 
