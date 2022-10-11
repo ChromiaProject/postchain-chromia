@@ -39,3 +39,18 @@ query get_configuration_proposal(rowid?): (
 		proposed_conf = config.to_struct()
 	);
 }
+
+query get_cluster_provider_proposal(rowid?) {
+	val proposal = get_latest_proposal(rowid, proposal_type.cluster_provider);
+	if (proposal == null) return null;
+	val pcp = pending_cluster_provider @ { proposal };
+	return (
+		cluster = pcp.cluster.name,
+		provider = pcp.provider.pubkey,
+		add = pcp.add
+	);
+}
+
+function get_latest_proposal(rowid?, proposal_type) {
+		return if (rowid == null) proposal @ { proposal_type } ( @max proposal ) else proposal @ { rowid };
+}
