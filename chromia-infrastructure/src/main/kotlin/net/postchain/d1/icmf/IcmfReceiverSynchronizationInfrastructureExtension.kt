@@ -71,8 +71,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(val postchainConte
         return if (configuration is DappBlockchainConfiguration) {
             ClusterManagementImpl(configuration.dataSource::query)
         } else {
-            MasterClusterManagementProvider()
-                    .getClusterManagement(postchainContext.appConfig)
+            MasterClusterManagementProvider.getClusterManagement(postchainContext.appConfig)
         }
     }
 
