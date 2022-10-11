@@ -2,6 +2,7 @@ package net.postchain.mc.cli.votingupdates
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
+import de.m3y.kformat.table
 import net.postchain.chain0.common.voting.getVoterSetInfo
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
@@ -18,13 +19,13 @@ class CommandVoterSetInfo : CliktCommand(
 
     override fun run() {
         val voterSet = ClientUtil.fromConfig(config).getVoterSetInfo(name)
-        println("""
-            Voter set: ${voterSet.name}
-            Governed by: ${voterSet.governor}
-            Threshold: ${formatThreshold(voterSet.threshold)}
-            Members:
-            ${voterSet.members.joinToString("\n") { it.toHex() }}
-        """.trimIndent()
-        )
+        table {
+            row("Voter set", voterSet.name)
+            row("Governed by", voterSet.governor)
+            row("Threshold", formatThreshold(voterSet.threshold))
+            voterSet.members.forEachIndexed { index, bytes ->  row("Member $index", bytes.toHex()) }
+        }
+            .render()
+            .also { println(it) }
     }
 }

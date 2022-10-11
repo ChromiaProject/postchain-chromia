@@ -41,7 +41,7 @@ class CommandGetProposal : CliktCommand(
         if (verbose) println(formatProposal(client, proposal))
     }
     
-    fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
+    private fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.type) {
             ProposalType.bc ->  {
                 val p = client.getBlockchainProposal(proposal.id) ?: return ""
@@ -90,6 +90,16 @@ class CommandGetProposal : CliktCommand(
                     row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
                 }.render()
                 return t.toString()
+            }
+            ProposalType.cluster_provider -> {
+                val cpc = client.getClusterProviderProposal(proposal.id) ?: return ""
+                return table {
+                    row("Cluster:", cpc.cluster)
+                    row("Provider:", cpc.provider)
+                    row("Add/Remove:", if (cpc.add) "Add" else "remove")
+                }
+                    .render()
+                    .toString()
             }
 
             else -> ""

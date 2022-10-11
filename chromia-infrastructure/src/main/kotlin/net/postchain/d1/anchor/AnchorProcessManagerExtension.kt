@@ -6,7 +6,7 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.DirectoryClusterManagement
+import net.postchain.d1.cluster.ClusterManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 
@@ -50,7 +50,7 @@ open class AnchorProcessManagerExtension(
     }
 
     open fun createClusterManagement(configuration: DappBlockchainConfiguration): ClusterManagement =
-            DirectoryClusterManagement(configuration.dataSource::query)
+            ClusterManagementImpl(configuration.dataSource::query)
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {

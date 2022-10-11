@@ -21,7 +21,7 @@
     <fileSets>
         <fileSet>
             <directory>${project.build.scriptSourceDirectory}</directory>
-            <outputDirectory>./</outputDirectory>
+            <outputDirectory>./bin</outputDirectory>
             <includes>
                 <include>*.sh</include>
             </includes>

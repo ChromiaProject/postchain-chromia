@@ -14,7 +14,7 @@ object Validation {
                                 previousBlockRid: ByteArray,
                                 rawHeader: ByteArray,
                                 blockRid: Hash,
-                                peers: List<PubKey>,
+                                peers: Collection<PubKey>,
                                 witness: BaseBlockWitness): Boolean {
         val blockWitnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, object : BlockHeader {
             override val prevBlockRID = previousBlockRid

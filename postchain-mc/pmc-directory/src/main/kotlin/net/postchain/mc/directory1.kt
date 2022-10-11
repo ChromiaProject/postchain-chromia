@@ -5,6 +5,8 @@ import net.postchain.cli.*
 import net.postchain.mc.cli.ManagementConsole
 import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.*
+import net.postchain.mc.cli.config.CommandConfig
+import net.postchain.mc.cli.config.CommandSetup
 import net.postchain.mc.cli.container.containerCommands
 import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.node.nodeCommands
@@ -16,6 +18,8 @@ import net.postchain.mc.network.networkCommands
 fun main(args: Array<String>) = ManagementConsole()
     .subcommands(
         CommandKeygen(),
+        CommandConfig(),
+        CommandSetup(),
 
         networkCommands(),
 
