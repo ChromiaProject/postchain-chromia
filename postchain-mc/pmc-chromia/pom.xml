@@ -19,6 +19,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>pmc-common</artifactId>
             <version>${project.version}</version>
