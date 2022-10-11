@@ -51,6 +51,4 @@ query get_cluster_provider_proposal(rowid?) {
 	);
 }
 
-function get_latest_proposal(rowid?, proposal_type) {
-		return if (rowid == null) proposal @ { proposal_type } ( @max proposal ) else proposal @ { rowid };
-}
+function get_latest_proposal(rowid?, proposal_type) = if (rowid == null) proposal @ { proposal_type } ( @max proposal ) else proposal @ { rowid };
