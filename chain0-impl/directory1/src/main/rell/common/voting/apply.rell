@@ -1,10 +1,11 @@
 import ^.proposal.*;
 
 // NB: check authority before calling this function
-function internal_vote(provider, prop: proposal, vote: boolean) {
-	create vote(prop, provider, vote);
+function internal_vote(provider, proposal, vote: boolean) {
+	require(voter_set_member @? { proposal.voter_set, provider });
+	create vote(proposal, provider, vote);
 	print("vote added with value:", if (vote) "Yes" else "False");
-	apply_voting_result(prop);
+	apply_voting_result(proposal);
 }
 
 function apply_voting_result(prop: proposal) {
