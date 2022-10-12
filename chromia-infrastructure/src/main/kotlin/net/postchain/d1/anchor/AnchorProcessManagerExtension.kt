@@ -3,12 +3,16 @@ package net.postchain.d1.anchor
 import net.postchain.PostchainContext
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.RemoteBlockchainProcess
+import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 
-open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+open class AnchorProcessManagerExtension(
+        postchainContext: PostchainContext
+) : BlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
     private val localDispatcher = ClusterAnchorDispatcher(postchainContext.storage)
 
@@ -65,5 +69,14 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
 
     @Synchronized
     override fun shutdown() {
+    }
+
+    override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
+        localDispatcher.connectSubnodeChain(
+                process.chainId, process.blockchainRid, process.restApiUrl)
+    }
+
+    override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {
+        localDispatcher.disconnectSubnodeChain(process.chainId)
     }
 }

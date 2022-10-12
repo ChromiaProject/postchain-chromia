@@ -97,7 +97,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             bctx: BlockEContext
     ): List<ClusterAnchorPacket> {
         val packets = mutableListOf<ClusterAnchorPacket>()
-        val blockchainRid = pipe.id
+        val blockchainRid = pipe.blockchainRid
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             currentHeight++ // Try next height
@@ -110,7 +110,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             }
         }
         if (logger.isDebugEnabled) {
-            logger.debug("Pulled ${packets.size} messages from pipeId: ${pipe.id}")
+            logger.debug("Pulled ${packets.size} messages from pipeId: ${pipe.blockchainRid}")
         }
         return packets
     }

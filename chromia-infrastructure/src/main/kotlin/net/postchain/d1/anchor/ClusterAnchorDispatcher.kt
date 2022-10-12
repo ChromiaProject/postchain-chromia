@@ -14,11 +14,8 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
     fun connectReceiver(chainID: Long, receiver: ClusterAnchorReceiver) {
         receivers[chainID] = receiver
         chains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
-            receiver.localPipes[currentChainID] = ClusterAnchorPipe(
-                    brid,
-                    storage,
-                    currentChainID
-            )
+            receiver.localPipes[currentChainID] = ClusterAnchorLocalPipe(
+                    currentChainID, brid, storage)
         }
     }
 
@@ -27,19 +24,36 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values.forEach {
-            it.localPipes[chainID] = ClusterAnchorPipe(
-                    brid,
-                    storage,
-                    chainID
-            )
+        connectChainInternal(chainID, brid) {
+            ClusterAnchorLocalPipe(chainID, brid, storage)
         }
+    }
+
+    // TODO: [POS-358]: Subnode OR Remote ?
+    fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
+        connectChainInternal(chainID, brid) {
+            ClusterAnchorSubnodePipe(chainID, brid, restApiUrl)
+        }
+    }
+
+    private fun connectChainInternal(chainID: Long, brid: BlockchainRid, pipeSupplier: () -> ClusterAnchorPipe) {
+        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values
+                .forEach {
+                    it.localPipes[chainID] = pipeSupplier()
+                }
 
         chains[chainID] = brid
     }
 
     fun disconnectChain(chainID: Long) {
         receivers.remove(chainID)
+        receivers.values.forEach {
+            it.localPipes.remove(chainID)
+        }
+        chains.remove(chainID)
+    }
+
+    fun disconnectSubnodeChain(chainID: Long) {
         receivers.values.forEach {
             it.localPipes.remove(chainID)
         }
