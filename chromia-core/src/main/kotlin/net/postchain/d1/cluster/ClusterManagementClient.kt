@@ -1,4 +1,4 @@
-package net.postchain.cm
+package net.postchain.d1.cluster
 
 import net.postchain.client.core.PostchainQuery
 import net.postchain.gtv.Gtv

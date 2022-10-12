@@ -1,12 +1,6 @@
 package net.postchain.d1.cluster
 
-import net.postchain.chain0.common.queries.cmGetBlockchainCluster
-import net.postchain.chain0.common.queries.cmGetClusterBlockchains
-import net.postchain.chain0.common.queries.cmGetClusterInfo
-import net.postchain.chain0.common.queries.cmGetClusterNames
-import net.postchain.chain0.common.queries.cmGetPeerInfo
-import net.postchain.chain0.common.queries.getBlockchainApiUrls
-import net.postchain.cm.ClusterManagementClient
+import net.postchain.chain0.common.queries.cm_api.*
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
@@ -25,7 +19,7 @@ class ClusterManagementImpl(query: (String, Gtv) -> Gtv) : ClusterManagement {
         }
 
     override fun getBlockchainApiUrls(blockchainRid: BlockchainRid): Collection<String> =
-        cmApi.getBlockchainApiUrls(blockchainRid.data)
+        cmApi.cmGetBlockchainApiUrls(blockchainRid.data)
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<PubKey> =
         cmApi.cmGetPeerInfo(blockchainRid.data, height).map { PubKey(it) }
