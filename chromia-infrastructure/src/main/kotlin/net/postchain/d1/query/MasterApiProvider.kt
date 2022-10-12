@@ -1,4 +1,4 @@
-package net.postchain.d1.containers
+package net.postchain.d1.query
 
 import net.postchain.config.app.AppConfig
 import net.postchain.d1.cluster.ClusterManagement

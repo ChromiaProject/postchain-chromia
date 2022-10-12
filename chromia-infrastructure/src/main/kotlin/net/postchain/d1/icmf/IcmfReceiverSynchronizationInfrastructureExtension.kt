@@ -11,7 +11,7 @@ import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.ClusterManagementImpl
-import net.postchain.d1.containers.MasterApiProvider
+import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 import java.time.Duration

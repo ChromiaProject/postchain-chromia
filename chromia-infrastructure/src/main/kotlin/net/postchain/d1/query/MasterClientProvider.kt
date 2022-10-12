@@ -1,4 +1,4 @@
-package net.postchain.d1.containers
+package net.postchain.d1.query
 
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.client.config.FailOverConfig
