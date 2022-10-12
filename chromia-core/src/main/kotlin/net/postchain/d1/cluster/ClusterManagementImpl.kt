@@ -1,6 +1,11 @@
 package net.postchain.d1.cluster
 
-import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.queries.cmGetBlockchainCluster
+import net.postchain.chain0.common.queries.cmGetClusterBlockchains
+import net.postchain.chain0.common.queries.cmGetClusterInfo
+import net.postchain.chain0.common.queries.cmGetClusterNames
+import net.postchain.chain0.common.queries.cmGetPeerInfo
+import net.postchain.chain0.common.queries.getBlockchainApiUrls
 import net.postchain.cm.ClusterManagementClient
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
