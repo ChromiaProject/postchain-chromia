@@ -62,6 +62,7 @@
                 <configuration>
                     <source>${project.build.directory}/directory1/rell</source>
                     <packageName>net.postchain.chain0</packageName>
+                    <mainModule>common.queries.cm_api</mainModule>
                 </configuration>
                 <executions>
                     <execution>
@@ -70,11 +71,6 @@
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
-                        <configuration>
-                            <mainModules>
-                                <mainModule>common.queries.cm_api</mainModule>
-                            </mainModules>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
