@@ -5,11 +5,13 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
+import net.postchain.managed.DirectoryDataSource
 
 class DefaultChromiaQueryProvider(
         private val blockchainRid: BlockchainRid,
         private val appConfig: AppConfig,
         private val clusterManagement: ClusterManagement,
+        private val directoryDataSource: DirectoryDataSource,
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
@@ -26,12 +28,14 @@ class DefaultChromiaQueryProvider(
     }
 
     override fun getQuery(blockchainRid: BlockchainRid): ((String, Gtv) -> Gtv)? {
-        val blockQueries = blockQueriesProvider.getBlockQueries(blockchainRid)
-        return if (blockQueries != null) {
-            { name, args -> blockQueries.query(name, args).get() }
+        val thisContainer = directoryDataSource.getContainerForBlockchain(this.blockchainRid)
+        val chainContainer = directoryDataSource.getContainerForBlockchain(blockchainRid)
+        return if (thisContainer == chainContainer) {
+            blockQueriesProvider.getBlockQueries(blockchainRid)?.let {
+                { name, args -> it.query(name, args).get() }
+            }
         } else {
-            val client = MasterClientProvider.getClient(appConfig, blockchainRid)
-            return client::querySync
+            MasterClientProvider.getClient(appConfig, blockchainRid)::querySync
         }
     }
 }
