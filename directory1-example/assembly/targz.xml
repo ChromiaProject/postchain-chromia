@@ -3,7 +3,6 @@
     <id>dist</id>
     <formats>
         <format>tar.gz</format>
-        <format>dir</format>
     </formats>
 
     <baseDirectory>managed-mode-example</baseDirectory>
