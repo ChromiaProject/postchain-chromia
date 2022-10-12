@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
 import net.postchain.client.config.FailOverConfig
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
@@ -10,7 +11,6 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.ClusterManagementImpl
 import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration

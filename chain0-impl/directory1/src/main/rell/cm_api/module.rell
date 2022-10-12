@@ -1,9 +1,23 @@
+module;
+
+import ^.model.*;
 /*
  * Cluster Management api used by postchain to get information about cluster anchoring chains
 */
 
-query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>) {
-       val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
+struct cm_peer_info {
+    pubkey: pubkey;
+    api_url: text;
+}
+
+struct cm_cluster_info {
+    name;
+    anchoring_chain: byte_array;
+    peers: list<cm_peer_info>;
+}
+
+query cm_get_cluster_info(name): cm_cluster_info {
+    val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
         cluster_node.cluster == cluster,
         anchoring_chain.cluster == cluster,
         cluster.name == name
@@ -13,14 +27,11 @@ query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: 
         peer = cluster_node.node.pubkey,
         peer_api_url = cluster_node.node.api_url
     ); 
-    val peers = list<(pubkey:pubkey, api_url:text)>();
+    val peers = list<cm_peer_info>();
     for (cp in cluster_peer) {
-           peers.add(
-            (pubkey = cp.peer,
-            api_url = cp.peer_api_url)
-        ); 
+        peers.add(cm_peer_info(pubkey = cp.peer, api_url = cp.peer_api_url));
     }
-    return (
+    return cm_cluster_info(
         name = cluster_peer[0].name,
         anchoring_chain = cluster_peer[0].anchoring_chain,
         peers = peers
@@ -32,7 +43,7 @@ query cm_get_cluster_names(): list<text> {
 }
 
 query cm_get_cluster_blockchains(name): list<byte_array> {
-    return get_cluster_blockchains(name);
+	return (container_blockchain) @* { .container.cluster.name == name } ( .blockchain.rid );
 }
 
 // Returns signers of blockchain at specific height
@@ -43,5 +54,17 @@ query cm_get_peer_info(brid: byte_array, height: integer): set<pubkey> {
 }
 
 query cm_get_blockchain_cluster(brid: byte_array): text {
-    return get_blockchain_cluster(brid);
+	return (container_blockchain, blockchain) @ { blockchain == container_blockchain.blockchain }
+	    ( container_blockchain.container.cluster.name );
+}
+
+query cm_get_blockchain_api_urls(blockchain_rid: byte_array) {
+    return (blockchain, container_blockchain, cluster_node) @*
+	{
+		blockchain.rid == blockchain_rid,
+		container_blockchain.blockchain.rid == blockchain.rid,
+		container_blockchain.container.cluster == cluster_node.cluster
+	} (
+		cluster_node.node.api_url
+	);
 }

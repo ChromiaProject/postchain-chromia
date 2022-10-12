@@ -17,7 +17,7 @@ class IcmfTestClusterManagement : ClusterManagement {
     }
 
     private val peers = listOf(
-        D1PeerInfo("http://127.0.0.1:7740/", pubKey.key),
+        D1PeerInfo("http://127.0.0.1:7740/", pubKey),
     )
 
     override fun getClusterNames() = listOf("cluster1")

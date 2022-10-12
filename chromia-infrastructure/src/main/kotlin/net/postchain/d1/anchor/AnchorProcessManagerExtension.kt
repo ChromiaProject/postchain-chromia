@@ -6,7 +6,7 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.ClusterManagementImpl
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 
