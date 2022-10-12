@@ -1,6 +1,7 @@
 module;
 
-import .model.*;
+import ^.model.*;
+import ^.cm_api.*;
 import .anchoring.*;
 import .voting.*;
 import .proposal.*;

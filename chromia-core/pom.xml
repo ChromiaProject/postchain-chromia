@@ -25,5 +25,54 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain.chain0</groupId>
+            <artifactId>directory1</artifactId>
+            <version>${project.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>directory1</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <configuration>
+                    <source>${project.build.directory}/directory1/rell</source>
+                    <packageName>net.postchain.cm</packageName>
+                    <mainModule>cm_api</mainModule>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>rell-client-gen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

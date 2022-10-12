@@ -1,3 +1,6 @@
+module;
+
+import ^.*;
 /*
     NP API Version: 3
 
