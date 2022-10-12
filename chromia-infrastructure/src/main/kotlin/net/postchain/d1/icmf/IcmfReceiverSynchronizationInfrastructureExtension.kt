@@ -68,6 +68,13 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(val postchainConte
     }
 
     open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
+        /**
+         * In case of non-cluster infrastructure, a dapp chain will have [DappBlockchainConfiguration]
+         * configuration, therefore [ClusterManagement] uses the local [ManagedNodeDataSource] instance.
+         *
+         * In the case of cluster infrastructure, a dapp chain will have a default [GTXBlockchainConfiguration]
+         * configuration. [ClusterManagement] uses the remote query runner to chain0: [PostchainClient].
+         */
         return if (configuration is DappBlockchainConfiguration) {
             ClusterManagementImpl(configuration.dataSource::query)
         } else {
