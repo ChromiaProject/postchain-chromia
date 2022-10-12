@@ -2,8 +2,19 @@
  * Cluster Management api used by postchain to get information about cluster anchoring chains
 */
 
-query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: list<(pubkey:pubkey, api_url:text)>) {
-       val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
+struct cm_peer_info {
+    pubkey: pubkey;
+    api_url: text;
+}
+
+struct cm_cluster_info {
+    name;
+    anchoring_chain: byte_array;
+    peers: list<cm_peer_info>;
+}
+
+query cm_get_cluster_info(name): cm_cluster_info {
+    val cluster_peer = (cluster_node, cluster, anchoring_chain) @* {
         cluster_node.cluster == cluster,
         anchoring_chain.cluster == cluster,
         cluster.name == name
@@ -13,14 +24,11 @@ query cm_get_cluster_info(name): (name:name, anchoring_chain:byte_array, peers: 
         peer = cluster_node.node.pubkey,
         peer_api_url = cluster_node.node.api_url
     ); 
-    val peers = list<(pubkey:pubkey, api_url:text)>();
+    val peers = list<cm_peer_info>();
     for (cp in cluster_peer) {
-           peers.add(
-            (pubkey = cp.peer,
-            api_url = cp.peer_api_url)
-        ); 
+        peers.add(cm_peer_info(pubkey = cp.peer, api_url = cp.peer_api_url));
     }
-    return (
+    return cm_cluster_info(
         name = cluster_peer[0].name,
         anchoring_chain = cluster_peer[0].anchoring_chain,
         peers = peers
