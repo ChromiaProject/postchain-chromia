@@ -201,6 +201,11 @@
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>3.3.0</version>
                 </plugin>
+                <plugin>
+                    <groupId>net.postchain.rell</groupId>
+                    <artifactId>rell-maven-plugin</artifactId>
+                    <version>0.5.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
 
