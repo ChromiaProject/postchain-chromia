@@ -1,8 +1,11 @@
-package net.postchain.d1.cluster
+package net.postchain.cm.cm_api
 
-import net.postchain.chain0.common.queries.cm_api.*
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
+import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.cluster.ClusterManagementClient
+import net.postchain.d1.cluster.D1ClusterInfo
+import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
 
 class ClusterManagementImpl(query: (String, Gtv) -> Gtv) : ClusterManagement {

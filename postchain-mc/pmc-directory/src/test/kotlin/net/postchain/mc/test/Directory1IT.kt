@@ -3,11 +3,11 @@ package net.postchain.mc.test
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import net.postchain.chain0.common.model.BlockchainAction
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.directory1.initOperation
+import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid

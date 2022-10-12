@@ -61,8 +61,8 @@
                 <version>0.5.0</version>
                 <configuration>
                     <source>${project.build.directory}/directory1/rell</source>
-                    <packageName>net.postchain.chain0</packageName>
-                    <mainModule>common.queries.cm_api</mainModule>
+                    <packageName>net.postchain.cm</packageName>
+                    <mainModule>cm_api</mainModule>
                 </configuration>
                 <executions>
                     <execution>
