@@ -1,3 +1,6 @@
+module;
+
+import ^.*;
 /*
  * Cluster Management api used by postchain to get information about cluster anchoring chains
 */
@@ -53,3 +56,5 @@ query cm_get_peer_info(brid: byte_array, height: integer): set<pubkey> {
 query cm_get_blockchain_cluster(brid: byte_array): text {
     return get_blockchain_cluster(brid);
 }
+
+query cm_get_blockchain_api_urls(blockchain_rid: byte_array) = get_blockchain_api_urls(blockchain_rid);
