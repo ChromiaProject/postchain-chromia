@@ -29,7 +29,6 @@
             <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
-            <classifier>cm-api</classifier>
         </dependency>
     </dependencies>
 </project>
