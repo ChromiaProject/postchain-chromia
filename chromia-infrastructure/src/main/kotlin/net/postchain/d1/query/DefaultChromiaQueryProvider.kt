@@ -4,8 +4,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.gtv.Gtv
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.managed.query.QueryRunner
 
 class DefaultChromiaQueryProvider(
         private val blockchainRid: BlockchainRid,
@@ -15,29 +15,27 @@ class DefaultChromiaQueryProvider(
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
-    override fun getChain0Query(): QueryRunner {
+    override fun getChain0Query(): (String, Gtv) -> Gtv {
         val client = MasterClientProvider.getChain0Client(appConfig)
-        return QueryRunner(client::querySync)
+        return client::querySync
     }
 
-    override fun getAnchorQuery(): QueryRunner? {
+    override fun getAnchorQuery(): ((String, Gtv) -> Gtv)? {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
         val info = clusterManagement.getClusterInfo(cluster)
         val client = MasterClientProvider.getClient(appConfig, info.anchoringChain)
-        return QueryRunner(client::querySync)
+        return client::querySync
     }
 
-    override fun getQuery(blockchainRid: BlockchainRid): QueryRunner? {
+    override fun getQuery(blockchainRid: BlockchainRid): ((String, Gtv) -> Gtv)? {
         val thisContainer = directoryDataSource.getContainerForBlockchain(this.blockchainRid)
         val chainContainer = directoryDataSource.getContainerForBlockchain(blockchainRid)
         return if (thisContainer == chainContainer) {
             blockQueriesProvider.getBlockQueries(blockchainRid)?.let {
-                QueryRunner { name, args -> it.query(name, args).get() }
+                { name, args -> it.query(name, args).get() }
             }
         } else {
-            QueryRunner(
-                    MasterClientProvider.getClient(appConfig, blockchainRid)::querySync
-            )
+            MasterClientProvider.getClient(appConfig, blockchainRid)::querySync
         }
     }
 }
