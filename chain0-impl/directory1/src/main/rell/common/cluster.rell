@@ -13,20 +13,6 @@ operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, clus
 	check_operational(cluster);
 }
 
-//Updates of cluster providers are controlled by its governor voter set.
-//TODO: Change this to propose_* or propose_update_cluster_providers(...)
-operation add_provider_to_cluster(my_pubkey: pubkey, provider_pubkey: pubkey, cluster_name: text) {
-	val me = require_provider(my_pubkey);
-	val provider = require_provider(provider_pubkey);
-	val cluster = require_cluster(cluster_name);
-	require_provider_auth_with_rl(me);
-	require(cluster.name != clusters.system, "Cannot add provider to system cluster manually");
-	require(voter_set_member @? { me, cluster.governance }, "Must be cluster governor to add a provider to this cluster");
-	require(voter_set_member @? { provider, cluster.deployer}, "Provider must be part of deployer voter set to be added");
-	require(roles.has_node_access(provider), "Provider needs 'Node provider' role to be a part of a cluster");
-	create cluster_provider(cluster, provider);
-}
-
 /* When all providers have provided a node each, cluster goes operational and stays operational even if a provider is added to the cluster*/
 function check_operational(cl: cluster) {
 	val providers = cluster_provider @* { cl }.provider;

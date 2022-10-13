@@ -17,7 +17,7 @@ function test_add_provider_to_system_cluster() {
 
     // Adding to cluster directly must fail
     rell.test.tx()
-        .op(add_provider_to_cluster(p1key.pub, rell.test.pubkeys.bob, constants.clusters.system))
+        .op(propose_cluster_provider(p1key.pub, constants.clusters.system, rell.test.pubkeys.bob, true))
         .sign(p1key)
         .run_must_fail();
 
@@ -73,7 +73,7 @@ function test_remove_cluster() {
     val alice = provider @ { rell.test.pubkeys.alice };
     val node = node @ { .provider == alice };
     rell.test.tx().op(
-        add_provider_to_cluster(alice.pubkey, alice.pubkey, cluster1.name),
+        propose_cluster_provider(alice.pubkey, cluster1.name, alice.pubkey, true),
         add_node_to_cluster(rell.test.pubkeys.alice, node.pubkey, "cluster1")
     ).sign(rell.test.keypairs.alice).run();
 

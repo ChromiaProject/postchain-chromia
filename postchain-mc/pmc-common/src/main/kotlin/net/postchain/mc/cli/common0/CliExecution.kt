@@ -778,7 +778,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Add existing provider to existing cluster
      * */
     fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addProviderToClusterOperation(config.pubkey().key, key.hexStringToByteArray(), clusterName)
+        return makeTransactionWithNop().proposeClusterProviderOperation(config.pubkey().key, clusterName, key.hexStringToByteArray(), true)
     }
 
     /** Add existing node to existing cluster
