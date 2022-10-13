@@ -3,7 +3,6 @@
 import ^^.*;
 import ^^^.test.ops.*;
 import ^^^.util.*;
-import ^^^.util.constants;
 
 function test_create_anchoring_chain() {
     val provider = rell.test.keypairs.alice;
