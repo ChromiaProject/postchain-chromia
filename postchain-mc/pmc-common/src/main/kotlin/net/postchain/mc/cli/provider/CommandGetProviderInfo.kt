@@ -1,15 +1,13 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.chain0.common.queries.getNodesByProvider
-import net.postchain.chain0.common.queries.getProviderClusters
-import net.postchain.chain0.common.queries.getProviderData
-import net.postchain.chain0.common.queries.getProviderPoints
-import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.common.hexStringToByteArray
+import com.github.ajalt.clikt.parameters.options.defaultLazy
+import net.postchain.chain0.common.queries.*
 import net.postchain.common.toHex
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandGetProviderInfo : CliktCommand(
         name = "info",
@@ -17,18 +15,18 @@ class CommandGetProviderInfo : CliktCommand(
 ) {
     private val config by configOption()
 
-    private val key by requiredPubkeyOption()
+    private val key by pubkeyOption().defaultLazy { config.pubkey() }
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val providerData = client.getProviderData(key.hexStringToByteArray())
-        val actionPoints = client.getProviderPoints(key.hexStringToByteArray())
-        val providerClusters = client.getProviderClusters(key.hexStringToByteArray())
-        val nodesByProvider = client.getNodesByProvider(key.hexStringToByteArray())
+        val providerData = client.getProviderData(key.key)
+        val actionPoints = client.getProviderPoints(key.key)
+        val providerClusters = client.getProviderClusters(key.key)
+        val nodesByProvider = client.getNodesByProvider(key.key)
         println("""
             Provider: ${providerData.name}
             Pubkey: ${providerData.pubkey.toHex()}
-            System: ${providerData.system}
+            System: ${client.isSystemProvider(key.key)}
             Tier: ${providerData.tier}
             Active: ${providerData.active}
             Action points: $actionPoints
