@@ -385,45 +385,6 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testProposeConfigurationAcceptGtv() {
-        doAndBuildBlocks(
-                provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
-                20L, "gtv", false
-        )
-        )
-        assertNextConfiguration(provConfig, 20L)
-
-        //force == false: only configs for heights > next config height can be added:
-        doAndBuildBlocks(
-                provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
-                18L, "gtv", false
-        )
-        )
-        assertNextConfiguration(provConfig, 20L)
-
-        //force == true: OK to add configs at all heights > current height
-        doAndBuildBlocks(
-                provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.blockchainRid.toHex(), bcConfigGtvFile,
-                18L, "gtv", true
-        )
-        )
-        val conf18Gtv = assertNextConfiguration(provConfig, 18L)
-
-        //force == true: OK to override a configuration
-        doAndBuildBlocks(
-                provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.blockchainRid.toHex(), bcConfig1xmlFile,
-                18L, "xml", true
-        )
-        )
-        val conf18GXml = assertNextConfiguration(provConfig, 18L)
-        assertNotEquals(conf18Gtv, conf18GXml)
-    }
-
-    @Test
     fun testProposeConfiguration() {
         doAndBuildBlocks(
                 provConfig, provExecutor.proposeConfigurationAsync(
