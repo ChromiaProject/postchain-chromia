@@ -2,19 +2,37 @@
 
 import ^^.*;
 import ^^.test.ops.*;
+import ^^.test.setup.*;
 import ^^.util.*;
 
-function setup() {
-	rell.test.tx().op(
-	    initialize_test_module(rell.test.pubkeys.alice)
-	).run();
+
+// Adding someone to system cluster will be through enroll system role and not this operation (propose_provider_is_system)
+function test_add_provider_to_system_cluster() {
+    setup_module();
+
+    rell.test.tx()
+        .op(register_provider(p1key.pub, rell.test.pubkeys.bob, 1))
+        .sign(p1key)
+        .run();
+
+    // Adding to cluster directly must fail
+    rell.test.tx()
+        .op(add_provider_to_cluster(p1key.pub, rell.test.pubkeys.bob, constants.clusters.system))
+        .sign(p1key)
+        .run_must_fail();
+
+    rell.test.tx()
+        .op(propose_provider_is_system(p1key.pub, rell.test.pubkeys.bob, true))
+        .sign(p1key)
+        .run();
+    assert_not_null(cluster_provider @? { system_cluster(), provider @ { rell.test.pubkeys.bob } });
 }
 
 function test_add_node_to_cluster() {
-    setup();
+    setup_module();
 
     val system_cluster = system_cluster();
-    val alice = provider @ { rell.test.pubkeys.alice };
+    val p1 = p1();
 
     // asserting node added
     assert_equals(
@@ -24,15 +42,13 @@ function test_add_node_to_cluster() {
 
     // must fail
     rell.test.tx()
-        .op(
-            create_test_node(alice, rell.test.pubkeys.bob, system_cluster)
-        )
-        .sign(rell.test.keypairs.alice)
+        .op(create_test_node(p1, rell.test.pubkeys.bob, system_cluster))
+        .sign(p1key)
         .run_must_fail();
 }
 
 function test_remove_cluster() {
-    setup();
+    setup_module();
 
     // 1. Deleting system cluster. Must fail.
     rell.test.tx().op(
