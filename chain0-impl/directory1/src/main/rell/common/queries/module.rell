@@ -2,8 +2,6 @@ module;
 
 import ^.*;
 import ^^.model.*;
-import ^^.cm_api.*;
-import .nm_api.*;
 
 query get_summary() {
 	return (

@@ -1,6 +1,5 @@
-module;
 
-import ^.*;
+import ^.model.*;
 /*
     NP API Version: 3
 
@@ -55,6 +54,18 @@ query nm_get_blockchain_configuration(
     else
         return null;
 }
+
+/*
+    Checking that signers.size() is non-zero is done when population blockchain_configuration_signers.
+    Thus, not needed to check here.
+*/
+function get_blockchain_configuration_with_signers(blockchain, height: integer, config_height: integer) : byte_array {
+	val current_config = blockchain_configuration @ { blockchain, .height == config_height };
+	val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(current_config.data));
+	config_dict["signers"] = get_signers_for_configuration(blockchain, height);
+	return config_dict.to_gtv().to_bytes();
+}
+
 
 /*
     Function getBlockchainsShouldBeLaunched() uses this query. If caller (nod_id) is a signer, return only active bcs.

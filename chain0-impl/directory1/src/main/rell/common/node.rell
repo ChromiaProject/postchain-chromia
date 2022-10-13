@@ -1,7 +1,4 @@
 
-object node_list {
-	mutable last_update: timestamp = 0;
-}
 
 operation add_node(provider_key:pubkey, node_pubkey: pubkey, host: text, port: integer, api_url: text, clusters:list<text> = list<text>()) {
 	print("-------------Add-Node--------------");
