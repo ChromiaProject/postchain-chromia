@@ -1,6 +1,6 @@
 # Setup
 
-Setting up a new network consist of the following steps:
+Setting up a new network with a set of system providers consist of the following steps:
 
 1. Starting the genesis (initial) node
 2. Configure the Management console
@@ -39,23 +39,19 @@ Now you can initialize the network using:
 pmc network initialize --host <ip> --port <node-messaging-port>
 ```
 
-## Add provider N+1
+## Add system provider N+1
 
 Adding a new provider can be done using
 ```shell
-pmc provider add --pubkey <pubkey> --tier <tier>
+pmc provider add --pubkey <pubkey>
 ```
-
-For a system provider, tier 1 must be used.
 
 Provider 1 can now add the new provider to the system voter set and system cluster:
 ```shell
-pmc voterset update --name SYSTEM_P --pubkey <pubkey> --add
-pmc cluster provider --pubkey <pubkey> --add
+pmc provider promote --pubkey <pubkey> --system
 ```
 
 ## Add node N+1
-
 
 The newly added provider can now start their node by configuring its genesis node to be node 1. See [Start a Node](start-a-node.md) for more information.
 They can then add the node to the system cluster by making the following commands towards node 1:
