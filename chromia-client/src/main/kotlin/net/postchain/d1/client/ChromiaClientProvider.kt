@@ -7,7 +7,7 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.cluster.ClusterManagementImpl
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 

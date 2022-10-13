@@ -28,12 +28,6 @@
             <artifactId>postchain-client</artifactId>
         </dependency>
     </dependencies>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>rellmaven</id>
-            <url>https://gitlab.com/api/v4/projects/37668820/packages/maven</url>
-        </pluginRepository>
-    </pluginRepositories>
 
     <build>
         <plugins>
@@ -44,7 +38,6 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.4.3</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>

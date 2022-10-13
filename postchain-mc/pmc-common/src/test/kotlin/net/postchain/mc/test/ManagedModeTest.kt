@@ -57,7 +57,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val bcConfig1xmlFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1.xml")
         val bcConfig1xmlDependencyFile =
                 getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
-        val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc//test/config/0.gtv")
 
         private fun getFileFromClasspath(path: String): File {
             val tempFile = File.createTempFile("managed-mode-test", "")
