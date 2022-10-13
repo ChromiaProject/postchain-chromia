@@ -20,10 +20,10 @@ operation add_provider_to_cluster(my_pubkey: pubkey, provider_pubkey: pubkey, cl
 	val provider = require_provider(provider_pubkey);
 	val cluster = require_cluster(cluster_name);
 	require_provider_auth_with_rl(me);
-	require(
-	    (me.tier > 0 and provider.tier == 0) or me.system,
-		"Must be system provider or have higher tier to add a provider to a cluster."
-	);
+	require(voter_set_member @? { me, cluster.governance }, "Must be cluster governor to add a provider to this cluster");
+	require(voter_set_member @? { provider, cluster.deployer}, "Provider must be part of deployer voter set to be added");
+	require(roles.has_node_access(provider), "Provider needs 'Node provider' role to be a part of a cluster");
+	if (cluster.name == clusters.system) require(roles.has_system_access(provider), "Provider must have system role to be a part of this cluster");
 	create cluster_provider(cluster, provider);
 }
 

@@ -32,10 +32,9 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
 	register_and_enable_provider(
 		initial_provider, 
-		is_system = true, 
 		tier = 1, 
-		cluster = system_cluster, 
-		voter_set = system_voter_set, 
+		cluster = null, 
+		voter_set = null, 
 		enabled_by_default = true
 	);
 	val provider = provider @ { initial_provider };
@@ -47,6 +46,8 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 		cluster = system_cluster,
 		voter_set = system_voter_set
 	);
+	
+	enroll.system(provider);
 	
 	print("Adding c0 blockchain to system container");
 	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);

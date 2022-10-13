@@ -3,9 +3,8 @@
 operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
     val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
-	require((me.tier > 0 and tier == 0) or me.system);
+	require((me.tier > 0 and tier == 0) or roles.has_system_access(me));
 	register_and_enable_provider(pubkey, 
-		is_system = false, 
 		tier = tier, 
 		cluster = null, 
 		voter_set = null, 
@@ -14,12 +13,11 @@ operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
 }
 
 
-@extendable function register_and_enable_provider(pubkey, is_system: boolean, tier: integer, cluster?, voter_set?, enabled_by_default: boolean = false) {
+@extendable function register_and_enable_provider(pubkey, tier: integer, cluster?, voter_set?, enabled_by_default: boolean = false) {
 	val provider = create provider (
 		pubkey,
 		name="",
         active=enabled_by_default,
-        system=is_system,
         tier=tier
     );
     create provider_rl_state(provider, points = 100, last_update=op_context.last_block_time);
