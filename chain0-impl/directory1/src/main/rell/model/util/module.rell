@@ -16,6 +16,12 @@ function require_cluster_deployer(cluster, provider) {
 	require_voter_set_member(cluster.deployer, provider);	
 }
 
+function require_is_system_provider(pubkey) {
+	val p = require_provider(pubkey);
+	require(roles.has_system_access(p), "Provider does not have system level access");
+	return p;
+}
+
 function require_system_p_member(provider) {
 	require_voter_set_member(system_p_voter_set(), provider);	
 }
