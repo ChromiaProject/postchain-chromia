@@ -1,10 +1,9 @@
 @test module;
 
 import ^^.*;
+import ^^^.model.*;
 import ^.ops.*;
-import ^.util.constants.*;
 import ^.util.*;
-import ^^.util.constants.*;
 
 function test_replace_node() {
     val provider = rell.test.keypairs.alice;
