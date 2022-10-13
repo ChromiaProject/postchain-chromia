@@ -7,7 +7,6 @@ import .voting.*;
 import .proposal.*;
 import .queries.*;
 import .util.*;
-import .util.constants.*;
 
 query directory_solution_version() = "0.1";
 
