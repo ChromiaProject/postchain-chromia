@@ -510,9 +510,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun registerProvider(key: String, tier: Long) {
+    fun registerProvider(key: String, node_provider: Boolean) {
         sendTxSync(
-                registerProviderAsync(key, tier),
+                registerProviderAsync(key, node_provider),
                 "Provider has been registered",
                 "Cannot register provider"
         )
@@ -754,8 +754,8 @@ open class CliExecution(val config: PostchainClientConfig) {
      * AddNodeAsync().
      */
 
-    fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
-        return makeTransactionWithNop().registerProviderOperation(config.pubkey().key, key.hexStringToByteArray(), tier)
+    fun registerProviderAsync(key: String, node_provider: Boolean): TransactionBuilder {
+        return makeTransactionWithNop().registerProviderOperation(config.pubkey().key, key.hexStringToByteArray(), node_provider)
     }
 
     fun createVoterSetAsync(

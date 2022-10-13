@@ -96,7 +96,7 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
 
     // Registering a new provider
     rell.test.tx().op(
-        register_provider(alice, provider_pk, 1)
+        register_provider(alice, provider_pk, true)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting that provider added

@@ -1,15 +1,18 @@
 
 // Registers and enables a provider
-operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
+operation register_provider(my_pubkey: pubkey, pubkey, node_provider: boolean) {
     val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
-	require((me.tier > 0 and tier == 0) or roles.has_system_access(me));
 	register_and_enable_provider(pubkey, 
-		tier = tier, 
+		tier = if (node_provider) 1 else 0, 
 		cluster = null, 
 		voter_set = null, 
-		enabled_by_default = tier == 0
+		enabled_by_default = node_provider != true
 	);
+    if (node_provider) {
+        require(roles.has_system_access(me), "Must be system provider to add a node provider");
+        enroll.node(provider @ { pubkey });
+    }
 }
 
 

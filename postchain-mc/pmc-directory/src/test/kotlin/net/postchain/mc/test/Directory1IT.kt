@@ -106,7 +106,7 @@ class Directory1IT : ManagedModeTest() {
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
-        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), 1L))
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
         doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubkey(), systemClusterName))
         doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubkey()))
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), true))
@@ -351,7 +351,7 @@ class Directory1IT : ManagedModeTest() {
         var clusters = provExecutor.listClustersForProvider(provConfig.pubkey())
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
-        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), 0))
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), false))
         doAndBuildBlocks(
                 provConfig,
                 provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
