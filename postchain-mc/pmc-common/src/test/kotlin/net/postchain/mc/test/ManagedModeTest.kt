@@ -3,6 +3,8 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.*
 import net.postchain.client.transaction.TransactionBuilder
@@ -98,21 +100,13 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.querySync(
-                "nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to GtvFactory.gtv(expectedHeight - 1)
-        )
-        )
-        assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
+        val height = client.nmFindNextConfigurationHeight(config.blockchainRid.data,0)
+        assertk.assert(height).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.querySync(
-                "nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to height
-        )
-        )
-        assertk.assert(bc.asByteArray()).isNotNull()
-        return bc.asByteArray()
+        val bc = client.nmGetBlockchainConfiguration(config.blockchainRid.data, height!!)
+        assertk.assert(bc).isNotNull()
+        return bc!!
     }
 
     /**

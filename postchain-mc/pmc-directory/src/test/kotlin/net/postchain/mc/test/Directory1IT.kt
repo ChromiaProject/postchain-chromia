@@ -107,8 +107,6 @@ class Directory1IT : ManagedModeTest() {
      */
     private fun addSystemProv2() {
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubkey(), systemClusterName))
-        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubkey()))
         doAndBuildBlocks(provConfig, provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), true))
         assertProviderData(prov2Config.pubkey(), "", true)
     }
@@ -409,8 +407,8 @@ class Directory1IT : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
         // Get next configuration height after adding new node as blockchain's signer
-        // expected next configuration height = -1 + init + addNode + proposeEnableProv + proposeBlockhain + addprov2toCluster + addNode + 5 = 10 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 10L)
+        // expected next configuration height = -1 + init + addNode + proposeSystemProvider + proposeBlockhain + addNode + 4 = 10 (with vote included in proposal)
+        assertNextConfiguration(provConfig, 8L)
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)

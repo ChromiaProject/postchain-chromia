@@ -5,6 +5,7 @@ import net.postchain.chain0.common.*
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
@@ -764,22 +765,8 @@ open class CliExecution(val config: PostchainClientConfig) {
             threshold: Long,
             governorName: String?
     ): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        var providerList: Gtv
-        if (providerKeys.isEmpty()) {
-            providerList = GtvNull
-        } else {
-            providerList = providersGtv(providerKeys)
-        }
-        var governor: Gtv
-        if (governorName == null || governorName.isEmpty()) {
-            governor = GtvNull
-        } else {
-            governor = voterSetGtv(governorName)
-        }
-        return makeTransactionWithNop().addOperation(
-                "create_voter_set",
-                meProvider, GtvString(name), GtvInteger(threshold), providerList, governor
+        return makeTransactionWithNop().createVoterSetOperation(
+            config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
         )
     }
 
