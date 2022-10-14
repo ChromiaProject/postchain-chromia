@@ -349,7 +349,8 @@ class Directory1IT : ManagedModeTest() {
         var clusters = provExecutor.listClustersForProvider(provConfig.pubkey())
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
-        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), false))
+        doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
+        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubkey()))
         doAndBuildBlocks(
                 provConfig,
                 provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
