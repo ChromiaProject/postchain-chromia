@@ -1,7 +1,8 @@
 
 entity blockchain { 
     key rid: byte_array; 
-    mutable name: text; 
+    mutable name: text;
+    system: boolean;
     mutable active: boolean;
 }
 

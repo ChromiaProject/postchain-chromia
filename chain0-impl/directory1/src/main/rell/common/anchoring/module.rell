@@ -9,7 +9,7 @@ function create_cluster_anchoring_chain(cluster) {
 
 	val config = get_anchoring_config2(cluster.name);
 	val blockchain_rid = config.hash();
-	val blockchain = create blockchain(blockchain_rid, "anchoring_" + cluster.name, true);
+	val blockchain = create blockchain(blockchain_rid, "anchoring_" + cluster.name, system = true, active = true);
 	create blockchain_configuration(blockchain, 0, config.to_bytes());
 
     val container = create_container_with_resource_limits(
