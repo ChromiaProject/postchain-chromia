@@ -92,12 +92,13 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 			create cluster_provider(c, prov);
 		}
 	}
+	create_cluster_anchoring_chain(c);
 }
 
 function require_cluster_available_for_removal(cluster) {
     require(cluster.name != "system", "System cluster can't be deleted");
     require(
-        empty(container @* { cluster }),
+        empty(container @* { cluster, not .name.starts_with("anchoring_") }),
         "Cluster %s is not empty and can't be deleted. Delete containers first".format(cluster.name)
     );
 }
