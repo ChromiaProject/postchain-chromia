@@ -21,7 +21,6 @@ import net.postchain.server.service.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 // Base class for managed mode tests
@@ -36,7 +35,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     val network: Network = Network.newNetwork()
 
-    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT"))
+    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImages.postgresImage())
             .withNetwork(network)
 
     val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
@@ -45,8 +44,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int) =
             PostchainContainer(
-                    DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
-                            .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
+                    DockerImages.postchainServerImage(),
                     setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
                     startupMsg = "Postchain server started, listening on 50051",
                     nodeHost = hostName,
