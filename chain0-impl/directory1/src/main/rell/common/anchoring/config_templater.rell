@@ -105,6 +105,7 @@ function get_anchoring_config2(cluster_name: text): gtv {
 }
 
 // TODO: [POS-359]: Add tests
+// TODO: [POS-359]: Move to 'config utils'
 /*private*/ function _add_property(config: map<text, gtv>, path: text, property: gtv) {
     val keys = path.split("/");
     if (keys.size() == 0) {
@@ -125,6 +126,7 @@ function get_anchoring_config2(cluster_name: text): gtv {
 }
 
 // TODO: [POS-359]: Add tests
+// TODO: [POS-359]: Move to 'config utils'
 /*private*/ function _get_property(config: map<text, gtv>, path: text): text? {
     val keys = path.split("/");
     if (keys.size() == 0) {

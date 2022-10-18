@@ -6,19 +6,18 @@ entity blockchain {
     mutable active: boolean;
 }
 
-entity blockchain_added { 
-    key blockchain; 
-    key transaction; 
+entity blockchain_added {
+    key blockchain, transaction;
 }
 
 entity blockchain_configuration {
-	key blockchain, height: integer;
-	mutable data: byte_array;
+    key blockchain, height: integer;
+    mutable data: byte_array;
 }
 
 entity blockchain_configuration_signers {
-      key blockchain, height: integer;
-      signers: byte_array;
+    key blockchain, height: integer;
+    signers: byte_array;
 }
 
 entity blockchain_replica_node { 

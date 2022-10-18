@@ -9,18 +9,13 @@ function test_create_and_remove_cluster_anchoring_chain() {
     rell.test.tx().op(initialize_test_module(provider.pub, 100)).run();
     assert_not_null(container @? { containers.system });
 
-    // 1. Creating anchoring chain
-    rell.test.tx().op(
-        _create_cluster_anchoring_chain_op(clusters.system)
-    ).run();
-
-    val system_chain = blockchain @ { constants.blockchains.c0 };
+    val chain0 = blockchain @ { constants.blockchains.c0 };
     val anchor = blockchain @? { "anchoring_system" };
     assert_not_null(anchor);
     assert_not_null(blockchain_configuration @? { anchor });
     assert_equals(
         blockchain_configuration_signers @ { anchor }.signers,
-        blockchain_configuration_signers @ { system_chain }.signers);
+        blockchain_configuration_signers @ { chain0 }.signers);
     assert_not_null(blockchain_added @? { anchor });
     assert_not_null(anchoring_chain @? { anchor });
 

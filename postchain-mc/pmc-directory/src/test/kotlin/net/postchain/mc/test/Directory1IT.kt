@@ -118,7 +118,6 @@ class Directory1IT : ManagedModeTest() {
      */
     @Test
     fun testProposeDegradeProviderVoteNo() {
-
         addSystemProv2()
         // Prov2 proposes degradation/demotion of prov1.
         doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
@@ -134,7 +133,6 @@ class Directory1IT : ManagedModeTest() {
      */
     @Test
     fun testVoterSet() {
-
         addSystemProv2()
 
         val voterSetName = "Ellen"
@@ -208,7 +206,7 @@ class Directory1IT : ManagedModeTest() {
             expected: Map<String, Long>
     ) {
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
-        var updated = provExecutor.listContainerLimits(containerName)
+        val updated = provExecutor.listContainerLimits(containerName)
         assertEquals(expected, updated)
     }
 
@@ -255,32 +253,32 @@ class Directory1IT : ManagedModeTest() {
                 provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
         )
 
-        val expected = arrayOf<String?>("container1", "system")
+        val expected = setOf("container1", "system", "anchoring_system")
 
         fun List<Gtv>.names() = map { it.asDict()["name"]?.asString() }
                 .sortedWith(naturalOrder<String>())
-                .toTypedArray()
+                .toSet()
 
         // asserting all containers
         val all = prov2Executor.listContainers().names()
-        assertContentEquals(expected, all)
+        assertEquals(expected, all)
 
         // asserting cluster containers
         val clusterContainers = prov2Executor.listClusterContainers("system").names()
-        assertContentEquals(expected, clusterContainers)
+        assertEquals(expected, clusterContainers)
 
         // asserting UNKNOWN cluster containers
         val unknownClusterContainers = prov2Executor.listClusterContainers("unknown").names()
-        assertContentEquals(arrayOf(), unknownClusterContainers)
+        assertEquals(setOf(), unknownClusterContainers)
 
         // asserting node containers
         val nodeContainers = prov2Executor.listContainersForNode(nodes[0].pubKey).names()
-        assertContentEquals(expected, nodeContainers)
+        assertEquals(expected, nodeContainers)
 
         // asserting UNKNOWN node containers
         val unknownKey = KeyPairHelper.pubKeyHex(77) // node 77
         val unknownNodeContainers = prov2Executor.listContainersForNode(unknownKey).names()
-        assertContentEquals(arrayOf(), unknownNodeContainers)
+        assertEquals(setOf(), unknownNodeContainers)
     }
 
     @Test
@@ -312,7 +310,7 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
-        assertEquals(2, provExecutor.listBlockchains(false).size)
+        assertEquals(3, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
@@ -320,14 +318,14 @@ class Directory1IT : ManagedModeTest() {
         //add yet another bc, dependent on previous one
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
         val listOfBcs = provExecutor.listBlockchains(false)
-        val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[2].toHex(), 0)
+        val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[3].toHex(), 0)
 
         assertEquals(1, listOfDependencies.size)
-        assertEquals(listOfBcs[1].toHex(), listOfDependencies[0].first.toHex())
+        assertEquals(listOfBcs[2].toHex(), listOfDependencies[0].first.toHex())
         assertEquals(container1, listOfDependencies[0].second)
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
-        proposeBlockchainAction(provClient, listOfBcs[1], BlockchainAction.remove)
+        proposeBlockchainAction(provClient, listOfBcs[2], BlockchainAction.remove)
         assertEquals(3, provExecutor.listBlockchains(false).size)
     }
 
@@ -337,12 +335,12 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testCluster() {
         val newClusterName = "Vera"
-        val providers_list = provConfig.pubkey()
+        val providersList = provConfig.pubkey()
 //        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
         //create cluster, initial providers added
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                newClusterName, providers_list,
+                newClusterName, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
@@ -432,7 +430,7 @@ class Directory1IT : ManagedModeTest() {
 
         doAndBuildBlocks(prov2Config, provExecutor.removeNodeAsync(node1Pubkey))
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
-        assertEquals(1, listBlockchainSigners.size)
+        assertEquals(2, listBlockchainSigners.size)
     }
 
     @Test
@@ -444,13 +442,13 @@ class Directory1IT : ManagedModeTest() {
 
         //pause new bc
         var bcs = provExecutor.listBlockchains(false)
-        val bridToPause = bcs[1]
+        val bridToPause = bcs[2]
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.pause)
 
         bcs = provExecutor.listBlockchains(true)
-        assertEquals(2, bcs.size)
+        assertEquals(3, bcs.size)
         bcs = provExecutor.listBlockchains(false)
-        assertEquals(1, bcs.size)
+        assertEquals(2, bcs.size)
 
         // try building blocks of pause bc
         assertBuildBlockFailure()
@@ -471,13 +469,13 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         var bcs = provExecutor.listBlockchains(false)
-        assertEquals(2, bcs.size)
+        assertEquals(3, bcs.size)
 
         // delete new bc
-        proposeBlockchainAction(provClient, bcs[1], BlockchainAction.remove)
+        proposeBlockchainAction(provClient, bcs[2], BlockchainAction.remove)
 
         bcs = provExecutor.listBlockchains(true)
-        assertEquals(1, bcs.size)
+        assertEquals(2, bcs.size)
 
         // try building blocks of deleted bc
         assertBuildBlockFailure()
@@ -551,7 +549,7 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testListBlockchains() {
         val listBlockchains = provExecutor.listBlockchains(false)
-        assertEquals(1, listBlockchains.size)
+        assertEquals(2, listBlockchains.size)
     }
 
     @Test
@@ -590,17 +588,17 @@ class Directory1IT : ManagedModeTest() {
         val clusterA = "A"
         val clusterB = "B"
         val containerName = "C"
-        val providers_list = provConfig.pubkey()
+        val providersList = provConfig.pubkey()
         //create two new clusters with initial provider added
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                clusterA, providers_list,
+                clusterA, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                clusterB, providers_list,
+                clusterB, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
@@ -649,7 +647,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, brid, action
+                provClient.config.signers.first().pubKey.data, brid, action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }

@@ -1,12 +1,14 @@
 package net.postchain.images.directory1
 
 import assertk.assert
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
-import assertk.assertions.isTrue
+import assertk.assertions.isNotEmpty
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
@@ -14,14 +16,18 @@ import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.adminPubKey
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
@@ -36,6 +42,7 @@ internal class Directory1DeploymentIT {
         private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
+        private const val globalAnchoringContainer = "anchoring_system"
         private const val foobarContainer = "foobar"
         private val foobarResourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits.fromValues(
@@ -89,20 +96,55 @@ internal class Directory1DeploymentIT {
         node1.client(brid).querySync("get_all_providers").also {
             assert(it.asArray().size).isEqualTo(1)
         }
-        assert(
-                node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
-        ).isTrue()
 
-        assert(
-                node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asDict()["active"]!!.asInteger()
-        ).isEqualTo(1L)
+        val isNode = node1.client(brid).querySync("is_node", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asBoolean()
+        assert(isNode)
+
+        val isActive = node1.client(brid).querySync("get_node_data", gtv("pubkey" to gtv(node1.pubKeyByteArray))).asDict()["active"]!!.asInteger()
+        assertEquals(isActive, 1L)
+
+        // Asserting anchoring chain properties
+        assertAnchoringChainProperties()
+    }
+
+    private fun assertAnchoringChainProperties() {
+        // System chains via NP API
+        val systemChainsGtv = node1.client(brid).querySync("nm_compute_system_blockchain_list", gtv("node_id" to gtv(node1.pubKeyByteArray))).asArray()
+        assertEquals(systemChainsGtv.size, 2)
+
+        // Getting anchoring chain for system cluster via CM API
+        val anchoringChainBrid = node1.client(brid).querySync("cm_get_cluster_info", gtv("name" to gtv("system")))
+                .asDict()["anchoring_chain"]!!.asByteArray()
+        // Asserting anchoring chain is in system_chains list of NP API
+        assert(systemChainsGtv.map { it.asByteArray().byteArrayKeyOf() })
+                .contains(anchoringChainBrid.byteArrayKeyOf())
+
+        // Getting config of anchoring chain
+        val anchoringChainConfigGtv = node1.client(brid).querySync("nm_get_blockchain_configuration", gtv(
+                "blockchain_rid" to gtv(anchoringChainBrid),
+                "height" to gtv(0L)
+        ))
+        // Asserting the config is not null and not empty
+        assertNotEquals(GtvNull, anchoringChainConfigGtv)
+        val rawConfig = anchoringChainConfigGtv.asByteArray()
+        assert(rawConfig.isNotEmpty())
+
+        // Asserting config properties: /cluster == system
+        val configGtv = GtvDecoder.decodeGtv(rawConfig)
+        assertEquals("system", configGtv["cluster"]?.asString())
+        // /gtx/modules contains AnchorGTXModule module
+        assert(configGtv["gtx"]?.get("modules")?.asArray()?.map(Gtv::asString) ?: emptyList())
+                .contains("net.postchain.d1.anchor.AnchorGTXModule")
+        // /gtx/rell/sources/module.rell contains rell code
+        assert(configGtv["gtx"]?.get("rell")?.get("sources")?.get("module.rell")?.asString() ?: "")
+                .isNotEmpty()
     }
 
     @Test
     @Order(3)
     fun `Add new container`() {
         // Asserting that there is only one container (system) before test
-        assert(node1.chain0.getAllContainers().asArray().size).isEqualTo(1)
+        assert(node1.chain0.getAllContainers().asArray().size).isEqualTo(2)
 
         node1.txAsAdmin(brid, "propose_container", gtv(adminPubKey.hexStringToByteArray()), gtv(systemContainer), gtv(foobarContainer), gtv("SYSTEM_P"))
 
@@ -110,7 +152,7 @@ internal class Directory1DeploymentIT {
             val containers = node1.chain0.getAllContainers().asArray()
                     .map { it.asDict()["name"]?.asString() }
                     .toSet()
-            assertEquals(setOf(systemContainer, foobarContainer), containers)
+            assertEquals(setOf(systemContainer, globalAnchoringContainer, foobarContainer), containers)
         }
     }
 
@@ -175,7 +217,7 @@ internal class Directory1DeploymentIT {
 
     @Test
     @Order(7)
-    fun `Deploy new dapp`() {
+    fun `Deploy new dapps`() {
         listOf(node1, node2, node3).forEach { node ->
             assert(node.chain0.getAllBlockchains().asArray().size).isEqualTo(1)
         }
