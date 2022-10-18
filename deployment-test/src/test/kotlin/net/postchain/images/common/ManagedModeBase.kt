@@ -5,6 +5,7 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -14,10 +15,10 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.server.service.AddPeerRequest
-import net.postchain.server.service.InitializeBlockchainRequest
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
+import net.postchain.server.grpc.AddPeerRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.PeerServiceGrpc
+import net.postchain.server.grpc.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
@@ -43,14 +44,16 @@ open class ManagedModeBase(rellFolder: String) {
     val node2: PostchainContainer = postchainServer("node2", node2Logger, 9872, 7741)
     val node3: PostchainContainer = postchainServer("node3", node3Logger, 9873, 7742)
 
-    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int) =
-        PostchainContainer(
+    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int): PostchainContainer {
+        val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
+        return PostchainContainer(
             DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
                 .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-            setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
+            appConfig,
             startupMsg = "Postchain server started, listening on 50051",
             nodeHost = hostName,
-            nodePort = messagePort
+            nodePort = messagePort,
+            provider = KeyPair.of(appConfig.pubKey, appConfig.privKey)
         )
             .withNetworkAliases(hostName)
             .withNetwork(this@ManagedModeBase.network)
@@ -58,6 +61,7 @@ open class ManagedModeBase(rellFolder: String) {
             .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
             .withLogConsumer(logConsumer)
+    }
 
 
     var chain0Config: File
@@ -126,7 +130,7 @@ open class ManagedModeBase(rellFolder: String) {
             AddPeerRequest.newBuilder()
                 .setHost(peer.nodeHost)
                 .setPort(peer.nodePort)
-                .setPubkey(peer.pubKey)
+                .setPubkey(peer.pubkey.hex())
                 .build()
         )
     }
