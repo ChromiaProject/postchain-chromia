@@ -14,10 +14,10 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.server.service.AddPeerRequest
-import net.postchain.server.service.InitializeBlockchainRequest
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
+import net.postchain.server.grpc.AddPeerRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.PeerServiceGrpc
+import net.postchain.server.grpc.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
