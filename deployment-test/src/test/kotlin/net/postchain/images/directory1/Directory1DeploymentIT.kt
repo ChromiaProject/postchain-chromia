@@ -7,7 +7,6 @@ import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
 import net.postchain.chain0.common.addNodeOperation
-import net.postchain.chain0.common.addNodeToClusterOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
@@ -15,14 +14,12 @@ import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
-import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.bpm.docker.DockerClientFactory
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
-import net.postchain.dapp.adminPubKey
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -32,8 +29,6 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
-
-internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -118,7 +113,7 @@ internal class Directory1DeploymentIT {
 
             transactionBuilder()
                 .proposeContainerOperation(node1.providerPubkey, "system", foobarContainer, "SYSTEM_P")
-                .postTransactionUntilConfirmed("$foobarContainer container")
+                .postTransactionUntilConfirmed("add $foobarContainer container")
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
@@ -137,14 +132,9 @@ internal class Directory1DeploymentIT {
 
         // Changing resource limits
         with(foobarResourceLimitsValues) {
-            node1.c0.transactionBuilder().proposeContainerLimitsOperation(
-                node1.providerPubkey,
-                foobarContainer,
-                first,
-                second,
-                third
-            )
-                .postTransactionUntilConfirmed("container limits")
+            node1.c0.transactionBuilder()
+                .proposeContainerLimitsOperation(node1.providerPubkey, foobarContainer, first, second, third)
+                .postTransactionUntilConfirmed("set container limits")
         }
 
         // Asserting resource limits changed
@@ -158,17 +148,11 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Adding node2 to the cluster")
         consoleLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node2.providerPubkey, 1)
-            .proposeEnableProviderOperation(node1.providerPubkey, node2.providerPubkey)
+            .registerProviderOperation(node1.providerPubkey, node2.providerPubkey, true)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
-            .proposeClusterProviderOperation(node1.providerPubkey, "system", node2.providerPubkey, true)
-            .postTransactionUntilConfirmed("Reg p2")
+            .postTransactionUntilConfirmed("Register p2 as system")
 
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
-            node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
-        }
+        voteOnAllProposals(node2.provider)
 
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
             .addNodeOperation(
@@ -179,8 +163,7 @@ internal class Directory1DeploymentIT {
                 node2.apiPath(),
                 listOf("system")
             )
-            .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
-            .postTransactionUntilConfirmed("Add node 2")
+            .postTransactionUntilConfirmed("add node 2 to system cluster")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
             assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(2)
@@ -195,23 +178,13 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node3.providerPubkey, 1)
-            .proposeEnableProviderOperation(node1.providerPubkey, node3.providerPubkey)
+            .registerProviderOperation(node1.providerPubkey, node3.providerPubkey, true)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
-            .proposeClusterProviderOperation(node1.providerPubkey, "system", node3.providerPubkey, true)
-            .postTransactionUntilConfirmed("Reg p3")
+            .postTransactionUntilConfirmed("Register p3 as system")
 
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
-            node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
-        }
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
-            node1.client(brid, listOf(node3.provider)).transactionBuilder()
-                .makeVoteOperation(node3.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
 
-        }
         consoleLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
             .addNodeOperation(
@@ -222,14 +195,21 @@ internal class Directory1DeploymentIT {
                 node3.apiPath(),
                 listOf("system")
             )
-            .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "system")
-            .postTransactionUntilConfirmed("Node 3")
+            .postTransactionUntilConfirmed("add node 3 to system cluster")
 
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
             assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(3)
             assert(node2.c0.getBcSigners(brid.data).size).isEqualTo(3)
             assert(node3.c0.getBcSigners(brid.data).size).isEqualTo(3)
+        }
+    }
+
+    private fun voteOnAllProposals(provider: KeyPair) {
+        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
+            node1.client(brid, listOf(provider)).transactionBuilder()
+                .makeVoteOperation(provider.pubKey.data, it.rowid, true)
+                .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
         }
     }
 
@@ -268,13 +248,8 @@ internal class Directory1DeploymentIT {
                     .proposeBlockchainOperation(node3.providerPubkey, configGtv, "dapp", containerName)
                     .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
-                // Voting
-                val proposal = node1.c0.getProposal(null)!!
-                node1.c0.transactionBuilder().makeVoteOperation(node1.providerPubkey, proposal.id, true).postTransactionUntilConfirmed("Vote for BC")
-                consoleLogger.info { "p1 voted for proposal: ${proposal.id}" }
-
-                node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id, true).postTransactionUntilConfirmed("Vote for BC")
-                consoleLogger.info { "p2 voted for proposal: ${proposal.id}" }
+                voteOnAllProposals(node1.provider)
+                voteOnAllProposals(node2.provider)
             }
         }
 
