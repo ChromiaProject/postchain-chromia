@@ -6,6 +6,8 @@ Configuration:
     Property:
     - name: filename
       value: "test.log"
+    - name: fileExt
+      value: "log"
 
   Appenders:
     Console:
