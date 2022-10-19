@@ -38,7 +38,7 @@ open class ManagedModeBase(rellFolder: String) {
     val network: Network = Network.newNetwork()
 
     val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT"))
-        .withNetwork(network)
+            .withNetwork(network)
 
     val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
     val node2: PostchainContainer = postchainServer("node2", node2Logger, 9872, 7741)
@@ -71,10 +71,10 @@ open class ManagedModeBase(rellFolder: String) {
         val applicationFolder = this::class.java.getResource(rellFolder)!!
         val runConf = this::class.java.getResource("run.xml")!!
         val configFiles = RellRunConfigGenerator.generateCli(
-            File(applicationFolder.toURI()),
-            File(runConf.toURI()),
-            RellVersions.VERSION,
-            false
+                File(applicationFolder.toURI()),
+                File(runConf.toURI()),
+                RellVersions.VERSION,
+                false
         ).let {
             RellRunConfigGenerator.buildFiles(it.config)
         }
@@ -110,8 +110,8 @@ open class ManagedModeBase(rellFolder: String) {
         addPeer(channel2, node1)
         addPeer(channel3, node1)
         brid = startBlockchain(
-            channel1,
-            chain0Config
+                channel1,
+                chain0Config
         ).let { BlockchainRid.buildFromHex(it) }
         startBlockchain(channel2, chain0Config)
         startBlockchain(channel3, chain0Config)
@@ -122,7 +122,7 @@ open class ManagedModeBase(rellFolder: String) {
     }
 
     private fun createChannel(target: PostchainContainer) =
-        ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
+            ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
 
     private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
         val service = PeerServiceGrpc.newBlockingStub(channel)
@@ -137,24 +137,24 @@ open class ManagedModeBase(rellFolder: String) {
 
     private fun startBlockchain(channel: ManagedChannel, config: File): String {
         return PostchainServiceGrpc.newBlockingStub(channel)
-            .initializeBlockchain(
-                InitializeBlockchainRequest.newBuilder()
-                    .setChainId(0)
-                    .setGtv(ByteString.copyFrom(config.readBytes()))
-                    .build()
-            ).brid
+                .initializeBlockchain(
+                        InitializeBlockchainRequest.newBuilder()
+                                .setChainId(0)
+                                .setGtv(ByteString.copyFrom(config.readBytes()))
+                                .build()
+                ).brid
     }
 
-   fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
-       val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
-       val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
-       return RellRunConfigGenerator.generateCli(
-           File(applicationFolder.toURI()),
-           File(runConf.toURI()),
-           RellVersions.VERSION,
-           false
-       ).apply {
-           RellRunConfigGenerator.buildFiles(this.config)
-       }
-   }
+    fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
+        val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
+        val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
+        return RellRunConfigGenerator.generateCli(
+                File(applicationFolder.toURI()),
+                File(runConf.toURI()),
+                RellVersions.VERSION,
+                false
+        ).apply {
+            RellRunConfigGenerator.buildFiles(this.config)
+        }
+    }
 }

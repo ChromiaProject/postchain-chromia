@@ -15,14 +15,11 @@ import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
-import net.postchain.common.hexStringToByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.bpm.docker.DockerClientFactory
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
-import net.postchain.dapp.adminPubKey
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -32,8 +29,6 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
-
-internal val initialProviderPubKey = adminPubKey.hexStringToByteArray()
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
