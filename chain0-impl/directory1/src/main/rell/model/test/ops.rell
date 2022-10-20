@@ -9,7 +9,7 @@ operation create_system_entities_op() {
 }
 
 operation add_provider(pubkey) {
-    create provider(pubkey, true);
+    create provider(pubkey, active = true, system = false);
 }
 
 operation enroll_system(pubkey) {

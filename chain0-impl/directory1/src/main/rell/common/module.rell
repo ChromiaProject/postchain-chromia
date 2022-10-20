@@ -16,8 +16,8 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	require(empty( provider @* {}));
 	print("--------------------Initializing-Chain-0-----------------------");
 	print("Creating provider quotas");
-	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	create provider_quota(tier=provider_tier.COMMUNITY_NODE_PROVIDER, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	create provider_quota(tier=provider_tier.NODE_PROVIDER, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	print("Creating SYSTEM voter set");
 	create_voter_set_internal(voter_sets.system, 1);
 	/** 

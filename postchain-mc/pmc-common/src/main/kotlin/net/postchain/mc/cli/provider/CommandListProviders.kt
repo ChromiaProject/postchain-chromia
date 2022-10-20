@@ -18,9 +18,9 @@ class CommandListProviders : CliktCommand(
     override fun run() {
         println("Providers:")
         table {
-            header("Name", "Pubkey", "Tier", "Active")
+            header("Name", "Pubkey", "Is System", "Tier", "Active")
             ClientUtil.fromConfig(config).getAllProviders().forEach {
-                row(it.name, it.pubkey.toHex(), it.tier.toString(), it.active.toString())
+                row(it.name, it.pubkey.toHex(), it.system.toString(), it.tier.toString(), it.active.toString())
             }
             hints {
                 borderStyle = Table.BorderStyle.SINGLE_LINE

@@ -19,14 +19,14 @@ class CommandGetProviderInfo : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val providerData = client.getProviderData(key.key)
-        val actionPoints = client.getProviderPoints(key.key)
-        val providerClusters = client.getProviderClusters(key.key)
-        val nodesByProvider = client.getNodesByProvider(key.key)
+        val providerData = client.getProviderData(key.data)
+        val actionPoints = client.getProviderPoints(key.data)
+        val providerClusters = client.getProviderClusters(key.data)
+        val nodesByProvider = client.getNodesByProvider(key.data)
         println("""
             Provider: ${providerData.name}
             Pubkey: ${providerData.pubkey.toHex()}
-            System: ${client.isSystemProvider(key.key)}
+            System: ${providerData.system}
             Tier: ${providerData.tier}
             Active: ${providerData.active}
             Action points: $actionPoints

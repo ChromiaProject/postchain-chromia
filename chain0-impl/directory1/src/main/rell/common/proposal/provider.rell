@@ -20,7 +20,7 @@ operation propose_enable_provider(my_pubkey: pubkey, enable_pubkey: pubkey) {
 	val other_prov = require_provider(enable_pubkey);
 
 	require_provider_auth_with_rl(me);
-	if (other_prov.tier == 0 and me.tier > 0) {
+	if (other_prov.tier == provider_tier.COMMUNITY_NODE_PROVIDER and roles.has_node_access(me)) {
 		update_provider_state(other_prov, true);		
 	} else {
 		require_is_system_provider(my_pubkey);
