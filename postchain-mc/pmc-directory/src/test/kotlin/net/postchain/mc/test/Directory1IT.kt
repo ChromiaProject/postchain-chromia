@@ -116,15 +116,14 @@ class Directory1IT : ManagedModeTest() {
      */
     @Test
     fun testProposeDegradeProviderVoteNo() {
-
         addSystemProv2()
         // Prov2 proposes degradation/demotion of prov1.
         doAndBuildBlocks(provConfig, prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
 
         // Prov votes no
         voteNo(ProposalType.provider_is_system)
-        val listVoterset = provExecutor.listVoterSetMembers(voterSetSystemP)
-        assertEquals(2, listVoterset.size)
+        val listVoterSet = provExecutor.listVoterSetMembers(voterSetSystemP)
+        assertEquals(2, listVoterSet.size)
     }
 
     /**
@@ -132,14 +131,13 @@ class Directory1IT : ManagedModeTest() {
      */
     @Test
     fun testVoterSet() {
-
         addSystemProv2()
 
         val voterSetName = "Ellen"
-        val providers_list = "${provConfig.pubkey()},${prov2Config.pubkey()}"
+        val providersList = "${provConfig.pubkey()},${prov2Config.pubkey()}"
         doAndBuildBlocks(
                 provConfig, provExecutor.createVoterSetAsync(
-                voterSetName, providers_list, 0,
+                voterSetName, providersList, 0,
                 voterSetSystemP
         )
         )
@@ -206,7 +204,7 @@ class Directory1IT : ManagedModeTest() {
             expected: Map<String, Long>
     ) {
         doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
-        var updated = provExecutor.listContainerLimits(containerName)
+        val updated = provExecutor.listContainerLimits(containerName)
         assertEquals(expected, updated)
     }
 
@@ -335,12 +333,11 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testCluster() {
         val newClusterName = "Vera"
-        val providers_list = provConfig.pubkey()
-//        val providers_list = "${provConfig.pubKey},${provConfig.pubKey}"
+        val providersList = provConfig.pubkey()
         //create cluster, initial providers added
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                newClusterName, providers_list,
+                newClusterName, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
@@ -589,17 +586,17 @@ class Directory1IT : ManagedModeTest() {
         val clusterA = "A"
         val clusterB = "B"
         val containerName = "C"
-        val providers_list = provConfig.pubkey()
+        val providersList = provConfig.pubkey()
         //create two new clusters with initial provider added
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                clusterA, providers_list,
+                clusterA, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
-                clusterB, providers_list,
+                clusterB, providersList,
                 voterSetSystemP, voterSetSystemP
         )
         )
@@ -648,7 +645,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.key, brid, action
+                provClient.config.signers.first().pubKey.data, brid, action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }

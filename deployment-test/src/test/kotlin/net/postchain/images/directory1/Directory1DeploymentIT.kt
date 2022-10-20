@@ -109,7 +109,9 @@ internal class Directory1DeploymentIT {
     fun `Add new container`() {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
-            assert(getSummary().containers).isEqualTo(1L)
+            awaitQueryResult {
+                assert(getSummary().containers).isEqualTo(1L)
+            }
 
             transactionBuilder()
                 .proposeContainerOperation(node1.providerPubkey, "system", foobarContainer, "SYSTEM_P")
