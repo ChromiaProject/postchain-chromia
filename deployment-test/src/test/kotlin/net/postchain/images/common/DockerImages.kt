@@ -1,6 +1,7 @@
 package net.postchain.images.common
 
 import org.testcontainers.utility.DockerImageName
+import java.util.*
 
 object DockerImages {
 
@@ -21,6 +22,14 @@ object DockerImages {
     }
 
     private fun versionTag(): String {
-        return javaClass.getPackage()?.implementationVersion ?: "latest"
+        val version = try {
+            val properties = Properties()
+            properties.load(this::class.java.getResourceAsStream("/pom.properties"))
+            properties.getProperty("projectVersion")
+        } catch (e: Exception) {
+            null
+        }
+
+        return version ?: "latest"
     }
 }
