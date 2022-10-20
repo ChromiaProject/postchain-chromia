@@ -22,7 +22,6 @@ import net.postchain.server.grpc.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 // Base class for managed mode tests
@@ -37,7 +36,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     val network: Network = Network.newNetwork()
 
-    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT"))
+    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImages.postgresImage())
             .withNetwork(network)
 
     val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
@@ -47,20 +46,19 @@ open class ManagedModeBase(rellFolder: String) {
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
         return PostchainContainer(
-            DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
-                .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-            appConfig,
-            startupMsg = "Postchain server started, listening on 50051",
-            nodeHost = hostName,
-            nodePort = messagePort,
-            provider = KeyPair.of(appConfig.pubKey, appConfig.privKey)
+                DockerImages.postchainServerImage(),
+                appConfig,
+                startupMsg = "Postchain server started, listening on 50051",
+                nodeHost = hostName,
+                nodePort = messagePort,
+                provider = KeyPair.of(appConfig.pubKey, appConfig.privKey)
         )
-            .withNetworkAliases(hostName)
-            .withNetwork(this@ManagedModeBase.network)
-            .withExposedPorts(50051, apiPort)
-            .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
-            .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-            .withLogConsumer(logConsumer)
+                .withNetworkAliases(hostName)
+                .withNetwork(this@ManagedModeBase.network)
+                .withExposedPorts(50051, apiPort)
+                .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+                .withLogConsumer(logConsumer)
     }
 
 
@@ -92,9 +90,9 @@ open class ManagedModeBase(rellFolder: String) {
     private lateinit var channel3: ManagedChannel
 
     fun stopNodes() {
-        channel1.shutdownNow()
-        channel2.shutdownNow()
-        channel3.shutdownNow()
+        if (::channel1.isInitialized) channel1.shutdownNow()
+        if (::channel2.isInitialized) channel2.shutdownNow()
+        if (::channel3.isInitialized) channel3.shutdownNow()
         stopContainers(node1, node2, node3)
         postgres.stop()
     }
@@ -127,11 +125,11 @@ open class ManagedModeBase(rellFolder: String) {
     private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
         val service = PeerServiceGrpc.newBlockingStub(channel)
         service.addPeer(
-            AddPeerRequest.newBuilder()
-                .setHost(peer.nodeHost)
-                .setPort(peer.nodePort)
-                .setPubkey(peer.pubkey.hex())
-                .build()
+                AddPeerRequest.newBuilder()
+                        .setHost(peer.nodeHost)
+                        .setPort(peer.nodePort)
+                        .setPubkey(peer.pubkey.hex())
+                        .build()
         )
     }
 
