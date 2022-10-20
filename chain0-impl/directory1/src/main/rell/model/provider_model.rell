@@ -73,6 +73,7 @@ namespace revoke {
 	}
 
 	function node(provider) {
+		require(roles.has_system_access(provider) != true, "Cannot revoke node access for a system provider. Revoke system access");
 		provider.tier = provider_tier.COMMUNITY_NODE_PROVIDER;
 		// TODO inactivate all nodes?
 	}

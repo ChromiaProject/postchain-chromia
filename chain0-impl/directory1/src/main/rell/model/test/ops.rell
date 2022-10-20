@@ -19,3 +19,11 @@ operation enroll_system(pubkey) {
 operation revoke_system(pubkey) {
     revoke.system(provider @ { pubkey });
 }
+
+operation enroll_node(pubkey) {
+    enroll.node(provider @ { pubkey });
+}
+
+operation revoke_node(pubkey) {
+    revoke.node(provider @ { pubkey });
+}

@@ -18,6 +18,10 @@ function test_enroll_system() {
     assert_not_null(cluster_provider @? { provider, system_cluster()});
 
     rell.test.tx().op(
+        revoke_node(rell.test.pubkeys.alice)
+    ).run_must_fail();
+
+    rell.test.tx().op(
         revoke_system(rell.test.pubkeys.alice)
     ).run();
 
