@@ -44,7 +44,7 @@ class CommandProposeConfiguration : CliktCommand(
                 if (height == null) {
                     proposeConfigurationOperation(client.config.pubkey().data, blockchainRID.data, configData)
                 } else {
-                    proposeConfigurationAtOperation(blockchainRID.data, client.config.pubkey().data, configData, height!!, force)
+                    proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID.data, configData, height!!, force)
                 }
             }
             .postSyncAwaitConfirmation()

@@ -875,7 +875,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     ): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return makeTransactionWithNop().proposeConfigurationAtOperation(
-            blockchainRID.hexStringToByteArray(), config.pubkey().key, data, height, force
+            config.pubkey().key, blockchainRID.hexStringToByteArray(), data, height, force
         )
     }
 

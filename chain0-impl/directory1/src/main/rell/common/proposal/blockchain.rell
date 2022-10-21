@@ -31,7 +31,7 @@ operation propose_configuration(my_pubkey: pubkey, blockchain_rid: byte_array, c
  * Proposes a new configuration for a blockchain.
  * NB: Only the deployer of the container the blockchain is running in can perform operation
  */
-operation propose_configuration_at(blockchain_rid:byte_array, my_pubkey: pubkey, config_data: byte_array, height: integer, force: boolean) {
+operation propose_configuration_at(my_pubkey: pubkey, blockchain_rid:byte_array, config_data: byte_array, height: integer, force: boolean) {
 	val blockchain = blockchain @ { blockchain_rid };
 	val me = provider @ { my_pubkey };
 	require_provider_auth_with_rl(me);
