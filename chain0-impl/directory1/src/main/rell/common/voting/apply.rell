@@ -22,7 +22,7 @@ function apply_voting_result(prop: proposal) {
 			when (prop.proposal_type) {
 				other			  -> apply_other_voting_result(prop);
 				configuration 	  -> apply_configuration(prop);
-	 			conf              -> apply_conf(prop);
+	 			configuration_at  -> apply_configuration_at(prop);
 	 			bc                -> apply_bc(prop);
 				container         -> apply_container(prop);
 				container_limits  -> apply_container_limits(prop);
@@ -150,8 +150,8 @@ function apply_configuration(proposal) {
 	add_dependencies(pc.data, pc.blockchain.rid, apply_at_height);
 }
 
-function apply_conf(proposal) {
-	val pc = pending_conf @ {proposal};
+function apply_configuration_at(proposal) {
+	val pc = pending_configuration_at @ {proposal};
 	require(get_last_height(pc.blockchain) < pc.height);
 	if (not(pc.force)) {
 		require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));

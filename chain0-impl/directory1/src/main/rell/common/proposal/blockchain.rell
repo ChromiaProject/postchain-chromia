@@ -40,10 +40,10 @@ operation propose_configuration_at(blockchain_rid:byte_array, my_pubkey: pubkey,
 	require(get_last_height(blockchain) < height, "Height must be greater than current height " + height);
 	if (not(force)) {
 		require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1), "BC config already exists.");
-		require(empty(pending_conf @? { blockchain, .height >= height } limit 1), "BC config already exists.");
+		require(empty(pending_configuration_at @? { blockchain, .height >= height } limit 1), "BC config already exists.");
 	}
-	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.deployer);
-	create pending_conf(prop,
+	val prop = create proposal(op_context.last_block_time, proposal_type.configuration_at, me, container.deployer);
+	create pending_configuration_at(prop,
 		blockchain,
 		height,
 		force,
