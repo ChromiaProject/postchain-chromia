@@ -7,6 +7,7 @@ import .voter_set.*;
 enum proposal_type {
     other,
     conf,
+    configuration,
     bc,
     container,
     container_limits,
@@ -34,6 +35,12 @@ entity pending_conf {
     blockchain;
 	height: integer;
 	force: boolean;
+    data: byte_array;
+}
+
+entity pending_configuration {
+    key proposal;
+    blockchain;
     data: byte_array;
 }
 

@@ -21,6 +21,7 @@ function apply_voting_result(prop: proposal) {
 			print("proposal approved:", propStr);
 			when (prop.proposal_type) {
 				other			  -> apply_other_voting_result(prop);
+				configuration 	  -> apply_configuration(prop);
 	 			conf              -> apply_conf(prop);
 	 			bc                -> apply_bc(prop);
 				container         -> apply_container(prop);
@@ -139,6 +140,14 @@ function update_provider_state(provider, active: boolean) {
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}
+}
+
+function apply_configuration(proposal) {
+	val pc = pending_configuration @ { proposal };
+	val apply_at_height = get_last_height(pc.blockchain) + 10;
+	require(empty(blockchain_configuration @? { pc.blockchain, apply_at_height }), "Configuration at height %d already exists".format(apply_at_height));
+	create blockchain_configuration(pc.blockchain, apply_at_height, pc.data);
+	add_dependencies(pc.data, pc.blockchain.rid, apply_at_height);
 }
 
 function apply_conf(proposal) {

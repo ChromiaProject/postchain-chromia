@@ -114,7 +114,7 @@ function test_propose_configuration() {
 function alice_propose_conf(brid: byte_array, conf: map<text, text>, height: integer, force: boolean) {
     val alice = rell.test.keypairs.alice;
     return rell.test.tx().op(
-        propose_configuration(brid, alice.pub, conf.to_gtv().to_bytes(), height, force)
+        propose_configuration_at(brid, alice.pub, conf.to_gtv().to_bytes(), height, force)
     )  
     .sign(alice);
 }
