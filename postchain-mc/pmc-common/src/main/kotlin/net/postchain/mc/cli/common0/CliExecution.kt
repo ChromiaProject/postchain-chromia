@@ -16,6 +16,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.readConfigurationFile
 import java.io.File
 
 open class CliExecution(val config: PostchainClientConfig) {
@@ -23,11 +24,6 @@ open class CliExecution(val config: PostchainClientConfig) {
     companion object : KLogging()
 
     open fun getPostchainClient() = ClientUtil.fromConfig(config)
-
-    protected fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
-        val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
-        return GtvEncoder.encodeGtv(gtv)
-    }
 
     protected fun makeTransactionWithNop(): TransactionBuilder {
         return getPostchainClient().transactionBuilder().addNop()
@@ -479,22 +475,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnList
     }
 
-    protected fun readConfigurationFile(blockchainConfigFile: File, format: String?): ByteArray {
-        var fmt = format
-        if (fmt == null) {
-            fmt = if (blockchainConfigFile.extension == "gtv") "gtv" else "xml"
-        }
-        val data: ByteArray
-        if (fmt == "gtv") {
-            data = blockchainConfigFile.readBytes()
-            // try to decode to ensure data is valid
-            GtvFactory.decodeGtv(data)
-        } else {
-            data = getEncodedGtxValueFromFile(blockchainConfigFile)
-        }
-        return data
-    }
-
     open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.postSync()
     }
@@ -579,20 +559,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 removeNodeAsync(key),
                 "Node removed",
                 "Cannot remove node"
-        )
-    }
-
-    fun proposeConfiguration(
-            blockchainRID: String,
-            blockchainConfigFile: String,
-            height: Long,
-            format: String?,
-            force: Boolean
-    ) {
-        sendTxSync(
-                proposeConfigurationAsync(blockchainRID, File(blockchainConfigFile), height, format, force),
-                "proposal of config added",
-                "Cannot add config proposal"
         )
     }
 
