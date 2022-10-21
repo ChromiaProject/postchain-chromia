@@ -16,11 +16,22 @@ operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name
 	}
 }
 
+operation propose_configuration(my_pubkey: pubkey, blockchain_rid: byte_array, config_data: byte_array) {
+	val me = require_is_provider_with_rl(my_pubkey);
+	val blockchain = require_blockchain(blockchain_rid);
+	val container = container_blockchain @ {blockchain} .container;
+	require_container_deployer(container, me);
+	
+	val prop = create proposal(op_context.last_block_time, proposal_type.configuration, me, container.deployer);
+	create pending_configuration(prop, blockchain, config_data);
+	internal_vote(me, prop, true);
+}
+
 /*
  * Proposes a new configuration for a blockchain.
  * NB: Only the deployer of the container the blockchain is running in can perform operation
  */
-operation propose_configuration(blockchain_rid:byte_array, my_pubkey: pubkey, config_data: byte_array, height: integer, force: boolean) {
+operation propose_configuration_at(my_pubkey: pubkey, blockchain_rid:byte_array, config_data: byte_array, height: integer, force: boolean) {
 	val blockchain = blockchain @ { blockchain_rid };
 	val me = provider @ { my_pubkey };
 	require_provider_auth_with_rl(me);
@@ -29,10 +40,10 @@ operation propose_configuration(blockchain_rid:byte_array, my_pubkey: pubkey, co
 	require(get_last_height(blockchain) < height, "Height must be greater than current height " + height);
 	if (not(force)) {
 		require(empty(blockchain_configuration @? { blockchain, .height >= height } limit 1), "BC config already exists.");
-		require(empty(pending_conf @? { blockchain, .height >= height } limit 1), "BC config already exists.");
+		require(empty(pending_configuration_at @? { blockchain, .height >= height } limit 1), "BC config already exists.");
 	}
-	val prop = create proposal(op_context.last_block_time, proposal_type.conf, me, container.deployer);
-	create pending_conf(prop,
+	val prop = create proposal(op_context.last_block_time, proposal_type.configuration_at, me, container.deployer);
+	create pending_configuration_at(prop,
 		blockchain,
 		height,
 		force,

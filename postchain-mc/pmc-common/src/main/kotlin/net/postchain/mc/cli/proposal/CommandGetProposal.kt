@@ -48,7 +48,7 @@ class CommandGetProposal : CliktCommand(
                 val conf = GtvDecoder.decodeGtv(p.data)
                 "Container: ${p.container}\nData: $conf"
             }
-            ProposalType.conf -> {
+            ProposalType.configuration_at -> {
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
