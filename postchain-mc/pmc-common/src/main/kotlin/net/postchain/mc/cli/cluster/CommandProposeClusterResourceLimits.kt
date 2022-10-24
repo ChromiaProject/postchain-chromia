@@ -17,18 +17,21 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val clusterName by nameOption("Cluster name").required()
 
-    private val ram by option("-r", "--ram", help = "RAM limit").long()
+    private val maxContainers by option("-mc", "--max-containers", help = "Max containers").long()
 
     private val cpu by option("-c", "--cpu", help = "CPU limit").long()
 
+    private val ram by option("-r", "--ram", help = "RAM limit").long()
+
     private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
     override fun run() {
-        val limitMap = mutableMapOf<String, Long>()
-        ram?.let { limitMap.put("ram", it) }
-        cpu?.let { limitMap.put("cpu", it) }
-        storage?.let { limitMap.put("storage", it) }
+        val limitsMap = mutableMapOf<String, Long>()
+        maxContainers?.let { limitsMap.put("max_containers", it) }
+        cpu?.let { limitsMap.put("default_container_cpu", it) }
+        ram?.let { limitsMap.put("default_container_ram", it) }
+        storage?.let { limitsMap.put("default_container_storage", it) }
 
-        CliExecution(config).proposeClusterLimits(clusterName, limitMap)
+        CliExecution(config).proposeClusterLimits(clusterName, limitsMap)
         println("proposal has been added successfully")
     }
 

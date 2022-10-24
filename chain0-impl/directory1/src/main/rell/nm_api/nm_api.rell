@@ -155,9 +155,9 @@ query nm_get_node_replica_map(): list<list<byte_array>> {
 query nm_get_container_limits(name) : map<text, integer> {
 	val container = container @ {name};
 	var return_map = map<text, integer>();
-	val limits_list = container_resource_limit @* {container};
+	val limits_list = container_resource_limit @* { container };
 	for (l in limits_list) {
-		val r = l.resource_limit_type;
+		val r = l.container_resource_limit_type;
 		return_map.put(r.name, l.value);
 	}
 	return return_map;
@@ -171,7 +171,7 @@ query nm_get_cluster_limits(name) : map<text, integer> {
 	var return_map = map<text, integer>();
 	val limits_list = cluster_resource_limit @* {cluster};
 	for (l in limits_list) {
-		val r = l.resource_limit_type;
+		val r = l.cluster_resource_limit_type;
 		return_map.put(r.name, l.value);
 	}
 	return return_map;

@@ -4,6 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.containers.bpm.ContainerResourceLimitType
+import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
@@ -17,19 +19,22 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val containerName by nameOption("Container name").required()
 
-    private val ram by option("-r", "--ram", help = "RAM limit").long()
+    private val maxDapps by option("-d", "--max-dapps", help = "Max dapps").long()
 
     private val cpu by option("-c", "--cpu", help = "CPU limit").long()
+
+    private val ram by option("-r", "--ram", help = "RAM limit").long()
 
     private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
 
     override fun run() {
-        val limitMap = mutableMapOf<String, Long>()
-        ram?.let { limitMap.put("ram", it) }
-        cpu?.let { limitMap.put("cpu", it) }
-        storage?.let { limitMap.put("storage", it) }
+        val limitsMap = mutableMapOf<ContainerResourceLimitType, Long>()
+        maxDapps?.let { limitsMap.put(ContainerResourceLimitType.MAX_DAPPS, it) }
+        cpu?.let { limitsMap.put(ContainerResourceLimitType.CPU, it) }
+        ram?.let { limitsMap.put(ContainerResourceLimitType.RAM, it) }
+        storage?.let { limitsMap.put(ContainerResourceLimitType.STORAGE, it) }
 
-        CliExecution(config).proposeContainerLimits(containerName, limitMap)
+        CliExecution(config).proposeContainerLimits(containerName, limitsMap)
         println("proposal has been added successfully")
     }
 

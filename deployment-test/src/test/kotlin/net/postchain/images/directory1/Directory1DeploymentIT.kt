@@ -16,8 +16,8 @@ import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.ContainerResourceLimitType
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
@@ -43,9 +43,9 @@ internal class Directory1DeploymentIT {
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
-        private val foobarResourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
+        private val resourceLimitsValues = arrayOf(-1L, 250L, 600L, -1L) // (max_dapps, cpu, ram, storage)
         private val foobarResourceLimits = ContainerResourceLimits.fromValues(
-            foobarResourceLimitsValues.first, foobarResourceLimitsValues.second, foobarResourceLimitsValues.third
+            resourceLimitsValues[0], resourceLimitsValues[1], resourceLimitsValues[2], resourceLimitsValues[3]
         )
 
         init {
@@ -135,18 +135,16 @@ internal class Directory1DeploymentIT {
     @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L)
+        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L, -1L)
         val actualLimits = ContainerResourceLimits(queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
         // Changing resource limits
-        with(foobarResourceLimitsValues) {
+        with(resourceLimitsValues) {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                 node1.providerPubkey,
                 foobarContainer,
-                first,
-                second,
-                third
+                get(0), get(1), get(2), get(3)
             )
                 .postTransactionUntilConfirmed("container limits")
         }
@@ -310,7 +308,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Asserting container resource limits")
 
         val expectedResourceLimits = ContainerResourceLimits.fromValues(
-            foobarResourceLimitsValues.first, foobarResourceLimitsValues.second, foobarResourceLimitsValues.third
+            resourceLimitsValues[0], resourceLimitsValues[1], resourceLimitsValues[2], resourceLimitsValues[3]
         )
 
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
@@ -347,8 +345,8 @@ internal class Directory1DeploymentIT {
         }
     }
 
-    private fun queryContainerResourceLimits(): Map<ResourceLimit, Long> {
-        return node1.c0.nmGetContainerLimits(foobarContainer).mapKeys { ResourceLimit.valueOf(it.key.uppercase()) }
+    private fun queryContainerResourceLimits(): Map<ContainerResourceLimitType, Long> {
+        return node1.c0.nmGetContainerLimits(foobarContainer).mapKeys { ContainerResourceLimitType.valueOf(it.key.uppercase()) }
     }
 
     private val PostchainContainer.c0 get() = client(brid)

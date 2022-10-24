@@ -1,13 +1,13 @@
 
 // Who can update container limits? Cluster deployers' voter set.
-operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram: integer, cpu: integer, storage: integer) {
+operation propose_container_limits(my_pubkey: pubkey, container_name: text, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {
 	val me = require_provider(my_pubkey);
 	val container = require_container(container_name);
 	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
 	require_cluster_deployer(container.cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
-	create pending_container_limits(prop, container, cpu, ram, storage);
+	create pending_container_limits(prop, container, max_dapps, cpu, ram, storage);
 	internal_vote(me, prop, true);
 }
 

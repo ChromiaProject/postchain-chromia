@@ -13,14 +13,21 @@ operation propose_cluster_deployer(my_pubkey: pubkey, cluster_name: text, new_de
 }
 
 // Who can update cluster limits? Cluster governance voter set.
-operation propose_cluster_limits(my_pubkey: pubkey, cluster_name: text, ram: integer, cpu: integer, storage: integer) {
+operation propose_cluster_limits(
+    my_pubkey: pubkey,
+    cluster_name: text,
+    max_containers: integer,
+    default_container_cpu: integer,
+    default_container_ram: integer,
+    default_container_storage: integer
+) {
 	val me = require_provider(my_pubkey);
 	//check that provider authority and that it is a cluster governor
 	require_provider_auth_with_rl(me);
 	val cluster = require_cluster(cluster_name);
 	require_cluster_governor(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_limits, me, cluster.governance);
-	create pending_cluster_limits(prop, cluster, cpu, ram, storage);
+	create pending_cluster_limits(prop, cluster, max_containers, default_container_cpu, default_container_ram, default_container_storage);
 	internal_vote(me, prop, true);
 }
 

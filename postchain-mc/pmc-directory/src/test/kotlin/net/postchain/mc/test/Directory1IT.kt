@@ -12,6 +12,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.containers.bpm.ContainerResourceLimitType
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -205,7 +206,8 @@ class Directory1IT : ManagedModeTest() {
             limits: Map<String, Long>,
             expected: Map<String, Long>
     ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
+        val limits0 = limits.mapKeys { ContainerResourceLimitType.valueOf(it.key.uppercase()) }
+        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits0))
         val updated = provExecutor.listContainerLimits(containerName)
         assertEquals(expected, updated)
     }

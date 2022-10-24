@@ -83,9 +83,10 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 	require_provider_auth_with_rl(me);
 	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
 	val c = create cluster(name, governance = governor, deployer = deployer);
-	create cluster_resource_limit(c, resource_limit_type.cpu , -1);
-	create cluster_resource_limit(c, resource_limit_type.ram , -1);
-	create cluster_resource_limit(c, resource_limit_type.storage , -1);
+	create cluster_resource_limit(c, cluster_resource_limit_type.max_containers , -1);
+	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_cpu , -1);
+	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_ram , -1);
+	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_storage , -1);
 	if (exists(initials)) {
 		for (i in initials) {
 			val prov = require_provider(i);
