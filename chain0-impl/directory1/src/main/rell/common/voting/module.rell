@@ -21,6 +21,7 @@ function create_voter_set_internal(name, threshold: integer = 0, governor: voter
 }
 
 function remove_voter_set_internal(voter_set) {
+    delete voter_set_member @* { voter_set };
     delete voter_set_governance @? { voter_set };
     delete voter_set;
 }

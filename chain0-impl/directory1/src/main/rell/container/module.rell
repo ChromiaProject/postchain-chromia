@@ -21,7 +21,6 @@ operation remove_container(me:pubkey, container_name:text) {
     val container = require_container(container_name);
     require_cluster_deployer(container.cluster, provider);
     require_container_available_for_removal(container);
-    delete voter_set_member @* { container.deployer };
     val vs = container.deployer;
     remove_container_impl(container);
     remove_voter_set_internal(vs);
