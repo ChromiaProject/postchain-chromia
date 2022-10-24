@@ -4,7 +4,7 @@ import ^^.container_proposal.*;
 import ^^^.common.test.setup.*;
 
 
-function remove_container() { // Ignored
+function test_remove_container() {
     setup_module();
 
     // 1. Deleting system container. Must fail.
