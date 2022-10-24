@@ -1,5 +1,6 @@
 module;
 
+import ^.*;
 import ^^.model.*;
 import ^^.common.util.*;
 
@@ -16,19 +17,6 @@ operation create_container_from(me:pubkey, name, cluster_name:text, consensus_th
     create_cluster_impl(me, name, cluster_name, consensus_threshold, deployers);
 }
 
-function create_cluster_impl(me:pubkey, name, cluster_name:text, consensus_threshold: integer, deployers: list<pubkey>) {
-    val provider = require_is_provider_with_rl(me);
-    val cluster = require_cluster(cluster_name);
-    require_cluster_deployer(cluster, provider);
-    require(consensus_threshold >= -1 and consensus_threshold <= deployers.size(), "Invalid threshold");
-    val vs = create_voter_set_internal("container_" + name + "_deployer", consensus_threshold, cluster.deployer);
-    for (deployer_key in deployers) {
-        val deployer = require_provider(deployer_key);
-        create voter_set_member(vs, deployer);
-    }
-    create_container_with_resource_limits(name, container_type.isolated, cluster, vs); // TODO: Add Resource limits
-}
-
 operation add_container_deployer(me:pubkey, container_name:text, deployer_pubkey:pubkey) {
     val provider = require_is_provider_with_rl(me);
     val container = require_container(container_name);
@@ -36,21 +24,11 @@ operation add_container_deployer(me:pubkey, container_name:text, deployer_pubkey
     val deployer = require_provider(deployer_pubkey);
     create voter_set_member(container.deployer, deployer);
 }
+
 operation remove_container_deployer(me:pubkey, container_name:text, deployer_pubkey:pubkey) {
     val provider = require_is_provider_with_rl(me);
     val container = require_container(container_name);
     require_cluster_deployer(container.cluster, provider);
     val deployer = require_provider(deployer_pubkey); 
     delete voter_set_member @? { container.deployer, deployer };
-}
-
-operation remove_container(me:pubkey, container_name:text) {
-    val provider = require_is_provider_with_rl(me);
-    val container = require_container(container_name);
-    require_cluster_deployer(container.cluster, provider);
-    require_container_available_for_removal(container);
-    delete voter_set_member @* { container.deployer };
-    val vs = container.deployer;
-    remove_container_impl(container);
-    remove_voter_set_internal(vs);
 }
