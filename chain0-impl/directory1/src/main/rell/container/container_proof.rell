@@ -18,5 +18,5 @@ operation create_container_by_proof(me:pubkey, name, cluster_name:text, proof:by
     // TODO: Validate proof
 
     val threshold = if (consensus_threshold == null) 1 else consensus_threshold;
-    create_cluster_impl(me, name, cluster_name, threshold, deployer_list);
+    create_container_impl(me, name, cluster_name, threshold, deployer_list);
 }

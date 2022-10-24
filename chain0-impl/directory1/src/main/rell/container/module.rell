@@ -3,7 +3,7 @@ module;
 import ^.model.*;
 import ^.common.util.*;
 
-function create_cluster_impl(me:pubkey, name, cluster_name:text, consensus_threshold: integer, deployers: list<pubkey>) {
+function create_container_impl(me:pubkey, name, cluster_name:text, consensus_threshold: integer, deployers: list<pubkey>) {
     val provider = require_is_provider_with_rl(me);
     val cluster = require_cluster(cluster_name);
     require_cluster_deployer(cluster, provider);
@@ -23,5 +23,5 @@ operation remove_container(me:pubkey, container_name:text) {
     require_container_available_for_removal(container);
     val vs = container.deployer;
     remove_container_impl(container);
-    remove_voter_set_internal(vs);
+    remove_voter_set_impl(vs);
 }
