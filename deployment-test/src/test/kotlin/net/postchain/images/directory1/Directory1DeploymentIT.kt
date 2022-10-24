@@ -12,6 +12,7 @@ import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
+import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
@@ -114,7 +115,13 @@ internal class Directory1DeploymentIT {
             }
 
             transactionBuilder()
-                .proposeContainerOperation(node1.providerPubkey, "system", foobarContainer, "SYSTEM_P")
+                .createContainerOperation(
+                    node1.providerPubkey,
+                    foobarContainer,
+                    "system",
+                    1,
+                    listOf(node1.provider.pubKey.data)
+                )
                 .postTransactionUntilConfirmed("$foobarContainer container")
 
             awaitUntilAsserted {
@@ -261,17 +268,20 @@ internal class Directory1DeploymentIT {
 
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
-                node3.c0.transactionBuilder()
-                    .proposeBlockchainOperation(node3.providerPubkey, configGtv, "dapp", containerName)
+                node1.c0.transactionBuilder()
+                    .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
                     .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 // Voting
-                val proposal = node1.c0.getProposal(null)!!
-                node1.c0.transactionBuilder().makeVoteOperation(node1.providerPubkey, proposal.id, true).postTransactionUntilConfirmed("Vote for BC")
-                consoleLogger.info { "p1 voted for proposal: ${proposal.id}" }
+                node1.c0.getProposal(null)?.let { proposal ->
+                    node3.c0.transactionBuilder().makeVoteOperation(node3.providerPubkey, proposal.id, true)
+                        .postTransactionUntilConfirmed("Vote for BC")
+                    consoleLogger.info { "p3 voted for proposal: ${proposal.id}" }
 
-                node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id, true).postTransactionUntilConfirmed("Vote for BC")
-                consoleLogger.info { "p2 voted for proposal: ${proposal.id}" }
+                    node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id, true)
+                        .postTransactionUntilConfirmed("Vote for BC")
+                    consoleLogger.info { "p2 voted for proposal: ${proposal.id}" }
+                }
             }
         }
 

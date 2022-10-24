@@ -176,7 +176,7 @@ class Directory1IT : ManagedModeTest() {
         val containerName = "container1"
         doAndBuildBlocks(
                 provConfig,
-                provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
+                provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
         )
         assertAdded("get_container", "name", GtvString(containerName))
 
@@ -250,7 +250,7 @@ class Directory1IT : ManagedModeTest() {
         val containerName = "container1"
         doAndBuildBlocks(
                 provConfig,
-                provExecutor.proposeContainerAsync(containerName, systemClusterName, voterSetSystemP)
+                provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
         )
 
         val expected = arrayOf<String?>("container1", "system")
@@ -307,7 +307,7 @@ class Directory1IT : ManagedModeTest() {
     fun testProposeAddBlockchainXmlWithDependency() {
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
         assertEquals(2, provExecutor.listBlockchains(false).size)
@@ -436,7 +436,7 @@ class Directory1IT : ManagedModeTest() {
     fun testPauseBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
@@ -464,7 +464,7 @@ class Directory1IT : ManagedModeTest() {
     fun testDeleteBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         var bcs = provExecutor.listBlockchains(false)
@@ -606,7 +606,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(listOf("system", clusterA, clusterB), clusterList)
 
         //add a container C to cluster A
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerAsync(containerName, clusterA, voterSetSystemP))
+        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(containerName, clusterA, voterSetSystemP))
         // add a replica of C in cluster B
         doAndBuildBlocks(provConfig, provExecutor.addContainerReplicaAsync(clusterB, containerName))
 

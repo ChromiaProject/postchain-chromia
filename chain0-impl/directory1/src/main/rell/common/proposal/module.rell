@@ -37,13 +37,7 @@ entity pending_conf {
     data: byte_array;
 }
 
-entity pending_container {
-	key proposal;
-	key name;
- 	cluster;
- 	container_type;
- 	deployer: voter_set;
-}
+
 
 entity pending_container_limits {
 	key proposal;
@@ -53,10 +47,6 @@ entity pending_container_limits {
 	storage: integer;
 }
 
-entity pending_remove_container {
-	key proposal;
-	key container;
-}
 
 entity pending_cluster_limits {
 	key proposal;
@@ -139,9 +129,7 @@ function delete_proposal(prop: proposal) {
         other               -> delete_other_proposal(prop);
         conf                -> delete pending_conf @ { prop };
         bc                  -> delete pending_blockchain @ { prop };
-        container           -> delete pending_container @ { prop };
         container_limits    -> delete pending_container_limits @ { prop };
-        container_remove    -> delete pending_remove_container @? { prop };
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };
