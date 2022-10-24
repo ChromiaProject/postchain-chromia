@@ -20,6 +20,8 @@
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
+        <module>deployment-tool</module>
+        <module>deployment-tool-cli</module>
     </modules>
     <packaging>pom</packaging>
 
