@@ -1,17 +1,4 @@
 
-// Who can create a new container? Cluster deployers' voter set. (They can also update container limits.)
-operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deployer_name: text) {
-	val me = require_provider(my_pubkey);
-	val cluster = require_cluster(cluster_name);
-	val deployer = require_voter_set(deployer_name);
-	//check that provider authority and that it is cluster's deployer
-	require_provider_auth_with_rl(me);
-	require_cluster_deployer(cluster, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.container, me, cluster.deployer);
-	create pending_container(prop, name, cluster, container_type.isolated, deployer);
-	internal_vote(me, prop, true);
-}
-
 // Who can update container limits? Cluster deployers' voter set.
 operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram: integer, cpu: integer, storage: integer) {
 	val me = require_provider(my_pubkey);
@@ -24,13 +11,3 @@ operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram:
 	internal_vote(me, prop, true);
 }
 
-operation propose_remove_container(my_pubkey: pubkey, name) {
-    val me = require_provider(my_pubkey);
-    require_provider_auth_with_rl(me);
-    val cont = require_container(name);
-    require_cluster_deployer(cont.cluster, me);
-    require_container_available_for_removal(cont);
-    val prop = create proposal(op_context.last_block_time, proposal_type.container_remove, me, cont.cluster.deployer);
-    create pending_remove_container(prop, cont);
-    internal_vote(me, prop, true);
-}

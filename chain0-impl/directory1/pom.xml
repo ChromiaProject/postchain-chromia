@@ -15,7 +15,7 @@
     <description>Chain0 implementations for Directory1/Chromia1</description>
 
     <properties>
-        <rellTestModules>common</rellTestModules>
+        <rellTestModules>common,container</rellTestModules>
     </properties>
 
     <dependencies>

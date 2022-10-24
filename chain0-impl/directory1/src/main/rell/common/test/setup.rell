@@ -1,7 +1,8 @@
 @test module;
 
 import o: ^.ops;
+import ^.util.constants;
 
 function setup_module() {
-    rell.test.tx().op(o.initialize_test_module(rell.test.pubkeys.alice)).run();
+    rell.test.tx().op(o.initialize_test_module(constants.initial_provider.pub)).run();
 }

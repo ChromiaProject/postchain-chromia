@@ -1,16 +1,11 @@
 @test module;
 
-import ^^.*;
-import ^^.test.ops.*;
+import ^^.container_proposal.*;
+import ^^^.common.test.setup.*;
 
-function setup() {
-	rell.test.tx().op(
-	    initialize_test_module(rell.test.pubkeys.alice)
-	).run();
-}
 
 function test_remove_container() {
-    setup();
+    setup_module();
 
     // 1. Deleting system container. Must fail.
     rell.test.tx().op(

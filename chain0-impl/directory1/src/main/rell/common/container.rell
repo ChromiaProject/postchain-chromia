@@ -17,6 +17,11 @@ function create_container_with_resource_limits(name, container_type, cluster, vo
     return c;
 }
 
+function remove_container_impl(container) {
+    delete container_resource_limit @* { container };
+    delete container;
+}
+
 function require_container_available_for_removal(container) {
     require(container.name != "system", "System cluster can't be deleted");
     require(

@@ -24,9 +24,7 @@ function apply_voting_result(prop: proposal) {
 				configuration 	  -> apply_configuration(prop);
 	 			configuration_at  -> apply_configuration_at(prop);
 	 			bc                -> apply_bc(prop);
-				container         -> apply_container(prop);
 				container_limits  -> apply_container_limits(prop);
-				container_remove  -> apply_container_remove(prop);
 				cluster_limits    -> apply_cluster_limits(prop);
 				cluster_provider  -> apply_cluster_provider(prop);
 				cluster_deployer  -> apply_cluster_deployer(prop);
@@ -43,17 +41,7 @@ function apply_voting_result(prop: proposal) {
 
 @extendable function apply_other_voting_result(proposal) { /* Should be extended */ }
 
-//Apply decision on creation of new container. With default resource limits.
-//TODO: Update default values to make sense.
-function apply_container(proposal) {
-	val pps = pending_container @ {proposal};
-	create_container_with_resource_limits(
-		pps.name,
-		pps.container_type,
-		pps.cluster,
-		pps.deployer
-	);
-}
+
 
 function apply_container_limits(proposal) {
 	val pps = pending_container_limits @ {proposal};
@@ -62,12 +50,6 @@ function apply_container_limits(proposal) {
 	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
 }
 
-function apply_container_remove(proposal) {
-    val cont = pending_remove_container @ { proposal } .container;
-    delete container_resource_limit @* { cont };
-    delete pending_remove_container @ { proposal };
-    delete container @ { cont.name };
-}
 
 function apply_cluster_limits(proposal) {
 	val pps = pending_cluster_limits @ {proposal};

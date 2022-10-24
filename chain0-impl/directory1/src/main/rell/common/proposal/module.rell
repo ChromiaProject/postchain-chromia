@@ -9,9 +9,7 @@ enum proposal_type {
     configuration_at,
     configuration,
     bc,
-    container,
     container_limits,
-    container_remove,
     cluster_limits,
     cluster_provider,
     cluster_deployer,
@@ -44,14 +42,6 @@ entity pending_configuration {
     data: byte_array;
 }
 
-entity pending_container {
-	key proposal;
-	key name;
- 	cluster;
- 	container_type;
- 	deployer: voter_set;
-}
-
 entity pending_container_limits {
 	key proposal;
 	key container;
@@ -60,10 +50,6 @@ entity pending_container_limits {
 	storage: integer;
 }
 
-entity pending_remove_container {
-	key proposal;
-	key container;
-}
 
 entity pending_cluster_limits {
 	key proposal;
@@ -147,9 +133,7 @@ function delete_proposal(prop: proposal) {
         configuration_at    -> delete pending_configuration_at @ { prop };
         configuration       -> delete pending_configuration @ { prop };
         bc                  -> delete pending_blockchain @ { prop };
-        container           -> delete pending_container @ { prop };
         container_limits    -> delete pending_container_limits @ { prop };
-        container_remove    -> delete pending_remove_container @? { prop };
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
         cluster_deployer    -> delete pending_cluster_deployer @ { prop };

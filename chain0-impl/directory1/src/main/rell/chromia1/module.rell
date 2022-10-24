@@ -5,6 +5,7 @@ import .proposal.*;
 import .ft3.ft3_basic;
 import ft3_account: .ft3.account;
 import ft3_core: .ft3.core;
+import ^.container.container_proof.*;
 
 /*
  * Chromia1 is a public blockchain networking dapp where the c1 dapp manages and controls creating and deleting clusters, containers and blockchains.

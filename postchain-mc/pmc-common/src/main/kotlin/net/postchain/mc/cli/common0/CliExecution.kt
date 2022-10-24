@@ -6,6 +6,7 @@ import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOpera
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.voting.makeVoteOperation
+import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
@@ -640,14 +641,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeContainer(containerName: String, clusterName: String, deployerName: String) {
-        sendTxSync(
-                proposeContainerAsync(containerName, clusterName, deployerName),
-                "Container proposed",
-                "Failed proposing new container"
-        )
-    }
-
     fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String, name: String) {
         sendTxSync(
                 proposeBlockchainAsync(File(blockchainConfigFile), format, container, name),
@@ -782,8 +775,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
-    fun proposeContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeContainerOperation(config.pubkey().key, clusterName, containerName, deployerName)
+    fun createContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
+        return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
     }
 
     /** Propose new cluster resource limits.
