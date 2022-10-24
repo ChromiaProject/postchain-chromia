@@ -1,11 +1,20 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.types.file
+import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
+import net.postchain.chain0.common.proposal.proposeConfigurationOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.cli.util.*
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeConfiguration : CliktCommand(
     name = "update",
@@ -16,9 +25,11 @@ class CommandProposeConfiguration : CliktCommand(
         at a height < previously approved config heights. Change will be applied after voting.
         """.trimIndent()
 ) {
-    private val config by configOption()
+    private val client by nopClientOption()
 
-    private val blockchainConfigFile by blockchainConfigOption()
+    private val blockchainConfigFile by option("-bc", "--blockchain-config", help = "Blockchain config to propose")
+        .file(mustExist = true, mustBeReadable = true, canBeDir = false)
+        .required()
 
     private val blockchainRID by blockchainRidOption()
 
@@ -27,9 +38,17 @@ class CommandProposeConfiguration : CliktCommand(
     private val force by forceOption()
 
     override fun run() {
-        val addToHeight = height ?: (ClientUtil.fromConfig(config).getBlockchainLastHeight(blockchainRID.data) + 5)
-        CliExecution(config)
-            .proposeConfiguration(blockchainRID.toHex(), blockchainConfigFile, addToHeight, null, force)
-        println("Configuration update has been proposed")
+        client.transactionBuilder()
+            .apply {
+                val configData = readConfigurationFile(blockchainConfigFile, null)
+                if (height == null) {
+                    proposeConfigurationOperation(client.config.pubkey().data, blockchainRID.data, configData)
+                } else {
+                    proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID.data, configData, height!!, force)
+                }
+            }
+            .postSyncAwaitConfirmation()
+            .printResult("Configuration was proposed",
+            "Failed to propose configuration")
     }
 }
