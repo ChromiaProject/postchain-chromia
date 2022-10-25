@@ -2,9 +2,8 @@ package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
-import net.postchain.chain0.common.addNodeToClusterOperation
+import net.postchain.chain0.common.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.updateNodeApiUrlOperation
 import net.postchain.chain0.common.updateNodeHostOperation
 import net.postchain.chain0.common.updateNodePortOperation
@@ -12,13 +11,8 @@ import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
-import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.clientOption
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandUpdateNode : CliktCommand(

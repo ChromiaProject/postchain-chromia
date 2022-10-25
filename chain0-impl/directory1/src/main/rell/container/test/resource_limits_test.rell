@@ -52,57 +52,6 @@ function test_container_resource_limits() {
 
     // Asserting 3d dapp rejected
     assert_equals(blockchain_count0 + 2, blockchain_count());
-
-
-
-/*
-
-    // 2. Proposing container resource limits
-    rell.test.tx().op(
-        propose_container_limits(alice.pubkey, "container1", voter_sets.system_p)
-    ).sign(rell.test.keypairs.alice).run();
-
-
-
-
-    // Asserting container is added
-    val container1 = container @? { "container1" };
-    assert_not_null(container1);
-
-    // Adding blockchain to container1
-    assert_null(blockchain @? { "foo_chain" });
-
-    var conf = map<text, text>();
-    rell.test.tx().op(
-        propose_blockchain(rell.test.pubkeys.alice, conf.to_gtv().to_bytes(), "foo_chain", "container1")
-    ).sign(rell.test.keypairs.alice).run();
-
-    // Asserting blockchain is added to container1
-    val bcFoo = blockchain @? { "foo_chain" };
-    assert_not_null(bcFoo);
-    assert_not_null(container_blockchain @? { container1, bcFoo });
-
-    // Trying to remove container and fail due to the fact it contains a foo_chain
-    rell.test.tx().op(
-        propose_remove_container(rell.test.pubkeys.alice, "container1")
-    ).sign(rell.test.keypairs.alice).run_must_fail();
-
-    // Deleting blockchain
-    rell.test.tx().op(
-        propose_blockchain_action(rell.test.pubkeys.alice, bcFoo.rid, blockchain_action.remove)
-    ).sign(rell.test.keypairs.alice).run();
-
-    // Trying to remove container1
-    rell.test.tx().op(
-        propose_remove_container(rell.test.pubkeys.alice, "container1")
-    ).sign(rell.test.keypairs.alice).run();
-
-    // Asserting that container1 is removed
-    assert_null(container @? { "container1" });
-    assert_true(empty(
-        container_resource_limit @* { .container in container @* { "container1" } }
-    ));
-    */
 }
 
 function assert_resource_limits(limits: map<container_resource_limit_type, integer>, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {

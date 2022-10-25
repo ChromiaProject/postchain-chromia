@@ -7,7 +7,7 @@ import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
 import net.postchain.chain0.common.addNodeOperation
-import net.postchain.chain0.common.addNodeToClusterOperation
+import net.postchain.chain0.common.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
@@ -183,6 +183,7 @@ internal class Directory1DeploymentIT {
                 )
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
                 .postTransactionUntilConfirmed("Add node 2")
+
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
             assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(2)
