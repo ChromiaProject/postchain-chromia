@@ -17,7 +17,7 @@ function test_container_resource_limits() {
     // Asserting default container resource limits
     val default_limits = get_container_resource_limits(container1);
     print(default_limits);
-    assert_resource_limits(default_limits, -1, -1, -1, -1);
+    assert_container_resource_limits(default_limits, -1, -1, -1, -1);
 
     // 2. Proposing container resource limits
     rell.test.tx().op(
@@ -27,7 +27,7 @@ function test_container_resource_limits() {
     // Asserting new container resource limits
     val limits1 = get_container_resource_limits(container1);
     print(limits1);
-    assert_resource_limits(limits1, 2, 10, 100, 1000);
+    assert_container_resource_limits(limits1, 2, 10, 100, 1000);
 
     // 3. Deploying 2 dapps
     val blockchain_count0 = blockchain_count();
@@ -54,7 +54,7 @@ function test_container_resource_limits() {
     assert_equals(blockchain_count0 + 2, blockchain_count());
 }
 
-function assert_resource_limits(limits: map<container_resource_limit_type, integer>, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {
+function assert_container_resource_limits(limits: map<container_resource_limit_type, integer>, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {
     assert_equals(limits[container_resource_limit_type.max_dapps], max_dapps);
     assert_equals(limits[container_resource_limit_type.cpu], cpu);
     assert_equals(limits[container_resource_limit_type.ram], ram);
