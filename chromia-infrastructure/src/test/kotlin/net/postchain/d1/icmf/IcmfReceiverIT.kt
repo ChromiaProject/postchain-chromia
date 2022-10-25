@@ -255,8 +255,8 @@ class IcmfReceiverIT : ManagedModeTest() {
         val rawWitness = BaseBlockWitness.fromSignatures(
             arrayOf(
                 cryptoSystem.buildSigMaker(
-                    IcmfTestClusterManagement.pubKey.key,
-                    IcmfTestClusterManagement.privKey.key
+                    IcmfTestClusterManagement.pubKey.data,
+                    IcmfTestClusterManagement.privKey.data
                 ).signDigest(blockRid)
             )
         ).getRawData()
