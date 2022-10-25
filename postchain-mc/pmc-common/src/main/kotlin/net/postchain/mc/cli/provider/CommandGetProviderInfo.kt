@@ -8,6 +8,7 @@ import net.postchain.chain0.common.queries.getProviderPoints
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.configOption
 
@@ -21,20 +22,21 @@ class CommandGetProviderInfo : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val providerData = client.getProviderData(key.hexStringToByteArray())
-        val actionPoints = client.getProviderPoints(key.hexStringToByteArray())
-        val providerClusters = client.getProviderClusters(key.hexStringToByteArray())
-        val nodesByProvider = client.getNodesByProvider(key.hexStringToByteArray())
+        val pubkey = PubKey(key)
+        val providerData = client.getProviderData(pubkey)
+        val actionPoints = client.getProviderPoints(pubkey)
+        val providerClusters = client.getProviderClusters(pubkey)
+        val nodesByProvider = client.getNodesByProvider(pubkey)
         println("""
             Provider: ${providerData.name}
-            Pubkey: ${providerData.pubkey.toHex()}
+            Pubkey: ${providerData.pubkey.hex()}
             System: ${providerData.system}
             Tier: ${providerData.tier}
             Active: ${providerData.active}
             Action points: $actionPoints
             Belongs to cluster(s): ${providerClusters.joinToString("\n")}
             Nodes:
-            ${nodesByProvider.joinToString("\n") { it.pubkey.toHex() }}
+            ${nodesByProvider.joinToString("\n") { it.pubkey.hex() }}
         """.trimIndent())
     }
 }

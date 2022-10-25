@@ -33,7 +33,7 @@ class CommandReplaceNode : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-            .replaceNodeOperation(client.config.pubkey().data, old.data, new.data, host, port?.toLong(), apiUrl)
+            .replaceNodeOperation(client.config.pubkey().wData, old.wData, new.wData, host, port?.toLong(), apiUrl)
             .postSyncAwaitConfirmation()
             .printResult(
                 "Node has been replaced",

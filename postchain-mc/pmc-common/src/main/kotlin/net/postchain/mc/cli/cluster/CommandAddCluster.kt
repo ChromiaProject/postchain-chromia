@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
 import net.postchain.chain0.common.createClusterOperation
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
@@ -25,7 +26,7 @@ class CommandAddCluster : CliktCommand(
     private val providers by option(
             "-p", "--providers",
             help = "String of comma separated list of pubkey strings of providers that should belong to this cluster"
-    ).convert { it.hexStringToByteArray() }.split(",").required()
+    ).convert { it.hexStringToWrappedByteArray() }.split(",").required()
 
     private val governorName by option(
             "-g", "--governor",
@@ -40,7 +41,7 @@ class CommandAddCluster : CliktCommand(
     override fun run() {
         val client = ClientUtil.nopClientFromConfig(config)
         client.transactionBuilder()
-                .createClusterOperation(config.pubkey().data, name, providers, governorName, deployerName)
+                .createClusterOperation(config.pubkey().wData, name, providers, governorName, deployerName)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Cluster $name added",
