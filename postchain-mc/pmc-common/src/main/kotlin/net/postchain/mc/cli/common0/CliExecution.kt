@@ -815,6 +815,7 @@ open class CliExecution(val config: PostchainClientConfig) {
                 config.pubkey().data,
                 clusterName,
                 currentLimits[ClusterResourceLimitType.max_containers.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_max_dapps.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_cpu.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_ram.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_storage.name]!!

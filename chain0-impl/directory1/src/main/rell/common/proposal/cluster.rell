@@ -29,6 +29,7 @@ operation propose_cluster_limits(
     my_pubkey: pubkey,
     cluster_name: text,
     max_containers: integer,
+    default_container_max_dapps: integer,
     default_container_cpu: integer,
     default_container_ram: integer,
     default_container_storage: integer
@@ -37,6 +38,7 @@ operation propose_cluster_limits(
         my_pubkey,
         cluster_name,
         max_containers,
+        default_container_max_dapps,
         default_container_cpu,
         default_container_ram,
         default_container_storage
@@ -52,6 +54,7 @@ operation propose_cluster_limit(my_pubkey: pubkey, cluster_name: text, type: clu
         my_pubkey,
         cluster_name,
         limits_map[cluster_resource_limit_type.max_containers],
+        limits_map[cluster_resource_limit_type.default_container_max_dapps],
         limits_map[cluster_resource_limit_type.default_container_cpu],
         limits_map[cluster_resource_limit_type.default_container_ram],
         limits_map[cluster_resource_limit_type.default_container_storage]
@@ -62,6 +65,7 @@ function _propose_cluster_limits_internal(
     my_pubkey: pubkey,
     cluster_name: text,
     max_containers: integer,
+    default_container_max_dapps: integer,
     default_container_cpu: integer,
     default_container_ram: integer,
     default_container_storage: integer
@@ -72,7 +76,10 @@ function _propose_cluster_limits_internal(
 	val cluster = require_cluster(cluster_name);
 	require_cluster_governor(cluster, me);
 	val prop = create proposal(op_context.last_block_time, proposal_type.cluster_limits, me, cluster.governance);
-	create pending_cluster_limits(prop, cluster, max_containers, default_container_cpu, default_container_ram, default_container_storage);
+	create pending_cluster_limits(
+	    prop, cluster, max_containers,
+	    default_container_max_dapps, default_container_cpu, default_container_ram, default_container_storage
+	);
 	internal_vote(me, prop, true);
 }
 

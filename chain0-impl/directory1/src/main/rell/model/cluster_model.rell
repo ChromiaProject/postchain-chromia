@@ -40,6 +40,7 @@ entity cluster_node {
 
 enum cluster_resource_limit_type {
     max_containers,
+    default_container_max_dapps,
     default_container_cpu,
     default_container_ram,
     default_container_storage

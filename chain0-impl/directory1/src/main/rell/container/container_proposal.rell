@@ -76,11 +76,10 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
         require(cluster_container_count + 1 <= max_containers, "Can't propose container, cluster %s is full".format(cluster_name));
     }
 
-//    val max_dapps = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.default_container_max_dapps } (.value) ?: -1;
-    val max_dapps = -1;
-    val cpu = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.default_container_cpu } (.value) ?: -1;
-    val ram = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.default_container_ram } (.value) ?: -1;
-    val storage = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.default_container_storage } (.value) ?: -1;
+    val max_dapps = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_max_dapps);
+    val cpu = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_cpu);
+    val ram = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_ram);
+    val storage = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_storage);
 
 	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.deployer);
     create pending_container_with_resource_limits(
@@ -132,4 +131,8 @@ function apply_container_remove(proposal) {
     delete container_resource_limit @* { cont };
     delete pending_remove_container @ { proposal };
     delete container @ { cont.name };
+}
+
+function _get_cluster_limit_or_default(cluster, type: cluster_resource_limit_type): integer {
+    return cluster_resource_limit @? { cluster, .cluster_resource_limit_type == type } (.value) ?: -1;
 }

@@ -51,11 +51,11 @@ entity pending_container_limits {
 	storage: integer;
 }
 
-
 entity pending_cluster_limits {
 	key proposal;
 	key cluster;
 	max_containers: integer;
+	default_container_max_dapps: integer;
 	default_container_cpu: integer;
 	default_container_ram: integer;
 	default_container_storage: integer;
