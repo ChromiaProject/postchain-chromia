@@ -43,7 +43,7 @@ class LocalTopicPipe(
 
         var maxAnchorHeight = currentPointer
         for (header in signedBlockHeaderWithAnchorHeights) {
-            val decodedHeader = BlockHeaderData.fromBinary(header.blockHeader)
+            val decodedHeader = BlockHeaderData.fromBinary(header.blockHeader.data)
             val blockchainRid = BlockchainRid(decodedHeader.getBlockchainRid())
 
             if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
@@ -91,8 +91,8 @@ class LocalTopicPipe(
                     sender = blockchainRid,
                     topic = route.topic,
                     blockRid = blockRid,
-                    rawHeader = header.blockHeader,
-                    rawWitness = header.witness,
+                    rawHeader = header.blockHeader.data,
+                    rawWitness = header.witness.data,
                     prevMessageBlockHeight = topicData.prevMessageBlockHeight,
                     bodies = bodies
                 )

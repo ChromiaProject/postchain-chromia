@@ -1,7 +1,7 @@
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
-query get_bc_signers(rid: byte_array) = get_blockchain_signers(blockchain @ { rid }); // Temporary to speed up tests
+query get_bc_signers(blockchain_rid: byte_array) = get_blockchain_signers(blockchain @ { blockchain_rid }); // Temporary to speed up tests
 
 query get_blockchain_signers(bc: blockchain) {
 	val cl = container_blockchain @ {bc}.container.cluster;

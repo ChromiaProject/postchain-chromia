@@ -33,9 +33,9 @@ class CommandListProviderNodes : CliktCommand(
         table {
             header("Pubkey", "Host", "Port", "Api port", "Active", "Last updated")
 
-            ClientUtil.fromConfig(config).getNodesByProvider(key.data).forEach {
+            ClientUtil.fromConfig(config).getNodesByProvider(key).forEach {
                 row(
-                    it.pubkey.toHex(),
+                    it.pubkey.hex(),
                     it.host,
                     it.port.toString(),
                     it.apiUrl,

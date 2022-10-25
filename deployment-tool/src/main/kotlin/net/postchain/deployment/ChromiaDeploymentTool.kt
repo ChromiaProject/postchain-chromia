@@ -5,6 +5,7 @@ import net.postchain.client.core.PostchainClientProvider
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.wrap
 import net.postchain.d1.common.proposal.proposeBlockchainOperation
 import net.postchain.d1.common.proposal.proposeConfigurationOperation
 import net.postchain.gtv.GtvEncoder
@@ -72,8 +73,8 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val result = client
             .transactionBuilder()
             .proposeBlockchainOperation(
-                clientConfig.signers.first().pubKey.data,
-                configData,
+                clientConfig.signers.first().pubKey.wData,
+                configData.wrap(),
                 blockchainName,
                 containerName
             )
@@ -93,9 +94,9 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val result = client
             .transactionBuilder()
             .proposeConfigurationOperation(
-                clientConfig.signers.first().pubKey.data,
-                blockchainRid.data,
-                configData
+                clientConfig.signers.first().pubKey.wData,
+                blockchainRid,
+                configData.wrap()
             )
             .sign()
             .postSyncAwaitConfirmation()
