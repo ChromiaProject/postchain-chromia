@@ -13,7 +13,7 @@ class IcmfTestClusterManagement : ClusterManagement {
     companion object {
         private val cryptoSystem = Secp256K1CryptoSystem()
         val privKey = PrivKey(cryptoSystem.getRandomBytes(32))
-        val pubKey = PubKey(secp256k1_derivePubKey(privKey.key))
+        val pubKey = PubKey(secp256k1_derivePubKey(privKey.data))
 
         const val senderCluster = "senderCluster"
         const val receiverCluster = "receiverCluster"

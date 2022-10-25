@@ -38,7 +38,7 @@ class CommandProposeVoterSetUpdate : CliktCommand(
     override fun run() {
         client.transactionBuilder()
             .proposeUpdateVoterSetOperation(
-                client.config.pubkey().key,
+                client.config.pubkey().data,
                 voterSet, threshold, governor, newMember, removeMember
             )
             .postSyncAwaitConfirmation()

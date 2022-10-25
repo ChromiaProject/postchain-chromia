@@ -44,10 +44,10 @@ class CommandUpdateNode : CliktCommand(
     override fun run() {
         val provider = client.config.pubkey()
         val builder = client.transactionBuilder()
-        host?.let { builder.updateNodeHostOperation(provider.key, key.hexStringToByteArray(), it) }
-        port?.let { builder.updateNodePortOperation(provider.key, key.hexStringToByteArray(), it.toLong()) }
-        apiUrl?.let { builder.updateNodeApiUrlOperation(provider.key, key.hexStringToByteArray(), it) }
-        clusterName?.forEach { builder.addNodeToClusterOperation(provider.key, key.hexStringToByteArray(), it) }
+        host?.let { builder.updateNodeHostOperation(provider.data, key.hexStringToByteArray(), it) }
+        port?.let { builder.updateNodePortOperation(provider.data, key.hexStringToByteArray(), it.toLong()) }
+        apiUrl?.let { builder.updateNodeApiUrlOperation(provider.data, key.hexStringToByteArray(), it) }
+        clusterName?.forEach { builder.addNodeToClusterOperation(provider.data, key.hexStringToByteArray(), it) }
         builder.postSyncAwaitConfirmation()
                 .printResult("Node information was updated", "Node information update failed")
     }
