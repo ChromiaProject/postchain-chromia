@@ -3,9 +3,12 @@
 package net.postchain.d1.icmf
 
 import net.postchain.core.BlockEContext
+import net.postchain.core.Shutdownable
 
-interface IcmfPipe<out RT : Route, PtrT> {
+interface IcmfPipe<out RT : Route, PtrT, IdT> : Shutdownable {
     val route: RT
+    val id: IdT
+
     fun mightHaveNewPackets(): Boolean
 
     /**

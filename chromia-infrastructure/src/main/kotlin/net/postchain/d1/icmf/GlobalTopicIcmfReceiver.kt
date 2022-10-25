@@ -16,29 +16,35 @@ import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.query.ChromiaQueryProvider
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
-                              private val cryptoSystem: CryptoSystem,
-                              private val storage: Storage,
-                              private val chainID: Long,
-                              private val clusterManagement: ClusterManagement,
-                              private val clientProvider: ChromiaClientProvider,
-                              private val dbOperations: IcmfDatabaseOperations)
-    : IcmfReceiver<TopicRoute, Long>, Shutdownable {
+class GlobalTopicIcmfReceiver(
+    topics: Map<String, List<BlockchainRid>>,
+    private val cryptoSystem: CryptoSystem,
+    private val storage: Storage,
+    private val queryProvider: ChromiaQueryProvider,
+    private val myChainId: Long,
+    myBlockchainRid: BlockchainRid,
+    private val clusterManagement: ClusterManagement,
+    private val clientProvider: ChromiaClientProvider,
+    private val dbOperations: IcmfDatabaseOperations
+) : IcmfReceiver<TopicRoute, Long, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
 
     private val routes = topics.map { TopicRoute(it.key, it.value) }
-    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
+    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, IcmfPipe<TopicRoute, Long, String>> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
 
+    private val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
+
     private fun start(): Job {
-        val lastMessageHeights = withReadConnection(storage, chainID) {
+        val lastMessageHeights = withReadConnection(storage, myChainId) {
             dbOperations.loadAllLastMessageHeights(it)
         }
 
@@ -77,6 +83,31 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
         }
     }
 
+    private fun createPipe(
+        clusterName: String,
+        route: TopicRoute,
+        lastMessageHeights: List<Pair<BlockchainRid, Long>>
+    ): IcmfPipe<TopicRoute, Long, String> {
+        return if (clusterName == myCluster) {
+            LocalTopicPipe(
+                queryProvider,
+                route,
+                clusterName,
+                cryptoSystem,
+                clusterManagement
+            )
+        } else {
+            val lastAnchorHeight = withReadConnection(storage, myChainId) {
+                dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
+            }
+
+            ClusterGlobalTopicPipe(
+                route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
+                clusterManagement, lastMessageHeights
+            )
+        }
+    }
+
     private fun updateClusters() {
         val currentClusters = pipes.keys.map { it.first }.toSet()
         val updatedClusters = clusterManagement.getClusterNames().toSet()
@@ -94,17 +125,7 @@ class GlobalTopicIcmfReceiver(topics: Map<String, List<BlockchainRid>>,
         }
     }
 
-    private fun createPipe(clusterName: String, route: TopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
-        val lastAnchorHeight = withReadConnection(storage, chainID) {
-            dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
-        }
-
-        return ClusterGlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
-                clusterManagement,
-                lastMessageHeights)
-    }
-
-    override fun getRelevantPipes(): List<ClusterGlobalTopicPipe> {
+    override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, String>> {
         synchronized(jobSynchronizer) {
             if (job == null) {
                 job = start()

@@ -10,14 +10,14 @@ object MasterApiProvider {
 
     fun getClusterManagement(appConfig: AppConfig): ClusterManagement {
         return ClusterManagementImpl(
-                MasterClientProvider.getChain0Client(appConfig)::querySync
+                MasterQueryProvider.getChain0Client(appConfig)
         )
     }
 
     fun getDirectoryManagement(appConfig: AppConfig): DirectoryDataSource {
         return BaseDirectoryDataSource(
-                MasterClientProvider.getChain0Client(appConfig)::querySync,
-                appConfig
+            MasterQueryProvider.getChain0Client(appConfig)::querySync,
+            appConfig
         )
     }
 }

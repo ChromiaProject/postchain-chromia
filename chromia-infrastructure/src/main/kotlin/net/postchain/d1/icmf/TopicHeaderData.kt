@@ -37,7 +37,7 @@ data class TopicHeaderData(val hash: ByteArray, val prevMessageBlockHeight: Long
             return icmfHeaderData.asDict().mapValues { fromGtv(it.value) }
         }
 
-        private fun fromGtv(gtv: Gtv): TopicHeaderData = TopicHeaderData(gtv["hash"]!!.asByteArray(), gtv["prev_message_block_height"]!!.asInteger())
+        fun fromGtv(gtv: Gtv): TopicHeaderData = TopicHeaderData(gtv["hash"]!!.asByteArray(), gtv["prev_message_block_height"]!!.asInteger())
 
         fun fromMessageHashes(messageHashes: List<ByteArray>, cryptoSystem: CryptoSystem, prevMessageBlockHeight: Long): TopicHeaderData =
                 TopicHeaderData(calculateMessagesHash(messageHashes, cryptoSystem), prevMessageBlockHeight)
