@@ -1,7 +1,9 @@
 package net.postchain.d1.icmf
 
 import assertk.assert
+import assertk.assertions.containsAll
 import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
@@ -57,7 +59,7 @@ class IcmfReceiverIT : ManagedModeTest() {
                         )
                     )
                 )
-            } doReturn gtv(listOf(senderOneQueryResponse, senderTwoQueryResponse))
+            } doReturn gtv(listOf(senderOneQueryResponse))
         })
 
         PostchainClientMocks.addMockClient(senderOneChainRid, mock {
@@ -72,19 +74,6 @@ class IcmfReceiverIT : ManagedModeTest() {
                 )
             } doReturn gtv(listOf(senderOneMessageBody))
         })
-
-        PostchainClientMocks.addMockClient(senderTwoChainRid, mock {
-            on {
-                querySync(
-                    "icmf_get_messages", gtv(
-                        mapOf(
-                            "topic" to gtv("my-topic"),
-                            "height" to gtv(0)
-                        )
-                    )
-                )
-            } doReturn gtv(listOf(senderTwoMessageBody))
-        })
     }
 
     private fun setupQueriesMocks() {
@@ -95,16 +84,9 @@ class IcmfReceiverIT : ManagedModeTest() {
                     -1
                 )
             )
-                gtv(listOf(senderOneQueryResponse, senderTwoQueryResponse))
+                gtv(listOf(senderTwoQueryResponse))
             else if (name == "icmf_get_headers_with_messages_after_height")
                 gtv(listOf())
-            else
-                GtvNull
-        }
-
-        QueryProviderMocks.addMockQueries(senderOneChainRid) { name, args ->
-            if (name == "icmf_get_messages" && args["topic"] == gtv("my-topic") && args["height"] == gtv(0))
-                gtv(listOf(senderOneMessageBody))
             else
                 GtvNull
         }
@@ -121,6 +103,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun globalTopicReceiver() {
         setupClientMocks()
+        setupQueriesMocks()
 
         startManagedSystem(3, 0)
 
@@ -145,7 +128,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                             .fetch()
                             .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
 
-                        assert(messages).containsExactly(
+                        assert(messages.size).isEqualTo(2)
+                        assert(messages).containsAll(
                             TestMessage(senderOneChainRid, "my-topic", senderOneEncodedMessageBody),
                             TestMessage(senderTwoChainRid, "my-topic", senderTwoEncodedMessageBody)
                         )
