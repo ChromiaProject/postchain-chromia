@@ -7,8 +7,7 @@ import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.chain0.model.ClusterResourceLimitType
 import net.postchain.chain0.model.ClusterResourceLimitType.*
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.*
 
 class CommandProposeClusterResourceLimits : CliktCommand(
         name = "limits",
@@ -21,13 +20,13 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val _maxContainers by option("-mc", "--max-containers", help = "Max containers per cluster").long()
 
-    private val _maxDapps by option("-md", "--max-dapps", help = "Max dapps per container").long()
+    private val _maxDapps by option("-md", "--max-dapps", help = maxDappsOptionHelp).long()
 
-    private val _cpu by option("-c", "--cpu", help = "CPU limit").long()
+    private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 
-    private val _ram by option("-r", "--ram", help = "RAM limit").long()
+    private val _ram by option("-r", "--ram", help = ramOptionHelp).long()
 
-    private val _storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
+    private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
     override fun run() {
         val limitsMap = mutableMapOf<ClusterResourceLimitType, Long>()
