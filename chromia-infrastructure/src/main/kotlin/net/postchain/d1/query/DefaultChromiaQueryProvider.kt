@@ -1,5 +1,6 @@
 package net.postchain.d1.query
 
+import net.postchain.client.core.PostchainQuery
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.block.BlockQueriesProvider
@@ -15,27 +16,25 @@ class DefaultChromiaQueryProvider(
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
-    override fun getChain0Query(): (String, Gtv) -> Gtv {
-        val client = MasterClientProvider.getChain0Client(appConfig)
-        return client::querySync
-    }
+    override fun getChain0Query(): PostchainQuery = MasterQueryProvider.getChain0Client(appConfig)
 
-    override fun getAnchorQuery(): ((String, Gtv) -> Gtv)? {
+    override fun getAnchorQuery(): PostchainQuery {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
         val info = clusterManagement.getClusterInfo(cluster)
-        val client = MasterClientProvider.getClient(appConfig, info.anchoringChain)
-        return client::querySync
+        return MasterQueryProvider.getClient(appConfig, info.anchoringChain)
     }
 
-    override fun getQuery(blockchainRid: BlockchainRid): ((String, Gtv) -> Gtv)? {
+    override fun getQuery(blockchainRid: BlockchainRid): PostchainQuery? {
         val thisContainer = directoryDataSource.getContainerForBlockchain(this.blockchainRid)
         val chainContainer = directoryDataSource.getContainerForBlockchain(blockchainRid)
         return if (thisContainer == chainContainer) {
             blockQueriesProvider.getBlockQueries(blockchainRid)?.let {
-                { name, args -> it.query(name, args).get() }
+                object : PostchainQuery {
+                    override fun querySync(name: String, gtv: Gtv) = it.query(name, gtv).get()
+                }
             }
         } else {
-            MasterClientProvider.getClient(appConfig, blockchainRid)::querySync
+            MasterQueryProvider.getClient(appConfig, blockchainRid)
         }
     }
 }

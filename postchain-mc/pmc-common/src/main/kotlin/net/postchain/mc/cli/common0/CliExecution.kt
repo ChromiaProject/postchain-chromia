@@ -719,7 +719,11 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
 
     fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
-        return makeTransactionWithNop().registerProviderOperation(config.pubkey().data, key.hexStringToByteArray(), tier)
+        return makeTransactionWithNop().registerProviderOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray(),
+                tier
+        )
     }
 
     fun createVoterSetAsync(
@@ -749,13 +753,24 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addNodeOperation(config.signers.first().pubKey.data, key.hexStringToByteArray(), host, port, apiUrl, if (clusterName == "") listOf() else listOf(clusterName))
+        return makeTransactionWithNop().addNodeOperation(
+                config.signers.first().pubKey.data,
+                key.hexStringToByteArray(),
+                host,
+                port,
+                apiUrl,
+                if (clusterName == "") listOf() else listOf(clusterName)
+        )
     }
 
     /** Add existing provider to existing cluster
      * */
     fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addProviderToClusterOperation(config.pubkey().data, key.hexStringToByteArray(), clusterName)
+        return makeTransactionWithNop().addProviderToClusterOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray(),
+                clusterName
+        )
     }
 
     /** Add existing node to existing cluster
@@ -818,7 +833,13 @@ open class CliExecution(val config: PostchainClientConfig) {
             governorSet: String,
             deployerSet: String
     ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, providerKeys?.split(",")?.map { it.hexStringToByteArray() }, governorSet, deployerSet)
+        return makeTransactionWithNop().createClusterOperation(
+                config.pubkey().data,
+                newClusterName,
+                providerKeys?.split(",")?.map { it.hexStringToByteArray() },
+                governorSet,
+                deployerSet
+        )
     }
 
     fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
@@ -858,7 +879,11 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().proposeProviderIsSystemOperation(config.pubkey().data, pubKey.hexStringToByteArray(), isSystem)
+        return makeTransactionWithNop().proposeProviderIsSystemOperation(
+                config.pubkey().data,
+                pubKey.hexStringToByteArray(),
+                isSystem
+        )
     }
 
     fun proposeEnableProviderAsync(key: String): TransactionBuilder {
@@ -872,7 +897,10 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeDisableProviderOperation(config.pubkey().data, key.hexStringToByteArray())
+        return makeTransactionWithNop().proposeDisableProviderOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray()
+        )
     }
 
     fun proposeConfigurationAsync(
@@ -941,7 +969,12 @@ open class CliExecution(val config: PostchainClientConfig) {
         val newMember = if (add) member else null
         val removeMember = if (!add) member else null
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-                config.pubkey().data, voterSet, null, null, newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(), removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
+                config.pubkey().data,
+                voterSet,
+                null,
+                null,
+                newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
+                removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
         )
     }
 

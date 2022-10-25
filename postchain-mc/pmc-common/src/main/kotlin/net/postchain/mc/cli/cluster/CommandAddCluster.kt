@@ -40,7 +40,7 @@ class CommandAddCluster : CliktCommand(
     override fun run() {
         val client = ClientUtil.nopClientFromConfig(config)
         client.transactionBuilder()
-                .createClusterOperation(config.pubkey().key, name, providers, governorName, deployerName)
+                .createClusterOperation(config.pubkey().data, name, providers, governorName, deployerName)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Cluster $name added",

@@ -49,7 +49,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                val clusterName = pipe.clusterName
+                val clusterName = pipe.id
                 val lastAnchoredHeight = lastAnchoredHeights[clusterName to pipe.route.topic] ?: -1
                 var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets()) {

@@ -63,6 +63,7 @@ deploy:
 build:
   extends: .setup
   stage: build
+  interruptible: true
   except:
     - dev
     - master

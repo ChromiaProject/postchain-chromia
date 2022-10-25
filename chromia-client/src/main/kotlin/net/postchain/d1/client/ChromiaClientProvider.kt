@@ -70,7 +70,7 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
         fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
             val httpClient = ApacheAsyncClient()
             val chain0Client: PostchainClient = ConcretePostchainClient(config, httpClient)
-            val clusterManagement = ClusterManagementImpl(chain0Client::querySync)
+            val clusterManagement = ClusterManagementImpl(chain0Client)
             return ChromiaClientProvider(config.failOverConfig, clusterManagement, httpClient)
         }
     }
