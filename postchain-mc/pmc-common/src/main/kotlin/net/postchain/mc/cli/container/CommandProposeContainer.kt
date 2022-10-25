@@ -14,8 +14,11 @@ import net.postchain.mc.cli.util.nameOrGenerateOption
 import net.postchain.mc.cli.util.nopClientOption
 
 sealed class DeployerOption {
-    class Deployer(val data: ByteArray): DeployerOption()
-    class VoterSet(val data: String): DeployerOption()
+    class Deployer(val data: String) : DeployerOption() {
+        val pubkeys get() = data.split(",").map { it.hexStringToByteArray() }
+    }
+
+    class VoterSet(val data: String) : DeployerOption()
 
 }
 
@@ -36,7 +39,7 @@ class CommandProposeContainer : CliktCommand(
 
     private val deployerOption by mutuallyExclusiveOptions(
         option("--voter-set").convert { DeployerOption.VoterSet(it) },
-        option("--deployers").convert { DeployerOption.Deployer(it.hexStringToByteArray()) }
+        option("--deployers").convert { DeployerOption.Deployer(it) }
     ).single().required()
 
     override fun run() {
@@ -44,14 +47,24 @@ class CommandProposeContainer : CliktCommand(
         client.transactionBuilder()
             .apply {
                 when (deployerOption) {
-                    is DeployerOption.Deployer -> createContainerOperation(client.config.pubkey().data, name, clusterName, threshold, listOf(
-                        (deployerOption as DeployerOption.Deployer).data))
-                    is DeployerOption.VoterSet -> createContainerFromOperation(client.config.pubkey().data, name, clusterName, threshold, (deployerOption as DeployerOption.VoterSet).data)
+                    is DeployerOption.Deployer -> createContainerOperation(
+                        client.config.pubkey().data, name, clusterName, threshold,
+                        (deployerOption as DeployerOption.Deployer).pubkeys
+                    )
+                    is DeployerOption.VoterSet -> createContainerFromOperation(
+                        client.config.pubkey().data,
+                        name,
+                        clusterName,
+                        threshold,
+                        (deployerOption as DeployerOption.VoterSet).data
+                    )
                 }
 
             }
             .postSyncAwaitConfirmation()
-            .printResult("Container has been created",
-            "Failed to create container")
+            .printResult(
+                "Container has been created",
+                "Failed to create container"
+            )
     }
 }

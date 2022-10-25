@@ -217,9 +217,7 @@ class Directory1IT : ManagedModeTest() {
         // create cluster, initial providers added
         doAndBuildBlocks(
                 provConfig,
-                provExecutor.createClusterAsync(
-                        clusterName, providersList, voterSetSystemP, voterSetSystemP
-                )
+                provExecutor.createClusterAsync(clusterName, providersList, voterSetSystemP)
         )
 
         var limits = mapOf("ramm" to 123L)
@@ -340,8 +338,8 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
                 newClusterName, providersList,
-                voterSetSystemP, voterSetSystemP
-        )
+                voterSetSystemP
+            )
         )
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
@@ -362,12 +360,6 @@ class Directory1IT : ManagedModeTest() {
         )
         clusters = provExecutor.listClustersForProvider(prov2Config.pubkey())
         assertEquals(listOf(), clusters)
-
-        // change deployer
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterDeployerAsync(newClusterName, voterSetSystem))
-        val clusterInfo = provExecutor.getClusterInfo(newClusterName)
-        println(clusterInfo!!.asDict())
-        assert(clusterInfo["deployer"]?.asString()).isEqualTo(voterSetSystem)
 
         // cluster providers
         val clusterProviders = provExecutor.getClusterProviders(newClusterName)
@@ -592,14 +584,14 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
                 clusterA, providersList,
-                voterSetSystemP, voterSetSystemP
-        )
+                voterSetSystemP
+            )
         )
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
                 clusterB, providersList,
-                voterSetSystemP, voterSetSystemP
-        )
+                voterSetSystemP
+            )
         )
 
         val clusterList = provExecutor.listClusters().map { it.asString() }

@@ -26,7 +26,7 @@
 entity cluster {
     key name;
     governance: voter_set; // who controls the cluster
-    mutable deployer: voter_set; // who can deploy containers
+    mutable capacity: integer; // How many containers it can contain
     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
 }
 
@@ -46,4 +46,12 @@ entity cluster_resource_limit {
 // Cluster replicate this container, but container belongs to another cluster that is responsible for block building.
 entity cluster_container_replica { 
     key cluster, container; 
+}
+
+function remove_cluster_impl(cluster) {
+    delete cluster_resource_limit @* { cluster };
+	delete cluster_node @* { cluster };
+	delete cluster_provider @* { cluster };
+	delete cluster_container_replica @* { cluster };
+    delete cluster;
 }

@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.*
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.proposal.*
@@ -14,7 +15,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -609,14 +609,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterDeployer(clusterName: String, key: String) {
-        sendTxSync(
-                proposeClusterDeployerAsync(clusterName, key),
-                "Cluster deployer update proposed",
-                "Failed proposing cluster deployer"
-        )
-    }
-
     fun proposeVoterSetGovernor(name: String, new: String) {
         sendTxSync(
                 proposeVoterSetGovernorAsync(name, new),
@@ -797,12 +789,11 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun createClusterAsync(
-            newClusterName: String,
-            providerKeys: String?,
-            governorSet: String,
-            deployerSet: String
+        newClusterName: String,
+        providerKeys: String,
+        governorSet: String
     ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(config.pubkey().key, newClusterName, providerKeys?.split(",")?.map { it.hexStringToByteArray() }, governorSet, deployerSet)
+        return makeTransactionWithNop().createClusterOperation(config.pubkey().key, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
     }
 
     fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
@@ -907,12 +898,6 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterProviderOperation(
             config.pubkey().key, clusterName, provider.hexStringToByteArray(), add
-        )
-    }
-
-    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeClusterDeployerOperation(
-            config.pubkey().key, clusterName, newDeployer
         )
     }
 

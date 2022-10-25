@@ -1,0 +1,17 @@
+module;
+
+import ^.model.*;
+
+
+function create_cluster_impl(name, governor: voter_set, providers: list<pubkey>, capacity: integer = 10, cpu: integer = -1, ram: integer = -1, storage: integer = -1) {
+	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
+    val cl = create cluster(name, governor, capacity);
+    create cluster_resource_limit(cl, resource_limit_type.cpu , cpu);
+	create cluster_resource_limit(cl, resource_limit_type.ram , ram);
+	create cluster_resource_limit(cl, resource_limit_type.storage , storage);
+    for (p_key in providers) {
+        val provider = require_provider(p_key);
+        require(provider.tier > 0);
+        create cluster_provider(cl, provider);
+    }
+}

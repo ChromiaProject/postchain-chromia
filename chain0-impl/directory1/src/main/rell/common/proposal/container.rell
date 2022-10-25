@@ -6,7 +6,7 @@ operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram:
 	//check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
 	require_cluster_deployer(container.cluster, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
+	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.governance);
 	create pending_container_limits(prop, container, cpu, ram, storage);
 	internal_vote(me, prop, true);
 }
