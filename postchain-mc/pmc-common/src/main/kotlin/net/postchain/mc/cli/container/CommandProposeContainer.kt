@@ -10,17 +10,11 @@ import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.VoterSetOrPubkeysOption
 import net.postchain.mc.cli.util.nameOrGenerateOption
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.pubkeysOrVotersetOption
 
-sealed class DeployerOption {
-    class Deployer(val data: String) : DeployerOption() {
-        val pubkeys get() = data.split(",").map { it.hexStringToByteArray() }
-    }
-
-    class VoterSet(val data: String) : DeployerOption()
-
-}
 
 class CommandProposeContainer : CliktCommand(
     name = "add",
@@ -37,26 +31,23 @@ class CommandProposeContainer : CliktCommand(
 
     private val consensus by option().flag()
 
-    private val deployerOption by mutuallyExclusiveOptions(
-        option("--voter-set").convert { DeployerOption.VoterSet(it) },
-        option("--deployers").convert { DeployerOption.Deployer(it) }
-    ).single().required()
+    private val deployerOption by pubkeysOrVotersetOption()
 
     override fun run() {
         val threshold = if (consensus) -1L else 1L
         client.transactionBuilder()
             .apply {
                 when (deployerOption) {
-                    is DeployerOption.Deployer -> createContainerOperation(
+                    is VoterSetOrPubkeysOption.Pubkeys -> createContainerOperation(
                         client.config.pubkey().data, name, clusterName, threshold,
-                        (deployerOption as DeployerOption.Deployer).pubkeys
+                        (deployerOption as VoterSetOrPubkeysOption.Pubkeys).pubkeys
                     )
-                    is DeployerOption.VoterSet -> createContainerFromOperation(
+                    is VoterSetOrPubkeysOption.VoterSet -> createContainerFromOperation(
                         client.config.pubkey().data,
                         name,
                         clusterName,
                         threshold,
-                        (deployerOption as DeployerOption.VoterSet).data
+                        (deployerOption as VoterSetOrPubkeysOption.VoterSet).data
                     )
                 }
 

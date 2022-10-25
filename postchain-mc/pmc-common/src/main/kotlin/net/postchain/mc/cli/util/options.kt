@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClient
+import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
@@ -48,3 +49,16 @@ fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
         require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
         require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
     }
+
+sealed class VoterSetOrPubkeysOption(val data: String) {
+    class Pubkeys(data: String) : VoterSetOrPubkeysOption(data) {
+        val pubkeys get() = data.split(",").map { it.hexStringToByteArray() }
+    }
+
+    class VoterSet(data: String) : VoterSetOrPubkeysOption(data)
+
+}
+fun CliktCommand.pubkeysOrVotersetOption() = mutuallyExclusiveOptions(
+    option("--voter-set", help = "Name of voter set").convert { VoterSetOrPubkeysOption.VoterSet(it) },
+    option("--pubkeys", help = "Comma delimited list of public keys").convert { VoterSetOrPubkeysOption.Pubkeys(it) }
+).single().required()
