@@ -4,38 +4,43 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.containers.bpm.ContainerResourceLimitType
-import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.chain0.model.ContainerResourceLimitType
+import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandProposeContainerResourceLimits : CliktCommand(
-    name = "limits",
-    help = "Propose new resource limits for given container There are three types of limits. " +
-            "Proposal can contain one, two, or all three types."
+        name = "limits",
+        help = "Propose new resource limits for given container There are three types of limits. " +
+                "Proposal can contain one, two, or all three types."
 ) {
     private val config by configOption()
 
     private val containerName by nameOption("Container name").required()
 
-    private val maxDapps by option("-d", "--max-dapps", help = "Max dapps").long()
+    private val _maxDapps by option("-d", "--max-dapps", help = "Max dapps").long()
 
-    private val cpu by option("-c", "--cpu", help = "CPU limit").long()
+    private val _cpu by option("-c", "--cpu", help = "CPU limit").long()
 
-    private val ram by option("-r", "--ram", help = "RAM limit").long()
+    private val _ram by option("-r", "--ram", help = "RAM limit").long()
 
-    private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
+    private val _storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
 
     override fun run() {
         val limitsMap = mutableMapOf<ContainerResourceLimitType, Long>()
-        maxDapps?.let { limitsMap.put(ContainerResourceLimitType.MAX_DAPPS, it) }
-        cpu?.let { limitsMap.put(ContainerResourceLimitType.CPU, it) }
-        ram?.let { limitsMap.put(ContainerResourceLimitType.RAM, it) }
-        storage?.let { limitsMap.put(ContainerResourceLimitType.STORAGE, it) }
+                .apply {
+                    setNullable(max_dapps, _maxDapps)
+                    setNullable(cpu, _cpu)
+                    setNullable(ram, _ram)
+                    setNullable(storage, _storage)
+                }
 
         CliExecution(config).proposeContainerLimits(containerName, limitsMap)
         println("proposal has been added successfully")
     }
 
+    private fun MutableMap<ContainerResourceLimitType, Long>.setNullable(key: ContainerResourceLimitType, value: Long?) {
+        value?.let { put(key, it) }
+    }
 }

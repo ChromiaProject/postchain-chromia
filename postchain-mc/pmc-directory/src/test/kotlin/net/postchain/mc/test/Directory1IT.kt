@@ -3,16 +3,17 @@ package net.postchain.mc.test
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
+import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
+import net.postchain.chain0.model.ClusterResourceLimitType
+import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.containers.bpm.ContainerResourceLimitType
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -241,7 +242,8 @@ class Directory1IT : ManagedModeTest() {
             limits: Map<String, Long>,
             expected: Map<String, Long>
     ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
+        val limits0 = limits.mapKeys { ClusterResourceLimitType.valueOf(it.key.uppercase()) }
+        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits0))
         val updated = provExecutor.listClusterLimits(clusterName)
         assertEquals(expected, updated)
     }

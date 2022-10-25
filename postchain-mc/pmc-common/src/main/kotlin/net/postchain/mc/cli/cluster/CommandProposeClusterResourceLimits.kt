@@ -4,35 +4,43 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.chain0.model.ClusterResourceLimitType
+import net.postchain.chain0.model.ClusterResourceLimitType.*
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandProposeClusterResourceLimits : CliktCommand(
-    name = "limits",
-    help = "Propose new resource limits for given cluster. There are three types of limits. " +
-            "Proposal can contain one, two, or all three types."
+        name = "limits",
+        help = "Propose new resource limits for given cluster. There are three types of limits. " +
+                "Proposal can contain one, two, or all three types."
 ) {
     private val config by configOption()
 
     private val clusterName by nameOption("Cluster name").required()
 
-    private val maxContainers by option("-mc", "--max-containers", help = "Max containers").long()
+    private val _maxContainers by option("-mc", "--max-containers", help = "Max containers").long()
 
-    private val cpu by option("-c", "--cpu", help = "CPU limit").long()
+    private val _cpu by option("-c", "--cpu", help = "CPU limit").long()
 
-    private val ram by option("-r", "--ram", help = "RAM limit").long()
+    private val _ram by option("-r", "--ram", help = "RAM limit").long()
 
-    private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
+    private val _storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
+
     override fun run() {
-        val limitsMap = mutableMapOf<String, Long>()
-        maxContainers?.let { limitsMap.put("max_containers", it) }
-        cpu?.let { limitsMap.put("default_container_cpu", it) }
-        ram?.let { limitsMap.put("default_container_ram", it) }
-        storage?.let { limitsMap.put("default_container_storage", it) }
+        val limitsMap = mutableMapOf<ClusterResourceLimitType, Long>()
+                .apply {
+                    setNullable(max_containers, _maxContainers)
+                    setNullable(default_container_cpu, _cpu)
+                    setNullable(default_container_ram, _ram)
+                    setNullable(default_container_storage, _storage)
+                }
 
         CliExecution(config).proposeClusterLimits(clusterName, limitsMap)
         println("proposal has been added successfully")
     }
 
+    private fun MutableMap<ClusterResourceLimitType, Long>.setNullable(key: ClusterResourceLimitType, value: Long?) {
+        value?.let { put(key, it) }
+    }
 }

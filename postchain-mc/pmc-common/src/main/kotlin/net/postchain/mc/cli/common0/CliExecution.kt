@@ -7,12 +7,13 @@ import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOpera
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.model.ClusterResourceLimitType
+import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.containers.bpm.ContainerResourceLimitType
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.base.ClientUtil
@@ -593,7 +594,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterLimits(clusterName: String, limitsMap: Map<String, Long>) {
+    fun proposeClusterLimits(clusterName: String, limitsMap: Map<ClusterResourceLimitType, Long>) {
         sendTxSync(
                 proposeClusterLimitsAsync(clusterName, limitsMap),
                 "Cluster limits proposed",
@@ -771,10 +772,10 @@ open class CliExecution(val config: PostchainClientConfig) {
         currentLimits.putAll(limits.mapKeys { it.key.name.lowercase() })
         return makeTransactionWithNop().proposeContainerLimitsOperation(
                 config.pubkey().data, containerName,
-                currentLimits[ContainerResourceLimitType.MAX_DAPPS.name.lowercase()]!!,
-                currentLimits[ContainerResourceLimitType.CPU.name.lowercase()]!!,
-                currentLimits[ContainerResourceLimitType.RAM.name.lowercase()]!!,
-                currentLimits[ContainerResourceLimitType.STORAGE.name.lowercase()]!!
+                currentLimits[ContainerResourceLimitType.max_dapps.name]!!,
+                currentLimits[ContainerResourceLimitType.cpu.name]!!,
+                currentLimits[ContainerResourceLimitType.ram.name]!!,
+                currentLimits[ContainerResourceLimitType.storage.name]!!
         )
     }
 
@@ -788,16 +789,16 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Propose new cluster resource limits.
      * Who can update cluster limits? Cluster governance voter set.
      * */
-    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): TransactionBuilder {
+    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<ClusterResourceLimitType, Long>): TransactionBuilder {
         val currentLimits = listClusterLimits(clusterName).toMutableMap()
-        currentLimits.putAll(limits)
+        currentLimits.putAll(limits.mapKeys { it.key.name.lowercase() })
         return makeTransactionWithNop().proposeClusterLimitsOperation(
                 config.pubkey().data,
                 clusterName,
-                currentLimits["max_containers"]!!,
-                currentLimits["default_container_cpu"]!!,
-                currentLimits["default_container_ram"]!!,
-                currentLimits["default_container_storage"]!!
+                currentLimits[ClusterResourceLimitType.max_containers.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_cpu.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_ram.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_storage.name]!!
         )
     }
 

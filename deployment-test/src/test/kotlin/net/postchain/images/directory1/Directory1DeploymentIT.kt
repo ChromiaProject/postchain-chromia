@@ -16,8 +16,8 @@ import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
-import net.postchain.containers.bpm.ContainerResourceLimitType
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
@@ -43,20 +43,20 @@ internal class Directory1DeploymentIT {
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
-        private val resourceLimitsValues = arrayOf(-1L, 250L, 600L, -1L) // (max_dapps, cpu, ram, storage)
+        private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits.fromValues(
-            resourceLimitsValues[0], resourceLimitsValues[1], resourceLimitsValues[2], resourceLimitsValues[3]
+                resourceLimitsValues.first, resourceLimitsValues.second, resourceLimitsValues.third
         )
 
         init {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping(
-                    "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
-                    MOUNT_DIR, BindMode.READ_ONLY
-                )
-                .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
+                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                    .withMasterDockerConfig()
+                    .withClasspathResourceMapping(
+                            "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
+                            MOUNT_DIR, BindMode.READ_ONLY
+                    )
+                    .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
         }
 
 
@@ -96,8 +96,8 @@ internal class Directory1DeploymentIT {
     fun `Initialize network with provider1`() {
         with(node1.c0) {
             transactionBuilder()
-                .initOperation(node1.nodeHost, node1.nodePort.toLong())
-                .postTransactionUntilConfirmed("init")
+                    .initOperation(node1.nodeHost, node1.nodePort.toLong())
+                    .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
             assert(isNode(node1.nodeKeyPair.pubKey.data)).isTrue()
@@ -115,14 +115,14 @@ internal class Directory1DeploymentIT {
             }
 
             transactionBuilder()
-                .createContainerOperation(
-                    node1.providerPubkey,
-                    foobarContainer,
-                    "system",
-                    1,
-                    listOf(node1.provider.pubKey.data)
-                )
-                .postTransactionUntilConfirmed("$foobarContainer container")
+                    .createContainerOperation(
+                            node1.providerPubkey,
+                            foobarContainer,
+                            "system",
+                            1,
+                            listOf(node1.provider.pubKey.data)
+                    )
+                    .postTransactionUntilConfirmed("$foobarContainer container")
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
@@ -135,18 +135,18 @@ internal class Directory1DeploymentIT {
     @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L, -1L)
+        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L)
         val actualLimits = ContainerResourceLimits(queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
         // Changing resource limits
         with(resourceLimitsValues) {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
-                node1.providerPubkey,
-                foobarContainer,
-                get(0), get(1), get(2), get(3)
+                    node1.providerPubkey,
+                    foobarContainer,
+                    -1, first, second, third
             )
-                .postTransactionUntilConfirmed("container limits")
+                    .postTransactionUntilConfirmed("container limits")
         }
 
         // Asserting resource limits changed
@@ -160,29 +160,29 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Adding node2 to the cluster")
         consoleLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node2.providerPubkey, 1)
-            .proposeEnableProviderOperation(node1.providerPubkey, node2.providerPubkey)
-            .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
-            .proposeClusterProviderOperation(node1.providerPubkey, "system", node2.providerPubkey, true)
-            .postTransactionUntilConfirmed("Reg p2")
+                .registerProviderOperation(node1.providerPubkey, node2.providerPubkey, 1)
+                .proposeEnableProviderOperation(node1.providerPubkey, node2.providerPubkey)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
+                .proposeClusterProviderOperation(node1.providerPubkey, "system", node2.providerPubkey, true)
+                .postTransactionUntilConfirmed("Reg p2")
 
         node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
             node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
+                    .makeVoteOperation(node2.providerPubkey, it.rowid, true)
+                    .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
         }
 
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
-            .addNodeOperation(
-                node2.providerPubkey,
-                node2.nodeKeyPair.pubKey.data,
-                node2.nodeHost,
-                node2.nodePort.toLong(),
-                node2.apiPath(),
-                listOf("system")
-            )
-            .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
-            .postTransactionUntilConfirmed("Add node 2")
+                .addNodeOperation(
+                        node2.providerPubkey,
+                        node2.nodeKeyPair.pubKey.data,
+                        node2.nodeHost,
+                        node2.nodePort.toLong(),
+                        node2.apiPath(),
+                        listOf("system")
+                )
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
+                .postTransactionUntilConfirmed("Add node 2")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
             assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(2)
@@ -197,35 +197,35 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node3.providerPubkey, 1)
-            .proposeEnableProviderOperation(node1.providerPubkey, node3.providerPubkey)
-            .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
-            .proposeClusterProviderOperation(node1.providerPubkey, "system", node3.providerPubkey, true)
-            .postTransactionUntilConfirmed("Reg p3")
+                .registerProviderOperation(node1.providerPubkey, node3.providerPubkey, 1)
+                .proposeEnableProviderOperation(node1.providerPubkey, node3.providerPubkey)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
+                .proposeClusterProviderOperation(node1.providerPubkey, "system", node3.providerPubkey, true)
+                .postTransactionUntilConfirmed("Reg p3")
 
         node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
             node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
+                    .makeVoteOperation(node2.providerPubkey, it.rowid, true)
+                    .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
         }
         node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
             node1.client(brid, listOf(node3.provider)).transactionBuilder()
-                .makeVoteOperation(node3.providerPubkey, it.rowid, true)
-                .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
+                    .makeVoteOperation(node3.providerPubkey, it.rowid, true)
+                    .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
 
         }
         consoleLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
-            .addNodeOperation(
-                node3.providerPubkey,
-                node3.pubkey.data,
-                node3.nodeHost,
-                node3.nodePort.toLong(),
-                node3.apiPath(),
-                listOf("system")
-            )
-            .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "system")
-            .postTransactionUntilConfirmed("Node 3")
+                .addNodeOperation(
+                        node3.providerPubkey,
+                        node3.pubkey.data,
+                        node3.nodeHost,
+                        node3.nodePort.toLong(),
+                        node3.apiPath(),
+                        listOf("system")
+                )
+                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "system")
+                .postTransactionUntilConfirmed("Node 3")
 
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
@@ -267,17 +267,17 @@ internal class Directory1DeploymentIT {
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
                 node1.c0.transactionBuilder()
-                    .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
-                    .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
+                        .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
+                        .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 // Voting
                 node1.c0.getProposal(null)?.let { proposal ->
                     node3.c0.transactionBuilder().makeVoteOperation(node3.providerPubkey, proposal.id, true)
-                        .postTransactionUntilConfirmed("Vote for BC")
+                            .postTransactionUntilConfirmed("Vote for BC")
                     consoleLogger.info { "p3 voted for proposal: ${proposal.id}" }
 
                     node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id, true)
-                        .postTransactionUntilConfirmed("Vote for BC")
+                            .postTransactionUntilConfirmed("Vote for BC")
                     consoleLogger.info { "p2 voted for proposal: ${proposal.id}" }
                 }
             }
@@ -308,7 +308,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Asserting container resource limits")
 
         val expectedResourceLimits = ContainerResourceLimits.fromValues(
-            resourceLimitsValues[0], resourceLimitsValues[1], resourceLimitsValues[2], resourceLimitsValues[3]
+                resourceLimitsValues.first, resourceLimitsValues.second, resourceLimitsValues.third
         )
 
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
@@ -339,14 +339,19 @@ internal class Directory1DeploymentIT {
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).querySync(query) }!!
-                    .asArray().map { it.asString() }
+                        .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
             }
         }
     }
 
-    private fun queryContainerResourceLimits(): Map<ContainerResourceLimitType, Long> {
-        return node1.c0.nmGetContainerLimits(foobarContainer).mapKeys { ContainerResourceLimitType.valueOf(it.key.uppercase()) }
+    private fun queryContainerResourceLimits(): Map<ResourceLimitType, Long> {
+        return node1.c0.nmGetContainerLimits(foobarContainer)
+                .mapNotNull { e ->
+                    ResourceLimitType.from(e.key.uppercase())?.let {
+                        it to e.value
+                    }
+                }.toMap()
     }
 
     private val PostchainContainer.c0 get() = client(brid)
