@@ -5,7 +5,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
-import net.postchain.chain0.common.createClusterOperation
+import net.postchain.chain0.common.cluster.createClusterOperation
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.ClientUtil

@@ -14,6 +14,7 @@ import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.deployment.ChromiaDeploymentTool
 import net.postchain.deployment.DeploymentTool
 import net.postchain.gtv.GtvEncoder
+import kotlin.io.path.absolutePathString
 
 abstract class DeployToolCommand(name: String) : CliktCommand(name) {
     val sourceDir by option("-d", "--source-dir").path(mustExist = true, canBeDir = true, canBeFile = false).required()
@@ -22,7 +23,6 @@ abstract class DeployToolCommand(name: String) : CliktCommand(name) {
 
     val clientConfig by option("--config", help = "Client configuration *.properties")
         .path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
-        .required()
 
     val deployXmlFile by argument().path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
 }
@@ -31,7 +31,7 @@ class DeployCommand : DeployToolCommand(name = "deploy") {
     private val containerName by option("-c", "--container").required()
 
     override fun run() {
-        val clientConfig = PostchainClientConfig.fromProperties(clientConfig.toAbsolutePath().toString())
+        val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
         val blockchainConfigurations = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
@@ -48,7 +48,7 @@ class UpdateCommand : DeployToolCommand(name = "update") {
     private val configVersion by option("-v", "--version").long()
 
     override fun run() {
-        val clientConfig = PostchainClientConfig.fromProperties(clientConfig.toAbsolutePath().toString())
+        val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
         val blockchainConfigurations = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)

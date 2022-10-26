@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>deployment-tool-cli</artifactId>
+    <artifactId>chromia-deployment-tool-cli</artifactId>
     <name>CLI for deploying DApps</name>
 
     <properties>
@@ -29,7 +29,7 @@
 
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>deployment-tool</artifactId>
+            <artifactId>chromia-deployment-tool</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

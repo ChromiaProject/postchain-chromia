@@ -4,33 +4,42 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.chain0.model.ContainerResourceLimitType
+import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.*
 
 class CommandProposeContainerResourceLimits : CliktCommand(
-    name = "limits",
-    help = "Propose new resource limits for given container There are three types of limits. " +
-            "Proposal can contain one, two, or all three types."
+        name = "limits",
+        help = "Propose new resource limits for given container There are three types of limits. " +
+                "Proposal can contain one, two, or all three types."
 ) {
     private val config by configOption()
 
     private val containerName by nameOption("Container name").required()
 
-    private val ram by option("-r", "--ram", help = "RAM limit").long()
+    private val _maxBlockchains by maxBlockchainsOption()
 
-    private val cpu by option("-c", "--cpu", help = "CPU limit").long()
+    private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 
-    private val storage by option("-s", "--storage", help = "Storage limit").long() //Unit?!!
+    private val _ram by option("-r", "--ram", help = ramOptionHelp).long()
+
+    private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
     override fun run() {
-        val limitMap = mutableMapOf<String, Long>()
-        ram?.let { limitMap.put("ram", it) }
-        cpu?.let { limitMap.put("cpu", it) }
-        storage?.let { limitMap.put("storage", it) }
+        val limitsMap = mutableMapOf<ContainerResourceLimitType, Long>()
+                .apply {
+                    setNullable(max_blockchains, _maxBlockchains)
+                    setNullable(cpu, _cpu)
+                    setNullable(ram, _ram)
+                    setNullable(storage, _storage)
+                }
 
-        CliExecution(config).proposeContainerLimits(containerName, limitMap)
+        CliExecution(config).proposeContainerLimits(containerName, limitsMap)
         println("proposal has been added successfully")
     }
 
+    private fun MutableMap<ContainerResourceLimitType, Long>.setNullable(key: ContainerResourceLimitType, value: Long?) {
+        value?.let { put(key, it) }
+    }
 }
