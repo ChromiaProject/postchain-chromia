@@ -45,7 +45,7 @@ function apply_voting_result(prop: proposal) {
 
 function apply_container_limits(proposal) {
 	val pps = pending_container_limits @ { proposal };
-	update container_resource_limit @ {pps.container, container_resource_limit_type.max_dapps} (pps.max_dapps);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.max_blockchains} (pps.max_blockchains);
 	update container_resource_limit @ {pps.container, container_resource_limit_type.cpu} (pps.cpu);
 	update container_resource_limit @ {pps.container, container_resource_limit_type.ram} (pps.ram);
 	update container_resource_limit @ {pps.container, container_resource_limit_type.storage} (pps.storage);
@@ -54,7 +54,7 @@ function apply_container_limits(proposal) {
 function apply_cluster_limits(proposal) {
 	val pps = pending_cluster_limits @ { proposal };
 	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.max_containers} (pps.max_containers);
-	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_max_dapps} (pps.default_container_max_dapps);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_max_blockchains} (pps.default_container_max_blockchains);
 	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_cpu} (pps.default_container_cpu);
 	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_ram} (pps.default_container_ram);
 	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_storage} (pps.default_container_storage);

@@ -20,7 +20,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val _maxContainers by option("-mc", "--max-containers", help = "Max containers per cluster").long()
 
-    private val _maxDapps by option("-md", "--max-dapps", help = maxDappsOptionHelp).long()
+    private val _maxBlockchains by option("-mb", "--max-blockchains", help = maxBlockchainsOptionHelp).long()
 
     private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 
@@ -32,7 +32,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
         val limitsMap = mutableMapOf<ClusterResourceLimitType, Long>()
                 .apply {
                     setNullable(max_containers, _maxContainers)
-                    setNullable(default_container_max_dapps, _maxDapps)
+                    setNullable(default_container_max_blockchains, _maxBlockchains)
                     setNullable(default_container_cpu, _cpu)
                     setNullable(default_container_ram, _ram)
                     setNullable(default_container_storage, _storage)

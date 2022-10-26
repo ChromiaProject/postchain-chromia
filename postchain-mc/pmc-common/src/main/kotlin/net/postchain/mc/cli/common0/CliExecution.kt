@@ -795,7 +795,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         currentLimits.putAll(limits.mapKeys { it.key.name.lowercase() })
         return makeTransactionWithNop().proposeContainerLimitsOperation(
                 config.pubkey().wData, containerName,
-                currentLimits[ContainerResourceLimitType.max_dapps.name]!!,
+                currentLimits[ContainerResourceLimitType.max_blockchains.name]!!,
                 currentLimits[ContainerResourceLimitType.cpu.name]!!,
                 currentLimits[ContainerResourceLimitType.ram.name]!!,
                 currentLimits[ContainerResourceLimitType.storage.name]!!
@@ -819,7 +819,7 @@ open class CliExecution(val config: PostchainClientConfig) {
                 config.pubkey().wData,
                 clusterName,
                 currentLimits[ClusterResourceLimitType.max_containers.name]!!,
-                currentLimits[ClusterResourceLimitType.default_container_max_dapps.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_max_blockchains.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_cpu.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_ram.name]!!,
                 currentLimits[ClusterResourceLimitType.default_container_storage.name]!!

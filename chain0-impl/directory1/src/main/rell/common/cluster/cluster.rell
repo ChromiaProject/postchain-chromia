@@ -84,7 +84,7 @@ operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, gover
 	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
 	val c = create cluster(name, governance = governor, deployer = deployer);
 	create cluster_resource_limit(c, cluster_resource_limit_type.max_containers , -1);
-	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_max_dapps, -1);
+	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_max_blockchains, -1);
 	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_cpu, -1);
 	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_ram, -1);
 	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_storage, -1);

@@ -28,7 +28,7 @@ entity pending_container_with_resource_limits {
  	cluster;
  	container_type;
  	deployer: voter_set;
- 	max_dapps: integer;
+ 	max_blockchains: integer;
  	cpu: integer;
  	ram: integer;
  	storage: integer;
@@ -76,7 +76,7 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
         require(cluster_container_count + 1 <= max_containers, "Can't propose container, cluster %s is full".format(cluster_name));
     }
 
-    val max_dapps = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_max_dapps);
+    val max_blockchains = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_max_blockchains);
     val cpu = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_cpu);
     val ram = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_ram);
     val storage = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_storage);
@@ -84,7 +84,7 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
 	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.deployer);
     create pending_container_with_resource_limits(
         prop, name, cluster, container_type.isolated, deployer,
-        max_dapps, cpu, ram, storage
+        max_blockchains, cpu, ram, storage
     );
     create container_proposal(prop, container_proposal_type.create_container_with_resource_limits);
 	internal_vote(me, prop, true);
@@ -119,7 +119,7 @@ function apply_container_with_resource_limits(proposal) {
 		pps.container_type,
 		pps.cluster,
 		pps.deployer,
-		pps.max_dapps,
+		pps.max_blockchains,
 		pps.cpu,
 		pps.ram,
 		pps.storage

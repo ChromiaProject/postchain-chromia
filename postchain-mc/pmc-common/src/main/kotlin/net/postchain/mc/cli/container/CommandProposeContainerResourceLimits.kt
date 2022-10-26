@@ -18,7 +18,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val containerName by nameOption("Container name").required()
 
-    private val _maxDapps by option("-md", "--max-dapps", help = maxDappsOptionHelp).long()
+    private val _maxBlockchains by option("-mb", "--max-blockchains", help = maxBlockchainsOptionHelp).long()
 
     private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 
@@ -29,7 +29,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
     override fun run() {
         val limitsMap = mutableMapOf<ContainerResourceLimitType, Long>()
                 .apply {
-                    setNullable(max_dapps, _maxDapps)
+                    setNullable(max_blockchains, _maxBlockchains)
                     setNullable(cpu, _cpu)
                     setNullable(ram, _ram)
                     setNullable(storage, _storage)

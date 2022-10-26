@@ -190,7 +190,7 @@ class Directory1IT : ManagedModeTest() {
 
         // Now updated container resource limits and check result
         val default = mapOf(
-                max_dapps to -1L,
+                max_blockchains to -1L,
                 cpu to -1L,
                 ram to -1L,
                 storage to -1L
@@ -202,9 +202,9 @@ class Directory1IT : ManagedModeTest() {
                 expected = default
         )
 
-        val limits = mapOf(max_dapps to 2L, cpu to 456L)
+        val limits = mapOf(max_blockchains to 2L, cpu to 456L)
         val expected = default.toMutableMap().also {
-            it[max_dapps] = 2L
+            it[max_blockchains] = 2L
             it[cpu] = 456L
         }
         proposeAndAssertContainerLimits(
@@ -238,7 +238,7 @@ class Directory1IT : ManagedModeTest() {
 
         val default = mapOf(
                 max_containers to -1L,
-                default_container_max_dapps to -1L,
+                default_container_max_blockchains to -1L,
                 default_container_cpu to -1L,
                 default_container_ram to -1L,
                 default_container_storage to -1L

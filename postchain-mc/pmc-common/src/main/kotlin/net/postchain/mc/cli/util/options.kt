@@ -49,7 +49,7 @@ fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
         require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
     }
 
-const val maxDappsOptionHelp = "Max dapps per container"
+const val maxBlockchainsOptionHelp = "Max number of blockchains per container"
 const val cpuOptionHelp = "CPU limit (percent of cpus, 10 == 0.1 cpu(s), 150 == 1.5 cpu(s))"
 const val ramOptionHelp = "RAM limit (Mb)"
 const val storageOptionHelp = "Storage limit (Mb)"

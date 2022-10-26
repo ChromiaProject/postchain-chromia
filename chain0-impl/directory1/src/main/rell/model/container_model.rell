@@ -5,7 +5,7 @@ enum container_type {
 }
 
 enum container_resource_limit_type {
-    max_dapps,
+    max_blockchains,
 	cpu,
 	ram,
 	storage

@@ -49,8 +49,8 @@ function test_container_resource_limits() {
     ).sign(rell.test.keypairs.alice).run_must_fail();
 }
 
-function assert_container_resource_limits(limits: map<container_resource_limit_type, integer>, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {
-    assert_equals(limits[container_resource_limit_type.max_dapps], max_dapps);
+function assert_container_resource_limits(limits: map<container_resource_limit_type, integer>, max_blockchains: integer, cpu: integer, ram: integer, storage: integer) {
+    assert_equals(limits[container_resource_limit_type.max_blockchains], max_blockchains);
     assert_equals(limits[container_resource_limit_type.cpu], cpu);
     assert_equals(limits[container_resource_limit_type.ram], ram);
     assert_equals(limits[container_resource_limit_type.storage], storage);
