@@ -20,7 +20,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val _maxContainers by option("-mc", "--max-containers", help = "Max containers per cluster").long()
 
-    private val _maxBlockchains by option("-mb", "--max-blockchains", help = maxBlockchainsOptionHelp).long()
+    private val _maxBlockchains by maxBlockchainsOption()
 
     private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 

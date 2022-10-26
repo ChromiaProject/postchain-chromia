@@ -18,7 +18,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val containerName by nameOption("Container name").required()
 
-    private val _maxBlockchains by option("-mb", "--max-blockchains", help = maxBlockchainsOptionHelp).long()
+    private val _maxBlockchains by maxBlockchainsOption()
 
     private val _cpu by option("-c", "--cpu", help = cpuOptionHelp).long()
 

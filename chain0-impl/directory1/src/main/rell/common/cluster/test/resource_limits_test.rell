@@ -70,4 +70,4 @@ function get_cluster_resource_limits(cluster): map<cluster_resource_limit_type, 
     return limits;
 }
 
-function container_count(cluster_name: text) = (container @* { .cluster.name == cluster_name }).size();
+function container_count(cluster_name: text) = container @* { .cluster.name == cluster_name } (@sum 1)[0];

@@ -64,4 +64,4 @@ function get_container_resource_limits(container): map<container_resource_limit_
     return limits;
 }
 
-function blockchain_count() = (blockchain @* {}).size();
+function blockchain_count() = blockchain @* {} (@sum 1)[0];
