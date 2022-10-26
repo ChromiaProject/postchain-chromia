@@ -8,6 +8,7 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.d1.common.proposal.proposeBlockchainOperation
 import net.postchain.d1.common.proposal.proposeConfigurationOperation
+import net.postchain.d1.container.container_proof.createContainerByProofOperation
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.rell.compiler.base.utils.C_SourceDir
@@ -33,12 +34,12 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val runConfText = DeployXmlParser.parse(deployXmlFile)
 
         val blockchainConfigurations = extractChainConfig(
-            RellRunConfigGenerator.generate(
-                ExceptionCliEnv(),
-                params,
-                deployXmlFile.pathString,
-                runConfText
-            )
+                RellRunConfigGenerator.generate(
+                        ExceptionCliEnv(),
+                        params,
+                        deployXmlFile.pathString,
+                        runConfText
+                )
         )
 
         Files.createDirectories(outputDir)
@@ -63,43 +64,62 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         return BlockchainConfigurations(BlockchainRid(chain.brid.toByteArray()), chain.name, configs)
     }
 
+    override fun createContainer(clientConfig: PostchainClientConfig, containerName: String, clusterName: String, proof: ByteArray) {
+        val client = clientProvider.createClient(clientConfig)
+        val result = client
+                .transactionBuilder()
+                .createContainerByProofOperation(
+                        clientConfig.signers.first().pubKey.wData,
+                        name = containerName,
+                        clusterName = clusterName,
+                        proof.wrap(),
+                        null,
+                        null
+                )
+                .sign()
+                .postSyncAwaitConfirmation()
+        if (result.status != TransactionStatus.CONFIRMED) {
+            throw UserMistake("Deployment failed: ${result.rejectReason ?: "still waiting for confirmation"}")
+        }
+    }
+
     override fun deployBlockchain(
-        clientConfig: PostchainClientConfig,
-        blockchainName: String,
-        containerName: String,
-        configData: ByteArray
+            clientConfig: PostchainClientConfig,
+            blockchainName: String,
+            containerName: String,
+            configData: ByteArray
     ) {
         val client = clientProvider.createClient(clientConfig)
         val result = client
-            .transactionBuilder()
-            .proposeBlockchainOperation(
-                clientConfig.signers.first().pubKey.wData,
-                configData.wrap(),
-                blockchainName,
-                containerName
-            )
-            .sign()
-            .postSyncAwaitConfirmation()
+                .transactionBuilder()
+                .proposeBlockchainOperation(
+                        clientConfig.signers.first().pubKey.wData,
+                        configData.wrap(),
+                        blockchainName,
+                        containerName
+                )
+                .sign()
+                .postSyncAwaitConfirmation()
         if (result.status != TransactionStatus.CONFIRMED) {
             throw UserMistake("Deployment failed: ${result.rejectReason ?: "still waiting for confirmation"}")
         }
     }
 
     override fun updateBlockchain(
-        clientConfig: PostchainClientConfig,
-        blockchainRid: BlockchainRid,
-        configData: ByteArray
+            clientConfig: PostchainClientConfig,
+            blockchainRid: BlockchainRid,
+            configData: ByteArray
     ) {
         val client = clientProvider.createClient(clientConfig)
         val result = client
-            .transactionBuilder()
-            .proposeConfigurationOperation(
-                clientConfig.signers.first().pubKey.wData,
-                blockchainRid,
-                configData.wrap()
-            )
-            .sign()
-            .postSyncAwaitConfirmation()
+                .transactionBuilder()
+                .proposeConfigurationOperation(
+                        clientConfig.signers.first().pubKey.wData,
+                        blockchainRid,
+                        configData.wrap()
+                )
+                .sign()
+                .postSyncAwaitConfirmation()
         if (result.status != TransactionStatus.CONFIRMED) {
             throw UserMistake("Update failed: ${result.rejectReason ?: "still waiting for confirmation"}")
         }
