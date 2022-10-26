@@ -1,13 +1,40 @@
 
 // Who can update container limits? Cluster deployers' voter set.
-operation propose_container_limits(my_pubkey: pubkey, container_name: text, ram: integer, cpu: integer, storage: integer) {
-	val me = require_provider(my_pubkey);
-	val container = require_container(container_name);
-	//check that provider authority and that it is cluster's deployer
-	require_provider_auth_with_rl(me);
-	require_cluster_deployer(container.cluster, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
-	create pending_container_limits(prop, container, cpu, ram, storage);
-	internal_vote(me, prop, true);
+operation propose_container_limits(my_pubkey: pubkey, container_name: text, max_blockchains: integer, cpu: integer, ram: integer, storage: integer) {
+    _propose_container_limits_internal(my_pubkey, container_name, max_blockchains, cpu, ram, storage);
 }
 
+// The operation is mostly needed to make rell-maven-plugin generate code for enum `container_resource_limit_type`
+operation propose_container_limit(my_pubkey: pubkey, container_name: text, type: container_resource_limit_type, value: integer) {
+    val limits_map = _get_current_container_resource_limits(container_name);
+    limits_map[type] = value;
+
+    _propose_container_limits_internal(
+        my_pubkey,
+        container_name,
+        limits_map[container_resource_limit_type.max_blockchains],
+        limits_map[container_resource_limit_type.cpu],
+        limits_map[container_resource_limit_type.ram],
+        limits_map[container_resource_limit_type.storage]
+    );
+}
+
+function _get_current_container_resource_limits(container_name: text): map<container_resource_limit_type, integer> {
+    var limits_map = map<container_resource_limit_type, integer>();
+    val cur_limits_list = container_resource_limit @* { .container.name == container_name };
+    for (l in cur_limits_list) {
+        limits_map[l.container_resource_limit_type] = l.value;
+    }
+    return limits_map;
+}
+
+function _propose_container_limits_internal(my_pubkey: pubkey, container_name: text, max_blockchains: integer, cpu: integer, ram: integer, storage: integer) {
+    val me = require_provider(my_pubkey);
+    val container = require_container(container_name);
+    // check that provider authority and that it is cluster's deployer
+    require_provider_auth_with_rl(me);
+    require_cluster_deployer(container.cluster, me);
+    val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
+    create pending_container_limits(prop, container, max_blockchains, cpu, ram, storage);
+    internal_vote(me, prop, true);
+}

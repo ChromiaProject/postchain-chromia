@@ -4,7 +4,8 @@ enum container_type {
 	isolated // container with resource limits
 }
 
-enum resource_limit_type {
+enum container_resource_limit_type {
+    max_blockchains,
 	cpu,
 	ram,
 	storage
@@ -18,7 +19,7 @@ entity container {
 }
  
 entity container_resource_limit {
-	key container, resource_limit_type;
+	key container, container_resource_limit_type;
 	mutable value: integer;
 }
 

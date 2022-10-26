@@ -1,12 +1,18 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.chain0.common.*
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
+import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.cluster.addNodeToClusterOperation
+import net.postchain.chain0.common.cluster.addProviderToClusterOperation
+import net.postchain.chain0.common.cluster.createClusterOperation
 import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.model.ClusterResourceLimitType
+import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
@@ -18,7 +24,6 @@ import net.postchain.common.wrap
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -597,9 +602,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterLimits(clusterName: String, limitMap: Map<String, Long>) {
+    fun proposeClusterLimits(clusterName: String, limitsMap: Map<ClusterResourceLimitType, Long>) {
         sendTxSync(
-                proposeClusterLimitsAsync(clusterName, limitMap),
+                proposeClusterLimitsAsync(clusterName, limitsMap),
                 "Cluster limits proposed",
                 "Failed proposing new cluster limits"
         )
@@ -637,9 +642,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeContainerLimits(containerName: String, limitMap: Map<String, Long>) {
+    fun proposeContainerLimits(containerName: String, limitsMap: Map<ContainerResourceLimitType, Long>) {
         sendTxSync(
-                proposeContainerLimitsAsync(containerName, limitMap),
+                proposeContainerLimitsAsync(containerName, limitsMap),
                 "Container limits proposed",
                 "Failed proposing new container limits"
         )
@@ -785,15 +790,15 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Propose a new container resource limits.
      * Who can update container resource limits? Cluster's deployer voter set.
      * */
-    fun proposeContainerLimitsAsync(containerName: String, limits: Map<String, Long>): TransactionBuilder {
+    fun proposeContainerLimitsAsync(containerName: String, limits: Map<ContainerResourceLimitType, Long>): TransactionBuilder {
         val currentLimits = listContainerLimits(containerName).toMutableMap()
-        currentLimits.putAll(limits)
+        currentLimits.putAll(limits.mapKeys { it.key.name.lowercase() })
         return makeTransactionWithNop().proposeContainerLimitsOperation(
-            config.pubkey().wData,
-            containerName,
-            currentLimits["ram"]!!,
-            currentLimits["cpu"]!!,
-            currentLimits["storage"]!!
+                config.pubkey().wData, containerName,
+                currentLimits[ContainerResourceLimitType.max_blockchains.name]!!,
+                currentLimits[ContainerResourceLimitType.cpu.name]!!,
+                currentLimits[ContainerResourceLimitType.ram.name]!!,
+                currentLimits[ContainerResourceLimitType.storage.name]!!
         )
     }
 
@@ -807,15 +812,17 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Propose new cluster resource limits.
      * Who can update cluster limits? Cluster governance voter set.
      * */
-    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): TransactionBuilder {
+    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<ClusterResourceLimitType, Long>): TransactionBuilder {
         val currentLimits = listClusterLimits(clusterName).toMutableMap()
-        currentLimits.putAll(limits)
+        currentLimits.putAll(limits.mapKeys { it.key.name.lowercase() })
         return makeTransactionWithNop().proposeClusterLimitsOperation(
-            config.pubkey().wData,
-            clusterName,
-            currentLimits["ram"]!!,
-            currentLimits["cpu"]!!,
-            currentLimits["storage"]!!
+                config.pubkey().wData,
+                clusterName,
+                currentLimits[ClusterResourceLimitType.max_containers.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_max_blockchains.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_cpu.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_ram.name]!!,
+                currentLimits[ClusterResourceLimitType.default_container_storage.name]!!
         )
     }
 
@@ -832,11 +839,11 @@ open class CliExecution(val config: PostchainClientConfig) {
             deployerSet: String
     ): TransactionBuilder {
         return makeTransactionWithNop().createClusterOperation(
-            config.pubkey().wData,
-            newClusterName,
-            providerKeys?.split(",")?.map { it.hexStringToWrappedByteArray() },
-            governorSet,
-            deployerSet
+                config.pubkey().wData,
+                newClusterName,
+                providerKeys?.split(",")?.map { it.hexStringToWrappedByteArray() },
+                governorSet,
+                deployerSet
         )
     }
 
@@ -878,9 +885,9 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeProviderIsSystemOperation(
-            config.pubkey().wData,
-            pubKey.hexStringToWrappedByteArray(),
-            isSystem
+                config.pubkey().wData,
+                pubKey.hexStringToWrappedByteArray(),
+                isSystem
         )
     }
 
@@ -896,8 +903,8 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
         return makeTransactionWithNop().proposeDisableProviderOperation(
-            config.pubkey().wData,
-            key.hexStringToWrappedByteArray()
+                config.pubkey().wData,
+                key.hexStringToWrappedByteArray()
         )
     }
 

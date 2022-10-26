@@ -45,18 +45,20 @@ entity pending_configuration {
 entity pending_container_limits {
 	key proposal;
 	key container;
+	max_blockchains: integer;
 	cpu: integer;
 	ram: integer;
 	storage: integer;
 }
 
-
 entity pending_cluster_limits {
 	key proposal;
 	key cluster;
-	cpu: integer;
-	ram: integer;
-	storage: integer;
+	max_containers: integer;
+	default_container_max_blockchains: integer;
+	default_container_cpu: integer;
+	default_container_ram: integer;
+	default_container_storage: integer;
 }
 
 entity pending_cluster_provider {

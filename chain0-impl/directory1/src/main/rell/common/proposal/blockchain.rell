@@ -8,7 +8,15 @@ operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name
 	val container = container @ { container_name };
 	require_provider_auth_with_rl(me);
 	require_container_deployer(container, me);
-	//If already proposed, do not add again.
+
+	// Require container resource limits are honored
+	val max_blockchains = container_resource_limit @ { container, .container_resource_limit_type == container_resource_limit_type.max_blockchains } (.value);
+	if (max_blockchains > 0) {
+	    val container_dapps_count = container_blockchain @* { container } (@sum 1)[0];
+	    require(container_dapps_count + 1 <= max_blockchains, "Can't propose blockchain, container %s is full".format(container_name));
+	}
+
+	// If already proposed, do not add again.
 	if (empty(pending_blockchain @* {.data == config_data } limit 1)) {
 		val prop = create proposal(op_context.last_block_time, proposal_type.bc, me, container.deployer);
 		create pending_blockchain(prop, bc_name, config_data, container);
