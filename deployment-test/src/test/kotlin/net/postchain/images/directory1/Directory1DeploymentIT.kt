@@ -20,6 +20,9 @@ import net.postchain.common.types.RowId
 import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType
+import net.postchain.containers.bpm.Cpu
+import net.postchain.containers.bpm.Ram
+import net.postchain.containers.bpm.Storage
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
@@ -47,7 +50,7 @@ internal class Directory1DeploymentIT {
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits.fromValues(
-                resourceLimitsValues.first, resourceLimitsValues.second, resourceLimitsValues.third
+                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
         )
 
         init {
@@ -137,7 +140,7 @@ internal class Directory1DeploymentIT {
     @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits.fromValues(-1L, -1L, -1L)
+        val expectedLimits = ContainerResourceLimits.fromValues(Cpu(-1L), Ram(-1L), Storage(-1L))
         val actualLimits = ContainerResourceLimits(queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
@@ -310,7 +313,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Asserting container resource limits")
 
         val expectedResourceLimits = ContainerResourceLimits.fromValues(
-                resourceLimitsValues.first, resourceLimitsValues.second, resourceLimitsValues.third
+                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
         )
 
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())

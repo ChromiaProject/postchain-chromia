@@ -20,7 +20,6 @@ function test_cluster_resource_limits() {
 
     // Asserting default cluster resource limits
     val default_limits = get_cluster_resource_limits(cluster1);
-    print(default_limits);
     assert_cluster_resource_limits(default_limits, -1, -1, -1, -1, -1);
 
     // Deploying container "foo" and asserting its resource limits
@@ -30,7 +29,6 @@ function test_cluster_resource_limits() {
     ).sign(rell.test.keypairs.alice).run();
     assert_equals(container_count0 + 1, container_count(cluster1_name));
     val foo_limits = get_container_resource_limits(container @ { "foo" });
-    print(foo_limits);
     assert_container_resource_limits(foo_limits, -1, -1, -1, -1);
 
     // 2. Proposing cluster resource limits
@@ -40,7 +38,6 @@ function test_cluster_resource_limits() {
 
     // Asserting new container resource limits
     val limits1 = get_cluster_resource_limits(cluster1);
-    print(limits1);
     assert_cluster_resource_limits(limits1, 2, 3, 10, 100, 1000);
 
     // Deploying container "bar" and asserting its NEW resource limits
@@ -49,16 +46,12 @@ function test_cluster_resource_limits() {
     ).sign(rell.test.keypairs.alice).run();
     assert_equals(container_count0 + 2, container_count(cluster1_name));
     val bar_limits = get_container_resource_limits(container @ { "bar" });
-    print(bar_limits);
     assert_container_resource_limits(bar_limits, 3, 10, 100, 1000);
 
     // 3. Trying to deploy more than 2 containers
     rell.test.tx().op(
         propose_container(rell.test.pubkeys.alice, cluster1_name, "foobar", voter_sets.system_p)
     ).sign(rell.test.keypairs.alice).run_must_fail();
-
-    // Asserting 3d container rejected
-    assert_equals(container_count0 + 2, container_count(cluster1_name));
 }
 
 function assert_cluster_resource_limits(limits: map<cluster_resource_limit_type, integer>, max_containers: integer, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {

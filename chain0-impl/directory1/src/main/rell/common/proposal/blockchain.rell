@@ -11,7 +11,7 @@ operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name
 
 	// Require container resource limits are honored
 	val max_dapps = container_resource_limit @ { container, .container_resource_limit_type == container_resource_limit_type.max_dapps } (.value);
-	if (max_dapps != -1) {
+	if (max_dapps > 0) {
 	    val container_dapps_count = (container_blockchain @* { container }).size();
 	    require(container_dapps_count + 1 <= max_dapps, "Can't propose blockchain, container %s is full".format(container_name));
 	}

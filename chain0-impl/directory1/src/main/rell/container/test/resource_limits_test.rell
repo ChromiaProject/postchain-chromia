@@ -16,7 +16,6 @@ function test_container_resource_limits() {
 
     // Asserting default container resource limits
     val default_limits = get_container_resource_limits(container1);
-    print(default_limits);
     assert_container_resource_limits(default_limits, -1, -1, -1, -1);
 
     // 2. Proposing container resource limits
@@ -26,7 +25,6 @@ function test_container_resource_limits() {
 
     // Asserting new container resource limits
     val limits1 = get_container_resource_limits(container1);
-    print(limits1);
     assert_container_resource_limits(limits1, 2, 10, 100, 1000);
 
     // 3. Deploying 2 dapps
@@ -49,9 +47,6 @@ function test_container_resource_limits() {
     rell.test.tx().op(
         propose_blockchain(alice.pubkey, conf.to_gtv().to_bytes(), "foobar_chain", container1_name)
     ).sign(rell.test.keypairs.alice).run_must_fail();
-
-    // Asserting 3d dapp rejected
-    assert_equals(blockchain_count0 + 2, blockchain_count());
 }
 
 function assert_container_resource_limits(limits: map<container_resource_limit_type, integer>, max_dapps: integer, cpu: integer, ram: integer, storage: integer) {
