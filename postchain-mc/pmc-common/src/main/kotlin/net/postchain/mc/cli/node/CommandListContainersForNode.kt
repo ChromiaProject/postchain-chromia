@@ -8,8 +8,8 @@ import net.postchain.mc.cli.util.ContainersPrinter
 import net.postchain.mc.cli.util.configOption
 
 class CommandListContainersForNode : CliktCommand(
-    name = "containers",
-    help = "List containers for node"
+        name = "containers",
+        help = "List containers for node"
 ) {
     private val config by configOption()
 

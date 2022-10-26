@@ -7,8 +7,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandRemoveBlockchainReplica : CliktCommand(
-    name = "remove",
-    help = "remove replica of a blockchain"
+        name = "remove",
+        help = "remove replica of a blockchain"
 ) {
     private val config by configOption()
 
@@ -18,7 +18,7 @@ class CommandRemoveBlockchainReplica : CliktCommand(
 
     override fun run() {
         CliExecution(config)
-            .removeBlockchainReplica(blockchainRID.toHex(), key)
+                .removeBlockchainReplica(blockchainRID.toHex(), key)
         println("Replica node has been removed successfully")
     }
 

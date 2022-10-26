@@ -76,11 +76,11 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
     protected fun cliConf(keyIndex: Int): PostchainClientConfig {
         return PostchainClientConfig(
-            nodes[0].getBlockchainRid(0)!!,
-            EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
-            listOf(
-                KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
-            )
+                nodes[0].getBlockchainRid(0)!!,
+                EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
+                listOf(
+                        KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
+                )
         )
     }
 
@@ -131,9 +131,9 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
-    configData: BaseBlockBuildingStrategyConfigurationData,
-    blockQueries: BlockQueries,
-    val txQueue: TransactionQueue
+        configData: BaseBlockBuildingStrategyConfigurationData,
+        blockQueries: BlockQueries,
+        val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()

@@ -8,8 +8,8 @@ import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandProposeClusterDeployer : CliktCommand(
-    name = "deployer",
-    help = "proposes an update of a cluster's deployer. New deployer must be an existing voter set."
+        name = "deployer",
+        help = "proposes an update of a cluster's deployer. New deployer must be an existing voter set."
 ) {
     private val config by configOption()
 
@@ -17,8 +17,8 @@ class CommandProposeClusterDeployer : CliktCommand(
 
 
     private val clusterName by option(
-        "-c", "--cluster",
-        help = "Name of existing cluster to update"
+            "-c", "--cluster",
+            help = "Name of existing cluster to update"
     ).required()
 
     override fun run() {

@@ -11,8 +11,8 @@ import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
 class CommandListVoterSets : CliktCommand(
-    name = "list",
-    help = "List all voter sets"
+        name = "list",
+        help = "List all voter sets"
 ) {
     private val config by configOption()
 
@@ -32,7 +32,7 @@ class CommandListVoterSets : CliktCommand(
                 borderStyle = Table.BorderStyle.SINGLE_LINE
             }
         }
-            .render(StringBuilder())
-            .also { println(it) }
+                .render(StringBuilder())
+                .also { println(it) }
     }
 }

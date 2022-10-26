@@ -9,8 +9,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandTransferActionPoints : CliktCommand(
-    name = "transfer-action-points",
-    help = "transfer some of your action points to another provider"
+        name = "transfer-action-points",
+        help = "transfer some of your action points to another provider"
 ) {
     private val config by configOption()
 

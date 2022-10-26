@@ -8,8 +8,8 @@ class ProposalCommand : CliktCommand("Interact with existing proposals") {
 }
 
 fun proposalCommands() = ProposalCommand().subcommands(
-    CommandGetProposal(),
-    CommandListProposalsSince(),
-    CommandRevokeProposal(),
-    CommandVote()
+        CommandGetProposal(),
+        CommandListProposalsSince(),
+        CommandRevokeProposal(),
+        CommandVote()
 )

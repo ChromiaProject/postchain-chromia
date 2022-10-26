@@ -14,8 +14,8 @@ class CliExecutionC0(config: PostchainClientConfig) : CliExecution(config) {
                     gtv("pubkey" to gtv(it.hexStringToByteArray())))
         }
         return makeTransactionWithNop().addOperation(
-                    "add_blockchain",
-                    gtv(data), gtv(nodeList))
+                "add_blockchain",
+                gtv(data), gtv(nodeList))
     }
 
     fun stopBlockchain(blockchainRID: String, removeReplicas: Boolean) {
@@ -26,8 +26,8 @@ class CliExecutionC0(config: PostchainClientConfig) : CliExecution(config) {
     fun stopBlockchainInternal(blockchainRID: String, removeReplicas: Boolean): TransactionBuilder {
         val blockchain = blockchainGtv(blockchainRID)
         return makeTransactionWithNop().addOperation(
-                    "stop_blockchain",
-                    blockchain, gtv(removeReplicas))
+                "stop_blockchain",
+                blockchain, gtv(removeReplicas))
     }
 
 }

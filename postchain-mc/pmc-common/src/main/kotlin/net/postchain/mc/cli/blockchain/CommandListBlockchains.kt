@@ -11,8 +11,8 @@ import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
 class CommandListBlockchains : CliktCommand(
-    name = "list",
-    help = "List blockchains"
+        name = "list",
+        help = "List blockchains"
 ) {
     private val config by configOption()
 
@@ -33,7 +33,7 @@ class CommandListBlockchains : CliktCommand(
                 borderStyle = Table.BorderStyle.SINGLE_LINE
             }
         }
-            .render(StringBuilder())
-            .also { println(it) }
+                .render(StringBuilder())
+                .also { println(it) }
     }
 }

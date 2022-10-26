@@ -6,8 +6,8 @@ import java.awt.Desktop
 
 
 class CommandConfig : CliktCommand(
-    name = "config",
-    help = "Configure the management console"
+        name = "config",
+        help = "Configure the management console"
 ) {
 
     private val show by option(help = "Show current configuration").flag()
@@ -17,8 +17,8 @@ class CommandConfig : CliktCommand(
     override fun run() {
         if (show) {
             config.readLines()
-                .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
-                .also { println(it) }
+                    .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
+                    .also { println(it) }
             return
         }
         if (!config.exists()) PmcConfigProvider.createConfigFile(config, null) else Desktop.getDesktop().edit(config)

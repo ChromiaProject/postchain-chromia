@@ -6,8 +6,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandRemoveNode : CliktCommand(
-    name = "remove",
-    help = "Inactivate node"
+        name = "remove",
+        help = "Inactivate node"
 ) {
     private val config by configOption()
 

@@ -18,8 +18,8 @@ import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeConfiguration : CliktCommand(
-    name = "update",
-    help = """
+        name = "update",
+        help = """
         Propose new configuration to blockchain at specific height. 
         Height must be > current height and > all previously approved configuration heights.
         Use force flag -f to override previously added configs or to squeeze in a configuration 
@@ -29,8 +29,8 @@ class CommandProposeConfiguration : CliktCommand(
     private val client by nopClientOption()
 
     private val blockchainConfigFile by option("-bc", "--blockchain-config", help = "Blockchain config to propose")
-        .file(mustExist = true, mustBeReadable = true, canBeDir = false)
-        .required()
+            .file(mustExist = true, mustBeReadable = true, canBeDir = false)
+            .required()
 
     private val blockchainRID by blockchainRidOption()
 
@@ -40,16 +40,16 @@ class CommandProposeConfiguration : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-            .apply {
-                val configData = readConfigurationFile(blockchainConfigFile, null)
-                if (height == null) {
-                    proposeConfigurationOperation(client.config.pubkey().wData, blockchainRID, configData.wrap())
-                } else {
-                    proposeConfigurationAtOperation(client.config.pubkey().wData, blockchainRID, configData.wrap(), height!!, force)
+                .apply {
+                    val configData = readConfigurationFile(blockchainConfigFile, null)
+                    if (height == null) {
+                        proposeConfigurationOperation(client.config.pubkey().wData, blockchainRID, configData.wrap())
+                    } else {
+                        proposeConfigurationAtOperation(client.config.pubkey().wData, blockchainRID, configData.wrap(), height!!, force)
+                    }
                 }
-            }
-            .postSyncAwaitConfirmation()
-            .printResult("Configuration was proposed",
-            "Failed to propose configuration")
+                .postSyncAwaitConfirmation()
+                .printResult("Configuration was proposed",
+                        "Failed to propose configuration")
     }
 }

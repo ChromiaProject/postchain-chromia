@@ -16,31 +16,31 @@ import net.postchain.mc.cli.votingupdates.voterSetCommands
 import net.postchain.mc.network.networkCommands
 
 fun main(args: Array<String>) = ManagementConsole()
-    .subcommands(
-        CommandKeygen(),
-        CommandConfig(),
-        CommandSetup(),
+        .subcommands(
+                CommandKeygen(),
+                CommandConfig(),
+                CommandSetup(),
 
-        networkCommands(),
+                networkCommands(),
 
-        // Voting
-        proposalCommands(),
-        voterSetCommands(),
+                // Voting
+                proposalCommands(),
+                voterSetCommands(),
 
-        // Blockchain
-        blockchainCommands(),
+                // Blockchain
+                blockchainCommands(),
 
-        // Cluster
-        clusterCommands(),
+                // Cluster
+                clusterCommands(),
 
-        // Provider
-        providerCommands()
-            .subcommands(CommandUpdateProvider()),
+                // Provider
+                providerCommands()
+                        .subcommands(CommandUpdateProvider()),
 
-        // Container
-        containerCommands(),
+                // Container
+                containerCommands(),
 
-        // Node
-        nodeCommands(),
+                // Node
+                nodeCommands(),
         )
-    .main(args)
+        .main(args)

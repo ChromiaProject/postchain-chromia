@@ -7,8 +7,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandAddBlockchainReplica : CliktCommand(
-    name = "add",
-    help = "add replica of a blockchain. The node is verifying but not building blocks."
+        name = "add",
+        help = "add replica of a blockchain. The node is verifying but not building blocks."
 ) {
 
     private val config by configOption()

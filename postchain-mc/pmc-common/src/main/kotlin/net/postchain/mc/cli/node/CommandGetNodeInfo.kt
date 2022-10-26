@@ -11,8 +11,8 @@ import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetNodeInfo : CliktCommand(
-    name = "info",
-    help = "Get node info for given node pubkey"
+        name = "info",
+        help = "Get node info for given node pubkey"
 ) {
     private val config by configOption()
 

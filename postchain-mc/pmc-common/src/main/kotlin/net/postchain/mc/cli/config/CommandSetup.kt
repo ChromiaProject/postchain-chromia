@@ -5,8 +5,8 @@ import net.postchain.cli.util.blockchainRidOption
 import net.postchain.client.config.PostchainClientConfig
 
 class CommandSetup : CliktCommand(
-    name = "setup",
-    help = "Create new provider configuration"
+        name = "setup",
+        help = "Create new provider configuration"
 ) {
 
     private val brid by blockchainRidOption()

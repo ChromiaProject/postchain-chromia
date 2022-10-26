@@ -6,6 +6,6 @@ import com.github.ajalt.clikt.core.subcommands
 class ReplicaCommand : NoOpCliktCommand("Blockchain replica commands")
 
 fun blockchainReplicaCommands() = ReplicaCommand().subcommands(
-    CommandAddBlockchainReplica(),
-    CommandRemoveBlockchainReplica()
+        CommandAddBlockchainReplica(),
+        CommandRemoveBlockchainReplica()
 )

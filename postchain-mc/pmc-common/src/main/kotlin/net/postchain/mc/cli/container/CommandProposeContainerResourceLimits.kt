@@ -9,9 +9,9 @@ import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandProposeContainerResourceLimits : CliktCommand(
-    name = "limits",
-    help = "Propose new resource limits for given container There are three types of limits. " +
-            "Proposal can contain one, two, or all three types."
+        name = "limits",
+        help = "Propose new resource limits for given container There are three types of limits. " +
+                "Proposal can contain one, two, or all three types."
 ) {
     private val config by configOption()
 

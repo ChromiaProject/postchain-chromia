@@ -9,8 +9,8 @@ import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandVote : CliktCommand(
-    name = "vote",
-    help = "Providers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposal."
+        name = "vote",
+        help = "Providers decide if proposed configuration changes should be applied. Use this function to vote yes or no to a proposal."
 ) {
 
     private val config by configOption()
@@ -18,7 +18,7 @@ class CommandVote : CliktCommand(
     private val idx by proposalIndexOption().required()
 
     private val vote by option("-y", "--approve", help = "Vote yes or no on this proposal")
-        .flag("-n", "--revoke", default = true)
+            .flag("-n", "--revoke", default = true)
 
     override fun run() {
         CliExecution(config).vote(idx, vote)

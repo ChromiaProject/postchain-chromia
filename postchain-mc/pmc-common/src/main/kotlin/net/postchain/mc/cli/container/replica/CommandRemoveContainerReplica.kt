@@ -7,8 +7,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandRemoveContainerReplica : CliktCommand(
-    name = "remove",
-    help = "remove replica of this container from this cluster"
+        name = "remove",
+        help = "remove replica of this container from this cluster"
 ) {
     private val config by configOption()
 

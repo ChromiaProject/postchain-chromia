@@ -6,8 +6,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposeDisableProvider : CliktCommand(
-    name = "disable",
-    help = "Propose disabling an existing provider"
+        name = "disable",
+        help = "Propose disabling an existing provider"
 ) {
     private val config by configOption()
 

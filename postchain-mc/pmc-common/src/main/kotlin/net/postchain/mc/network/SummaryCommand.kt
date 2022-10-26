@@ -8,7 +8,7 @@ import net.postchain.mc.cli.util.clientOption
 import java.lang.StringBuilder
 
 class SummaryCommand : CliktCommand(
-    help = "Show summary of the network"
+        help = "Show summary of the network"
 ) {
 
     val client by clientOption()
@@ -26,7 +26,7 @@ class SummaryCommand : CliktCommand(
                 alignment(0, Table.Hints.Alignment.LEFT)
             }
         }
-            .render(StringBuilder())
-            .also { println(it) }
+                .render(StringBuilder())
+                .also { println(it) }
     }
 }

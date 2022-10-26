@@ -13,8 +13,8 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandReplaceNode : CliktCommand(
-    name = "replace",
-    help = """
+        name = "replace",
+        help = """
         Replace a node with a new one (Used to rotate keypairs). Add the keys to the nodes to the client configuration as comma-delimited list:
         pubkey=<key>,<old-node-key>,<new-node-key>
         privkey=<key>,<old-node-key>,<new-node-key>
@@ -33,11 +33,11 @@ class CommandReplaceNode : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-            .replaceNodeOperation(client.config.pubkey().wData, old.wData, new.wData, host, port?.toLong(), apiUrl)
-            .postSyncAwaitConfirmation()
-            .printResult(
-                "Node has been replaced",
-                "Failed to replace node"
-            )
+                .replaceNodeOperation(client.config.pubkey().wData, old.wData, new.wData, host, port?.toLong(), apiUrl)
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Node has been replaced",
+                        "Failed to replace node"
+                )
     }
 }

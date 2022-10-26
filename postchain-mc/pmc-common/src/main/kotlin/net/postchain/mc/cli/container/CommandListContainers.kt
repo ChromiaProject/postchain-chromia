@@ -29,7 +29,7 @@ class CommandListContainers : CliktCommand(
                 borderStyle = Table.BorderStyle.SINGLE_LINE
             }
         }
-            .render(StringBuilder())
-            .also { println(it) }
+                .render(StringBuilder())
+                .also { println(it) }
     }
 }

@@ -719,9 +719,9 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
         return makeTransactionWithNop().registerProviderOperation(
-            config.pubkey().wData,
-            PubKey(key),
-            tier
+                config.pubkey().wData,
+                PubKey(key),
+                tier
         )
     }
 
@@ -753,12 +753,12 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
         return makeTransactionWithNop().addNodeOperation(
-            config.pubkey().wData,
-            key.hexStringToWrappedByteArray(),
-            host,
-            port,
-            apiUrl,
-            if (clusterName == "") listOf() else listOf(clusterName)
+                config.pubkey().wData,
+                key.hexStringToWrappedByteArray(),
+                host,
+                port,
+                apiUrl,
+                if (clusterName == "") listOf() else listOf(clusterName)
         )
     }
 
@@ -766,9 +766,9 @@ open class CliExecution(val config: PostchainClientConfig) {
      * */
     fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
         return makeTransactionWithNop().addProviderToClusterOperation(
-            config.pubkey().wData,
-            key.hexStringToWrappedByteArray(),
-            clusterName
+                config.pubkey().wData,
+                key.hexStringToWrappedByteArray(),
+                clusterName
         )
     }
 
@@ -777,8 +777,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun addNodeToClusterAsync(key: String, clusterName: String): TransactionBuilder {
         val provider = config.pubkey().wData
         return makeTransactionWithNop().addNodeToClusterOperation(
-            provider,
-            key.hexStringToWrappedByteArray(), clusterName
+                provider,
+                key.hexStringToWrappedByteArray(), clusterName
         )
     }
 
@@ -789,11 +789,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         val currentLimits = listContainerLimits(containerName).toMutableMap()
         currentLimits.putAll(limits)
         return makeTransactionWithNop().proposeContainerLimitsOperation(
-            config.pubkey().wData,
-            containerName,
-            currentLimits["ram"]!!,
-            currentLimits["cpu"]!!,
-            currentLimits["storage"]!!
+                config.pubkey().wData,
+                containerName,
+                currentLimits["ram"]!!,
+                currentLimits["cpu"]!!,
+                currentLimits["storage"]!!
         )
     }
 
@@ -811,11 +811,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         val currentLimits = listClusterLimits(clusterName).toMutableMap()
         currentLimits.putAll(limits)
         return makeTransactionWithNop().proposeClusterLimitsOperation(
-            config.pubkey().wData,
-            clusterName,
-            currentLimits["ram"]!!,
-            currentLimits["cpu"]!!,
-            currentLimits["storage"]!!
+                config.pubkey().wData,
+                clusterName,
+                currentLimits["ram"]!!,
+                currentLimits["cpu"]!!,
+                currentLimits["storage"]!!
         )
     }
 
@@ -832,11 +832,11 @@ open class CliExecution(val config: PostchainClientConfig) {
             deployerSet: String
     ): TransactionBuilder {
         return makeTransactionWithNop().createClusterOperation(
-            config.pubkey().wData,
-            newClusterName,
-            providerKeys?.split(",")?.map { it.hexStringToWrappedByteArray() },
-            governorSet,
-            deployerSet
+                config.pubkey().wData,
+                newClusterName,
+                providerKeys?.split(",")?.map { it.hexStringToWrappedByteArray() },
+                governorSet,
+                deployerSet
         )
     }
 
@@ -878,9 +878,9 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeProviderIsSystemOperation(
-            config.pubkey().wData,
-            pubKey.hexStringToWrappedByteArray(),
-            isSystem
+                config.pubkey().wData,
+                pubKey.hexStringToWrappedByteArray(),
+                isSystem
         )
     }
 
@@ -896,8 +896,8 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
         return makeTransactionWithNop().proposeDisableProviderOperation(
-            config.pubkey().wData,
-            key.hexStringToWrappedByteArray()
+                config.pubkey().wData,
+                key.hexStringToWrappedByteArray()
         )
     }
 
@@ -910,7 +910,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     ): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return makeTransactionWithNop().proposeConfigurationAtOperation(
-            config.pubkey().wData, BlockchainRid.buildFromHex(blockchainRID), data.wrap(), height, force
+                config.pubkey().wData, BlockchainRid.buildFromHex(blockchainRID), data.wrap(), height, force
         )
     }
 
@@ -937,7 +937,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().proposeBlockchainOperation(
-            config.pubkey().wData, data.wrap(), name, containerName
+                config.pubkey().wData, data.wrap(), name, containerName
         )
     }
 
@@ -948,13 +948,13 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterProviderOperation(
-            config.pubkey().wData, clusterName, provider.hexStringToWrappedByteArray(), add
+                config.pubkey().wData, clusterName, provider.hexStringToWrappedByteArray(), add
         )
     }
 
     fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterDeployerOperation(
-            config.pubkey().wData, clusterName, newDeployer
+                config.pubkey().wData, clusterName, newDeployer
         )
     }
 
@@ -967,18 +967,18 @@ open class CliExecution(val config: PostchainClientConfig) {
         val newMember = if (add) member else null
         val removeMember = if (!add) member else null
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().wData,
-            voterSet,
-            null,
-            null,
-            newMember?.let { listOf(it.hexStringToWrappedByteArray()) } ?: listOf(),
-            removeMember?.let { listOf(it.hexStringToWrappedByteArray()) } ?: listOf()
+                config.pubkey().wData,
+                voterSet,
+                null,
+                null,
+                newMember?.let { listOf(it.hexStringToWrappedByteArray()) } ?: listOf(),
+                removeMember?.let { listOf(it.hexStringToWrappedByteArray()) } ?: listOf()
         )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().wData, voterSetName, null, newGovernor, listOf(), listOf()
+                config.pubkey().wData, voterSetName, null, newGovernor, listOf(), listOf()
         )
     }
 }

@@ -10,8 +10,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetBlockchainConfiguration : CliktCommand(
-    name = "get",
-    help = "Get blockchain configuration"
+        name = "get",
+        help = "Get blockchain configuration"
 ) {
     private val config by configOption()
 
@@ -21,7 +21,7 @@ class CommandGetBlockchainConfiguration : CliktCommand(
 
     override fun run() {
         val bc = CliExecution(config)
-            .getBlockchainConfiguration(blockchainRID.toHex(), height)
+                .getBlockchainConfiguration(blockchainRID.toHex(), height)
         if (height == -1L) {
             println("Blockchain configuration at current:")
         } else {

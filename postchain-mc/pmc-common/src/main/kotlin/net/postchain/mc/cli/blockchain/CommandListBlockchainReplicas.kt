@@ -8,8 +8,8 @@ import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandListBlockchainReplicas : CliktCommand(
-    name = "replicas",
-    help = "List blockchain replicas"
+        name = "replicas",
+        help = "List blockchain replicas"
 ) {
     private val config by configOption()
 

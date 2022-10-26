@@ -7,8 +7,8 @@ import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 
 class CommandAddContainerReplica : CliktCommand(
-    name = "add",
-    help = "add replica of a container to this cluster. (Another cluster is responsible for blockbuilding)"
+        name = "add",
+        help = "add replica of a container to this cluster. (Another cluster is responsible for blockbuilding)"
 ) {
     private val config by configOption()
 

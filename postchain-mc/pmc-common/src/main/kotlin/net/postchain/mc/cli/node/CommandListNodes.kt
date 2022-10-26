@@ -15,8 +15,8 @@ import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandListNodes : CliktCommand(
-    name = "list",
-    help = "List all nodes"
+        name = "list",
+        help = "List all nodes"
 ) {
     private val config by configOption()
 
@@ -28,7 +28,7 @@ class CommandListNodes : CliktCommand(
             ClientUtil.fromConfig(config).getNodesWithProvider().forEach {
                 row(it.pubkey.hex(), it.host, it.port.toString(), it.nodeActive.toString(), it.provider.toHex())
             }
-            hints {borderStyle = Table.BorderStyle.SINGLE_LINE }
+            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
         }
     }
 }

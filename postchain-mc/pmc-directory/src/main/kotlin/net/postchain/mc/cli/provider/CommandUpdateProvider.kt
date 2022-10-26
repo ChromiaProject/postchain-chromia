@@ -9,8 +9,8 @@ import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandUpdateProvider : CliktCommand(
-    name = "update",
-    help = "update provider information"
+        name = "update",
+        help = "update provider information"
 ) {
     private val client by nopClientOption()
 
@@ -18,9 +18,9 @@ class CommandUpdateProvider : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-            .updateProviderOperation(client.config.pubkey().wData, name)
-            .postSyncAwaitConfirmation()
-            .printResult("Information updated",
-            "Could not update provider data")
+                .updateProviderOperation(client.config.pubkey().wData, name)
+                .postSyncAwaitConfirmation()
+                .printResult("Information updated",
+                        "Could not update provider data")
     }
 }

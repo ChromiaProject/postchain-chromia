@@ -7,8 +7,8 @@ import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandListProposalsSince : CliktCommand(
-    name = "list",
-    help = "List all active proposals since a given index"
+        name = "list",
+        help = "List all active proposals since a given index"
 ) {
 
     private val config by configOption()

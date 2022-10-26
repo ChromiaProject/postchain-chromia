@@ -15,37 +15,37 @@ import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandProposeVoterSetUpdate : CliktCommand(
-    name = "update",
-    help = "proposes an update of a voter set's governor. New governor must be an existing voter set."
+        name = "update",
+        help = "proposes an update of a voter set's governor. New governor must be an existing voter set."
 ) {
     private val client by nopClientOption()
 
     private val voterSet by option(
-        "-vs", "--voter-set",
-        help = "Name of existing voter set to update"
+            "-vs", "--voter-set",
+            help = "Name of existing voter set to update"
     ).required()
 
     private val threshold by option("--threshold", help = "New threshold").long()
     private val governor by option("--governor", help = "Name of new governor")
     private val newMember by option("--add-member", help = "Provider pubkey(s) to add to voter set")
-        .convert { it.hexStringToWrappedByteArray() }
-        .split(",")
-        .default(listOf())
+            .convert { it.hexStringToWrappedByteArray() }
+            .split(",")
+            .default(listOf())
     private val removeMember by option("--remove-member", help = "Provider pubkey(s) to remove from voter set")
-        .convert { it.hexStringToWrappedByteArray() }
-        .split(",")
-        .default(listOf())
+            .convert { it.hexStringToWrappedByteArray() }
+            .split(",")
+            .default(listOf())
 
     override fun run() {
         client.transactionBuilder()
-            .proposeUpdateVoterSetOperation(
-                client.config.pubkey().wData,
-                voterSet, threshold, governor, newMember, removeMember
-            )
-            .postSyncAwaitConfirmation()
-            .printResult(
-                "Proposal for voter set $voterSet has been added",
-                "Failed to add proposal"
-            )
+                .proposeUpdateVoterSetOperation(
+                        client.config.pubkey().wData,
+                        voterSet, threshold, governor, newMember, removeMember
+                )
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Proposal for voter set $voterSet has been added",
+                        "Failed to add proposal"
+                )
     }
 }

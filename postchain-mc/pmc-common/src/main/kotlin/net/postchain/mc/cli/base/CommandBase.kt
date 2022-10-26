@@ -10,9 +10,9 @@ object CommandBase {
 
     fun autoGenerateName(): String {
         return (1..NAME_LENGTH)
-            .map { i -> Random.nextInt(0, charPool.size) }
-            .map(charPool::get)
-            .joinToString("");
+                .map { i -> Random.nextInt(0, charPool.size) }
+                .map(charPool::get)
+                .joinToString("");
     }
 
     fun isAlphanumeric(string: String): Boolean {

@@ -10,8 +10,8 @@ import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandVoterSetInfo : CliktCommand(
-    name = "info",
-    help = "Show information of voter set"
+        name = "info",
+        help = "Show information of voter set"
 ) {
     private val config by configOption()
 
@@ -23,9 +23,9 @@ class CommandVoterSetInfo : CliktCommand(
             row("Voter set", voterSet.name)
             row("Governed by", voterSet.governor)
             row("Threshold", formatThreshold(voterSet.threshold))
-            voterSet.members.forEachIndexed { index, bytes ->  row("Member $index", bytes.toHex()) }
+            voterSet.members.forEachIndexed { index, bytes -> row("Member $index", bytes.toHex()) }
         }
-            .render()
-            .also { println(it) }
+                .render()
+                .also { println(it) }
     }
 }

@@ -10,8 +10,8 @@ import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
 class CommandListProviders : CliktCommand(
-    name = "list",
-    help = "List all providers"
+        name = "list",
+        help = "List all providers"
 ) {
     private val config by configOption()
 
@@ -26,7 +26,7 @@ class CommandListProviders : CliktCommand(
                 borderStyle = Table.BorderStyle.SINGLE_LINE
             }
         }
-            .render(StringBuilder())
-            .also { println(it) }
+                .render(StringBuilder())
+                .also { println(it) }
     }
 }

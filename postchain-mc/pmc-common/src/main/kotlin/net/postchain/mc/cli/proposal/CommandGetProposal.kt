@@ -23,8 +23,8 @@ import java.time.Instant
 import java.util.*
 
 class CommandGetProposal : CliktCommand(
-    name = "info",
-    help = "Gets information of a given proposal"
+        name = "info",
+        help = "Gets information of a given proposal"
 ) {
     private val config by configOption()
 
@@ -43,10 +43,10 @@ class CommandGetProposal : CliktCommand(
         """.trimIndent())
         if (verbose) println(formatProposal(client, proposal))
     }
-    
+
     private fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.type) {
-            ProposalType.bc ->  {
+            ProposalType.bc -> {
                 val p = client.getBlockchainProposal(proposal.id) ?: return ""
                 val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
@@ -101,8 +101,8 @@ class CommandGetProposal : CliktCommand(
                     row("Provider:", cpc.provider)
                     row("Add/Remove:", if (cpc.add) "Add" else "remove")
                 }
-                    .render()
-                    .toString()
+                        .render()
+                        .toString()
             }
 
             else -> ""

@@ -11,8 +11,8 @@ import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
 
 class CommandAddNode : CliktCommand(
-    name = "add",
-    help = "Add or update node information"
+        name = "add",
+        help = "Add or update node information"
 ) {
     private val config by configOption()
 
@@ -25,9 +25,9 @@ class CommandAddNode : CliktCommand(
     private val apiUrl by option("-a", "--api-url", help = "api url").required()
 
     private val clusterName by option(
-        "-c",
-        "--cluster",
-        help = "comma delimited list of clusters this node belongs to"
+            "-c",
+            "--cluster",
+            help = "comma delimited list of clusters this node belongs to"
     ).required()
 
     override fun run() {

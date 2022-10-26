@@ -8,6 +8,6 @@ class ContainerReplicaCommand : CliktCommand("Replica commands") {
 }
 
 fun containerReplicaCommands() = ContainerReplicaCommand().subcommands(
-    CommandAddContainerReplica(),
-    CommandRemoveContainerReplica()
+        CommandAddContainerReplica(),
+        CommandRemoveContainerReplica()
 )

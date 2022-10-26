@@ -16,44 +16,44 @@ import net.postchain.mc.cli.util.nameOrGenerateOption
 import net.postchain.mc.cli.util.nopClientOption
 
 sealed class DeployerOption {
-    class Deployer(val data: WrappedByteArray): DeployerOption()
-    class VoterSet(val data: String): DeployerOption()
+    class Deployer(val data: WrappedByteArray) : DeployerOption()
+    class VoterSet(val data: String) : DeployerOption()
 
 }
 
 class CommandProposeContainer : CliktCommand(
-    name = "add",
-    help = "propose a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it."
+        name = "add",
+        help = "propose a new container in an existing cluster and give authority to deployer voter set to deploy bcs in it."
 ) {
     private val client by nopClientOption()
 
     private val name by nameOrGenerateOption("Container name")
 
     private val clusterName by option(
-        "-c", "--cluster",
-        help = "Name of cluster to put container in. Must exist in database"
+            "-c", "--cluster",
+            help = "Name of cluster to put container in. Must exist in database"
     ).required()
 
     private val consensus by option().flag()
 
     private val deployerOption by mutuallyExclusiveOptions(
-        option("--voter-set").convert { DeployerOption.VoterSet(it) },
-        option("--deployers").convert { DeployerOption.Deployer(it.hexStringToWrappedByteArray()) }
+            option("--voter-set").convert { DeployerOption.VoterSet(it) },
+            option("--deployers").convert { DeployerOption.Deployer(it.hexStringToWrappedByteArray()) }
     ).single().required()
 
     override fun run() {
         val threshold = if (consensus) -1L else 1L
         client.transactionBuilder()
-            .apply {
-                when (deployerOption) {
-                    is DeployerOption.Deployer -> createContainerOperation(client.config.pubkey().wData, name, clusterName, threshold, listOf(
-                        (deployerOption as DeployerOption.Deployer).data))
-                    is DeployerOption.VoterSet -> createContainerFromOperation(client.config.pubkey().wData, name, clusterName, threshold, (deployerOption as DeployerOption.VoterSet).data)
-                }
+                .apply {
+                    when (deployerOption) {
+                        is DeployerOption.Deployer -> createContainerOperation(client.config.pubkey().wData, name, clusterName, threshold, listOf(
+                                (deployerOption as DeployerOption.Deployer).data))
+                        is DeployerOption.VoterSet -> createContainerFromOperation(client.config.pubkey().wData, name, clusterName, threshold, (deployerOption as DeployerOption.VoterSet).data)
+                    }
 
-            }
-            .postSyncAwaitConfirmation()
-            .printResult("Container has been created",
-            "Failed to create container")
+                }
+                .postSyncAwaitConfirmation()
+                .printResult("Container has been created",
+                        "Failed to create container")
     }
 }

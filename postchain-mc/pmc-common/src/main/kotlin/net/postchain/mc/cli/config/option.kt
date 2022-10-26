@@ -7,8 +7,8 @@ import net.postchain.mc.cli.config.PmcConfigProvider.globalConfigurationFile
 import net.postchain.mc.cli.config.PmcConfigProvider.localConfigurationFile
 
 internal fun CliktCommand.pmcConfigFileOption() = option(help = "Configure pmc globally or locally to current folder")
-    .switch(
-        "--global" to globalConfigurationFile(),
-        "--local" to localConfigurationFile(),
-        "--env" to envConfigurationFile()
-    ).default(localConfigurationFile())
+        .switch(
+                "--global" to globalConfigurationFile(),
+                "--local" to localConfigurationFile(),
+                "--env" to envConfigurationFile()
+        ).default(localConfigurationFile())
