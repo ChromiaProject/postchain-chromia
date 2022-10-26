@@ -19,9 +19,9 @@ class CommandProposeDeleteBlockchain : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .proposeBlockchainActionOperation(
-                        client.config.pubkey().key,
-                        blockchainRID.data,
-                        BlockchainAction.remove
+                    client.config.pubkey().wData,
+                    blockchainRID,
+                    BlockchainAction.remove
                 )
                 .postSyncAwaitConfirmation()
                 .printResult(

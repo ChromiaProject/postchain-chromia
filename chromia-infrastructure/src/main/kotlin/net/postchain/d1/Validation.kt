@@ -20,7 +20,7 @@ object Validation {
             override val prevBlockRID = previousBlockRid
             override val rawData = rawHeader
             override val blockRID = blockRid
-        }, peers.map { it.key }.toTypedArray(), getBFTRequiredSignatureCount(peers.size))
+        }, peers.map { it.data }.toTypedArray(), getBFTRequiredSignatureCount(peers.size))
 
         for (signature in witness.getSignatures()) {
             try {

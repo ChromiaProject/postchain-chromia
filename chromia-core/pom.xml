@@ -26,6 +26,10 @@
             <artifactId>postchain-gtv</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-client</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>

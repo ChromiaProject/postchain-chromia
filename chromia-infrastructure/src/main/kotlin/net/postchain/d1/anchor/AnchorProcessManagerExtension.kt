@@ -1,17 +1,19 @@
 package net.postchain.d1.anchor
 
 import net.postchain.PostchainContext
+import net.postchain.client.core.PostchainQuery
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.cm.cm_api.ClusterManagementImpl
+import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.config.DappBlockchainConfiguration
 
 open class AnchorProcessManagerExtension(
-        postchainContext: PostchainContext
+    postchainContext: PostchainContext
 ) : BlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
     private val localDispatcher = ClusterAnchorDispatcher(postchainContext.storage)
@@ -50,20 +52,22 @@ open class AnchorProcessManagerExtension(
     }
 
     open fun createClusterManagement(configuration: DappBlockchainConfiguration): ClusterManagement =
-            ClusterManagementImpl(configuration.dataSource::query)
+        ClusterManagementImpl(object : PostchainQuery {
+            override fun querySync(name: String, gtv: Gtv): Gtv = configuration.dataSource.query(name, gtv)
+        })
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
         localDispatcher.disconnectChain(
-                process.blockchainEngine.getConfiguration().chainID
+            process.blockchainEngine.getConfiguration().chainID
         )
     }
 
     @Synchronized
     override fun afterCommit(process: BlockchainProcess, height: Long) {
         localDispatcher.afterCommit(
-                process.blockchainEngine.getConfiguration().chainID,
-                height
+            process.blockchainEngine.getConfiguration().chainID,
+            height
         )
     }
 
@@ -73,7 +77,8 @@ open class AnchorProcessManagerExtension(
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         localDispatcher.connectSubnodeChain(
-                process.chainId, process.blockchainRid, process.restApiUrl)
+            process.chainId, process.blockchainRid, process.restApiUrl
+        )
     }
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {

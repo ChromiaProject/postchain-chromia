@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
@@ -27,18 +28,18 @@ class CommandProposeVoterSetUpdate : CliktCommand(
     private val threshold by option("--threshold", help = "New threshold").long()
     private val governor by option("--governor", help = "Name of new governor")
     private val newMember by option("--add-member", help = "Provider pubkey(s) to add to voter set")
-        .convert { it.hexStringToByteArray() }
+        .convert { it.hexStringToWrappedByteArray() }
         .split(",")
         .default(listOf())
     private val removeMember by option("--remove-member", help = "Provider pubkey(s) to remove from voter set")
-        .convert { it.hexStringToByteArray() }
+        .convert { it.hexStringToWrappedByteArray() }
         .split(",")
         .default(listOf())
 
     override fun run() {
         client.transactionBuilder()
             .proposeUpdateVoterSetOperation(
-                client.config.pubkey().key,
+                client.config.pubkey().wData,
                 voterSet, threshold, governor, newMember, removeMember
             )
             .postSyncAwaitConfirmation()

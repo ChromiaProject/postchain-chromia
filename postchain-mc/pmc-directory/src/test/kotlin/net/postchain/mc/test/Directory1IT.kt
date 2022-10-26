@@ -12,6 +12,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -83,7 +84,7 @@ class Directory1IT : ManagedModeTest() {
 
         //First provider proposes Disable prov2. Prov2 agrees:
         doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
-        val id = assertProposalTypeAndGetRowid(ProposalType.provider_state)
+        val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         assertProviderDisabled(prov2Config.pubkey())
     }
@@ -154,14 +155,14 @@ class Directory1IT : ManagedModeTest() {
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), false))
-        var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update)
+        var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         members = provExecutor.listVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey()), members.map { it.asByteArray().toHex() })
 
         //Make Ellen her own governor.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
-        id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update)
+        id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
@@ -385,7 +386,7 @@ class Directory1IT : ManagedModeTest() {
     }
 
     private fun voteNo(proposalType: ProposalType) {
-        val id = assertProposalTypeAndGetRowid(proposalType)
+        val id = assertProposalTypeAndGetRowid(proposalType).id
         doAndBuildBlocks(provConfig, provExecutor.voteAsync(id, false))
     }
 
@@ -629,16 +630,16 @@ class Directory1IT : ManagedModeTest() {
     }
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
-    private fun assertProposalTypeAndGetRowid(expectedType: ProposalType): Long {
+    private fun assertProposalTypeAndGetRowid(expectedType: ProposalType): RowId {
         val proposals = provExecutor.listProposalsSince(0)
         val type = (proposals[0].asDict()["proposal_type"] as GtvString).string
         assertEquals(expectedType.toString(), type, "Wrong proposal type")
-        return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger()
+        return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger().let { RowId(it) }
     }
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.data, brid, action
+                provClient.config.signers.first().pubKey.wData, BlockchainRid(brid), action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }

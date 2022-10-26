@@ -18,7 +18,7 @@ class CommandProposeRemoveContainer : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .removeContainerOperation(client.config.pubkey().data, name)
+                .removeContainerOperation(client.config.pubkey().wData, name)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Container removal proposed",

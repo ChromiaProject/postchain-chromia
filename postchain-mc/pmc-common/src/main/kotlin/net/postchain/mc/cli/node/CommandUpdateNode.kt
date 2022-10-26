@@ -12,6 +12,7 @@ import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
@@ -42,12 +43,13 @@ class CommandUpdateNode : CliktCommand(
     ).split(",")
 
     override fun run() {
-        val provider = client.config.pubkey()
+        val pubkey = key.hexStringToWrappedByteArray()
+        val provider = client.config.pubkey().wData
         val builder = client.transactionBuilder()
-        host?.let { builder.updateNodeHostOperation(provider.key, key.hexStringToByteArray(), it) }
-        port?.let { builder.updateNodePortOperation(provider.key, key.hexStringToByteArray(), it.toLong()) }
-        apiUrl?.let { builder.updateNodeApiUrlOperation(provider.key, key.hexStringToByteArray(), it) }
-        clusterName?.forEach { builder.addNodeToClusterOperation(provider.key, key.hexStringToByteArray(), it) }
+        host?.let { builder.updateNodeHostOperation(provider, pubkey, it) }
+        port?.let { builder.updateNodePortOperation(provider, pubkey, it.toLong()) }
+        apiUrl?.let { builder.updateNodeApiUrlOperation(provider, pubkey, it) }
+        clusterName?.forEach { builder.addNodeToClusterOperation(provider, pubkey, it) }
         builder.postSyncAwaitConfirmation()
                 .printResult("Node information was updated", "Node information update failed")
     }

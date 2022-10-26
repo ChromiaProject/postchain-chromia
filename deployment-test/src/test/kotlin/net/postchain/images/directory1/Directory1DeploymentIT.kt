@@ -16,6 +16,8 @@ import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.RowId
+import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.bpm.docker.DockerClientFactory
@@ -100,8 +102,8 @@ internal class Directory1DeploymentIT {
                 .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
-            assert(isNode(node1.nodeKeyPair.pubKey.data)).isTrue()
-            assert(getNodeData(node1.nodeKeyPair.pubKey.data).active).isTrue()
+            assert(isNode(node1.nodeKeyPair.pubKey)).isTrue()
+            assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
     }
 
@@ -120,7 +122,7 @@ internal class Directory1DeploymentIT {
                     foobarContainer,
                     "system",
                     1,
-                    listOf(node1.provider.pubKey.data)
+                    listOf(node1.provider.pubKey.wData)
                 )
                 .postTransactionUntilConfirmed("$foobarContainer container")
 
@@ -162,33 +164,33 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Adding node2 to the cluster")
         consoleLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node2.providerPubkey, 1)
+            .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, 1)
             .proposeEnableProviderOperation(node1.providerPubkey, node2.providerPubkey)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
             .proposeClusterProviderOperation(node1.providerPubkey, "system", node2.providerPubkey, true)
             .postTransactionUntilConfirmed("Reg p2")
 
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
+        node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
             node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
+                .makeVoteOperation(node2.providerPubkey, it.rowid.id, true)
                 .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
         }
 
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
             .addNodeOperation(
                 node2.providerPubkey,
-                node2.nodeKeyPair.pubKey.data,
+                node2.nodeKeyPair.pubKey.wData,
                 node2.nodeHost,
                 node2.nodePort.toLong(),
                 node2.apiPath(),
                 listOf("system")
             )
-            .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
+            .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.wData, "system")
             .postTransactionUntilConfirmed("Add node 2")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(2)
-            assert(node2.c0.getBcSigners(brid.data).size).isEqualTo(2)
+            assert(node1.c0.getBcSigners(brid).size).isEqualTo(2)
+            assert(node2.c0.getBcSigners(brid).size).isEqualTo(2)
         }
     }
 
@@ -199,20 +201,20 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node3.providerPubkey, 1)
+            .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, 1)
             .proposeEnableProviderOperation(node1.providerPubkey, node3.providerPubkey)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
             .proposeClusterProviderOperation(node1.providerPubkey, "system", node3.providerPubkey, true)
             .postTransactionUntilConfirmed("Reg p3")
 
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
+        node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
             node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .makeVoteOperation(node2.providerPubkey, it.rowid, true)
+                .makeVoteOperation(node2.providerPubkey, it.rowid.id, true)
                 .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
         }
-        node1.c0.getProposalsSince(0).sortedBy { it.rowid }.forEach {
+        node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
             node1.client(brid, listOf(node3.provider)).transactionBuilder()
-                .makeVoteOperation(node3.providerPubkey, it.rowid, true)
+                .makeVoteOperation(node3.providerPubkey, it.rowid.id, true)
                 .postTransactionUntilConfirmed("Vote on ${it.proposalType}")
 
         }
@@ -220,20 +222,20 @@ internal class Directory1DeploymentIT {
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
             .addNodeOperation(
                 node3.providerPubkey,
-                node3.pubkey.data,
+                node3.pubkey.wData,
                 node3.nodeHost,
                 node3.nodePort.toLong(),
                 node3.apiPath(),
                 listOf("system")
             )
-            .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "system")
+            .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.wData, "system")
             .postTransactionUntilConfirmed("Node 3")
 
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(brid.data).size).isEqualTo(3)
-            assert(node2.c0.getBcSigners(brid.data).size).isEqualTo(3)
-            assert(node3.c0.getBcSigners(brid.data).size).isEqualTo(3)
+            assert(node1.c0.getBcSigners(brid).size).isEqualTo(3)
+            assert(node2.c0.getBcSigners(brid).size).isEqualTo(3)
+            assert(node3.c0.getBcSigners(brid).size).isEqualTo(3)
         }
     }
 
@@ -269,16 +271,16 @@ internal class Directory1DeploymentIT {
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
                 node1.c0.transactionBuilder()
-                    .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
+                    .proposeBlockchainOperation(node1.providerPubkey, configGtv.wrap(), "dapp", containerName)
                     .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 // Voting
                 node1.c0.getProposal(null)?.let { proposal ->
-                    node3.c0.transactionBuilder().makeVoteOperation(node3.providerPubkey, proposal.id, true)
+                    node3.c0.transactionBuilder().makeVoteOperation(node3.providerPubkey, proposal.id.id, true)
                         .postTransactionUntilConfirmed("Vote for BC")
                     consoleLogger.info { "p3 voted for proposal: ${proposal.id}" }
 
-                    node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id, true)
+                    node2.c0.transactionBuilder().makeVoteOperation(node2.providerPubkey, proposal.id.id, true)
                         .postTransactionUntilConfirmed("Vote for BC")
                     consoleLogger.info { "p2 voted for proposal: ${proposal.id}" }
                 }
@@ -287,9 +289,9 @@ internal class Directory1DeploymentIT {
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(blockchainRid!!.data).size).isEqualTo(3)
-            assert(node2.c0.getBcSigners(blockchainRid!!.data).size).isEqualTo(3)
-            assert(node3.c0.getBcSigners(blockchainRid!!.data).size).isEqualTo(3)
+            assert(node1.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
+            assert(node2.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
+            assert(node3.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
         }
     }
 
@@ -353,5 +355,5 @@ internal class Directory1DeploymentIT {
 
     private val PostchainContainer.c0 get() = client(brid)
 
-    val PostchainContainer.providerPubkey get() = provider.pubKey.data
+    val PostchainContainer.providerPubkey get() = provider.pubKey.wData
 }

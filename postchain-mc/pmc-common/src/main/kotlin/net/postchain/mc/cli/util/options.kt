@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
@@ -52,7 +53,7 @@ fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
 
 sealed class VoterSetOrPubkeysOption(val data: String) {
     class Pubkeys(data: String) : VoterSetOrPubkeysOption(data) {
-        val pubkeys get() = data.split(",").map { it.hexStringToByteArray() }
+        val pubkeys get() = data.split(",").map { it.hexStringToWrappedByteArray() }
     }
 
     class VoterSet(data: String) : VoterSetOrPubkeysOption(data)

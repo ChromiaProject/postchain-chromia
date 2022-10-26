@@ -1,13 +1,9 @@
 package net.postchain.mc.cli.container
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
-import com.github.ajalt.clikt.parameters.groups.required
-import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
-import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.VoterSetOrPubkeysOption
@@ -39,11 +35,11 @@ class CommandProposeContainer : CliktCommand(
             .apply {
                 when (deployerOption) {
                     is VoterSetOrPubkeysOption.Pubkeys -> createContainerOperation(
-                        client.config.pubkey().data, name, clusterName, threshold,
+                        client.pubkey, name, clusterName, threshold,
                         (deployerOption as VoterSetOrPubkeysOption.Pubkeys).pubkeys
                     )
                     is VoterSetOrPubkeysOption.VoterSet -> createContainerFromOperation(
-                        client.config.pubkey().data,
+                        client.pubkey,
                         name,
                         clusterName,
                         threshold,
