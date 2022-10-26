@@ -13,6 +13,8 @@ struct signed_block_header_with_anchor_height {
 }
 
 function process_icmf(header: block_header) {
+    if (not header.extra.contains("icmf_send")) return;
+
     val icmf_data = map<text,gtv>.from_gtv_pretty(header.extra["icmf_send"]);
     for (topic in icmf_data.keys()) {
         create icmf_messages_height(
