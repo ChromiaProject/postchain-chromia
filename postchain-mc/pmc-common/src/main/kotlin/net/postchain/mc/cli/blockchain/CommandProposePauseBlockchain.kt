@@ -19,9 +19,9 @@ class CommandProposePauseBlockchain : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .proposeBlockchainActionOperation(
-                    client.config.pubkey().data,
-                    blockchainRID.data,
-                    BlockchainAction.pause
+                        client.config.pubkey().wData,
+                        blockchainRID,
+                        BlockchainAction.pause
                 )
                 .postSyncAwaitConfirmation()
                 .printResult(

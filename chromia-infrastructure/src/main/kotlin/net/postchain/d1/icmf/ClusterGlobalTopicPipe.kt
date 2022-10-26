@@ -94,7 +94,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
         var maxAnchorHeight = fromAnchorHeight
         for (header in signedBlockHeaderWithAnchorHeights) {
-            val decodedHeader = BlockHeaderData.fromBinary(header.blockHeader)
+            val decodedHeader = BlockHeaderData.fromBinary(header.blockHeader.data)
             val blockchainRid = BlockchainRid(decodedHeader.getBlockchainRid())
 
             if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
@@ -102,7 +102,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
             }
 
             val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-            val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.blockHeader, header.witness, blockRid, cryptoSystem, clusterManagement)
+            val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.blockHeader.data, header.witness.data, blockRid, cryptoSystem, clusterManagement)
                     ?: return
 
             val topicData = topicHeaderData[route.topic]
@@ -137,8 +137,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                                 sender = blockchainRid,
                                 topic = route.topic,
                                 blockRid = blockRid,
-                                rawHeader = header.blockHeader,
-                                rawWitness = header.witness,
+                                rawHeader = header.blockHeader.data,
+                                rawWitness = header.witness.data,
                                 prevMessageBlockHeight = topicData.prevMessageBlockHeight,
                                 bodies = bodies
                         )

@@ -9,6 +9,7 @@ import net.postchain.chain0.common.proposal.proposeConfigurationOperation
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.heightOption
+import net.postchain.common.wrap
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
@@ -40,9 +41,9 @@ class CommandProposeConfiguration : CliktCommand(
                 .apply {
                     val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID.data, configData)
+                        proposeConfigurationOperation(client.config.pubkey().wData, blockchainRID, configData.wrap())
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID.data, configData, height!!, force)
+                        proposeConfigurationAtOperation(client.config.pubkey().wData, blockchainRID, configData.wrap(), height!!, force)
                     }
                 }
                 .postSyncAwaitConfirmation()
