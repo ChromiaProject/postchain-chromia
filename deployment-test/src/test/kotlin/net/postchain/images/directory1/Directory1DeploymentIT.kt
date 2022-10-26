@@ -52,13 +52,13 @@ internal class Directory1DeploymentIT {
 
         init {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                    .withMasterDockerConfig()
-                    .withClasspathResourceMapping(
-                            "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
-                            MOUNT_DIR, BindMode.READ_ONLY
-                    )
-                    .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
+                .withClasspathResourceMapping(
+                    "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
+                    MOUNT_DIR, BindMode.READ_ONLY
+                )
+                .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
         }
 
 

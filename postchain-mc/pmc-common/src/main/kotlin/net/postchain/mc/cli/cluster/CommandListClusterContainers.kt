@@ -2,6 +2,7 @@ package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
+import de.m3y.kformat.table
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.ContainersPrinter
 import net.postchain.mc.cli.util.configOption
@@ -15,9 +16,10 @@ class CommandListClusterContainers : CliktCommand(
     private val clusterName by nameOption("Cluster name").required()
 
     override fun run() {
-        val containers = CliExecution(config).listClusterContainers(clusterName)
-        val res = ContainersPrinter.print(containers, false)
-        println(res)
-        println("Query returned successfully")
+        table {
+        CliExecution(config).listClusterContainers(clusterName).forEach {
+            row(it.name, it.deployer)
+        }
+        }.render().also { println(it) }
     }
 }
