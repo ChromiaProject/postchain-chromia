@@ -13,7 +13,6 @@ operation register_provider(my_pubkey: pubkey, pubkey, tier: integer) {
 	);
 }
 
-
 @extendable function register_and_enable_provider(pubkey, is_system: boolean, tier: integer, cluster?, voter_set?, enabled_by_default: boolean = false) {
 	val provider = create provider (
 		pubkey,
@@ -45,8 +44,7 @@ function provider_rate_limit(provider) {
     var got_points = 0;
     var update_time = state.last_update;
 
-    if (time_delta > recovery_time)
-    {
+    if (time_delta > recovery_time) {
         got_points = time_delta / recovery_time;
         // advance  update_time to a multiple of recovery_time to avoid wasting time
         update_time = state.last_update + got_points * recovery_time;
@@ -65,10 +63,35 @@ function provider_rate_limit(provider) {
     );
 }
 
-operation transfer_action_points (from: provider, to: provider, amount: integer) {
+operation transfer_action_points(from: provider, to: provider, amount: integer) {
 	require_provider_auth_with_rl(from);
-	require( provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
+	require(provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
 	update provider_rl_state @ { from } ( .points -= amount );
 	update provider_rl_state @ { to } ( .points += amount );
 }
 
+function require_provider_quota(provider, quota_type: provider_quota_type) {
+    val quota = provider_quota @? { .tier == provider.tier, quota_type } (.value);
+    if (quota != null and quota > 0) {
+        when (quota_type) {
+            max_nodes -> {
+                require(
+                    nodes @* { provider } (@sum 1)[0] + 1 <= quota,
+                    "Provider quota exceeded: " + quota_type
+                );
+            }
+            max_clusters -> {
+                require(
+                    cluster @* { .proposed_by == provider } (@sum 1)[0] + 1 <= quota,
+                    "Provider quota exceeded: " + quota_type
+                );
+            }
+            max_containers -> {
+                require(
+                    containers @* { .proposed_by == provider } (@sum 1)[0] + 1 <= quota,
+                    "Provider quota exceeded: " + quota_type
+                );
+            }
+        }
+    }
+}

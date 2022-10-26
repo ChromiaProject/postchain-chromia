@@ -78,9 +78,10 @@ function update_configuration_signers(cluster) {
 // Who can create a cluster? Any provider
 operation create_cluster(my_pubkey: pubkey, name, initials: list<pubkey>?, governance_name: text, deployer_name: text) {
 	val me = require_provider(my_pubkey);
+	require_provider_auth_with_rl(me);
+	require_provider_quota(me, provider_quota_type.max_clusters);
 	val governor = require_voter_set(governance_name);
 	val deployer = require_voter_set(deployer_name);
-	require_provider_auth_with_rl(me);
 	require(empty(cluster @* { name }), "Cluster with name %s already exists".format(name));
 	val c = create cluster(name, governance = governor, deployer = deployer);
 	create cluster_resource_limit(c, cluster_resource_limit_type.max_containers , -1);

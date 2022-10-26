@@ -28,6 +28,7 @@ entity cluster {
     governance: voter_set; // who controls the cluster
     mutable deployer: voter_set; // who can deploy containers
     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
+    proposed_by: provider;
 }
 
 entity cluster_provider { 

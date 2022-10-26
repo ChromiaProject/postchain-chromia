@@ -7,10 +7,12 @@ entity provider {
     mutable tier: integer; 	// NEW. Tier defines how much stuff provider can add. 0 is lowest.
 }
 
-// type of quota for a provider
+// Type of quota for a provider
 enum provider_quota_type {
+	max_actions_per_day,
 	max_nodes,
-	max_actions_per_day
+	max_clusters,
+	max_containers
 }
 
 entity provider_quota {
