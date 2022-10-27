@@ -210,21 +210,6 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testGetContainerForBlockchain() {
-        val chain0Brid = nodes[0].getBlockchainRid(0)!!
-        val actualContainer = prov2Executor.getContainerForBlockchain(chain0Brid.toHex())
-
-        assertEquals(systemContainerName, actualContainer)
-    }
-
-    @Test
-    fun testGetContainerForUnknownBlockchain() {
-        assertThrows<UserMistake> {
-            prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
-        }
-    }
-
-    @Test
     fun testProposeAddBlockchainXmlWithDependency() {
         //add new container to system cluster
         val container1 = "container1"
