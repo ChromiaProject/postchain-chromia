@@ -73,8 +73,8 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val result = client
             .transactionBuilder()
             .proposeBlockchainOperation(
-                clientConfig.signers.first().pubKey.wData,
-                configData.wrap(),
+                clientConfig.signers.first().pubKey.data,
+                configData,
                 blockchainName,
                 containerName
             )
@@ -94,9 +94,9 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val result = client
             .transactionBuilder()
             .proposeConfigurationOperation(
-                clientConfig.signers.first().pubKey.wData,
+                clientConfig.signers.first().pubKey.data,
                 blockchainRid,
-                configData.wrap()
+                configData
             )
             .sign()
             .postSyncAwaitConfirmation()

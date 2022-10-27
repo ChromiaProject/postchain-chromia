@@ -669,7 +669,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.wData, BlockchainRid(brid), action
+                provClient.config.signers.first().pubKey.data, BlockchainRid(brid), action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }

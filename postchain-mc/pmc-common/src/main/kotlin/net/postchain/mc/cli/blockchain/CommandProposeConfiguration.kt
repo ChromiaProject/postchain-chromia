@@ -41,9 +41,9 @@ class CommandProposeConfiguration : CliktCommand(
                 .apply {
                     val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        proposeConfigurationOperation(client.config.pubkey().wData, blockchainRID, configData.wrap())
+                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().wData, blockchainRID, configData.wrap(), height!!, force)
+                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force)
                     }
                 }
                 .postSyncAwaitConfirmation()

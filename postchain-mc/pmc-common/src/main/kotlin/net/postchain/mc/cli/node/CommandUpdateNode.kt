@@ -38,8 +38,8 @@ class CommandUpdateNode : CliktCommand(
     ).split(",")
 
     override fun run() {
-        val pubkey = key.hexStringToWrappedByteArray()
-        val provider = client.config.pubkey().wData
+        val pubkey = key.hexStringToByteArray()
+        val provider = client.config.pubkey().data
         val builder = client.transactionBuilder()
         host?.let { builder.updateNodeHostOperation(provider, pubkey, it) }
         port?.let { builder.updateNodePortOperation(provider, pubkey, it.toLong()) }

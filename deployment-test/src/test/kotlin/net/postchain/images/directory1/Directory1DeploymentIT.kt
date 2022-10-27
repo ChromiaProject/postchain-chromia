@@ -17,7 +17,6 @@ import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
-import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
@@ -122,7 +121,7 @@ internal class Directory1DeploymentIT {
                             foobarContainer,
                             "system",
                             1,
-                            listOf(node1.provider.pubKey.wData)
+                            listOf(node1.provider.pubKey.data)
                     )
                     .postTransactionUntilConfirmed("$foobarContainer container")
 
@@ -176,13 +175,13 @@ internal class Directory1DeploymentIT {
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
                 .addNodeOperation(
                         node2.providerPubkey,
-                        node2.nodeKeyPair.pubKey.wData,
+                        node2.nodeKeyPair.pubKey.data,
                         node2.nodeHost,
                         node2.nodePort.toLong(),
                         node2.apiPath(),
                         listOf("system")
                 )
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.wData, "system")
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "system")
                 .postTransactionUntilConfirmed("Add node 2")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
@@ -219,13 +218,13 @@ internal class Directory1DeploymentIT {
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
                 .addNodeOperation(
                         node3.providerPubkey,
-                        node3.pubkey.wData,
+                        node3.pubkey.data,
                         node3.nodeHost,
                         node3.nodePort.toLong(),
                         node3.apiPath(),
                         listOf("system")
                 )
-                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.wData, "system")
+                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "system")
                 .postTransactionUntilConfirmed("Node 3")
 
         // Asserting that node2 is signers of chain0
@@ -268,7 +267,7 @@ internal class Directory1DeploymentIT {
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
                 node1.c0.transactionBuilder()
-                        .proposeBlockchainOperation(node1.providerPubkey, configGtv.wrap(), "dapp", containerName)
+                        .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 // Voting
@@ -355,5 +354,5 @@ internal class Directory1DeploymentIT {
 
     private val PostchainContainer.c0 get() = client(brid)
 
-    val PostchainContainer.providerPubkey get() = provider.pubKey.wData
+    val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }
