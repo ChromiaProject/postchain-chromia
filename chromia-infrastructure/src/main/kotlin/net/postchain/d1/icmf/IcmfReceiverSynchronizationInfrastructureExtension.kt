@@ -14,9 +14,11 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.query.DefaultChromiaQueryProvider
+import net.postchain.d1.query.LocalQueryProvider
 import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXModuleAwareness
 import net.postchain.managed.config.DappBlockchainConfiguration
 import java.time.Duration
 
@@ -29,7 +31,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-        if (configuration is DappBlockchainConfiguration) {
+        if (configuration is GTXModuleAwareness) {
             getIcmfReceiverSpecialTxExtension(configuration.module)?.let { txExt ->
                 val clusterManagement = createClusterManagement(configuration)
                 val clientProvider = createClientProvider(clusterManagement)
@@ -80,13 +82,25 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     open fun createQueryProvider(
         configuration: BlockchainConfiguration,
         clusterManagement: ClusterManagement
-    ): ChromiaQueryProvider = DefaultChromiaQueryProvider(
-        configuration.blockchainRid,
-        postchainContext.appConfig,
-        clusterManagement,
-        MasterApiProvider.getDirectoryManagement(postchainContext.appConfig),
-        postchainContext.blockQueriesProvider
-    )
+    ): ChromiaQueryProvider {
+        // We have the same case here as when we are creating our cluster management
+        return if (configuration is DappBlockchainConfiguration) {
+            LocalQueryProvider(
+                    configuration.blockchainRid,
+                    postchainContext.blockQueriesProvider,
+                    clusterManagement,
+                    configuration.dataSource
+            )
+        } else {
+            DefaultChromiaQueryProvider(
+                    configuration.blockchainRid,
+                    postchainContext.appConfig,
+                    clusterManagement,
+                    MasterApiProvider.getDirectoryManagement(postchainContext.appConfig),
+                    postchainContext.blockQueriesProvider
+            )
+        }
+    }
 
     open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
         /**
