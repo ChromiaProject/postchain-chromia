@@ -16,7 +16,7 @@ import net.postchain.mc.cli.util.nameOrGenerateOption
 import net.postchain.mc.cli.util.nopClientOption
 
 sealed class DeployerOption {
-    class Deployer(val data: WrappedByteArray): DeployerOption()
+    class Deployer(val data: ByteArray): DeployerOption()
     class VoterSet(val data: String): DeployerOption()
 
 }
@@ -38,7 +38,7 @@ class CommandProposeContainer : CliktCommand(
 
     private val deployerOption by mutuallyExclusiveOptions(
         option("--voter-set").convert { DeployerOption.VoterSet(it) },
-        option("--deployers").convert { DeployerOption.Deployer(it.hexStringToWrappedByteArray()) }
+        option("--deployers").convert { DeployerOption.Deployer(it.hexStringToByteArray()) }
     ).single().required()
 
     override fun run() {
@@ -46,9 +46,9 @@ class CommandProposeContainer : CliktCommand(
         client.transactionBuilder()
             .apply {
                 when (deployerOption) {
-                    is DeployerOption.Deployer -> createContainerOperation(client.config.pubkey().wData, name, clusterName, threshold, listOf(
+                    is DeployerOption.Deployer -> createContainerOperation(client.config.pubkey().data, name, clusterName, threshold, listOf(
                         (deployerOption as DeployerOption.Deployer).data))
-                    is DeployerOption.VoterSet -> createContainerFromOperation(client.config.pubkey().wData, name, clusterName, threshold, (deployerOption as DeployerOption.VoterSet).data)
+                    is DeployerOption.VoterSet -> createContainerFromOperation(client.config.pubkey().data, name, clusterName, threshold, (deployerOption as DeployerOption.VoterSet).data)
                 }
 
             }
