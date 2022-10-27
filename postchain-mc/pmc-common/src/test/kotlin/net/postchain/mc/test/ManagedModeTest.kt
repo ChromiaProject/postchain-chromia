@@ -3,6 +3,7 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.*
 import net.postchain.client.transaction.TransactionBuilder
@@ -73,20 +74,20 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     abstract fun cliExecution(cliConfig: PostchainClientConfig): CliExecution
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
-        val data = provExecutor.getProviderInfo(provPubkey).asDict()
-        assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
-        assertk.assert(data["name"]?.asString()).isEqualTo(name)
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(isActive)
+        val data = provExecutor.getProviderInfo(provPubkey)
+        assertArrayEquals(data.pubkey.data, provPubkey.hexStringToByteArray())
+        assertk.assert(data.name).isEqualTo(name)
+        assertk.assert(data.active).isEqualTo(isActive)
     }
 
     protected fun assertProviderEnabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+        val data = provExecutor.getProviderInfo(providerPublicKey)
+        assertk.assert(data.active).isEqualTo(true)
     }
 
     protected fun assertProviderDisabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        val data = provExecutor.getProviderInfo(providerPublicKey)
+        assertk.assert(data.active).isEqualTo(false)
         val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(0, listReplicas.size)
 
@@ -195,20 +196,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     private fun assertNodeInfo(
-            n: Gtv,
+            n: GetNodesWithProviderResult,
             nodeHost: String,
             nodePort: Long,
             nodePubkey: String,
             providerPubkey: String,
             b: Boolean
     ) {
-        val nodeDict = n.asDict()
-        assertEquals(nodeHost, nodeDict["host"]!!.asString())
-        assertEquals(nodePort, nodeDict["port"]!!.asInteger())
-        assertEquals(nodePubkey, nodeDict["pubkey"]!!.asByteArray().toHex())
+        assertEquals(nodeHost, n.host)
+        assertEquals(nodePort, n.port)
+        assertEquals(nodePubkey, n.pubkey.hex())
 
-        assertEquals(providerPubkey, nodeDict["provider"]!!.asByteArray().toHex())
-        assertEquals(b, nodeDict["provider_active"]!!.asBoolean())
+        assertEquals(providerPubkey, n.provider.toHex())
+        assertEquals(b, n.providerActive)
     }
 
     protected fun assertListNodes() {
@@ -218,9 +218,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val nodeList = provExecutor.listNodesWithProvider()
         assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
         assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubkey(), true)
-
-        PrintUtils.printNodes(nodeList)
-
     }
 
     protected fun buildAndAwaitBlocks(nBlocks: Int) {

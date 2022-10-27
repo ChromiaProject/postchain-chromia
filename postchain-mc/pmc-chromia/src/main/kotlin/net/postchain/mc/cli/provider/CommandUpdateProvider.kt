@@ -19,11 +19,11 @@ class CommandUpdateProvider : CliktCommand(
 
     private val name by nameOption("Provider name")
 
-    private val beneficiary by option("-b", "--beneficiary", help = "Beneficiary account").convert { it.hexStringToWrappedByteArray() }
+    private val beneficiary by option("-b", "--beneficiary", help = "Beneficiary account").convert { it.hexStringToByteArray() }
 
     override fun run() {
         client.transactionBuilder()
-            .updateProviderOperation(client.config.pubkey().wData, name, beneficiary)
+            .updateProviderOperation(client.config.pubkey().data, name, beneficiary)
             .postSyncAwaitConfirmation()
             .printResult("Information updated",
             "Could not update provider data")

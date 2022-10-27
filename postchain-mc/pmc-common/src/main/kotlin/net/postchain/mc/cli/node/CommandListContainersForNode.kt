@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
+import de.m3y.kformat.table
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.toHex
 import net.postchain.mc.cli.common0.CliExecution
@@ -16,9 +17,11 @@ class CommandListContainersForNode : CliktCommand(
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        val containers = CliExecution(config).listContainersForNode(key)
-        val res = ContainersPrinter.print(containers, false)
-        println(res)
-        println("Query returned successfully")
+        table {
+            CliExecution(config).listContainersForNode(key).forEach {
+
+                row(it.name, it.cluster, it.deployer)
+            }
+        }.render().also { println(it) }
     }
 }

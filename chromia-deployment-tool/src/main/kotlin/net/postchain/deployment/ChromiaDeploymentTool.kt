@@ -69,10 +69,10 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
         val result = client
                 .transactionBuilder()
                 .createContainerByProofOperation(
-                        clientConfig.signers.first().pubKey.wData,
+                        clientConfig.signers.first().pubKey.data,
                         name = containerName,
                         clusterName = clusterName,
-                        proof.wrap(),
+                        proof,
                         null,
                         null
                 )
@@ -91,15 +91,15 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
     ) {
         val client = clientProvider.createClient(clientConfig)
         val result = client
-                .transactionBuilder()
-                .proposeBlockchainOperation(
-                        clientConfig.signers.first().pubKey.wData,
-                        configData.wrap(),
-                        blockchainName,
-                        containerName
-                )
-                .sign()
-                .postSyncAwaitConfirmation()
+            .transactionBuilder()
+            .proposeBlockchainOperation(
+                clientConfig.signers.first().pubKey.data,
+                configData,
+                blockchainName,
+                containerName
+            )
+            .sign()
+            .postSyncAwaitConfirmation()
         if (result.status != TransactionStatus.CONFIRMED) {
             throw UserMistake("Deployment failed: ${result.rejectReason ?: "still waiting for confirmation"}")
         }
@@ -112,14 +112,14 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
     ) {
         val client = clientProvider.createClient(clientConfig)
         val result = client
-                .transactionBuilder()
-                .proposeConfigurationOperation(
-                        clientConfig.signers.first().pubKey.wData,
-                        blockchainRid,
-                        configData.wrap()
-                )
-                .sign()
-                .postSyncAwaitConfirmation()
+            .transactionBuilder()
+            .proposeConfigurationOperation(
+                clientConfig.signers.first().pubKey.data,
+                blockchainRid,
+                configData
+            )
+            .sign()
+            .postSyncAwaitConfirmation()
         if (result.status != TransactionStatus.CONFIRMED) {
             throw UserMistake("Update failed: ${result.rejectReason ?: "still waiting for confirmation"}")
         }

@@ -18,7 +18,7 @@ class CommandProposeRemoveCluster : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .proposeRemoveClusterOperation(client.config.pubkey().wData, name)
+                .proposeRemoveClusterOperation(client.config.pubkey().data, name)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Cluster removal proposed",
