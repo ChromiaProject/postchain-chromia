@@ -1,11 +1,8 @@
 package net.postchain.mc.test
 
 import assertk.assert
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import net.postchain.chain0.common.proposal.ProposalType
-import net.postchain.chain0.common.proposal.getProposal
-import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.model.ClusterResourceLimitType
@@ -21,8 +18,8 @@ import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
+import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -219,7 +216,12 @@ class Directory1IT : ManagedModeTest() {
             proposedLimits: Map<ContainerResourceLimitType, Long>,
             expected: Map<ContainerResourceLimitType, Long>
     ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, proposedLimits))
+        val tx = ClientUtil.nopClientFromConfig(provExecutor.config)
+                .transactionBuilder()
+                .proposeContainerLimitsOperation(
+                        provExecutor.config.signers.first().pubKey.data, containerName, proposedLimits
+                )
+        doAndBuildBlocks(provConfig, tx)
         val updated = provExecutor.listContainerLimits(containerName)
                 .mapKeys { ContainerResourceLimitType.valueOf(it.key) }
         assertEquals(expected, updated)
@@ -262,7 +264,12 @@ class Directory1IT : ManagedModeTest() {
             limits: Map<ClusterResourceLimitType, Long>,
             expected: Map<ClusterResourceLimitType, Long>
     ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
+        val tx = ClientUtil.nopClientFromConfig(provExecutor.config)
+                .transactionBuilder()
+                .proposeClusterLimitsOperation(
+                        provExecutor.config.signers.first().pubKey.data, clusterName, limits
+                )
+        doAndBuildBlocks(provConfig, tx)
         val updated = provExecutor.listClusterLimits(clusterName)
                 .mapKeys { ClusterResourceLimitType.valueOf(it.key) }
         assertEquals(expected, updated)

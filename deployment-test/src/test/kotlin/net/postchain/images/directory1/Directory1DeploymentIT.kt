@@ -14,6 +14,7 @@ import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
+import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
@@ -51,13 +52,13 @@ internal class Directory1DeploymentIT {
 
         init {
             node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping(
-                    "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
-                    MOUNT_DIR, BindMode.READ_ONLY
-                )
-                .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
+                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                    .withMasterDockerConfig()
+                    .withClasspathResourceMapping(
+                            "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
+                            MOUNT_DIR, BindMode.READ_ONLY
+                    )
+                    .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
         }
 
 
@@ -145,7 +146,7 @@ internal class Directory1DeploymentIT {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                     node1.providerPubkey,
                     foobarContainer,
-                    -1, first, second, third
+                    mapOf(cpu to first, ram to second, storage to third)
             ).postTransactionUntilConfirmed("container limits")
         }
 

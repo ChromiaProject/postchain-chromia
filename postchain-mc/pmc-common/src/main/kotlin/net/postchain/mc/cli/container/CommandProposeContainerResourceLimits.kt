@@ -4,9 +4,12 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.chain0.common.proposal.proposeContainerLimitsOperation
 import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.chain0.model.ContainerResourceLimitType.*
-import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.cluster.CommandProposeClusterResourceLimits.Companion.setIfNotNull
 import net.postchain.mc.cli.util.*
 
 class CommandProposeContainerResourceLimits : CliktCommand(
@@ -14,7 +17,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
         help = "Propose new resource limits for given container There are three types of limits. " +
                 "Proposal can contain one, two, or all three types."
 ) {
-    private val config by configOption()
+    private val client by nopClientOption()
 
     private val containerName by nameOption("Container name").required()
 
@@ -27,19 +30,19 @@ class CommandProposeContainerResourceLimits : CliktCommand(
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
     override fun run() {
-        val limitsMap = mutableMapOf<ContainerResourceLimitType, Long>()
+        val limits = mutableMapOf<ContainerResourceLimitType, Long>()
                 .apply {
-                    setNullable(max_blockchains, _maxBlockchains)
-                    setNullable(cpu, _cpu)
-                    setNullable(ram, _ram)
-                    setNullable(storage, _storage)
+                    setIfNotNull(max_blockchains, _maxBlockchains)
+                    setIfNotNull(cpu, _cpu)
+                    setIfNotNull(ram, _ram)
+                    setIfNotNull(storage, _storage)
                 }
 
-        CliExecution(config).proposeContainerLimits(containerName, limitsMap)
-        println("proposal has been added successfully")
-    }
-
-    private fun MutableMap<ContainerResourceLimitType, Long>.setNullable(key: ContainerResourceLimitType, value: Long?) {
-        value?.let { put(key, it) }
+        client.transactionBuilder()
+                .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits)
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Container limits proposed",
+                        "Failed proposing new container limits")
     }
 }
