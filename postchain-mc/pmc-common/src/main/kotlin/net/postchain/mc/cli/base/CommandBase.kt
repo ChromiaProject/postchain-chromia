@@ -6,13 +6,13 @@ const val NAME_LENGTH = 10
 const val NAME_LENGTH_MAX = 50
 
 object CommandBase {
-    val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+    private val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
     fun autoGenerateName(): String {
         return (1..NAME_LENGTH)
-            .map { i -> Random.nextInt(0, charPool.size) }
-            .map(charPool::get)
-            .joinToString("");
+                .map { Random.nextInt(0, charPool.size) }
+                .map(charPool::get)
+                .joinToString("")
     }
 
     fun isAlphanumeric(string: String): Boolean {

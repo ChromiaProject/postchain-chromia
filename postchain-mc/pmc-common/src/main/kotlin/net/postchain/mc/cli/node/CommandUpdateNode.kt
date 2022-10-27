@@ -2,9 +2,8 @@ package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
-import net.postchain.chain0.common.addNodeToClusterOperation
+import net.postchain.chain0.common.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.updateNodeApiUrlOperation
 import net.postchain.chain0.common.updateNodeHostOperation
 import net.postchain.chain0.common.updateNodePortOperation
@@ -16,10 +15,6 @@ import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.clientOption
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandUpdateNode : CliktCommand(
@@ -43,8 +38,8 @@ class CommandUpdateNode : CliktCommand(
     ).split(",")
 
     override fun run() {
-        val pubkey = key.hexStringToWrappedByteArray()
-        val provider = client.config.pubkey().wData
+        val pubkey = key.hexStringToByteArray()
+        val provider = client.config.pubkey().data
         val builder = client.transactionBuilder()
         host?.let { builder.updateNodeHostOperation(provider, pubkey, it) }
         port?.let { builder.updateNodePortOperation(provider, pubkey, it.toLong()) }

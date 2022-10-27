@@ -1,22 +1,21 @@
 package net.postchain.mc.test
 
 import assertk.assert
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
+import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
@@ -146,11 +145,11 @@ class Directory1IT : ManagedModeTest() {
         )
         assertAdded("get_voter_set", "name", GtvString(voterSetName))
         val listVotersets = provExecutor.listVoterSets()
-        assertEquals(voterSetName, listVotersets[2].asString())
+        assertEquals(voterSetName, listVotersets[2].name)
         assertEquals(voterSetSystemP, provExecutor.getVoterSetGovernor(voterSetName))
 
         var members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.asByteArray().toHex() })
+        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
 
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
@@ -158,7 +157,7 @@ class Directory1IT : ManagedModeTest() {
         var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey()), members.map { it.asByteArray().toHex() })
+        assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
         //Make Ellen her own governor.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
@@ -168,79 +167,7 @@ class Directory1IT : ManagedModeTest() {
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), true))
         members = provExecutor.listVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.asByteArray().toHex() })
-    }
-
-    @Test
-    fun testProposeContainerAndLimits() {
-        //add new container to system cluster
-        val containerName = "container1"
-        doAndBuildBlocks(
-                provConfig,
-                provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
-        )
-        assertAdded("get_container", "name", GtvString(containerName))
-
-        val default = provExecutor.listContainerLimits(containerName)
-        assertEquals(3, default.size)
-
-        //Now updated container resource limits and check result
-        proposeAndAssertContainerLimits(
-                containerName,
-                mapOf("ramm" to 123L),
-                mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
-        )
-
-        proposeAndAssertContainerLimits(
-                containerName,
-                mapOf("ram" to 123L),
-                mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
-        )
-
-        val limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
-        proposeAndAssertContainerLimits(containerName, limits, limits)
-    }
-
-    private fun proposeAndAssertContainerLimits(
-            containerName: String,
-            limits: Map<String, Long>,
-            expected: Map<String, Long>
-    ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, limits))
-        val updated = provExecutor.listContainerLimits(containerName)
-        assertEquals(expected, updated)
-    }
-
-    @Test
-    fun testProposeClusterLimits() {
-        val clusterName = "Vera"
-        val providersList = provConfig.pubkey()
-        // create cluster, initial providers added
-        doAndBuildBlocks(
-                provConfig,
-                provExecutor.createClusterAsync(clusterName, providersList, voterSetSystemP)
-        )
-
-        var limits = mapOf("ramm" to 123L)
-        var expected = mapOf("ram" to -1L, "cpu" to -1L, "storage" to -1L)
-        proposeAndAssertClusterLimits(clusterName, limits, expected)
-
-        limits = mapOf("ram" to 123L)
-        expected = mapOf("ram" to 123L, "cpu" to -1L, "storage" to -1L)
-        proposeAndAssertClusterLimits(clusterName, limits, expected)
-
-        limits = mapOf("ram" to 123L, "cpu" to 456L, "storage" to 789L)
-        proposeAndAssertClusterLimits(clusterName, limits, limits)
-    }
-
-    private fun proposeAndAssertClusterLimits(
-            clusterName: String,
-            limits: Map<String, Long>,
-            expected: Map<String, Long>
-    ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
-        val updated = provExecutor.listClusterLimits(clusterName)
-        assertEquals(expected, updated)
+        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
     }
 
     @Test
@@ -252,32 +179,34 @@ class Directory1IT : ManagedModeTest() {
                 provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
         )
 
-        val expected = arrayOf<String?>("container1", "system")
+        val expected = arrayOf("container1", "system")
 
         fun List<Gtv>.names() = map { it.asDict()["name"]?.asString() }
                 .sortedWith(naturalOrder<String>())
                 .toTypedArray()
 
         // asserting all containers
-        val all = prov2Executor.listContainers().names()
+        val all = prov2Executor.listContainers().map { it.name }.toTypedArray()
         assertContentEquals(expected, all)
 
         // asserting cluster containers
-        val clusterContainers = prov2Executor.listClusterContainers("system").names()
+        val clusterContainers = prov2Executor.listClusterContainers("system").map { it.name }.toTypedArray()
         assertContentEquals(expected, clusterContainers)
 
         // asserting UNKNOWN cluster containers
-        val unknownClusterContainers = prov2Executor.listClusterContainers("unknown").names()
+        val unknownClusterContainers = prov2Executor.listClusterContainers("unknown").map { it.name }.toTypedArray()
         assertContentEquals(arrayOf(), unknownClusterContainers)
 
         // asserting node containers
-        val nodeContainers = prov2Executor.listContainersForNode(nodes[0].pubKey).names()
+        val nodeContainers = prov2Executor.listContainersForNode(nodes[0].pubKey).map { it.name }.toTypedArray()
         assertContentEquals(expected, nodeContainers)
 
         // asserting UNKNOWN node containers
         val unknownKey = KeyPairHelper.pubKeyHex(77) // node 77
-        val unknownNodeContainers = prov2Executor.listContainersForNode(unknownKey).names()
-        assertContentEquals(arrayOf(), unknownNodeContainers)
+        assertThrows<UserMistake> {
+            prov2Executor.listContainersForNode(unknownKey)
+
+        }
     }
 
     @Test
@@ -297,9 +226,9 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testGetContainerForUnknownBlockchain() {
-        assertNull(
-                prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
-        )
+        assertThrows<UserMistake> {
+            prov2Executor.getContainerForBlockchain(BlockchainRid.ZERO_RID.toHex())
+        }
     }
 
     @Test
@@ -366,12 +295,11 @@ class Directory1IT : ManagedModeTest() {
         val clusterProviders = provExecutor.getClusterProviders(newClusterName)
         println(clusterProviders.toTypedArray().contentToString())
         assert(clusterProviders.size).isEqualTo(1)
-        assert(clusterProviders.first()["pubkey"]?.asByteArray()?.toHex()).isEqualTo(
-                provConfig.pubkey()
-        )
+        assert(clusterProviders.first().pubkey.hex()).isEqualTo(provConfig.pubkey())
         // UNKNOWN cluster providers
-        val unknownProviders = provExecutor.getClusterProviders("unknown cluster name")
-        assert(unknownProviders).isEmpty()
+        assertThrows<UserMistake> {
+            provExecutor.getClusterProviders("unknown cluster name")
+        }
     }
 
     @Test
@@ -486,7 +414,7 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testListBlockchainsForNode() {
         var listBlockchains = provExecutor.listBlockchainsForNode(node1Pubkey)
-        assertEquals(0, listBlockchains.size)
+        assertEquals(1, listBlockchains.size) // Always know about itself
 
         listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
         assertEquals(1, listBlockchains.size)
@@ -595,7 +523,7 @@ class Directory1IT : ManagedModeTest() {
             )
         )
 
-        val clusterList = provExecutor.listClusters().map { it.asString() }
+        val clusterList = provExecutor.listClusters()
         assertEquals(listOf("system", clusterA, clusterB), clusterList)
 
         //add a container C to cluster A
@@ -626,20 +554,19 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(id, propid, "wrong idx")
         assertEquals(ProposalType.provider_is_system, actualType, "Wrong proposal type")
         assertNotEquals(0, timestamp, "timestamp is 0")
-
     }
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
     private fun assertProposalTypeAndGetRowid(expectedType: ProposalType): RowId {
         val proposals = provExecutor.listProposalsSince(0)
-        val type = (proposals[0].asDict()["proposal_type"] as GtvString).string
+        val type = (proposals[0].proposalType.name)
         assertEquals(expectedType.toString(), type, "Wrong proposal type")
-        return (proposals[0].asDict()["rowid"] as GtvInteger).asInteger().let { RowId(it) }
+        return (proposals[0].rowid)
     }
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.wData, BlockchainRid(brid), action
+                provClient.config.signers.first().pubKey.data, BlockchainRid(brid), action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }

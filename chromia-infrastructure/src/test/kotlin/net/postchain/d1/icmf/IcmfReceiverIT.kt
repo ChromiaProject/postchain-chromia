@@ -52,12 +52,12 @@ class IcmfReceiverIT : ManagedModeTest() {
             on { currentBlockHeightSync() } doReturn 1L
             on {
                 querySync(
-                    "icmf_get_headers_with_messages_after_height", gtv(
+                        "icmf_get_headers_with_messages_after_height", gtv(
                         mapOf(
-                            "topic" to gtv("my-topic"),
-                            "from_anchor_height" to gtv(-1)
+                                "topic" to gtv("my-topic"),
+                                "from_anchor_height" to gtv(-1)
                         )
-                    )
+                )
                 )
             } doReturn gtv(listOf(senderOneQueryResponse))
         })
@@ -65,12 +65,12 @@ class IcmfReceiverIT : ManagedModeTest() {
         PostchainClientMocks.addMockClient(senderOneChainRid, mock {
             on {
                 querySync(
-                    "icmf_get_messages", gtv(
+                        "icmf_get_messages", gtv(
                         mapOf(
-                            "topic" to gtv("my-topic"),
-                            "height" to gtv(0)
+                                "topic" to gtv("my-topic"),
+                                "height" to gtv(0)
                         )
-                    )
+                )
                 )
             } doReturn gtv(listOf(senderOneMessageBody))
         })
@@ -81,8 +81,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         QueryProviderMocks.anchorQueries = { name, args ->
             if (name == "icmf_get_headers_with_messages_after_height" && args["topic"] == gtv("my-topic") && args["from_anchor_height"] == gtv(
-                    -1
-                )
+                            -1
+                    )
             )
                 gtv(listOf(senderTwoQueryResponse))
             else if (name == "icmf_get_headers_with_messages_after_height")
@@ -108,13 +108,13 @@ class IcmfReceiverIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
-            javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_global_1.xml")!!.readText()
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_global_1.xml")!!.readText()
         )
 
         val dappChain = startNewBlockchain(
-            setOf(0, 1, 2),
-            setOf(),
-            rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
@@ -124,14 +124,14 @@ class IcmfReceiverIT : ManagedModeTest() {
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
-                            .from(tableName(ctx, testMessageTable))
-                            .fetch()
-                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
 
                         assert(messages.size).isEqualTo(2)
                         assert(messages).containsAll(
-                            TestMessage(senderOneChainRid, "my-topic", senderOneEncodedMessageBody),
-                            TestMessage(senderTwoChainRid, "my-topic", senderTwoEncodedMessageBody)
+                                TestMessage(senderOneChainRid, "my-topic", senderOneEncodedMessageBody),
+                                TestMessage(senderTwoChainRid, "my-topic", senderTwoEncodedMessageBody)
                         )
                     }
                 }
@@ -147,14 +147,14 @@ class IcmfReceiverIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
-            javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_1.xml")!!
-                .readText()
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_1.xml")!!
+                        .readText()
         )
 
         val dappChain = startNewBlockchain(
-            setOf(0, 1, 2),
-            setOf(),
-            rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
@@ -164,12 +164,12 @@ class IcmfReceiverIT : ManagedModeTest() {
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
-                            .from(tableName(ctx, testMessageTable))
-                            .fetch()
-                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
 
                         assert(messages).containsExactly(
-                            TestMessage(senderOneChainRid, "my-topic", senderOneEncodedMessageBody),
+                                TestMessage(senderOneChainRid, "my-topic", senderOneEncodedMessageBody),
                         )
                     }
                 }
@@ -185,14 +185,14 @@ class IcmfReceiverIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
-            javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_intra_cluster_1.xml")!!
-                .readText()
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_intra_cluster_1.xml")!!
+                        .readText()
         )
 
         val dappChain = startNewBlockchain(
-            setOf(0, 1, 2),
-            setOf(),
-            rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
@@ -202,12 +202,12 @@ class IcmfReceiverIT : ManagedModeTest() {
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
-                            .from(tableName(ctx, testMessageTable))
-                            .fetch()
-                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY]) }
 
                         assert(messages).containsExactly(
-                            TestMessage(senderTwoChainRid, "my-topic", senderTwoEncodedMessageBody),
+                                TestMessage(senderTwoChainRid, "my-topic", senderTwoEncodedMessageBody),
                         )
                     }
                 }
@@ -217,46 +217,43 @@ class IcmfReceiverIT : ManagedModeTest() {
 
     private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, encodedMessageBody: ByteArray): Gtv {
         val blockHeader = BlockHeaderData(
-            gtv(blockchainRid.data),
-            gtv(blockchainRid.data),
-            gtv(ByteArray(32)),
-            gtv(0),
-            gtv(0),
-            GtvNull,
-            gtv(
-                mapOf(
-                    ICMF_BLOCK_HEADER_EXTRA to gtv(
-                        "my-topic" to TopicHeaderData.fromMessageHashes(
-                            listOf(cryptoSystem.digest(encodedMessageBody)),
-                            cryptoSystem,
-                            -1L
-                        ).toGtv()
-                    )
+                gtv(blockchainRid.data),
+                gtv(blockchainRid.data),
+                gtv(ByteArray(32)),
+                gtv(0),
+                gtv(0),
+                GtvNull,
+                gtv(
+                        mapOf(
+                                ICMF_BLOCK_HEADER_EXTRA to gtv(
+                                        "my-topic" to TopicHeaderData.fromMessageHashes(
+                                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                                cryptoSystem,
+                                                -1L
+                                        ).toGtv()
+                                )
+                        )
                 )
-            )
         ).toGtv()
         val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-            arrayOf(
-                cryptoSystem.buildSigMaker(
-                    IcmfTestClusterManagement.pubKey.data,
-                    IcmfTestClusterManagement.privKey.data
-                ).signDigest(blockRid)
-            )
+                arrayOf(
+                        cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(blockRid)
+                )
         ).getRawData()
         return gtv(
-            mapOf(
-                "block_header" to gtv(GtvEncoder.encodeGtv(blockHeader)),
-                "witness" to gtv(rawWitness),
-                "anchor_height" to gtv(0)
-            )
+                mapOf(
+                        "block_header" to gtv(GtvEncoder.encodeGtv(blockHeader)),
+                        "witness" to gtv(rawWitness),
+                        "anchor_height" to gtv(0)
+                )
         )
     }
 
     data class TestMessage(
-        val sender: BlockchainRid,
-        val topic: String,
-        val body: ByteArray
+            val sender: BlockchainRid,
+            val topic: String,
+            val body: ByteArray
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

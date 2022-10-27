@@ -8,7 +8,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>deployment-tool</artifactId>
+    <artifactId>chromia-deployment-tool</artifactId>
     <name>Tool for deploying DApps</name>
 
     <dependencies>
@@ -70,7 +70,10 @@
                 <configuration>
                     <source>${project.build.directory}/directory1/rell</source>
                     <packageName>net.postchain.d1</packageName>
-                    <mainModule>common.proposal</mainModule>
+                    <mainModules>
+                        <mainModule>common.proposal</mainModule>
+                        <mainModule>container.container_proof</mainModule>
+                    </mainModules>
                 </configuration>
                 <executions>
                     <execution>

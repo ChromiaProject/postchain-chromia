@@ -17,9 +17,8 @@ class CommandListProposalsSince : CliktCommand(
     override fun run() {
         val proposals = CliExecution(config).listProposalsSince(idx)
         proposals.forEach {
-            val n = it.asDict()
-            println("proposal type: ${n["proposal_type"]!!.asString()}")
-            println("index: ${n["rowid"]!!.asInteger()}")
+            println("proposal type: ${it.proposalType}")
+            println("index: ${it.rowid.id}")
         }
         if (proposals.isEmpty()) {
             println("There are no proposals waiting for approval.")

@@ -4,6 +4,7 @@ import ^.model.*;
 import ^.cm_api.*;
 import ^.nm_api.*;
 import .anchoring.*;
+import .cluster.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
