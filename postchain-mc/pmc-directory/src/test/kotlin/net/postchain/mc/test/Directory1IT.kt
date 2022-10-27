@@ -1,17 +1,12 @@
 package net.postchain.mc.test
 
 import assertk.assert
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
-import net.postchain.chain0.model.ClusterResourceLimitType
-import net.postchain.chain0.model.ClusterResourceLimitType.*
-import net.postchain.chain0.model.ContainerResourceLimitType
-import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
@@ -21,7 +16,6 @@ import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
@@ -174,98 +168,6 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), true))
         members = provExecutor.listVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
-    }
-
-    @Test
-    fun testProposeContainerAndLimits() {
-        //add new container to system cluster
-        val containerName = "container1"
-        doAndBuildBlocks(
-                provConfig,
-                provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
-        )
-        assertAdded("get_container", "name", GtvString(containerName))
-
-        val defaultStr = provExecutor.listContainerLimits(containerName)
-        assertEquals(4, defaultStr.size)
-
-        // Now updated container resource limits and check result
-        val default = mapOf(
-                max_blockchains to -1L,
-                cpu to -1L,
-                ram to -1L,
-                storage to -1L
-        )
-
-        proposeAndAssertContainerLimits(
-                containerName,
-                proposedLimits = mapOf(),
-                expected = default
-        )
-
-        val limits = mapOf(max_blockchains to 2L, cpu to 456L)
-        val expected = default.toMutableMap().also {
-            it[max_blockchains] = 2L
-            it[cpu] = 456L
-        }
-        proposeAndAssertContainerLimits(
-                containerName,
-                proposedLimits = limits,
-                expected = expected)
-    }
-
-    private fun proposeAndAssertContainerLimits(
-            containerName: String,
-            proposedLimits: Map<ContainerResourceLimitType, Long>,
-            expected: Map<ContainerResourceLimitType, Long>
-    ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeContainerLimitsAsync(containerName, proposedLimits))
-        val updated = provExecutor.listContainerLimits(containerName)
-                .mapKeys { ContainerResourceLimitType.valueOf(it.key) }
-        assertEquals(expected, updated)
-    }
-
-    @Test
-    fun testProposeClusterLimits() {
-        val clusterName = "Vera"
-        val providersList = provConfig.pubkey()
-        // create cluster, initial providers added
-        doAndBuildBlocks(
-                provConfig,
-                provExecutor.createClusterAsync(
-                        clusterName, providersList, voterSetSystemP, voterSetSystemP
-                )
-        )
-
-        val default = mapOf(
-                max_containers to -1L,
-                default_container_max_blockchains to -1L,
-                default_container_cpu to -1L,
-                default_container_ram to -1L,
-                default_container_storage to -1L
-        )
-
-        var limits = mapOf<ClusterResourceLimitType, Long>()
-        var expected = default
-        proposeAndAssertClusterLimits(clusterName, limits, expected)
-
-        limits = mapOf(default_container_cpu to 456L, default_container_storage to 789L)
-        expected = default.toMutableMap().also {
-            it[default_container_cpu] = 456L
-            it[default_container_storage] = 789L
-        }
-        proposeAndAssertClusterLimits(clusterName, limits, expected)
-    }
-
-    private fun proposeAndAssertClusterLimits(
-            clusterName: String,
-            limits: Map<ClusterResourceLimitType, Long>,
-            expected: Map<ClusterResourceLimitType, Long>
-    ) {
-        doAndBuildBlocks(provConfig, provExecutor.proposeClusterLimitsAsync(clusterName, limits))
-        val updated = provExecutor.listClusterLimits(clusterName)
-                .mapKeys { ClusterResourceLimitType.valueOf(it.key) }
-        assertEquals(expected, updated)
     }
 
     @Test

@@ -4,9 +4,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.chain0.common.proposal.proposeClusterLimitsOperation
 import net.postchain.chain0.model.ClusterResourceLimitType
 import net.postchain.chain0.model.ClusterResourceLimitType.*
-import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.*
 
 class CommandProposeClusterResourceLimits : CliktCommand(
@@ -14,7 +16,13 @@ class CommandProposeClusterResourceLimits : CliktCommand(
         help = "Propose new resource limits for given cluster. There are three types of limits. " +
                 "Proposal can contain one, two, or all three types."
 ) {
-    private val config by configOption()
+    companion object {
+        fun <K> MutableMap<K, Long>.setIfNotNull(key: K, value: Long?) {
+            value?.let { put(key, it) }
+        }
+    }
+
+    private val client by nopClientOption()
 
     private val clusterName by nameOption("Cluster name").required()
 
@@ -29,20 +37,20 @@ class CommandProposeClusterResourceLimits : CliktCommand(
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
     override fun run() {
-        val limitsMap = mutableMapOf<ClusterResourceLimitType, Long>()
+        val limits = mutableMapOf<ClusterResourceLimitType, Long>()
                 .apply {
-                    setNullable(max_containers, _maxContainers)
-                    setNullable(default_container_max_blockchains, _maxBlockchains)
-                    setNullable(default_container_cpu, _cpu)
-                    setNullable(default_container_ram, _ram)
-                    setNullable(default_container_storage, _storage)
+                    setIfNotNull(max_containers, _maxContainers)
+                    setIfNotNull(default_container_max_blockchains, _maxBlockchains)
+                    setIfNotNull(default_container_cpu, _cpu)
+                    setIfNotNull(default_container_ram, _ram)
+                    setIfNotNull(default_container_storage, _storage)
                 }
 
-        CliExecution(config).proposeClusterLimits(clusterName, limitsMap)
-        println("proposal has been added successfully")
-    }
-
-    private fun MutableMap<ClusterResourceLimitType, Long>.setNullable(key: ClusterResourceLimitType, value: Long?) {
-        value?.let { put(key, it) }
+        client.transactionBuilder()
+                .proposeClusterLimitsOperation(client.config.pubkey().data, clusterName, limits)
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Cluster limits proposed",
+                        "Failed proposing new cluster limits")
     }
 }

@@ -32,13 +32,21 @@ function test_cluster_resource_limits() {
     assert_container_resource_limits(foo_limits, -1, -1, -1, -1);
 
     // 2. Proposing cluster resource limits
+    val proposed_limits = map<cluster_resource_limit_type, integer>();
+    proposed_limits[cluster_resource_limit_type.max_containers] = 2;
+    proposed_limits[cluster_resource_limit_type.default_container_max_blockchains] = 3;
+    proposed_limits[cluster_resource_limit_type.default_container_cpu] = 10;
+    proposed_limits[cluster_resource_limit_type.default_container_ram] = 100;
     rell.test.tx().op(
-        propose_cluster_limits(rell.test.pubkeys.alice, cluster1_name, 2, 3, 10, 100, 1000)
+        propose_cluster_limits(rell.test.pubkeys.alice, cluster1_name, proposed_limits)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting new container resource limits
-    val limits1 = get_cluster_resource_limits(cluster1);
-    assert_cluster_resource_limits(limits1, 2, 3, 10, 100, 1000);
+    val actual = get_cluster_resource_limits(cluster1);
+    val expected = map<cluster_resource_limit_type, integer>();
+    expected.put_all(proposed_limits);
+    expected[cluster_resource_limit_type.default_container_storage] = -1;
+    assert_equals(expected, actual);
 
     // Deploying container "bar" and asserting its NEW resource limits
     rell.test.tx().op(
@@ -46,7 +54,12 @@ function test_cluster_resource_limits() {
     ).sign(rell.test.keypairs.alice).run();
     assert_equals(container_count0 + 2, container_count(cluster1_name));
     val bar_limits = get_container_resource_limits(container @ { "bar" });
-    assert_container_resource_limits(bar_limits, 3, 10, 100, 1000);
+    val bar_expected_limits = map<container_resource_limit_type, integer>();
+    bar_expected_limits[container_resource_limit_type.max_blockchains] = 3;
+    bar_expected_limits[container_resource_limit_type.cpu] = 10;
+    bar_expected_limits[container_resource_limit_type.ram] = 100;
+    bar_expected_limits[container_resource_limit_type.storage] = -1;
+    assert_equals(bar_expected_limits, bar_limits);
 
     // 3. Trying to deploy more than 2 containers
     rell.test.tx().op(

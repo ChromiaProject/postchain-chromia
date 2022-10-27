@@ -19,13 +19,20 @@ function test_container_resource_limits() {
     assert_container_resource_limits(default_limits, -1, -1, -1, -1);
 
     // 2. Proposing container resource limits
+    val proposed_limits = map<container_resource_limit_type, integer>();
+    proposed_limits[container_resource_limit_type.max_blockchains] = 2;
+    proposed_limits[container_resource_limit_type.ram] = 100;
+    proposed_limits[container_resource_limit_type.storage] = 1000;
     rell.test.tx().op(
-        propose_container_limits(alice.pubkey, container1_name, 2, 10, 100, 1000)
+        propose_container_limits(alice.pubkey, container1_name, proposed_limits)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting new container resource limits
-    val limits1 = get_container_resource_limits(container1);
-    assert_container_resource_limits(limits1, 2, 10, 100, 1000);
+    val actual = get_container_resource_limits(container1);
+    val expected = map<container_resource_limit_type, integer>();
+    expected.put_all(proposed_limits);
+    expected[container_resource_limit_type.cpu] = -1;
+    assert_equals(expected, actual);
 
     // 3. Deploying 2 dapps
     val blockchain_count0 = blockchain_count();
