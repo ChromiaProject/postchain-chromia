@@ -210,13 +210,6 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testGetBlockchainsForContainer() {
-        val bcs = prov2Executor.listBlockchainsForContainer(systemContainerName)
-        assertEquals(1, bcs.size)
-        assertEquals(nodes[0].getBlockchainRid(0)!!.toHex(), bcs[0].toHex())
-    }
-
-    @Test
     fun testGetContainerForBlockchain() {
         val chain0Brid = nodes[0].getBlockchainRid(0)!!
         val actualContainer = prov2Executor.getContainerForBlockchain(chain0Brid.toHex())
