@@ -26,7 +26,7 @@ class CommandAddCluster : CliktCommand(
     private val providers by option(
             "-p", "--providers",
             help = "String of comma separated list of pubkey strings of providers that should belong to this cluster"
-    ).convert { it.hexStringToWrappedByteArray() }.split(",").required()
+    ).convert { it.hexStringToByteArray() }.split(",").required()
 
     private val governorName by option(
             "-g", "--governor",
@@ -41,7 +41,7 @@ class CommandAddCluster : CliktCommand(
     override fun run() {
         val client = ClientUtil.nopClientFromConfig(config)
         client.transactionBuilder()
-                .createClusterOperation(config.pubkey().wData, name, providers, governorName, deployerName)
+                .createClusterOperation(config.pubkey().data, name, providers, governorName, deployerName)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Cluster $name added",

@@ -23,11 +23,11 @@ class ClusterManagementImpl(private val query: PostchainQuery) : ClusterManageme
             query.cmGetBlockchainApiUrls(blockchainRid)
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<PubKey> =
-            query.cmGetPeerInfo(blockchainRid.data.wrap(), height).map { PubKey(it) }
+            query.cmGetPeerInfo(blockchainRid.data, height).map { PubKey(it) }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
             query.cmGetClusterBlockchains(clusterName).map { BlockchainRid(it) }
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String =
-            query.cmGetBlockchainCluster(blockchainRid.data.wrap())
+            query.cmGetBlockchainCluster(blockchainRid.data)
 }

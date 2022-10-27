@@ -19,7 +19,7 @@ class CommandProposeResumeBlockchain : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .proposeBlockchainActionOperation(
-                        client.config.pubkey().wData,
+                        client.config.pubkey().data,
                         blockchainRID,
                         BlockchainAction.resume
                 )
