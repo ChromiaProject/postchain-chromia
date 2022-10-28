@@ -14,7 +14,8 @@ import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
-import net.postchain.chain0.nm_api.*
+import net.postchain.chain0.nm_api.nmComputeBlockchainList
+import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
@@ -101,19 +102,6 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
 
-    fun listClusterLimits(name: String) = getPostchainClient().nmGetClusterLimits(name)
-
-
-    fun listContainerLimits(name: String) = getPostchainClient().nmGetContainerLimits(name)
-
-    /**
-     * key - publicKey of node
-     */
-    fun listContainersForNode(key: String) = getPostchainClient().getNodeContainers(PubKey(key))
-
-    fun listContainers() = getPostchainClient().getContainers()
-
-    fun listClusterContainers(cluster: String) = getPostchainClient().getClusterContainers(cluster)
 
     fun listClustersForProvider(key: String) = getPostchainClient().getProviderClusters(PubKey(key))
 
@@ -121,13 +109,6 @@ open class CliExecution(val config: PostchainClientConfig) {
      * key - publicKey of node
      */
     fun listBlockchainsForNode(key: String) = getPostchainClient().nmComputeBlockchainList(key.hexStringToByteArray())
-
-    /**
-     * key - publicKey of node
-     */
-    fun listBlockchainsForContainer(name: String) = getPostchainClient().nmGetBlockchainsForContainer(name)
-
-    fun getContainerForBlockchain(blockchainRid: String) = getPostchainClient().nmGetContainerForBlockchain(BlockchainRid.buildFromHex(blockchainRid))
 
     fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
         val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
