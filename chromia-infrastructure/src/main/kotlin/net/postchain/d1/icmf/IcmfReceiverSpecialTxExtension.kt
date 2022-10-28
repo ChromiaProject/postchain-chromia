@@ -10,7 +10,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -95,14 +94,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             ops: List<OpData>
     ): Boolean {
         var currentHeaderData: HeaderValidationInfo? = null
-        val messageHashes: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
+        val bodiesByTopic: MutableMap<String, MutableList<Gtv>> = mutableMapOf()
         for (op in ops) {
             when (op.opName) {
                 HeaderOp.OP_NAME -> {
                     val headerOp = HeaderOp.fromOpData(op) ?: return false
 
-                    if (!validateMessages(messageHashes, currentHeaderData, bctx)) return false
-                    messageHashes.clear()
+                    if (!validateMessages(bodiesByTopic, currentHeaderData, bctx)) return false
+                    bodiesByTopic.clear()
 
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -130,8 +129,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                         return false
                     }
 
-                    messageHashes.computeIfAbsent(messageOp.topic) { mutableListOf() }
-                            .add(cryptoSystem.digest(GtvEncoder.encodeGtv(messageOp.body)))
+                    bodiesByTopic.computeIfAbsent(messageOp.topic) { mutableListOf() }
+                            .add(messageOp.body)
                 }
 
                 else -> {
@@ -140,15 +139,15 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 }
             }
         }
-        return validateMessages(messageHashes, currentHeaderData, bctx)
+        return validateMessages(bodiesByTopic, currentHeaderData, bctx)
     }
 
     private fun validateMessages(
-            messageHashes: MutableMap<String, MutableList<ByteArray>>,
+            bodiesByTopic: MutableMap<String, MutableList<Gtv>>,
             currentHeaderData: HeaderValidationInfo?,
             bctx: BlockEContext
     ): Boolean {
-        if (!validateMessagesHash(messageHashes, currentHeaderData)) return false
+        if (!validateMessagesHash(bodiesByTopic, currentHeaderData)) return false
         if (currentHeaderData != null) {
             for ((topic, data) in currentHeaderData.icmfHeaderData) {
                 if (!validatePrevMessageHeight(
@@ -184,10 +183,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     }
 
     private fun validateMessagesHash(
-            messageHashes: MutableMap<String, MutableList<ByteArray>>,
+            bodiesByTopic: MutableMap<String, MutableList<Gtv>>,
             headerData: HeaderValidationInfo?
     ): Boolean {
-        for ((topic, hashes) in messageHashes) {
+        for ((topic, bodies) in bodiesByTopic) {
             if (headerData == null) {
                 logger.error("got ${MessageOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
                 return false
@@ -199,7 +198,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 return false
             }
 
-            val computedHash = TopicHeaderData.calculateMessagesHash(hashes, cryptoSystem)
+            val computedHash = TopicHeaderData.calculateMessagesHash(bodies, cryptoSystem)
             if (!topicData.hash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for topic: $topic")
                 return false
