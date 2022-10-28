@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.ParameterHolder
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.default
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
@@ -16,16 +18,17 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.deployment.ChromiaDeploymentTool
 import net.postchain.deployment.DeploymentTool
 import net.postchain.gtv.GtvEncoder
+import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 
 abstract class DeployXmlCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
     val clientConfig by clientConfigOption()
 
-    val sourceDir by option("-d", "--source-dir", help = "Rell source dir").path(mustExist = true, canBeDir = true, canBeFile = false).required()
+    val sourceDir by option("-d", "--source-dir", help = "Rell source dir (defaults to 'rell/src')").path(mustExist = true, canBeDir = true, canBeFile = false).default(Path.of("rell/src"))
 
-    val outputDir by option("-o", "--output-dir", help = "Generated configuration output dir").path(mustExist = false, canBeDir = true, canBeFile = false).required()
+    val outputDir by option("-o", "--output-dir", help = "Generated configuration output dir (defaults to 'generated-configuration')").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("generated-configuration"))
 
-    val deployXmlFile by argument(name = "deploy.xml").path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
+    val deployXmlFile by argument(name = "deploy.xml", help = "(defaults to 'rell/config/deploy.xml')").path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
 }
 
 class ContainerCommand : CliktCommand(name = "container", help = "Create container") {
