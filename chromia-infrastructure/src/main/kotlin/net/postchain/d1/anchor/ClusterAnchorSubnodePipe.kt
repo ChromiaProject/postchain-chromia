@@ -2,24 +2,23 @@
 
 package net.postchain.d1.anchor
 
+import mu.KLogging
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
-import java.lang.Long.max
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
-        val restApiUrl: String
+        restApiUrl: String
 ) : ClusterAnchorPipe {
 
-    private val highestSeen = AtomicLong(-1L)
-    private val lastCommitted = AtomicLong(-1L)
+    companion object : KLogging()
+
     private val client = ConcretePostchainClientProvider().createClient(
             PostchainClientConfig(
                     blockchainRid = blockchainRid,
@@ -28,32 +27,29 @@ class ClusterAnchorSubnodePipe(
             )
     )
 
-    override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
-
-    override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
+    override fun setHighestSeenHeight(height: Long) {}
+    override fun mightHaveNewPackets() = true
 
     // TODO: [POS-358]: Make it async
     override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
-        val block = client.blockAtHeightSync(currentPointer)
+        val block = try {
+            client.blockAtHeightSync(currentPointer)
+        } catch (e: Exception) {
+            logger.warn("Block fetching from sub node failed")
+            return null
+        }
 
         return if (!block.isNull()) {
-            highestSeen.getAndUpdate { max(it, currentPointer) }
-
             ClusterAnchorPacket(
                     currentPointer,
-                    block["rid"]!!.asByteArray(),
-                    block["header"]!!.asByteArray(),
-                    block["witness"]!!.asByteArray()
+                    block["rid"]!!.asByteArray(true),
+                    block["header"]!!.asByteArray(true),
+                    block["witness"]!!.asByteArray(true)
             )
-
         } else {
             null
         }
     }
 
-    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
-        bctx.addAfterCommitHook {
-            lastCommitted.getAndUpdate { max(it, currentPointer) }
-        }
-    }
+    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {}
 }

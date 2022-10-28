@@ -54,7 +54,7 @@ query cm_get_peer_info(brid: byte_array, height: integer): set<pubkey> {
 }
 
 query cm_get_blockchain_cluster(brid: byte_array): text {
-	return (container_blockchain, blockchain) @ { blockchain == container_blockchain.blockchain }
+	return (container_blockchain, blockchain) @ { blockchain.rid == brid, blockchain == container_blockchain.blockchain }
 	    ( container_blockchain.container.cluster.name );
 }
 
