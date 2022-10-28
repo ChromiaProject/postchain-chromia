@@ -262,8 +262,8 @@ internal class Directory1DeploymentIT {
                         .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
-                voteOnAllProposals(node1.provider)
                 voteOnAllProposals(node2.provider)
+                voteOnAllProposals(node3.provider)
             }
         }
 
