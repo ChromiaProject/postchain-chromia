@@ -17,6 +17,7 @@ entity provider {
 	key pubkey; 
 	mutable name: text = "";
 	mutable active: boolean = false;
+    mutable tier: provider_tier = provider_tier.COMMUNITY_NODE_PROVIDER;
 	/* System provider can
     * - Add and remove signer nodes to clusters
     * - update the system cluster/voter set
@@ -25,62 +26,9 @@ entity provider {
     * - Update cluster configuration
     */
 	mutable system: boolean = false;
-    mutable tier: provider_tier = provider_tier.COMMUNITY_NODE_PROVIDER;
 }
 
-namespace roles {
 
-	function has_system_access(provider) = provider.active and provider.system;
-
-	function has_node_access(provider) = provider.active and provider.tier == provider_tier.NODE_PROVIDER;
-
-    /* Can deploy blockchains on a container
-    * - Deploy a blockchain to a container
-    */
-	entity deploy { key provider, container; }
-
-	function has_deploy_access(provider, container) = provider.active and exists(voter_set_member @? { provider, container.deployer });
-
-}
-
-namespace enroll {
-	function system(provider) {
-		provider.active = true;
-		provider.system = true;
-		provider.tier = provider_tier.NODE_PROVIDER;
-		create voter_set_member(provider, system_p_voter_set());
-		create cluster_provider(provider, system_cluster());
-		create roles.deploy(provider, system_container());
-		if (not(roles.has_node_access(provider))) node(provider);
-	}
-
-	function node(provider) {
-		provider.tier = provider_tier.NODE_PROVIDER;
-	}
-
-	function deploy(governor: voter_set, container, provider) {
-		require(container.cluster.governance == governor);
-		create roles.deploy(provider, container);
-	}
-}
-
-namespace revoke {
-	function system(provider) {
-		provider.system = false;
-		delete voter_set_member @ { provider, voter_set @ { "SYSTEM_P" }};
-		delete cluster_provider @ { provider, cluster @ { "system" } };
-		delete roles.deploy @ { provider, container @ { "system"} };
-	}
-
-	function node(provider) {
-		require(roles.has_system_access(provider) != true, "Cannot revoke node access for a system provider. Revoke system access");
-		provider.tier = provider_tier.COMMUNITY_NODE_PROVIDER;
-		// TODO inactivate all nodes?
-	}
-
-	// TODO: Revoke deploy access
-
-}
 
 // type of quota for a provider
 enum provider_quota_type {

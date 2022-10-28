@@ -1,6 +1,7 @@
 module;
 
 import ^.*;
+import ^^.roles.*;
 import .constants.*;
 
 function require_is_signer(pubkey) {
