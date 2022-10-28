@@ -40,12 +40,11 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
@@ -83,12 +82,11 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
@@ -173,13 +171,12 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val incorrectMessageBody = gtv("nej")
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
@@ -203,14 +200,12 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody0 = gtv("hej0")
-        val encodedMessageBody0 = GtvEncoder.encodeGtv(messageBody0)
         val messageBody1 = gtv("hej1")
-        val encodedMessageBody1 = GtvEncoder.encodeGtv(messageBody1)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody0), cryptoSystem.digest(encodedMessageBody1)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody0, messageBody1),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
@@ -234,13 +229,12 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val injectedMessageBody = gtv("hej2")
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
@@ -265,13 +259,12 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         // Header data indicates that primary is trying to skip messages from block 0
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 1, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 0L).toGtv()
                 ))

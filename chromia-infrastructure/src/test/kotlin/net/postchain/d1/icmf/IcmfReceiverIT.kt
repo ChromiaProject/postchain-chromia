@@ -38,12 +38,12 @@ class IcmfReceiverIT : ManagedModeTest() {
     private val senderOneChainRid = BlockchainRid.buildRepeat(1)
     private val senderOneMessageBody = gtv("hej1")
     private val senderOneEncodedMessageBody = GtvEncoder.encodeGtv(senderOneMessageBody)
-    private val senderOneQueryResponse = createQueryResponseForMessage(senderOneChainRid, senderOneEncodedMessageBody)
+    private val senderOneQueryResponse = createQueryResponseForMessage(senderOneChainRid, senderOneMessageBody)
 
     private val senderTwoChainRid = BlockchainRid.buildRepeat(2)
     private val senderTwoMessageBody = gtv("hej2")
     private val senderTwoEncodedMessageBody = GtvEncoder.encodeGtv(senderTwoMessageBody)
-    private val senderTwoQueryResponse = createQueryResponseForMessage(senderTwoChainRid, senderTwoEncodedMessageBody)
+    private val senderTwoQueryResponse = createQueryResponseForMessage(senderTwoChainRid, senderTwoMessageBody)
 
     private fun setupClientMocks() {
         PostchainClientMocks.clearMocks()
@@ -215,7 +215,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
     }
 
-    private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, encodedMessageBody: ByteArray): Gtv {
+    private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBody: Gtv): Gtv {
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
                 gtv(blockchainRid.data),
@@ -226,8 +226,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                 gtv(
                         mapOf(
                                 ICMF_BLOCK_HEADER_EXTRA to gtv(
-                                        "my-topic" to TopicHeaderData.fromMessageHashes(
-                                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                        "my-topic" to TopicHeaderData.fromMessages(
+                                                listOf(messageBody),
                                                 cryptoSystem,
                                                 -1L
                                         ).toGtv()

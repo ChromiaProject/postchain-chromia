@@ -82,7 +82,7 @@ class IcmfSenderIT : ManagedModeTest() {
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
                 val expectedHash = TopicHeaderData.calculateMessagesHash(
-                        expectedMessages.map { message -> cryptoSystem.digest(GtvEncoder.encodeGtv(gtv(message))) },
+                        expectedMessages.map { message -> gtv(message) },
                         cryptoSystem
                 )
                 val topicHeader = decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()[topic]!!.asDict()

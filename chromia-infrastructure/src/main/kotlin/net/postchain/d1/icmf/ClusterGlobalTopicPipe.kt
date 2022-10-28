@@ -185,7 +185,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 }
             }
 
-            val computedHash = TopicHeaderData.calculateMessagesHash(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }, cryptoSystem)
+            val computedHash = TopicHeaderData.calculateMessagesHash(bodies, cryptoSystem)
 
             if (!expectedMessagesHash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")

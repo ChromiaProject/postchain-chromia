@@ -8,7 +8,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 
 const val ICMF_MESSAGE_TYPE = "icmf_message"
@@ -42,13 +41,7 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic
                 .mapValues {
-                    TopicHeaderData.fromMessageHashes(it.value.map { message ->
-                        cryptoSystem.digest(
-                                GtvEncoder.encodeGtv(
-                                        message.body
-                                )
-                        )
-                    }, cryptoSystem, it.value.first().previousMessageBlockHeight).toGtv()
+                    TopicHeaderData.fromMessages(it.value.map { message -> message.body }, cryptoSystem, it.value.first().previousMessageBlockHeight).toGtv()
                 }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
     }
