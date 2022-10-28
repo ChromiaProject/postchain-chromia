@@ -12,7 +12,6 @@ enum proposal_type {
     container_limits,
     cluster_limits,
     cluster_provider,
-    cluster_deployer,
     cluster_remove,
     voter_set_update,
     provider_state,
@@ -66,12 +65,6 @@ entity pending_cluster_provider {
 	key cluster;
 	provider;
 	add: boolean;
-}
-
-entity pending_cluster_deployer {
-	key proposal;
-	key cluster;
-	deployer: voter_set;
 }
 
 entity pending_remove_cluster {
@@ -138,7 +131,6 @@ function delete_proposal(prop: proposal) {
         container_limits    -> delete pending_container_limits @ { prop };
         cluster_limits      -> delete pending_cluster_limits @ { prop };
         cluster_provider    -> delete pending_cluster_provider @ { prop };
-        cluster_deployer    -> delete pending_cluster_deployer @ { prop };
         cluster_remove      -> delete pending_remove_cluster @? { prop };
         voter_set_update    -> delete_pending_voter_set_update(prop);
         provider_state      -> delete pending_provider_state @ { prop };

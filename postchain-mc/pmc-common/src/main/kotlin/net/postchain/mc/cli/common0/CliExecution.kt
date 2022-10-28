@@ -1,12 +1,12 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
+import net.postchain.chain0.cluster.cluster_op.createClusterOperation
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.cluster.addProviderToClusterOperation
-import net.postchain.chain0.common.cluster.createClusterOperation
 import net.postchain.chain0.common.proposal.*
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
@@ -332,14 +332,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterDeployer(clusterName: String, key: String) {
-        sendTxSync(
-                proposeClusterDeployerAsync(clusterName, key),
-                "Cluster deployer update proposed",
-                "Failed proposing cluster deployer"
-        )
-    }
-
     fun proposeVoterSetGovernor(name: String, new: String) {
         sendTxSync(
                 proposeVoterSetGovernorAsync(name, new),
@@ -508,17 +500,11 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun createClusterAsync(
             newClusterName: String,
-            providerKeys: String?,
-            governorSet: String,
-            deployerSet: String
+            providerKeys: String,
+            governorSet: String
     ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(
-                config.pubkey().data,
-                newClusterName,
-                providerKeys?.split(",")?.map { it.hexStringToByteArray() },
-                governorSet,
-                deployerSet
-        )
+        return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
+
     }
 
     fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
@@ -630,12 +616,6 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterProviderOperation(
                 config.pubkey().data, clusterName, provider.hexStringToByteArray(), add
-        )
-    }
-
-    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeClusterDeployerOperation(
-                config.pubkey().data, clusterName, newDeployer
         )
     }
 

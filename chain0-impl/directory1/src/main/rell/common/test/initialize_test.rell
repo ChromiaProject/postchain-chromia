@@ -24,7 +24,6 @@ function test_initialization() {
 	val cluster1 = cluster @? { "system" };
 	assert_not_null(cluster1);
 	assert_equals(cluster1.governance, system_p);
-	assert_equals(cluster1.deployer, system_p);
 	
 	/* Initial provider is a provider of system cluster */
 	val p1 = provider @? { rell.test.pubkeys.alice };

@@ -1,5 +1,4 @@
 
-// The operation is mostly needed to make rell-maven-plugin generate code for enum `container_resource_limit_type`
 operation propose_container_limits(my_pubkey: pubkey, container_name: text, limits: map<container_resource_limit_type, integer>) {
     val limits_map = _get_current_container_resource_limits(container_name);
     limits_map.put_all(limits);
@@ -8,8 +7,8 @@ operation propose_container_limits(my_pubkey: pubkey, container_name: text, limi
     val container = require_container(container_name);
     // check that provider authority and that it is cluster's deployer
     require_provider_auth_with_rl(me);
-    require_cluster_deployer(container.cluster, me);
-    val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.deployer);
+	require_cluster_governor(container.cluster, me);
+    val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.governance);
     create pending_container_limits(
         prop,
         container,
@@ -29,4 +28,3 @@ function _get_current_container_resource_limits(container_name: text): map<conta
     }
     return limits_map;
 }
-

@@ -2,6 +2,7 @@ module;
 
 import ^^.model.*;
 import ^^.common.proposal.*;
+import ^.*;
 
 enum container_proposal_type {
     create_container,
@@ -67,7 +68,6 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
 	val deployer = require_voter_set(deployer_name);
 	// check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
-	require_cluster_deployer(cluster, me);
 
 	// Require container resource limits are honored
     val max_containers = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.max_containers } (.value);
@@ -81,22 +81,22 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
     val ram = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_ram);
     val storage = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_storage);
 
-	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.deployer);
+	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.governance);
     create pending_container_with_resource_limits(
         prop, name, cluster, container_type.isolated, deployer,
         max_blockchains, cpu, ram, storage
     );
     create container_proposal(prop, container_proposal_type.create_container_with_resource_limits);
-	internal_vote(me, prop, true);
+    internal_vote(me, prop, true);
 }
 
 operation propose_remove_container(my_pubkey: pubkey, name) {
     val me = require_provider(my_pubkey);
     require_provider_auth_with_rl(me);
     val cont = require_container(name);
-    require_cluster_deployer(cont.cluster, me);
+    require_cluster_governor(cont.cluster, me);
     require_container_available_for_removal(cont);
-    val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cont.cluster.deployer);
+    val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cont.cluster.governance);
     create pending_remove_container(prop, cont);
     create container_proposal(prop, container_proposal_type.remove_container);
     internal_vote(me, prop, true);
@@ -131,8 +131,4 @@ function apply_container_remove(proposal) {
     delete container_resource_limit @* { cont };
     delete pending_remove_container @ { proposal };
     delete container @ { cont.name };
-}
-
-function _get_cluster_limit_or_default(cluster, type: cluster_resource_limit_type): integer {
-    return cluster_resource_limit @? { cluster, .cluster_resource_limit_type == type } (.value) ?: -1;
 }
