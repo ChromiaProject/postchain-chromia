@@ -2,7 +2,6 @@
 
 import ^^.*;
 import ^^^^.test.ops.*;
-import ^^^^.test.util.constants.*;
 import ^^^^.test.setup.*;
 
 val test_set = "test";

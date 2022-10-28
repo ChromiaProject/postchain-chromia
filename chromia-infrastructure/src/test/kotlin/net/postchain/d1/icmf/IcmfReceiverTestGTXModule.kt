@@ -3,11 +3,11 @@ package net.postchain.d1.icmf
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
@@ -49,7 +49,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
 
 }
 
-class IcmfMessageOp(u: Unit, private val opdata: ExtOpData) : GTXOperation(opdata) {
+class IcmfMessageOp(@Suppress("UNUSED_PARAMETER") u: Unit, private val opdata: ExtOpData) : GTXOperation(opdata) {
     override fun isCorrect(): Boolean {
         return true
     }

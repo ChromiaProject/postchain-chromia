@@ -1,12 +1,11 @@
 @test module;
 
 import o: ^.ops;
+import c: ^.util.constants;
 import ^^^.model.*;
 
-val p1key = rell.test.keypairs.alice;
-
-function p1() = provider @ { p1key.pub };
+function initial_provider() = provider @ { c.initial_provider.pub };
 
 function setup_module() {
-    rell.test.tx().op(o.initialize_test_module(p1key.pub)).run();
+    rell.test.tx().op(o.initialize_test_module(c.initial_provider.pub)).run();
 }

@@ -1,8 +1,8 @@
 
 query get_provider (pubkey) = provider @ { pubkey };
 
-query get_nodes_by_provider(provider_key:pubkey) {
-    return node @* { provider @ { provider_key } } (
+query get_nodes_by_provider(pubkey) {
+    return node @* { provider @ { pubkey } } (
         .pubkey,
         .active,
         .host,

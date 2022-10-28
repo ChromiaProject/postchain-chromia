@@ -3,8 +3,13 @@
 import ^^.*;
 import ^^.test.ops.*;
 import ^^.test.setup.*;
+import ^.util.constants.*;
 import ^^.util.*;
-
+import ^^^.cluster.cluster_op.*;
+import ^^^.container.container_proposal.*;
+import ^^^.container.container_op.*;
+import ^^^.model.util.constants;
+val p1key = initial_provider;
 
 // Adding someone to system cluster will be through enroll system role and not this operation (propose_provider_is_system)
 function test_add_provider_to_system_cluster() {
@@ -32,7 +37,7 @@ function test_add_node_to_cluster() {
     setup_module();
 
     val system_cluster = system_cluster();
-    val p1 = p1();
+    val p1 = initial_provider();
 
     // asserting node added
     assert_equals(
@@ -62,7 +67,7 @@ function test_remove_cluster() {
 
     // 3. Adding a new cluster
     rell.test.tx().op(
-        create_cluster(rell.test.pubkeys.alice, "cluster1", list(), voter_sets.system_p, voter_sets.system_p)
+        create_cluster(rell.test.pubkeys.alice, "cluster1", voter_sets.system_p, list())
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting cluster1 added

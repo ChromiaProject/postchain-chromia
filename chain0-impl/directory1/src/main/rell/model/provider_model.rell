@@ -39,7 +39,7 @@ namespace roles {
     */
 	entity deploy { key provider, container; }
 
-	function has_deploy_access(provider, container) = provider.active and exists(deploy @? { provider, container });
+	function has_deploy_access(provider, container) = provider.active and exists(voter_set_member @? { provider, container.deployer });
 
 }
 

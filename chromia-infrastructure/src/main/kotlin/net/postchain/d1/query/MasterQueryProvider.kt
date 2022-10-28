@@ -4,7 +4,7 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
-import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.PostchainQuery
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
@@ -12,15 +12,15 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import java.net.URL
 import java.time.Duration
 
-object MasterClientProvider {
+object MasterQueryProvider {
 
-    fun getClient(appConfig: AppConfig, blockchainRid: BlockchainRid): PostchainClient {
+    fun getClient(appConfig: AppConfig, blockchainRid: BlockchainRid): PostchainQuery {
         return ConcretePostchainClientProvider().createClient(
                 buildConfig(appConfig, blockchainRid = blockchainRid)
         )
     }
 
-    fun getChain0Client(appConfig: AppConfig): PostchainClient {
+    fun getChain0Client(appConfig: AppConfig): PostchainQuery {
         return ConcretePostchainClientProvider().createClient(
                 buildConfig(appConfig, queryByChainId = 0L)
         )
@@ -28,7 +28,7 @@ object MasterClientProvider {
 
     private fun buildConfig(
             appConfig: AppConfig,
-            blockchainRid: BlockchainRid = BlockchainRid(byteArrayOf()),
+            blockchainRid: BlockchainRid = BlockchainRid.ZERO_RID,
             queryByChainId: Long? = null
     ): PostchainClientConfig {
         val restApiUrl = getMasterRestApiUrl(appConfig)
