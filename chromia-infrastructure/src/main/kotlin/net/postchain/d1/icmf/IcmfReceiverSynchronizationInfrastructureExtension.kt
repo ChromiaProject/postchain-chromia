@@ -18,7 +18,7 @@ import net.postchain.d1.query.LocalQueryProvider
 import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXModuleAwareness
+import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.DappBlockchainConfiguration
 import java.time.Duration
 
@@ -31,7 +31,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-        if (configuration is GTXModuleAwareness) {
+        if (configuration is GTXModuleAware) {
             getIcmfReceiverSpecialTxExtension(configuration.module)?.let { txExt ->
                 val clusterManagement = createClusterManagement(configuration)
                 val clientProvider = createClientProvider(clusterManagement)

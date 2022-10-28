@@ -10,8 +10,8 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXModuleAwareness
-import net.postchain.managed.config.ManagedDataSourceAwareness
+import net.postchain.gtx.GTXModuleAware
+import net.postchain.managed.config.ManagedDataSourceAware
 
 open class AnchorProcessManagerExtension(
     postchainContext: PostchainContext
@@ -29,7 +29,7 @@ open class AnchorProcessManagerExtension(
         val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
 
-        if (cfg is GTXModuleAwareness && cfg is ManagedDataSourceAwareness) {
+        if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
@@ -52,7 +52,7 @@ open class AnchorProcessManagerExtension(
         } as AnchorSpecialTxExtension?
     }
 
-    open fun createClusterManagement(configuration: ManagedDataSourceAwareness): ClusterManagement =
+    open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
         ClusterManagementImpl(object : PostchainQuery {
             override fun querySync(name: String, gtv: Gtv): Gtv = configuration.dataSource.query(name, gtv)
         })
