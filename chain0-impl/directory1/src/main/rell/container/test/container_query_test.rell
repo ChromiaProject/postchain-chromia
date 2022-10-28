@@ -3,6 +3,7 @@
 import ^.helpers.*;
 import ^^.*;
 import ^^.container_op.*;
+import ^^^.cluster.cluster_op.*;
 import ^^^.common.test.setup.*;
 import ^^^.common.test.ops.*;
 import ^^^.common.test.util.constants.*;
@@ -21,7 +22,7 @@ function test_get_cluster_containers() {
 
     // Adding `bar_cluster` cluster and `bar` container
     rell.test.tx().op(
-        create_cluster(initial_provider.pub, "bar_cluster", list(), voter_sets.system_p, voter_sets.system_p)
+        create_cluster(initial_provider.pub, "bar_cluster", voter_sets.system_p, list<pubkey>())
     ).sign(initial_provider).run();
     rell.test.tx().op(
         propose_container(initial_provider.pub, "bar_cluster", "bar", voter_sets.system_p)
