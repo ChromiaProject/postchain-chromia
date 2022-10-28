@@ -26,7 +26,6 @@
 entity cluster {
     key name;
     governance: voter_set; // who controls the cluster
-    mutable capacity: integer; // How many containers it can contain
     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
 }
 

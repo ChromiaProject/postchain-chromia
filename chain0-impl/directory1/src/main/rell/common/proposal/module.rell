@@ -67,12 +67,6 @@ entity pending_cluster_provider {
 	add: boolean;
 }
 
-entity pending_cluster_deployer {
-	key proposal;
-	key cluster;
-	deployer: voter_set;
-}
-
 entity pending_remove_cluster {
 	key proposal;
 	key cluster;
