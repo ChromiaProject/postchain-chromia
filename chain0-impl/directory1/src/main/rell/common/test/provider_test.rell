@@ -11,8 +11,8 @@ function test_register_provider() {
     val node_provider = rell.test.keypairs.trudy;
 
     rell.test.tx()
-        .op(register_provider(initial_provider.pub, dapp_provider.pub, false))
-        .op(register_provider(initial_provider.pub, node_provider.pub, true))
+        .op(register_provider(initial_provider.pub, dapp_provider.pub, provider_tier.COMMUNITY_NODE_PROVIDER))
+        .op(register_provider(initial_provider.pub, node_provider.pub, provider_tier.NODE_PROVIDER))
         .sign(initial_provider)
         .run();
 
@@ -35,7 +35,7 @@ function test_register_provider() {
 
     // Node provider cannot add node provider
     rell.test.tx()
-        .op(register_provider(node_provider.pub, x"03", true))
+        .op(register_provider(node_provider.pub, x"03", provider_tier.NODE_PROVIDER))
         .sign(node_provider)
         .run_must_fail();
 

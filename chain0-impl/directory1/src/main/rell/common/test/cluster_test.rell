@@ -16,7 +16,7 @@ function test_add_provider_to_system_cluster() {
     setup_module();
 
     rell.test.tx()
-        .op(register_provider(p1key.pub, rell.test.pubkeys.bob, true))
+        .op(register_provider(p1key.pub, rell.test.pubkeys.bob, provider_tier.NODE_PROVIDER))
         .sign(p1key)
         .run();
 

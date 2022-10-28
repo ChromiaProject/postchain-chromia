@@ -15,6 +15,7 @@ import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
@@ -425,7 +426,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().registerProviderOperation(
                 config.pubkey().data,
                 PubKey(key),
-                nodeProvider
+                if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
         )
     }
 

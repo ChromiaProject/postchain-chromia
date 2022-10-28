@@ -39,7 +39,7 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
 	register_and_enable_provider(
 		initial_provider, 
-		tier = 1, 
+		provider_tier.NODE_PROVIDER, 
 		cluster = null, 
 		voter_set = null, 
 		enabled_by_default = true

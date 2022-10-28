@@ -14,6 +14,7 @@ import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
+import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
@@ -161,7 +162,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Adding node2 to the cluster")
         consoleLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, true)
+            .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
             .postTransactionUntilConfirmed("Register p2 as system")
 
@@ -191,7 +192,7 @@ internal class Directory1DeploymentIT {
         consoleLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, true)
+            .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
             .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
             .postTransactionUntilConfirmed("Register p3 as system")
 
