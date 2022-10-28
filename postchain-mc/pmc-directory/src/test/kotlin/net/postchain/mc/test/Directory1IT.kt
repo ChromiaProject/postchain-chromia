@@ -14,7 +14,6 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.common0.CliExecution
@@ -24,7 +23,6 @@ import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Paths
-import java.util.Comparator.naturalOrder
 import kotlin.test.*
 
 class Directory1IT : ManagedModeTest() {
@@ -168,45 +166,6 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), true))
         members = provExecutor.listVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
-    }
-
-    @Test
-    fun testGetContainers() {
-        // add new container to system cluster
-        val containerName = "container1"
-        doAndBuildBlocks(
-                provConfig,
-                provExecutor.createContainerAsync(containerName, systemClusterName, voterSetSystemP)
-        )
-
-        val expected = arrayOf("container1", "system")
-
-        fun List<Gtv>.names() = map { it.asDict()["name"]?.asString() }
-                .sortedWith(naturalOrder<String>())
-                .toTypedArray()
-
-        // asserting all containers
-        val all = prov2Executor.listContainers().map { it.name }.toTypedArray()
-        assertContentEquals(expected, all)
-
-        // asserting cluster containers
-        val clusterContainers = prov2Executor.listClusterContainers("system").map { it.name }.toTypedArray()
-        assertContentEquals(expected, clusterContainers)
-
-        // asserting UNKNOWN cluster containers
-        val unknownClusterContainers = prov2Executor.listClusterContainers("unknown").map { it.name }.toTypedArray()
-        assertContentEquals(arrayOf(), unknownClusterContainers)
-
-        // asserting node containers
-        val nodeContainers = prov2Executor.listContainersForNode(nodes[0].pubKey).map { it.name }.toTypedArray()
-        assertContentEquals(expected, nodeContainers)
-
-        // asserting UNKNOWN node containers
-        val unknownKey = KeyPairHelper.pubKeyHex(77) // node 77
-        assertThrows<UserMistake> {
-            prov2Executor.listContainersForNode(unknownKey)
-
-        }
     }
 
     @Test
