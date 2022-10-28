@@ -3,7 +3,7 @@
 operation propose_cluster_provider(my_pubkey: pubkey, cluster_name: text, provider_pubkey: pubkey, add: boolean) {
 	val me = require_is_provider_with_rl(my_pubkey);
 	val provider = require_provider(provider_pubkey);
-	require(roles.has_node_access(provider), "Provider needs 'Node provider' role to be a part of a cluster");
+	require_node_access(provider);
 	//check that provider authority and that it is a cluster governor
 	val cluster = require_cluster(cluster_name);
 	require(cluster.name != clusters.system, "Cannot add provider to system cluster manually");
@@ -23,7 +23,7 @@ operation propose_enable_provider(my_pubkey: pubkey, enable_pubkey: pubkey) {
 	if (other_prov.tier == provider_tier.COMMUNITY_NODE_PROVIDER and roles.has_node_access(me)) {
 		update_provider_state(other_prov, true);		
 	} else {
-		require_is_system_provider(my_pubkey);
+		require_system_access(me);
 		//If proposal already exist, do not add again.
 		if (empty(pending_provider_state @* { .provider == other_prov, .active == true } limit 1)) {
 			val system_voter_set = system_p_voter_set();

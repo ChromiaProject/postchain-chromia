@@ -24,8 +24,6 @@ query get_provider_data (pubkey) {
     return provider @ { pubkey } ($.to_struct());
 }
 
-query is_system_provider(pubkey) = roles.has_system_access(require_provider(pubkey));
-
 query get_all_providers(): list<struct<provider>> {
     return provider @* {} ($.to_struct());
 }
