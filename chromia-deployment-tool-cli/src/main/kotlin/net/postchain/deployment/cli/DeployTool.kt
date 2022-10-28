@@ -26,7 +26,7 @@ abstract class DeployXmlCommand(name: String, help: String) : CliktCommand(name 
 
     val sourceDir by option("-d", "--source-dir", help = "Rell source dir (defaults to 'rell/src')").path(mustExist = true, canBeDir = true, canBeFile = false).default(Path.of("rell/src"))
 
-    val outputDir by option("-o", "--output-dir", help = "Generated configuration output dir (defaults to 'generated-configuration')").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("generated-configuration"))
+    val outputDir by option("-o", "--output-dir", help = "Generated configuration output dir (defaults to 'rell/build')").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("rell/build"))
 
     val deployXmlFile by argument(name = "deploy.xml", help = "(defaults to 'rell/config/deploy.xml')").path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
 }
