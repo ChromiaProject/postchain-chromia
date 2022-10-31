@@ -39,12 +39,12 @@ class ClusterAnchorSubnodePipe(
             return null
         }
 
-        return if (!block.isNull()) {
+        return if (block != null) {
             ClusterAnchorPacket(
                     currentPointer,
-                    block["rid"]!!.asByteArray(true),
-                    block["header"]!!.asByteArray(true),
-                    block["witness"]!!.asByteArray(true)
+                    block.rid,
+                    block.header,
+                    block.witness
             )
         } else {
             null
