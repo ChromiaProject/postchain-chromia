@@ -2,12 +2,30 @@ module;
 
 import ^^.*;
 
-operation initialize_test_module(pubkey, majority_threshold:integer = 0) {
-	initialize_module(pubkey, "localhost", 9870, 1000, majority_threshold);
+operation initialize_test_module(
+    pubkey,
+    majority_threshold: integer = 0,
+    provider_quota_max_actions_per_day: integer = 100,
+    provider_quota_max_clusters: integer = -1,
+    provider_quota_max_containers: integer = -1
+) {
+	initialize_module(
+	    pubkey,
+	    "localhost",
+	    9870,
+        majority_threshold = majority_threshold,
+        provider_quota_max_actions_per_day = provider_quota_max_actions_per_day,
+        provider_quota_max_clusters = provider_quota_max_clusters,
+        provider_quota_max_containers = provider_quota_max_containers
+    );
 }
 
 operation create_test_provider(name, pubkey, provider_tier = provider_tier.NODE_PROVIDER) {
-	if (provider_quota @? { .tier == provider_tier } == null) create provider_quota(provider_tier, provider_quota_type.max_actions_per_day, value = 100);
+	if (empty(provider_quota @* { .tier == provider_tier })) {
+	    create provider_quota(provider_tier, provider_quota_type.max_actions_per_day, value = 100);
+	    create provider_quota(provider_tier, provider_quota_type.max_clusters, value = -1);
+        create provider_quota(provider_tier, provider_quota_type.max_containers, value = -1);
+	}
 	val p = create provider(pubkey, name, active = true, provider_tier);
 	create provider_rl_state(p, points = 10000, last_update = 0);
 }

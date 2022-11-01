@@ -5,6 +5,7 @@ import ^.common.util.*;
 
 function create_container_impl(me: pubkey, name, cluster_name: text, consensus_threshold: integer, deployers: list<pubkey>) {
     val provider = require_is_provider_with_rl(me);
+    require_provider_quota(provider, provider_quota_type.max_containers);
     val cluster = require_cluster(cluster_name);
     require_cluster_governor(cluster, provider);
     require(consensus_threshold >= -1 and consensus_threshold <= deployers.size(), "Invalid threshold");

@@ -28,10 +28,12 @@ entity provider {
 	mutable system: boolean = false;
 }
 
-// type of quota for a provider
+// Type of quota for a provider
 enum provider_quota_type {
-	max_nodes,
-	max_actions_per_day
+	max_actions_per_day,
+	max_nodes, // not used now
+    max_clusters,
+    max_containers
 }
 
 entity provider_quota {

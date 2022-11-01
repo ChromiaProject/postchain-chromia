@@ -6,6 +6,17 @@ import ^^^.model.*;
 
 function initial_provider() = provider @ { c.initial_provider.pub };
 
-function setup_module() {
-    rell.test.tx().op(o.initialize_test_module(c.initial_provider.pub)).run();
+function setup_module(
+    provider_quota_max_actions_per_day: integer = 100,
+    provider_quota_max_clusters: integer = -1,
+    provider_quota_max_containers: integer = -1
+) {
+    rell.test.tx().op(
+        o.initialize_test_module(
+            c.initial_provider.pub,
+            provider_quota_max_actions_per_day = provider_quota_max_actions_per_day,
+            provider_quota_max_clusters = provider_quota_max_clusters,
+            provider_quota_max_containers = provider_quota_max_containers
+        )
+    ).run();
 }

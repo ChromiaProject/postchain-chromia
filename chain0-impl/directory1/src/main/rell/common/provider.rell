@@ -73,10 +73,24 @@ function provider_rate_limit(provider) {
     );
 }
 
-operation transfer_action_points (from: provider, to: provider, amount: integer) {
+operation transfer_action_points(from: provider, to: provider, amount: integer) {
 	require_provider_auth_with_rl(from);
 	require( provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
 	update provider_rl_state @ { from } ( .points -= amount );
 	update provider_rl_state @ { to } ( .points += amount );
 }
 
+function require_provider_quota(provider, quota_type: provider_quota_type) {
+    val quota = provider_quota @? { .tier == provider.tier, quota_type } (.value) ?: -1;
+    if (quota > 0) {
+        when (quota_type) {
+            max_nodes -> _require_provider_quota(quota, quota_type, node @* { provider } (@sum 1)[0]);
+            max_clusters -> _require_provider_quota(quota, quota_type, cluster @* { .proposed_by == provider } (@sum 1)[0]);
+            max_containers -> _require_provider_quota(quota, quota_type, container @* { .proposed_by == provider } (@sum 1)[0]);
+        }
+    }
+}
+
+function _require_provider_quota(quota: integer, quota_type: provider_quota_type, count: integer) {
+    require(count < quota , "Provider quota exceeded: " + quota_type);
+}
