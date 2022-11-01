@@ -37,7 +37,7 @@ import kotlin.test.assertEquals
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-internal class Directory1DeploymentIT {
+internal class Directory1DeploymentNightly {
 
     companion object : ManagedModeBase("/directory1/rell") {
         val subnodeLogger = KotlinLogging.logger("SubNode")
