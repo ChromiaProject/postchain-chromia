@@ -6,6 +6,7 @@ import net.postchain.chain0.common.queries.listClustersOfNode
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.configOption
 
@@ -19,7 +20,7 @@ class CommandGetNodeInfo : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val node = client.getNodeData(key.hexStringToByteArray())
+        val node = client.getNodeData(PubKey(key))
         println("Active: ${node.active}")
         println("Host: ${node.host}")
         println("Port: ${node.port}")

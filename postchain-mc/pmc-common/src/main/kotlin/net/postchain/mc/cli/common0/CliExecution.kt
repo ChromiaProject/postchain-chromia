@@ -1,20 +1,31 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.chain0.common.*
+import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
+import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.cluster.addNodeToClusterOperation
+import net.postchain.chain0.common.cluster.addProviderToClusterOperation
 import net.postchain.chain0.common.proposal.*
-import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.chain0.common.voting.getVoterSetGovernor
+import net.postchain.chain0.common.voting.getVoterSetMembers
+import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.nm_api.nmComputeBlockchainList
+import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.types.RowId
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -40,69 +51,13 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun getProviderInfo(key: String): Gtv {
-        var returnVal: Gtv? = null
-        doInTryBlock {
-            val info = getPostchainClient().querySync(
-                    "get_provider_data",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            )
-            returnVal = info
-        }
-        return returnVal!!
-    }
+    fun getProviderInfo(key: String) = getPostchainClient().getProviderData(PubKey(key))
 
-    fun getClusterInfo(name: String): Gtv? {
-        var info: Gtv? = null
+    fun getClusterInfo(name: String) = getPostchainClient().getClusterData(name)
 
-        doInTryBlock {
-            info = getPostchainClient().querySync(
-                    "get_cluster_data",
-                    gtv("name" to gtv(name))
-            )
-        }
+    fun getClusterProviders(name: String) = getPostchainClient().getClusterProviders(name)
 
-        return info
-    }
-
-    fun getClusterProviders(name: String): List<Gtv> {
-        val providers = mutableListOf<Gtv>()
-
-        doInTryBlock {
-            getPostchainClient().querySync(
-                    "get_cluster_providers",
-                    gtv("name" to gtv(name))
-            ).asArray().forEach(providers::add)
-        }
-
-        return providers
-    }
-
-    fun getClusterNodes(name: String): List<Gtv> {
-        val nodes = mutableListOf<Gtv>()
-
-        doInTryBlock {
-            getPostchainClient().querySync(
-                    "get_cluster_nodes",
-                    gtv("name" to gtv(name))
-            ).asArray().forEach(nodes::add)
-        }
-
-        return nodes
-    }
-
-    fun listProvidersActionPoints(key: String): Long {
-        var points: Gtv? = null
-
-        doInTryBlock {
-            points = getPostchainClient().querySync(
-                    "get_provider_points",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            )
-        }
-
-        return points!!.asInteger()
-    }
+    fun listProvidersActionPoints(key: String) = getPostchainClient().getProviderPoints(PubKey(key))
 
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
@@ -141,187 +96,19 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnVal!!
     }
 
-    fun getBlockchainLastHeight(blockchainRID: String): Long {
-        var returnVal = -1L
-        doInTryBlock {
-            val height = getPostchainClient().querySync(
-                    "get_blockchain_last_height",
-                    gtv("blockchain_rid" to gtv(blockchainRID.hexStringToByteArray()))
-            ).asInteger()
-            returnVal = height
-        }
-        return returnVal
-    }
+    fun getBlockchainLastHeight(blockchainRID: String) = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
 
-    fun getNodeListVersion(): Long {
-        var returnVal = 0L
-        doInTryBlock {
-            val version = getPostchainClient().querySync(
-                    "nm_get_peer_list_version",
-                    gtv("type" to gtv("nm_get_peer_list_version"))
-            ).asInteger()
-            returnVal = version
-        }
-        return returnVal
-    }
+    fun getNodeListVersion() = getPostchainClient().nmGetPeerListVersion()
 
-    fun listNodesWithProvider(): List<Gtv> {
-        val nodeList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val nList = getPostchainClient().querySync(
-                    "get_nodes_with_provider",
-                    gtv("type" to gtv("get_nodes_with_provider"))
-            )
-                    .asArray()
-            nodeList.addAll(nList.map { it })
-        }
-        return nodeList
-    }
-
-    fun listProviders(): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "get_all_providers",
-                    gtv("type" to gtv("get_all_providers"))
-            )
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
-
-    fun listClusterLimits(name: String): Map<String, Long> {
-        var listLimits = mapOf<String, Long>()
-        doInTryBlock {
-            val d = getPostchainClient().querySync(
-                    "nm_get_cluster_limits",
-                    gtv("name" to gtv(name))
-            )
-                    .asDict()
-            listLimits = d.mapValues { it.value.asInteger() }
-        }
-        return listLimits
-    }
+    fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
 
 
-    fun listContainerLimits(name: String): Map<String, Long> {
-        var listLimits = mapOf<String, Long>()
-        doInTryBlock {
-            val d = getPostchainClient().querySync(
-                    "nm_get_container_limits",
-                    gtv("name" to gtv(name))
-            )
-                    .asDict()
-            listLimits = d.mapValues { it.value.asInteger() }
-        }
-        return listLimits
-    }
+    fun listClustersForProvider(key: String) = getPostchainClient().getProviderClusters(PubKey(key))
 
     /**
      * key - publicKey of node
      */
-    fun listContainersForNode(key: String): List<Gtv> {
-        val containers = arrayListOf<Gtv>()
-
-        doInTryBlock {
-            val isNode = getPostchainClient().querySync(
-                    "is_node",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            ).asBoolean()
-
-            if (isNode) {
-                getPostchainClient().querySync(
-                        "get_node_containers",
-                        gtv("pubkey" to gtv(key.hexStringToByteArray()))
-                ).asArray().forEach(containers::add)
-            }
-        }
-
-        return containers
-    }
-
-    fun listContainers(): List<Gtv> {
-        val containers = arrayListOf<Gtv>()
-        doInTryBlock {
-            getPostchainClient().querySync("get_containers")
-                    .asArray().forEach(containers::add)
-        }
-        return containers
-    }
-
-    fun listClusterContainers(cluster: String): List<Gtv> {
-        val containers = arrayListOf<Gtv>()
-        doInTryBlock {
-            getPostchainClient().querySync(
-                    "get_cluster_containers",
-                    gtv("cluster_name" to gtv(cluster))
-            ).asArray().forEach(containers::add)
-        }
-        return containers
-    }
-
-    fun listClustersForProvider(key: String): List<String> {
-        val listClusters = arrayListOf<String>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "get_provider_clusters", gtv(
-                    "pubkey" to gtv(key.hexStringToByteArray())
-            )
-            ).asArray()
-            listClusters.addAll(list.map { it.asString() })
-        }
-        return listClusters
-    }
-
-    /**
-     * key - publicKey of node
-     */
-    fun listBlockchainsForNode(key: String): List<ByteArray> {
-        val listBlockChain = arrayListOf<ByteArray>()
-        doInTryBlock {
-            val isNode = getPostchainClient().querySync(
-                    "is_node",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            ).asBoolean()
-            if (isNode) {
-                val list = getPostchainClient().querySync(
-                        "nm_compute_blockchain_list", gtv(
-                        "node_id" to gtv(key.hexStringToByteArray())
-                )
-                ).asArray()
-                listBlockChain.addAll(list.map { it.asByteArray() })
-            }
-        }
-        return listBlockChain
-    }
-
-    /**
-     * key - publicKey of node
-     */
-    fun listBlockchainsForContainer(name: String): List<ByteArray> {
-        val listBlockChain = arrayListOf<ByteArray>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "nm_get_blockchains_for_container", gtv(
-                    "container_name" to GtvString(name)
-            )
-            ).asArray()
-            listBlockChain.addAll(list.map { it.asByteArray() })
-        }
-        return listBlockChain
-    }
-
-    fun getContainerForBlockchain(blockchainRid: String): String? {
-        var container: String? = null
-        doInTryBlock {
-            container = getPostchainClient().querySync(
-                    "nm_get_container_for_blockchain",
-                    gtv("blockchain_rid" to gtv(blockchainRid.hexStringToByteArray()))
-            ).asString()
-        }
-        return container
-    }
+    fun listBlockchainsForNode(key: String) = getPostchainClient().nmComputeBlockchainList(key.hexStringToByteArray())
 
     fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
         val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
@@ -347,7 +134,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
-        return getPostchainClient().getBlockchains(includeInactive).map { it.rid }
+        return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
     }
 
     fun listBlockchainSigners(blockchainRID: String): List<Gtv> {
@@ -365,42 +152,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnList
     }
 
-    fun listVoterSetMembers(name: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "get_voter_set_members",
-                    gtv("name" to GtvString(name))
-            )
+    fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
 
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
+    fun listVoterSets() = getPostchainClient().getVoterSets()
 
-    fun listVoterSets(): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync("list_voter_sets").asArray()
-            returnList.addAll(list.map { it["name"]!! })
-        }
-        return returnList
-    }
-
-    fun getVoterSetGovernor(name: String): String {
-        var returnValue = ""
-        doInTryBlock {
-            val governorName = getPostchainClient().querySync(
-                    "get_voter_set_governor",
-                    gtv("name" to GtvString(name))
-            )
-
-                    .asString()
-            returnValue = governorName
-        }
-        return returnValue
-    }
+    fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
 
     fun listBlockchainReplicas(blockchainRID: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
@@ -438,7 +194,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         doInTryBlock {
             val list = getPostchainClient().querySync(
                     "get_nodes_by_provider",
-                    gtv("provider_key" to gtv(key.hexStringToByteArray()))
+                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
             )
 
                     .asArray()
@@ -447,34 +203,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnList
     }
 
-    fun listClusters(): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "list_clusters",
-                    gtv("type" to gtv("list_clusters"))
-            )
+    fun listClusters() = getPostchainClient().listClusters()
 
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
-
-    fun listProposalsSince(rowid: Long): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().querySync(
-                    "get_proposals_since", gtv(
-                    "since" to gtv(rowid)
-            )
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
+    fun listProposalsSince(rowid: Long) = getPostchainClient().getProposalsSince(RowId(rowid))
 
     open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.postSync()
@@ -593,27 +324,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterLimits(clusterName: String, limitMap: Map<String, Long>) {
-        sendTxSync(
-                proposeClusterLimitsAsync(clusterName, limitMap),
-                "Cluster limits proposed",
-                "Failed proposing new cluster limits"
-        )
-    }
-
     fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
         sendTxSync(
                 proposeClusterProviderAsync(clusterName, key, add),
                 "Cluster providers update proposed",
                 "Failed proposing cluster providers update"
-        )
-    }
-
-    fun proposeClusterDeployer(clusterName: String, key: String) {
-        sendTxSync(
-                proposeClusterDeployerAsync(clusterName, key),
-                "Cluster deployer update proposed",
-                "Failed proposing cluster deployer"
         )
     }
 
@@ -630,14 +345,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 proposeVoterSetMemberAsync(voterSet, member, add),
                 "Voter set member update proposed",
                 "Failed proposing voter set member update"
-        )
-    }
-
-    fun proposeContainerLimits(containerName: String, limitMap: Map<String, Long>) {
-        sendTxSync(
-                proposeContainerLimitsAsync(containerName, limitMap),
-                "Container limits proposed",
-                "Failed proposing new container limits"
         )
     }
 
@@ -714,7 +421,11 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
 
     fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
-        return makeTransactionWithNop().registerProviderOperation(config.pubkey().key, key.hexStringToByteArray(), tier)
+        return makeTransactionWithNop().registerProviderOperation(
+                config.pubkey().data,
+                PubKey(key),
+                tier
+        )
     }
 
     fun createVoterSetAsync(
@@ -744,32 +455,34 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     /** Add new node. Optionally, also add it to a cluster */
     fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addNodeOperation(config.signers.first().pubKey.key, key.hexStringToByteArray(), host, port, apiUrl, if (clusterName == "") listOf() else listOf(clusterName))
+        return makeTransactionWithNop().addNodeOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray(),
+                host,
+                port,
+                apiUrl,
+                if (clusterName == "") listOf() else listOf(clusterName)
+        )
     }
 
     /** Add existing provider to existing cluster
      * */
     fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addProviderToClusterOperation(config.pubkey().key, key.hexStringToByteArray(), clusterName)
+        return makeTransactionWithNop().addProviderToClusterOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray(),
+                clusterName
+        )
     }
 
     /** Add existing node to existing cluster
      * */
     fun addNodeToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        val provider = config.signers.first().pubKey.key
+        val provider = config.pubkey().data
         return makeTransactionWithNop().addNodeToClusterOperation(
                 provider,
                 key.hexStringToByteArray(), clusterName
         )
-    }
-
-    /** Propose a new container resource limits.
-     * Who can update container resource limits? Cluster's deployer voter set.
-     * */
-    fun proposeContainerLimitsAsync(containerName: String, limits: Map<String, Long>): TransactionBuilder {
-        val currentLimits = listContainerLimits(containerName).toMutableMap()
-        currentLimits.putAll(limits)
-        return makeTransactionWithNop().proposeContainerLimitsOperation(config.pubkey().key, containerName, currentLimits["ram"]!!, currentLimits["cpu"]!!, currentLimits["storage"]!!)
     }
 
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
@@ -777,17 +490,6 @@ open class CliExecution(val config: PostchainClientConfig) {
      * */
     fun createContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
         return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
-    }
-
-    /** Propose new cluster resource limits.
-     * Who can update cluster limits? Cluster governance voter set.
-     * */
-    fun proposeClusterLimitsAsync(clusterName: String, limits: Map<String, Long>): TransactionBuilder {
-        val currentLimits = listClusterLimits(clusterName).toMutableMap()
-        currentLimits.putAll(limits)
-        return makeTransactionWithNop().proposeClusterLimitsOperation(
-            config.pubkey().key, clusterName, currentLimits["ram"]!!, currentLimits["cpu"]!!, currentLimits["storage"]!!
-        )
     }
 
     fun transferActionPointsAsync(to: String, amount: Long): TransactionBuilder {
@@ -798,11 +500,11 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun createClusterAsync(
             newClusterName: String,
-            providerKeys: String?,
-            governorSet: String,
-            deployerSet: String
+            providerKeys: String,
+            governorSet: String
     ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(config.pubkey().key, newClusterName, providerKeys?.split(",")?.map { it.hexStringToByteArray() }, governorSet, deployerSet)
+        return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
+
     }
 
     fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
@@ -842,11 +544,15 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().proposeProviderIsSystemOperation(config.pubkey().key, pubKey.hexStringToByteArray(), isSystem)
+        return makeTransactionWithNop().proposeProviderIsSystemOperation(
+                config.pubkey().data,
+                pubKey.hexStringToByteArray(),
+                isSystem
+        )
     }
 
     fun proposeEnableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeEnableProviderOperation(config.pubkey().key, key.hexStringToByteArray())
+        return makeTransactionWithNop().proposeEnableProviderOperation(config.pubkey().data, key.hexStringToByteArray())
     }
 
     fun revokeProposalAsync(rowid: Long): TransactionBuilder {
@@ -856,7 +562,10 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeDisableProviderOperation(config.pubkey().key, key.hexStringToByteArray())
+        return makeTransactionWithNop().proposeDisableProviderOperation(
+                config.pubkey().data,
+                key.hexStringToByteArray()
+        )
     }
 
     fun proposeConfigurationAsync(
@@ -868,7 +577,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     ): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return makeTransactionWithNop().proposeConfigurationAtOperation(
-            config.pubkey().key, blockchainRID.hexStringToByteArray(), data, height, force
+                config.pubkey().data, BlockchainRid.buildFromHex(blockchainRID), data, height, force
         )
     }
 
@@ -877,7 +586,7 @@ open class CliExecution(val config: PostchainClientConfig) {
      * can vote for a pending configuration.
      */
     fun voteAsync(rowid: Long, yes: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().makeVoteOperation(config.pubkey().key, rowid, yes)
+        return makeTransactionWithNop().makeVoteOperation(config.pubkey().data, rowid, yes)
     }
 
     /**
@@ -895,7 +604,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().proposeBlockchainOperation(
-                config.pubkey().key, data, name, containerName
+                config.pubkey().data, data, name, containerName
         )
     }
 
@@ -906,13 +615,7 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterProviderOperation(
-            config.pubkey().key, clusterName, provider.hexStringToByteArray(), add
-        )
-    }
-
-    fun proposeClusterDeployerAsync(clusterName: String, newDeployer: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeClusterDeployerOperation(
-            config.pubkey().key, clusterName, newDeployer
+                config.pubkey().data, clusterName, provider.hexStringToByteArray(), add
         )
     }
 
@@ -925,13 +628,18 @@ open class CliExecution(val config: PostchainClientConfig) {
         val newMember = if (add) member else null
         val removeMember = if (!add) member else null
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().key, voterSet, null, null, newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(), removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
+                config.pubkey().data,
+                voterSet,
+                null,
+                null,
+                newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
+                removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
         )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-            config.pubkey().key, voterSetName, null, newGovernor, listOf(), listOf()
+                config.pubkey().data, voterSetName, null, newGovernor, listOf(), listOf()
         )
     }
 }

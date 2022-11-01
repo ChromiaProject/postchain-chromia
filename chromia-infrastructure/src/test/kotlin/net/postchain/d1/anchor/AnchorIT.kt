@@ -119,12 +119,11 @@ class AnchorIT : ManagedModeTest() {
                     query(
                             anchorChain.nodes()[0],
                             it,
-                            "icmf_get_headers_with_messages_between_heights",
+                            "icmf_get_headers_with_messages_after_height",
                             gtv(
                                     mapOf(
                                             "topic" to gtv("my-topic"),
-                                            "from_anchor_height" to gtv(0),
-                                            "to_anchor_height" to gtv(1)
+                                            "from_anchor_height" to gtv(-1)
                                     )
                             ),
                             anchorChain.chain

@@ -5,6 +5,10 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
+import de.m3y.kformat.table
+import net.postchain.chain0.common.queries.getClusterData
+import net.postchain.chain0.common.queries.getClusterNodes
+import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.*
 import net.postchain.mc.cli.util.PrintUtils.printClusters
@@ -14,28 +18,31 @@ class CommandGetClusterInfo : CliktCommand(
         help = "Get information about a cluster"
 ) {
 
-    private val config by configOption()
+    private val client by clientOption()
 
     private val name by nameOption("Cluster Name").required().validate(validateAlphaNumeric())
 
     private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
 
     override fun run() {
-        val clusterInfo = CliExecution(config).getClusterInfo(name)
-        if (clusterInfo != null) {
-            printClusters(listOf(clusterInfo))
+        with (client.getClusterData(name)) {
+            table {
 
-            val providers = CliExecution(config).getClusterProviders(name)
-            println(ProvidersPrinter.printProvidersNamePubKey(providers))
-            println()
+                row("", name)
+                row("", governor)
+                row("", deployer)
+                row("", isOperational.toString())
 
-            val nodes = CliExecution(config).getClusterNodes(name)
-            println(NodesPrinter.printNodes(nodes))
-            println()
-
-            println("Query returned successfully")
-        } else {
-            println("Can't run query")
-        }
+                row("")
+                client.getClusterProviders(name).forEach { provider ->
+                    row(provider.name, provider.pubkey.toString())
+                }
+                row("")
+                row("Nodes")
+                client.getClusterNodes(name).forEach { node ->
+                    row(node.pubkey)
+                }
+            }
+        }.render().also { println(it) }
     }
 }

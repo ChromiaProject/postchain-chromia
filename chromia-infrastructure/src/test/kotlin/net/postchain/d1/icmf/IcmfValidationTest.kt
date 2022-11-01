@@ -6,10 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
-import net.postchain.crypto.PrivKey
-import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -43,19 +40,19 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -85,19 +82,19 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -117,10 +114,9 @@ class IcmfValidationTest {
         ))
 
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-        val invalidSignerPrivKey = PrivKey(cryptoSystem.getRandomBytes(32))
-        val invalidSignerPubKey = PubKey(secp256k1_derivePubKey(invalidSignerPrivKey.key))
+        val invalidSigner = cryptoSystem.generateKeyPair()
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(invalidSignerPubKey.key, invalidSignerPrivKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(invalidSigner).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -137,7 +133,8 @@ class IcmfValidationTest {
 
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -157,7 +154,8 @@ class IcmfValidationTest {
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -173,20 +171,20 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val incorrectMessageBody = gtv("nej")
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -202,21 +200,20 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody0 = gtv("hej0")
-        val encodedMessageBody0 = GtvEncoder.encodeGtv(messageBody0)
         val messageBody1 = gtv("hej1")
-        val encodedMessageBody1 = GtvEncoder.encodeGtv(messageBody1)
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody0), cryptoSystem.digest(encodedMessageBody1)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody0, messageBody1),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -232,20 +229,20 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val injectedMessageBody = gtv("hej2")
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
@@ -262,20 +259,20 @@ class IcmfValidationTest {
         icmfReceiverSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
 
         val messageBody = gtv("hej")
-        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         // Header data indicates that primary is trying to skip messages from block 0
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 1, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData.fromMessageHashes(
-                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                        topic to TopicHeaderData.fromMessages(
+                                listOf(messageBody),
                                 cryptoSystem,
                                 0L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
-                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+                arrayOf(cryptoSystem.buildSigMaker(
+                        IcmfTestClusterManagement.keyPair).signDigest(blockRid))
         ).getRawData()
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 

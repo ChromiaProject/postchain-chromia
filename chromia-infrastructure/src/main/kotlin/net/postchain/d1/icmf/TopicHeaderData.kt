@@ -10,6 +10,8 @@ import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
 data class TopicHeaderData(val hash: ByteArray, val prevMessageBlockHeight: Long) {
     companion object : KLogging() {
@@ -37,16 +39,13 @@ data class TopicHeaderData(val hash: ByteArray, val prevMessageBlockHeight: Long
             return icmfHeaderData.asDict().mapValues { fromGtv(it.value) }
         }
 
-        private fun fromGtv(gtv: Gtv): TopicHeaderData = TopicHeaderData(gtv["hash"]!!.asByteArray(), gtv["prev_message_block_height"]!!.asInteger())
+        fun fromGtv(gtv: Gtv): TopicHeaderData = TopicHeaderData(gtv["hash"]!!.asByteArray(), gtv["prev_message_block_height"]!!.asInteger())
 
-        fun fromMessageHashes(messageHashes: List<ByteArray>, cryptoSystem: CryptoSystem, prevMessageBlockHeight: Long): TopicHeaderData =
-                TopicHeaderData(calculateMessagesHash(messageHashes, cryptoSystem), prevMessageBlockHeight)
+        fun fromMessages(messages: List<Gtv>, cryptoSystem: CryptoSystem, prevMessageBlockHeight: Long): TopicHeaderData =
+                TopicHeaderData(calculateMessagesHash(messages, cryptoSystem), prevMessageBlockHeight)
 
-        fun calculateMessagesHash(messageHashes: List<ByteArray>, cryptoSystem: CryptoSystem): ByteArray =
-                cryptoSystem.digest(messageHashes
-                        .fold(ByteArray(0)) { total, item ->
-                            total.plus(item)
-                        })
+        fun calculateMessagesHash(messages: List<Gtv>, cryptoSystem: CryptoSystem): ByteArray =
+                gtv(messages).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
     }
 
     fun toGtv(): Gtv = gtv("hash" to gtv(hash), "prev_message_block_height" to gtv(prevMessageBlockHeight))

@@ -20,7 +20,7 @@ operation create_container_from(me:pubkey, name, cluster_name:text, consensus_th
 operation add_container_deployer(me:pubkey, container_name:text, deployer_pubkey:pubkey) {
     val provider = require_is_provider_with_rl(me);
     val container = require_container(container_name);
-    require_cluster_deployer(container.cluster, provider);
+    require_cluster_governor(container.cluster, provider);
     val deployer = require_provider(deployer_pubkey);
     create voter_set_member(container.deployer, deployer);
 }
@@ -28,7 +28,7 @@ operation add_container_deployer(me:pubkey, container_name:text, deployer_pubkey
 operation remove_container_deployer(me:pubkey, container_name:text, deployer_pubkey:pubkey) {
     val provider = require_is_provider_with_rl(me);
     val container = require_container(container_name);
-    require_cluster_deployer(container.cluster, provider);
+    require_cluster_governor(container.cluster, provider);
     val deployer = require_provider(deployer_pubkey); 
     delete voter_set_member @? { container.deployer, deployer };
 }

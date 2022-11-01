@@ -2,9 +2,11 @@ module;
 
 import ^^.model.*;
 import ^^.common.proposal.*;
+import ^.*;
 
 enum container_proposal_type {
     create_container,
+    create_container_with_resource_limits,
     remove_container
 }
 
@@ -21,6 +23,18 @@ entity pending_container {
  	deployer: voter_set;
 }
 
+entity pending_container_with_resource_limits {
+	key proposal;
+	key name;
+ 	cluster;
+ 	container_type;
+ 	deployer: voter_set;
+ 	max_blockchains: integer;
+ 	cpu: integer;
+ 	ram: integer;
+ 	storage: integer;
+}
+
 entity pending_remove_container {
 	key proposal;
 	key container;
@@ -29,8 +43,9 @@ entity pending_remove_container {
 @extend(delete_other_proposal) function delete_container_proposal(proposal) {
     val container_proposal = container_proposal @? { proposal };
     if (container_proposal == null) return;
-    when(container_proposal.container_proposal_type) {
+    when (container_proposal.container_proposal_type) {
         create_container -> delete pending_container @ { proposal };
+        create_container_with_resource_limits -> delete pending_container_with_resource_limits @ { proposal };
         remove_container -> delete pending_remove_container @? { proposal };
     }
     delete container_proposal;
@@ -39,8 +54,9 @@ entity pending_remove_container {
 @extend(apply_other_voting_result) function apply_container_proposal(proposal) {
     val container_proposal = container_proposal @? { proposal };
     if (container_proposal == null) return;
-    when(container_proposal.container_proposal_type) {
+    when (container_proposal.container_proposal_type) {
         create_container -> apply_container(proposal);
+        create_container_with_resource_limits -> apply_container_with_resource_limits(proposal);
         remove_container -> apply_container_remove(proposal);
     }
 }
@@ -50,36 +66,63 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
 	val me = require_provider(my_pubkey);
 	val cluster = require_cluster(cluster_name);
 	val deployer = require_voter_set(deployer_name);
-	//check that provider authority and that it is cluster's deployer
+	// check that provider authority and that it is cluster's deployer
 	require_provider_auth_with_rl(me);
-	require_cluster_deployer(cluster, me);
-	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.deployer);
-    create pending_container(prop, name, cluster, container_type.isolated, deployer);
-    create container_proposal(prop, container_proposal_type.create_container);
-	internal_vote(me, prop, true);
+
+	// Require container resource limits are honored
+    val max_containers = cluster_resource_limit @? { cluster, .cluster_resource_limit_type == cluster_resource_limit_type.max_containers } (.value);
+    if (max_containers != null and max_containers != -1) {
+        val cluster_container_count = container @* { cluster } (@sum 1)[0];
+        require(cluster_container_count + 1 <= max_containers, "Can't propose container, cluster %s is full".format(cluster_name));
+    }
+
+    val max_blockchains = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_max_blockchains);
+    val cpu = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_cpu);
+    val ram = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_ram);
+    val storage = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_storage);
+
+	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.governance);
+    create pending_container_with_resource_limits(
+        prop, name, cluster, container_type.isolated, deployer,
+        max_blockchains, cpu, ram, storage
+    );
+    create container_proposal(prop, container_proposal_type.create_container_with_resource_limits);
+    internal_vote(me, prop, true);
 }
 
 operation propose_remove_container(my_pubkey: pubkey, name) {
     val me = require_provider(my_pubkey);
     require_provider_auth_with_rl(me);
     val cont = require_container(name);
-    require_cluster_deployer(cont.cluster, me);
+    require_cluster_governor(cont.cluster, me);
     require_container_available_for_removal(cont);
-    val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cont.cluster.deployer);
+    val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cont.cluster.governance);
     create pending_remove_container(prop, cont);
     create container_proposal(prop, container_proposal_type.remove_container);
     internal_vote(me, prop, true);
 }
 
-//Apply decision on creation of new container. With default resource limits.
-//TODO: Update default values to make sense.
 function apply_container(proposal) {
-	val pps = pending_container @ {proposal};
+	val pps = pending_container @ { proposal };
 	create_container_with_resource_limits(
 		pps.name,
 		pps.container_type,
 		pps.cluster,
 		pps.deployer
+	);
+}
+
+function apply_container_with_resource_limits(proposal) {
+	val pps = pending_container_with_resource_limits @ { proposal };
+	create_container_with_resource_limits(
+		pps.name,
+		pps.container_type,
+		pps.cluster,
+		pps.deployer,
+		pps.max_blockchains,
+		pps.cpu,
+		pps.ram,
+		pps.storage
 	);
 }
 

@@ -27,7 +27,6 @@ function apply_voting_result(prop: proposal) {
 				container_limits  -> apply_container_limits(prop);
 				cluster_limits    -> apply_cluster_limits(prop);
 				cluster_provider  -> apply_cluster_provider(prop);
-				cluster_deployer  -> apply_cluster_deployer(prop);
 				cluster_remove    -> apply_remove_cluster(prop);
 				voter_set_update  -> apply_voter_set_update(prop);
 				provider_state    -> apply_provider_state(prop);
@@ -44,33 +43,26 @@ function apply_voting_result(prop: proposal) {
 
 
 function apply_container_limits(proposal) {
-	val pps = pending_container_limits @ {proposal};
-	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
-	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
-	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
+	val pps = pending_container_limits @ { proposal };
+	update container_resource_limit @ {pps.container, container_resource_limit_type.max_blockchains} (pps.max_blockchains);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.cpu} (pps.cpu);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.ram} (pps.ram);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.storage} (pps.storage);
 }
-
 
 function apply_cluster_limits(proposal) {
-	val pps = pending_cluster_limits @ {proposal};
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
-}
-
-function apply_cluster_deployer(proposal) {
-	val pps = pending_cluster_deployer @ {proposal};
-	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
+	val pps = pending_cluster_limits @ { proposal };
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.max_containers} (pps.max_containers);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_max_blockchains} (pps.default_container_max_blockchains);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_cpu} (pps.default_container_cpu);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_ram} (pps.default_container_ram);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_storage} (pps.default_container_storage);
 }
 
 function apply_remove_cluster(proposal) {
 	val cl = pending_remove_cluster @ { proposal } .cluster;
-	delete cluster_resource_limit @* { cl };
-	delete cluster_node @* { cl };
-	delete cluster_provider @* { cl };
-	delete cluster_container_replica @* { cl };
 	delete pending_remove_cluster @ { proposal };
-    delete cluster @* { cl.name };
+	remove_cluster_impl(cl);
 }
 
 function apply_cluster_provider(proposal) {
