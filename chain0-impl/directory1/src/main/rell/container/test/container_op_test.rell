@@ -13,8 +13,8 @@ function test_create_container() {
 
     // Register provider as tier 0
     rell.test.tx().op(
-        create_test_provider("", deployer1.pub, 0),
-        create_test_provider("", deployer2.pub, 0)
+        create_test_provider("", deployer1.pub, provider_tier.COMMUNITY_NODE_PROVIDER),
+        create_test_provider("", deployer2.pub, provider_tier.COMMUNITY_NODE_PROVIDER)
     ).run();
 
     val deployers = list<pubkey>();

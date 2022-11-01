@@ -1,6 +1,7 @@
 module;
 
 import ^.*;
+import ^^.roles.*;
 import .constants.*;
 
 function require_is_signer(pubkey) {
@@ -12,6 +13,12 @@ function require_blockchain(blockchain_rid: byte_array) = require(blockchain @? 
 function require_cluster(name) = require(cluster @? { name }, "Cluster %s not found".format(name));
 function require_container(name) = require(container @? { name }, "Container %s not found".format(name));
 function require_voter_set(name) = require(voter_set @? { name }, "Voter set " + name + " does not exist");
+
+function require_is_system_provider(pubkey) {
+	val p = require_provider(pubkey);
+	require_system_access(p);
+	return p;
+}
 
 function require_system_p_member(provider) {
 	require_voter_set_member(system_p_voter_set(), provider);	
@@ -27,7 +34,7 @@ function require_voter_set_governor(voter_set, provider) {
 }
 
 function require_container_deployer(container, provider) {
-	require_voter_set_member(container.deployer, provider);
+	require(roles.has_deploy_access(provider, container));
 }
 
 function require_voter_set_member(voter_set, provider) {

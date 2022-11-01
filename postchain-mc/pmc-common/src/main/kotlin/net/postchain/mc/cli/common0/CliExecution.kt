@@ -5,8 +5,9 @@ import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.cluster.addNodeToClusterOperation
-import net.postchain.chain0.common.cluster.addProviderToClusterOperation
 import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
@@ -14,6 +15,7 @@ import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
@@ -222,9 +224,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun registerProvider(key: String, tier: Long) {
+    fun registerProvider(key: String, node_provider: Boolean) {
         sendTxSync(
-                registerProviderAsync(key, tier),
+                registerProviderAsync(key, node_provider),
                 "Provider has been registered",
                 "Cannot register provider"
         )
@@ -420,11 +422,11 @@ open class CliExecution(val config: PostchainClientConfig) {
      * AddNodeAsync().
      */
 
-    fun registerProviderAsync(key: String, tier: Long): TransactionBuilder {
+    fun registerProviderAsync(key: String, nodeProvider: Boolean): TransactionBuilder {
         return makeTransactionWithNop().registerProviderOperation(
                 config.pubkey().data,
                 PubKey(key),
-                tier
+                if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
         )
     }
 
@@ -434,22 +436,8 @@ open class CliExecution(val config: PostchainClientConfig) {
             threshold: Long,
             governorName: String?
     ): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        var providerList: Gtv
-        if (providerKeys.isEmpty()) {
-            providerList = GtvNull
-        } else {
-            providerList = providersGtv(providerKeys)
-        }
-        var governor: Gtv
-        if (governorName == null || governorName.isEmpty()) {
-            governor = GtvNull
-        } else {
-            governor = voterSetGtv(governorName)
-        }
-        return makeTransactionWithNop().addOperation(
-                "create_voter_set",
-                meProvider, GtvString(name), GtvInteger(threshold), providerList, governor
+        return makeTransactionWithNop().createVoterSetOperation(
+            config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
         )
     }
 
@@ -468,10 +456,11 @@ open class CliExecution(val config: PostchainClientConfig) {
     /** Add existing provider to existing cluster
      * */
     fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addProviderToClusterOperation(
+        return makeTransactionWithNop().proposeClusterProviderOperation(
                 config.pubkey().data,
+                clusterName,
                 key.hexStringToByteArray(),
-                clusterName
+                true
         )
     }
 

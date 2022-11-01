@@ -2,7 +2,7 @@ import ^.proposal.*;
 
 // NB: check authority before calling this function
 function internal_vote(provider, proposal, vote: boolean) {
-	require(voter_set_member @? { proposal.voter_set, provider });
+	require(voter_set_member @? { proposal.voter_set, provider }, provider.pubkey.to_hex() + " must be a member of the voter set");
 	create vote(proposal, provider, vote);
 	print("vote added with value:", if (vote) "Yes" else "False");
 	apply_voting_result(proposal);
@@ -77,13 +77,12 @@ function apply_cluster_provider(proposal) {
 //For promotion and demotion of system providers
 function apply_provider_is_system(proposal) {
 	val pps = pending_provider_is_system @ {proposal};
-	pps.provider.system = pps.system;
 
 	//If promotion, update SYSTEM_P voter set
-	if (pps.provider.system) {
-		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
+	if (pps.system) {
+		enroll.system(pps.provider);
 	} else {
-		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
+		revoke.system(pps.provider);
 	}
 }
 
@@ -110,7 +109,7 @@ function update_provider_state(provider, active: boolean) {
 		delete blockchain_replica_node @* { .node.provider == provider };
 	} else { //enable
 		//If enabled provider is a system provider, update SYSTEM_P voter set
-		if (provider.system) {
+		if (roles.has_system_access(provider)) {
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}

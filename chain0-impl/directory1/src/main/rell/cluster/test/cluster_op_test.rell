@@ -7,6 +7,7 @@ import ^^^.container.container_op.*;
 
 function test_add_remove_cluster() {
     setup_module();
+    val alice = provider @ { rell.test.pubkeys.alice };
 
     // 1. Deleting system cluster. Must fail.
     rell.test.tx().op(
@@ -20,7 +21,7 @@ function test_add_remove_cluster() {
 
     // 3. Adding a new cluster
     rell.test.tx().op(
-        create_cluster(rell.test.pubkeys.alice, "cluster1",  voter_sets.system_p, list<pubkey>())
+        create_cluster(rell.test.pubkeys.alice, "cluster1",  voter_sets.system_p, [alice.pubkey])
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting cluster1 added
@@ -28,10 +29,8 @@ function test_add_remove_cluster() {
     assert_not_null(cluster1);
 
     // Adding a node into cluster1
-    val alice = provider @ { rell.test.pubkeys.alice };
     val node = node @ { .provider == alice };
     rell.test.tx().op(
-        add_provider_to_cluster(alice.pubkey, alice.pubkey, cluster1.name),
         add_node_to_cluster(rell.test.pubkeys.alice, node.pubkey, "cluster1")
     ).sign(rell.test.keypairs.alice).run();
 

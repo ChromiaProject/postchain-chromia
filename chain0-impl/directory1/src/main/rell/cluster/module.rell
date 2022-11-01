@@ -13,7 +13,7 @@ function create_cluster_impl(name, governor: voter_set, providers: list<pubkey>,
 	create cluster_resource_limit(c, cluster_resource_limit_type.default_container_storage, storage);
     for (p_key in providers) {
         val provider = require_provider(p_key);
-        require(provider.tier > 0);
+        require_node_access(provider);
         create cluster_provider(c, provider);
     }
     return c;

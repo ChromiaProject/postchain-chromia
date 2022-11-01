@@ -96,7 +96,7 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
 
     // Registering a new provider
     rell.test.tx().op(
-        register_provider(alice, provider_pk, 1)
+        register_provider(alice, provider_pk, provider_tier.NODE_PROVIDER)
     ).sign(rell.test.keypairs.alice).run();
 
     // Asserting that provider added
@@ -122,8 +122,7 @@ function add_provider_to_system_cluster(provider_pk: byte_array, approver: rell.
 
     // Asserting that provider is enabled and system
     val prov = provider @ { provider_pk };
-    assert_true(prov.active);
-    assert_true(prov.system);
+    assert_true(roles.has_system_access(prov));
 }
 
 function vote_for_last_proposal(approver: rell.test.keypair) {
