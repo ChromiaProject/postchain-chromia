@@ -3,7 +3,7 @@ module;
 import ^.model.*;
 import ^.common.util.*;
 
-function create_container_impl(me:pubkey, name, cluster_name:text, consensus_threshold: integer, deployers: list<pubkey>) {
+function create_container_impl(me: pubkey, name, cluster_name: text, consensus_threshold: integer, deployers: list<pubkey>) {
     val provider = require_is_provider_with_rl(me);
     val cluster = require_cluster(cluster_name);
     require_cluster_governor(cluster, provider);
@@ -18,7 +18,7 @@ function create_container_impl(me:pubkey, name, cluster_name:text, consensus_thr
     val cpu = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_cpu);
     val ram = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_ram);
     val storage = _get_cluster_limit_or_default(cluster, cluster_resource_limit_type.default_container_storage);
-    create_container_with_resource_limits(name, container_type.isolated, cluster, vs, max_blockchains, cpu, ram, storage); // TODO: Add Resource limits
+    create_container_with_resource_limits(provider, name, container_type.isolated, cluster, vs, max_blockchains, cpu, ram, storage); // TODO: Add Resource limits
 }
 
 operation remove_container(me:pubkey, container_name:text) {

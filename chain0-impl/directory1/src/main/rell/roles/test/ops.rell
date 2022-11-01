@@ -2,15 +2,13 @@ module;
 
 import ^^.*;
 
-operation create_system_entities_op() {
+operation create_system_entities_op(my_pubkey: pubkey) {
     val vs = create voter_set("SYSTEM_P");
-    val cl = create cluster("system", governance=vs, false);
-    create container("system", cl, container_type.naked, vs);
+    val me = create provider(my_pubkey, active = true, system = false);
+    val cl = create cluster("system", governance = vs, false, me);
+    create container("system", cl, container_type.naked, vs, me);
 }
 
-operation add_provider(pubkey) {
-    create provider(pubkey, active = true, system = false);
-}
 operation enroll_system(pubkey) {
     enroll.system(provider @ { pubkey });
 }

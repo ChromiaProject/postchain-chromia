@@ -21,6 +21,7 @@ entity pending_container {
  	cluster;
  	container_type;
  	deployer: voter_set;
+ 	proposed_by: provider;
 }
 
 entity pending_container_with_resource_limits {
@@ -33,6 +34,7 @@ entity pending_container_with_resource_limits {
  	cpu: integer;
  	ram: integer;
  	storage: integer;
+ 	proposed_by: provider;
 }
 
 entity pending_remove_container {
@@ -84,7 +86,7 @@ operation propose_container(my_pubkey: pubkey, cluster_name: text, name, deploye
 	val prop = create proposal(op_context.last_block_time, proposal_type.other, me, cluster.governance);
     create pending_container_with_resource_limits(
         prop, name, cluster, container_type.isolated, deployer,
-        max_blockchains, cpu, ram, storage
+        max_blockchains, cpu, ram, storage, me
     );
     create container_proposal(prop, container_proposal_type.create_container_with_resource_limits);
     internal_vote(me, prop, true);
@@ -105,6 +107,7 @@ operation propose_remove_container(my_pubkey: pubkey, name) {
 function apply_container(proposal) {
 	val pps = pending_container @ { proposal };
 	create_container_with_resource_limits(
+	    pps.proposed_by,
 		pps.name,
 		pps.container_type,
 		pps.cluster,
@@ -115,6 +118,7 @@ function apply_container(proposal) {
 function apply_container_with_resource_limits(proposal) {
 	val pps = pending_container_with_resource_limits @ { proposal };
 	create_container_with_resource_limits(
+	    pps.proposed_by,
 		pps.name,
 		pps.container_type,
 		pps.cluster,

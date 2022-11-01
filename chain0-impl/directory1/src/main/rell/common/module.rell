@@ -28,34 +28,36 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	 */
 	print("Creating SYSTEM_P voter set");
 	val system_voter_set = create_voter_set_internal(voter_sets.system_p, majority_threshold);
-	
+
+	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
+	val provider = create provider(
+        initial_provider,
+        name = "initial_provider",
+        active = true,
+        tier = provider_tier.NODE_PROVIDER
+    );
+    create provider_rl_state(provider, points = 100, last_update = op_context.last_block_time);
+
 	print("Creating system cluster with SYSTEM_P as governor");
 	val system_cluster = create_cluster_impl(
+	    provider,
 		clusters.system,
-		governor=system_voter_set,
-		providers=list<pubkey>()
-		);
-	
-	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
-	register_and_enable_provider(
-		initial_provider, 
-		provider_tier.NODE_PROVIDER, 
-		cluster = null, 
-		voter_set = null, 
-		enabled_by_default = true
+		governor = system_voter_set,
+		providers = list<pubkey>()
 	);
-	val provider = provider @ { initial_provider };
-	
+
+	// Making the initial provider a system provider
+	enroll.system(provider);
+
 	print("Creating naked system container");
 	val system_container = create_container_with_resource_limits(
+	    provider,
 		containers.system,
 		container_type.naked,
 		cluster = system_cluster,
 		voter_set = system_voter_set
 	);
-	
-	enroll.system(provider);
-	
+
 	print("Adding c0 blockchain to system container");
 	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
 	val c0_signers_gtv = c0_config["signers"];

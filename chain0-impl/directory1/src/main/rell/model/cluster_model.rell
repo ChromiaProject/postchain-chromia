@@ -22,11 +22,11 @@
  *
  */
 
-// node cluster
 entity cluster {
     key name;
     governance: voter_set; // who controls the cluster
     mutable operational: boolean = false; // cluster goes operational when all providers provide a node
+    proposed_by: provider;
 }
 
 entity cluster_provider { 

@@ -19,8 +19,8 @@ operation create_test_node(provider, pubkey, cluster) {
 }
 
 // This operation is not accessible in the app. It is only the system itself who can create anchoring chain
-operation create_anchoring_chain_op(cluster_name: text) {
-	create_anchoring_chain(cluster @ { cluster_name });
+operation create_anchoring_chain_op(me: pubkey, cluster_name: text) {
+	create_anchoring_chain(me, cluster @ { cluster_name });
 }
 
 operation create_test_voter_set(name, threshold: integer, governor: voter_set?) {

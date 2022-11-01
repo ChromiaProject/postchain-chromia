@@ -15,9 +15,10 @@ entity container {
 	key name;
 	index cluster;
 	container_type;
-	index deployer: voter_set; //  who can deploy and update bcs in this container
+	index deployer: voter_set; // who can deploy and update bcs in this container
+	proposed_by: provider;
 }
- 
+
 entity container_resource_limit {
 	key container, container_resource_limit_type;
 	mutable value: integer;

@@ -2,15 +2,15 @@
 
 import ^^.*;
 import ^^^.test.ops.*;
+import ^^^.test.util.*;
 import ^^^.util.*;
 
 function test_create_anchoring_chain() {
-    val provider = rell.test.keypairs.alice;
-    rell.test.tx().op(initialize_test_module(provider.pub, 100)).run();
+    rell.test.tx().op(initialize_test_module(initial_provider.pub, 100)).run();
     assert_not_null(container @? { containers.system });
 
     rell.test.tx().op(
-        create_anchoring_chain_op(clusters.system)
+        create_anchoring_chain_op(initial_provider.pub, clusters.system)
     ).run();
 
     val system_chain = blockchain @ { constants.blockchains.c0 };
@@ -20,7 +20,7 @@ function test_create_anchoring_chain() {
 
     // Cannot have more than one anchoring chain per cluster
     rell.test.tx().op(
-        create_anchoring_chain_op(clusters.system)
+        create_anchoring_chain_op(initial_provider.pub, clusters.system)
     ).run_must_fail();
 
     val clusters = cm_get_cluster_names();

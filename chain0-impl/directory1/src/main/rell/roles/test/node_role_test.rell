@@ -5,7 +5,7 @@ import ^.ops.*;
 
 function test_enroll_node() {
     rell.test.tx().op(
-        add_provider(rell.test.pubkeys.alice),
+        create_system_entities_op(rell.test.pubkeys.alice),
         enroll_node(rell.test.pubkeys.alice)
     ).run();
 

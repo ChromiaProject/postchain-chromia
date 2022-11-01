@@ -4,7 +4,7 @@ import ^^.model.*;
 import ^.util.*;
 
 // Creates an anchoring chain for a given cluster
-function create_anchoring_chain(cluster) {
+function create_anchoring_chain(proposed_by: pubkey, cluster) {
 	require(empty(anchoring_chain @? { cluster }), "Anchoring chain already exists for cluster " + cluster.name);
 	val config = map<text, gtv>(); // TODO: How do we get config for anchoring chain?
 	config["cluster"] = cluster.name.to_gtv(); // Make it unique
@@ -13,6 +13,7 @@ function create_anchoring_chain(cluster) {
 	create blockchain_configuration (blockchain, 0, config.to_gtv().to_bytes());
 	
 	val container = create_container_with_resource_limits(
+	    provider @ { proposed_by },
 		"anchoring_" + cluster.name,
 		container_type.naked,
 		cluster = cluster,
