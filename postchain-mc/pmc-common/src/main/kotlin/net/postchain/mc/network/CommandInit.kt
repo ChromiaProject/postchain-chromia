@@ -5,11 +5,12 @@ import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
+import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandInit : CliktCommand(
-    name = "initialize",
-    help = "Create system cluster with naked system container for the directory blockchain. Module argument initial_provider becomes first member of SYSTEM_P voter set."
+        name = "initialize",
+        help = "Create system cluster with naked system container for the directory blockchain. Module argument initial_provider becomes first member of SYSTEM_P voter set."
 ) {
 
     private val client by nopClientOption()
@@ -20,7 +21,11 @@ class CommandInit : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-            .initOperation(host, port.toLong())
-            .postSyncAwaitConfirmation()
+                .initOperation(host, port.toLong())
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Network was initiated with node $host:$port in the system cluster",
+                        "Failed to initiate network"
+                )
     }
 }

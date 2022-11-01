@@ -3,20 +3,22 @@ package net.postchain.mc.cli.node
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.split
+import net.postchain.chain0.common.addNodeOperation
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
-import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.configOption
-import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandAddNode : CliktCommand(
     name = "add",
     help = "Add or update node information"
 ) {
-    private val config by configOption()
+    private val client by nopClientOption()
 
-    private val key by requiredPubkeyOption()
+    private val key by pubkeyOption("Node pubkey").required()
 
     private val host by hostOption().required()
 
@@ -24,14 +26,18 @@ class CommandAddNode : CliktCommand(
 
     private val apiUrl by option("-a", "--api-url", help = "api url").required()
 
-    private val clusterName by option(
+    private val clusters by option(
         "-c",
         "--cluster",
         help = "comma delimited list of clusters this node belongs to"
-    ).required()
-
+    ).split(",").required()
     override fun run() {
-        CliExecution(config).addNode(key, host, port.toLong(), apiUrl, clusterName)
-        println("Node has been added successfully")
+        client.transactionBuilder()
+                .addNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
+                .postSyncAwaitConfirmation()
+                .printResult(
+                        "Node added",
+                "Failed to add node"
+                )
     }
 }
