@@ -35,7 +35,7 @@ query get_node_containers(pubkey): list<(cluster:text, name:text, deployer:text)
 query get_nodes_with_provider() {
     return node @* {} (
         pubkey = .pubkey,
-        node_active = node.active,
+        node_active = .active,
         host = .host,
         port = .port,
         last_updated = .last_updated,
