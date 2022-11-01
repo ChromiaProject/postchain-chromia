@@ -16,7 +16,7 @@ import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
 
 
 const val POSTCHAIN_CLIENT_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
-fun CliktCommand.pubkeyOption() = option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY")
+fun CliktCommand.pubkeyOption(helpMsg: String = "Public key") = option("-pk", "--pubkey", help = helpMsg, envvar = "POSTCHAIN_PUBKEY")
     .convert { PubKey(it) } // TODO: Update this in postchain repo
 fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
