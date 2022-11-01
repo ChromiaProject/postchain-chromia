@@ -13,7 +13,6 @@ fun clusterCommands() = ClusterCommand().subcommands(
         CommandGetClusterInfo(),
         CommandListClusterContainers(),
         CommandProposeClusterProvider(),
-        CommandProposeClusterDeployer(),
         CommandProposeClusterResourceLimits(),
         CommandProposeRemoveCluster()
 )

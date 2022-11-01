@@ -1,7 +1,7 @@
 module;
 
 import ^.*;
-import ^^.model.*;
+import ^^^.model.*;
 
 entity pending_voter_set_update {
     key proposal, voter_set;
@@ -57,6 +57,7 @@ function delete_pending_voter_set_update(proposal) {
 operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: text, new_threshold: integer?, new_governor: name?, new_member: list<pubkey>, remove_member: list<pubkey>) {
 	val provider = require_is_provider_with_rl(my_pubkey);
 	val voter_set = require_voter_set(voter_set_name);
+    require(voter_set.name != constants.voter_sets.system_p, "Cannot update system voter set. Update this by proposing system provider role");
     require_voter_set_governor(voter_set, provider);
     require_provider_auth_with_rl(provider);
     require(empty(proposal @* { voter_set }), "Cannot have more than one pending proposal involving this voter set.");
@@ -79,7 +80,7 @@ operation propose_update_voter_set(my_pubkey: pubkey, voter_set_name: text, new_
     }
     for (m in new_member) {
         val p = require_provider(m);
-        require(p.tier > 0, "Cannot add a provider that has no voting right to a voter set");
+        require(p.tier == provider_tier.NODE_PROVIDER, "Cannot add a provider that has no voting right to a voter set");
         create voter_set_update.new_member(update_prop, p);
     }
     for (m in remove_member) {

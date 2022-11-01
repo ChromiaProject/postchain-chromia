@@ -15,7 +15,7 @@
     <description>Chain0 implementations for Directory1/Chromia1</description>
 
     <properties>
-        <rellTestModules>common</rellTestModules>
+        <rellTestModules>common,roles,container,cluster</rellTestModules>
     </properties>
 
     <dependencies>
@@ -28,19 +28,9 @@
             <artifactId>postchain-client</artifactId>
         </dependency>
     </dependencies>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>rellmaven</id>
-            <url>https://gitlab.com/api/v4/projects/37668820/packages/maven</url>
-        </pluginRepository>
-    </pluginRepositories>
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-maven-plugin</artifactId>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -48,7 +38,6 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
-                <version>0.4.1</version>
                 <configuration>
                     <source>src/main/rell</source>
                     <packageName>net.postchain.chain0</packageName>
@@ -66,22 +55,15 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-client-gen-d1</id>
+                        <id>rell-client-gen</id>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <mainModule>directory1</mainModule>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>rell-client-gen-c1</id>
-                        <goals>
-                            <goal>rell-generate-client</goal>
-                        </goals>
-                        <configuration>
-                            <force>true</force>
-                            <mainModule>chromia1</mainModule>
+                            <mainModules>
+                                <mainModule>directory1</mainModule>
+                                <mainModule>chromia1</mainModule>
+                            </mainModules>
                         </configuration>
                     </execution>
                 </executions>

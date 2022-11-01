@@ -2,7 +2,7 @@ package net.postchain.mc.cli.container
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.proposal.proposeRemoveContainerOperation
+import net.postchain.chain0.container.removeContainerOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
@@ -18,7 +18,7 @@ class CommandProposeRemoveContainer : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .proposeRemoveContainerOperation(client.config.pubkey().key, name)
+                .removeContainerOperation(client.config.pubkey().data, name)
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Container removal proposed",

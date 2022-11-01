@@ -1,12 +1,15 @@
 module;
 
-import .model.*;
+import ^.model.*;
+import ^.cm_api.*;
+import ^.nm_api.*;
 import .anchoring.*;
+import .cluster.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
 import .util.*;
-import .util.constants.*;
+import ^.cluster.*;
 
 query directory_solution_version() = "0.1";
 
@@ -15,8 +18,8 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	require(empty( provider @* {}));
 	print("--------------------Initializing-Chain-0-----------------------");
 	print("Creating provider quotas");
-	create provider_quota(tier=0, provider_quota_type.max_actions_per_day, value = actions_per_day);
-	create provider_quota(tier=1, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	create provider_quota(tier=provider_tier.COMMUNITY_NODE_PROVIDER, provider_quota_type.max_actions_per_day, value = actions_per_day);
+	create provider_quota(tier=provider_tier.NODE_PROVIDER, provider_quota_type.max_actions_per_day, value = actions_per_day);
 	print("Creating SYSTEM voter set");
 	create_voter_set_internal(voter_sets.system, 1);
 	/** 
@@ -27,15 +30,18 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	val system_voter_set = create_voter_set_internal(voter_sets.system_p, majority_threshold);
 	
 	print("Creating system cluster with SYSTEM_P as governor");
-	val system_cluster = create cluster(clusters.system, governance=system_voter_set, deployer=system_voter_set, false);
+	val system_cluster = create_cluster_impl(
+		clusters.system,
+		governor=system_voter_set,
+		providers=list<pubkey>()
+		);
 	
 	print("Creating initial provider with pubkey: " + initial_provider.to_hex());
 	register_and_enable_provider(
 		initial_provider, 
-		is_system = true, 
-		tier = 1, 
-		cluster = system_cluster, 
-		voter_set = system_voter_set, 
+		provider_tier.NODE_PROVIDER, 
+		cluster = null, 
+		voter_set = null, 
 		enabled_by_default = true
 	);
 	val provider = provider @ { initial_provider };
@@ -47,6 +53,8 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 		cluster = system_cluster,
 		voter_set = system_voter_set
 	);
+	
+	enroll.system(provider);
 	
 	print("Adding c0 blockchain to system container");
 	val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
@@ -72,6 +80,7 @@ function initialize_module(initial_provider:pubkey, initial_node_host:text, init
 	);
 	create cluster_node(system_cluster, initial_node);
 	node_list.last_update = op_context.last_block_time;
+	check_operational(system_cluster);
 	print("---------------------------------------------------------------");
 }
 

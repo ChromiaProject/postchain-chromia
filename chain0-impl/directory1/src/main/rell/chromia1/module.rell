@@ -5,6 +5,8 @@ import .proposal.*;
 import .ft3.ft3_basic;
 import ft3_account: .ft3.account;
 import ft3_core: .ft3.core;
+import ^.container.container_proof.*;
+import ^.cluster.cluster_op.*;
 
 /*
  * Chromia1 is a public blockchain networking dapp where the c1 dapp manages and controls creating and deleting clusters, containers and blockchains.
@@ -36,7 +38,7 @@ function create_simple_ft3_account(pubkey): ft3_account.account {
 	return ft3_account.account @ { account_id };
 }
 
-@extend(register_and_enable_provider) function add_account_to_provider(pubkey, is_system: boolean, tier: integer, cluster?, voter_set?, enabled_by_default: boolean) {
+@extend(register_and_enable_provider) function add_account_to_provider(pubkey, provider_tier, cluster?, voter_set?, enabled_by_default: boolean) {
 	val account = create_simple_ft3_account(pubkey);
 	create provider_beneficiary(provider @ { pubkey }, account);
 }

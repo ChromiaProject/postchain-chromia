@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.subcommands
 
 fun providerCommands() = commonProviderCommands().subcommands(
     CommandProposeEnableProvider(),
+    CommandPromoteProvider(),
     CommandProposeDisableProvider(),
     CommandTransferActionPoints(),
 )

@@ -38,15 +38,17 @@
         <fileSet>
             <directory>./scripts</directory>
             <outputDirectory>./scripts</outputDirectory>
-            <includes>
-                <include>*.sh</include>
-            </includes>
             <fileMode>0755</fileMode>
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
             <directory>./config</directory>
             <outputDirectory>./config</outputDirectory>
+            <filtered>true</filtered>
+        </fileSet>
+        <fileSet>
+            <directory>./provider</directory>
+            <outputDirectory>./provider</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
 

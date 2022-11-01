@@ -5,6 +5,7 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -14,14 +15,13 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import net.postchain.server.service.AddPeerRequest
-import net.postchain.server.service.InitializeBlockchainRequest
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
+import net.postchain.server.grpc.AddPeerRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.PeerServiceGrpc
+import net.postchain.server.grpc.PostchainServiceGrpc
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 
 // Base class for managed mode tests
@@ -36,28 +36,30 @@ open class ManagedModeBase(rellFolder: String) {
 
     val network: Network = Network.newNetwork()
 
-    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT"))
-        .withNetwork(network)
+    val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImages.postgresImage())
+            .withNetwork(network)
 
     val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
     val node2: PostchainContainer = postchainServer("node2", node2Logger, 9872, 7741)
     val node3: PostchainContainer = postchainServer("node3", node3Logger, 9873, 7742)
 
-    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int) =
-        PostchainContainer(
-            DockerImageName.parse("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
-                .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest"),
-            setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!),
-            startupMsg = "Postchain server started, listening on 50051",
-            nodeHost = hostName,
-            nodePort = messagePort
+    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int): PostchainContainer {
+        val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
+        return PostchainContainer(
+                DockerImages.postchainServerImage(),
+                appConfig,
+                startupMsg = "Postchain server started, listening on 50051",
+                nodeHost = hostName,
+                nodePort = messagePort,
+                provider = KeyPair.of(appConfig.pubKey, appConfig.privKey)
         )
-            .withNetworkAliases(hostName)
-            .withNetwork(this@ManagedModeBase.network)
-            .withExposedPorts(50051, apiPort)
-            .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
-            .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
-            .withLogConsumer(logConsumer)
+                .withNetworkAliases(hostName)
+                .withNetwork(this@ManagedModeBase.network)
+                .withExposedPorts(50051, apiPort)
+                .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+                .withLogConsumer(logConsumer)
+    }
 
 
     var chain0Config: File
@@ -67,10 +69,10 @@ open class ManagedModeBase(rellFolder: String) {
         val applicationFolder = this::class.java.getResource(rellFolder)!!
         val runConf = this::class.java.getResource("run.xml")!!
         val configFiles = RellRunConfigGenerator.generateCli(
-            File(applicationFolder.toURI()),
-            File(runConf.toURI()),
-            RellVersions.VERSION,
-            false
+                File(applicationFolder.toURI()),
+                File(runConf.toURI()),
+                RellVersions.VERSION,
+                false
         ).let {
             RellRunConfigGenerator.buildFiles(it.config)
         }
@@ -88,9 +90,9 @@ open class ManagedModeBase(rellFolder: String) {
     private lateinit var channel3: ManagedChannel
 
     fun stopNodes() {
-        channel1.shutdownNow()
-        channel2.shutdownNow()
-        channel3.shutdownNow()
+        if (::channel1.isInitialized) channel1.shutdownNow()
+        if (::channel2.isInitialized) channel2.shutdownNow()
+        if (::channel3.isInitialized) channel3.shutdownNow()
         stopContainers(node1, node2, node3)
         postgres.stop()
     }
@@ -106,8 +108,8 @@ open class ManagedModeBase(rellFolder: String) {
         addPeer(channel2, node1)
         addPeer(channel3, node1)
         brid = startBlockchain(
-            channel1,
-            chain0Config
+                channel1,
+                chain0Config
         ).let { BlockchainRid.buildFromHex(it) }
         startBlockchain(channel2, chain0Config)
         startBlockchain(channel3, chain0Config)
@@ -118,39 +120,39 @@ open class ManagedModeBase(rellFolder: String) {
     }
 
     private fun createChannel(target: PostchainContainer) =
-        ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
+            ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
 
     private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
         val service = PeerServiceGrpc.newBlockingStub(channel)
         service.addPeer(
-            AddPeerRequest.newBuilder()
-                .setHost(peer.nodeHost)
-                .setPort(peer.nodePort)
-                .setPubkey(peer.pubKey)
-                .build()
+                AddPeerRequest.newBuilder()
+                        .setHost(peer.nodeHost)
+                        .setPort(peer.nodePort)
+                        .setPubkey(peer.pubkey.hex())
+                        .build()
         )
     }
 
     private fun startBlockchain(channel: ManagedChannel, config: File): String {
         return PostchainServiceGrpc.newBlockingStub(channel)
-            .initializeBlockchain(
-                InitializeBlockchainRequest.newBuilder()
-                    .setChainId(0)
-                    .setGtv(ByteString.copyFrom(config.readBytes()))
-                    .build()
-            ).brid
+                .initializeBlockchain(
+                        InitializeBlockchainRequest.newBuilder()
+                                .setChainId(0)
+                                .setGtv(ByteString.copyFrom(config.readBytes()))
+                                .build()
+                ).brid
     }
 
-   fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
-       val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
-       val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
-       return RellRunConfigGenerator.generateCli(
-           File(applicationFolder.toURI()),
-           File(runConf.toURI()),
-           RellVersions.VERSION,
-           false
-       ).apply {
-           RellRunConfigGenerator.buildFiles(this.config)
-       }
-   }
+    fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
+        val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
+        val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
+        return RellRunConfigGenerator.generateCli(
+                File(applicationFolder.toURI()),
+                File(runConf.toURI()),
+                RellVersions.VERSION,
+                false
+        ).apply {
+            RellRunConfigGenerator.buildFiles(this.config)
+        }
+    }
 }

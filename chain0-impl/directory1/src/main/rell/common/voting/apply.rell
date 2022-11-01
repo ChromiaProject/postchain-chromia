@@ -1,10 +1,11 @@
 import ^.proposal.*;
 
 // NB: check authority before calling this function
-function internal_vote(provider, prop: proposal, vote: boolean) {
-	create vote(prop, provider, vote);
+function internal_vote(provider, proposal, vote: boolean) {
+	require(voter_set_member @? { proposal.voter_set, provider }, provider.pubkey.to_hex() + " must be a member of the voter set");
+	create vote(proposal, provider, vote);
 	print("vote added with value:", if (vote) "Yes" else "False");
-	apply_voting_result(prop);
+	apply_voting_result(proposal);
 }
 
 function apply_voting_result(prop: proposal) {
@@ -20,14 +21,12 @@ function apply_voting_result(prop: proposal) {
 			print("proposal approved:", propStr);
 			when (prop.proposal_type) {
 				other			  -> apply_other_voting_result(prop);
-	 			conf              -> apply_conf(prop);
+				configuration 	  -> apply_configuration(prop);
+	 			configuration_at  -> apply_configuration_at(prop);
 	 			bc                -> apply_bc(prop);
-				container         -> apply_container(prop);
 				container_limits  -> apply_container_limits(prop);
-				container_remove  -> apply_container_remove(prop);
 				cluster_limits    -> apply_cluster_limits(prop);
 				cluster_provider  -> apply_cluster_provider(prop);
-				cluster_deployer  -> apply_cluster_deployer(prop);
 				cluster_remove    -> apply_remove_cluster(prop);
 				voter_set_update  -> apply_voter_set_update(prop);
 				provider_state    -> apply_provider_state(prop);
@@ -41,52 +40,29 @@ function apply_voting_result(prop: proposal) {
 
 @extendable function apply_other_voting_result(proposal) { /* Should be extended */ }
 
-//Apply decision on creation of new container. With default resource limits.
-//TODO: Update default values to make sense.
-function apply_container(proposal) {
-	val pps = pending_container @ {proposal};
-	create_container_with_resource_limits(
-		pps.name,
-		pps.container_type,
-		pps.cluster,
-		pps.deployer
-	);
-}
+
 
 function apply_container_limits(proposal) {
-	val pps = pending_container_limits @ {proposal};
-	update container_resource_limit @ {pps.container, resource_limit_type.ram} (pps.ram);
-	update container_resource_limit @ {pps.container, resource_limit_type.cpu} (pps.cpu);
-	update container_resource_limit @ {pps.container, resource_limit_type.storage} (pps.storage);
-}
-
-function apply_container_remove(proposal) {
-    val cont = pending_remove_container @ { proposal } .container;
-    delete container_resource_limit @* { cont };
-    delete pending_remove_container @ { proposal };
-    delete container @ { cont.name };
+	val pps = pending_container_limits @ { proposal };
+	update container_resource_limit @ {pps.container, container_resource_limit_type.max_blockchains} (pps.max_blockchains);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.cpu} (pps.cpu);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.ram} (pps.ram);
+	update container_resource_limit @ {pps.container, container_resource_limit_type.storage} (pps.storage);
 }
 
 function apply_cluster_limits(proposal) {
-	val pps = pending_cluster_limits @ {proposal};
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.ram} (pps.ram);
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.cpu} (pps.cpu);
-	update cluster_resource_limit @ {pps.cluster, resource_limit_type.storage} (pps.storage);
-}
-
-function apply_cluster_deployer(proposal) {
-	val pps = pending_cluster_deployer @ {proposal};
-	update cluster @ {pps.cluster.name} (.deployer = pps.deployer);
+	val pps = pending_cluster_limits @ { proposal };
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.max_containers} (pps.max_containers);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_max_blockchains} (pps.default_container_max_blockchains);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_cpu} (pps.default_container_cpu);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_ram} (pps.default_container_ram);
+	update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_storage} (pps.default_container_storage);
 }
 
 function apply_remove_cluster(proposal) {
 	val cl = pending_remove_cluster @ { proposal } .cluster;
-	delete cluster_resource_limit @* { cl };
-	delete cluster_node @* { cl };
-	delete cluster_provider @* { cl };
-	delete cluster_container_replica @* { cl };
 	delete pending_remove_cluster @ { proposal };
-    delete cluster @* { cl.name };
+	remove_cluster_impl(cl);
 }
 
 function apply_cluster_provider(proposal) {
@@ -101,13 +77,12 @@ function apply_cluster_provider(proposal) {
 //For promotion and demotion of system providers
 function apply_provider_is_system(proposal) {
 	val pps = pending_provider_is_system @ {proposal};
-	pps.provider.system = pps.system;
 
 	//If promotion, update SYSTEM_P voter set
-	if (pps.provider.system) {
-		create voter_set_member(voter_set @ {"SYSTEM_P"}, pps.provider);
+	if (pps.system) {
+		enroll.system(pps.provider);
 	} else {
-		delete voter_set_member @? {.voter_set == voter_set @ {"SYSTEM_P"}, .provider == pps.provider};
+		revoke.system(pps.provider);
 	}
 }
 
@@ -134,14 +109,22 @@ function update_provider_state(provider, active: boolean) {
 		delete blockchain_replica_node @* { .node.provider == provider };
 	} else { //enable
 		//If enabled provider is a system provider, update SYSTEM_P voter set
-		if (provider.system) {
+		if (roles.has_system_access(provider)) {
 			create voter_set_member(voter_set @ {"SYSTEM_P"}, provider);
 		}
 	}
 }
 
-function apply_conf(proposal) {
-	val pc = pending_conf @ {proposal};
+function apply_configuration(proposal) {
+	val pc = pending_configuration @ { proposal };
+	val apply_at_height = get_last_height(pc.blockchain) + 10;
+	require(empty(blockchain_configuration @? { pc.blockchain, apply_at_height }), "Configuration at height %d already exists".format(apply_at_height));
+	create blockchain_configuration(pc.blockchain, apply_at_height, pc.data);
+	add_dependencies(pc.data, pc.blockchain.rid, apply_at_height);
+}
+
+function apply_configuration_at(proposal) {
+	val pc = pending_configuration_at @ {proposal};
 	require(get_last_height(pc.blockchain) < pc.height);
 	if (not(pc.force)) {
 		require(empty(blockchain_configuration @? { pc.blockchain, .height > pc.height } limit 1));

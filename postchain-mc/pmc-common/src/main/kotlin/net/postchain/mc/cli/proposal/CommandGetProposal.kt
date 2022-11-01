@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.proposal
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -10,6 +11,8 @@ import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
+import net.postchain.common.types.RowId
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
@@ -25,33 +28,33 @@ class CommandGetProposal : CliktCommand(
 ) {
     private val config by configOption()
 
-    private val idx by proposalIndexOption().required()
+    private val idx by proposalIndexOption().convert { RowId(it) }.required()
 
     private val verbose by option("-v", "--verbose", help = "Show proposal content").flag()
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
         val proposal = client.getProposal(idx) ?: return println("Proposal $idx not found")
-        val proposedBy = client.getProviderData(proposal.proposedBy)
+        val proposedBy = client.getProviderData(PubKey(proposal.proposedBy))
         println("""
             Proposal: $idx - ${proposal.type.name}
-            Proposed by ${proposedBy.name} - ${proposedBy.pubkey.toHex()}
+            Proposed by ${proposedBy.name} - ${proposedBy.pubkey.hex()}
             Time: ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
         """.trimIndent())
         if (verbose) println(formatProposal(client, proposal))
     }
     
-    fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
+    private fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.type) {
             ProposalType.bc ->  {
                 val p = client.getBlockchainProposal(proposal.id) ?: return ""
-                val conf = GtvDecoder.decodeGtv(p.data)
+                val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
             }
-            ProposalType.conf -> {
+            ProposalType.configuration_at -> {
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
-                val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
-                val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
+                val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
+                val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
                 val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
                 val new = mutableMapOf<String, Gtv>()
                 newConf.dict.forEach { (t, u) ->
@@ -81,7 +84,7 @@ class CommandGetProposal : CliktCommand(
                 """.trimIndent()
             }
             ProposalType.voter_set_update -> {
-                val vsu = client.getVoterSetUpdateProposal(proposal.id) ?: return ""
+                val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
                 val t = table {
                     row("Voter set:", vsu.voterSet)
                     row("Governor update", vsu.governor ?: "")
@@ -90,6 +93,16 @@ class CommandGetProposal : CliktCommand(
                     row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
                 }.render()
                 return t.toString()
+            }
+            ProposalType.cluster_provider -> {
+                val cpc = client.getClusterProviderProposal(proposal.id) ?: return ""
+                return table {
+                    row("Cluster:", cpc.cluster)
+                    row("Provider:", cpc.provider)
+                    row("Add/Remove:", if (cpc.add) "Add" else "remove")
+                }
+                    .render()
+                    .toString()
             }
 
             else -> ""

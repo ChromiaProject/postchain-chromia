@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
@@ -38,7 +39,7 @@ class CommandProposeVoterSetUpdate : CliktCommand(
     override fun run() {
         client.transactionBuilder()
             .proposeUpdateVoterSetOperation(
-                client.config.pubkey().key,
+                client.config.pubkey().data,
                 voterSet, threshold, governor, newMember, removeMember
             )
             .postSyncAwaitConfirmation()

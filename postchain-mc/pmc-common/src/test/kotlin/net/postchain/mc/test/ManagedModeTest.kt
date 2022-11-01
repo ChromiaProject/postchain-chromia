@@ -3,8 +3,12 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
+import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.*
+import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -12,8 +16,8 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.util.PrintUtils
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.PrintUtils
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
 import kotlin.test.assertEquals
@@ -57,7 +61,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val bcConfig1xmlFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1.xml")
         val bcConfig1xmlDependencyFile =
                 getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_1_dependency.xml")
-        val bcConfigGtvFile = getFileFromClasspath("/net/postchain/mc//test/config/0.gtv")
 
         private fun getFileFromClasspath(path: String): File {
             val tempFile = File.createTempFile("managed-mode-test", "")
@@ -74,20 +77,20 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     abstract fun cliExecution(cliConfig: PostchainClientConfig): CliExecution
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
-        val data = provExecutor.getProviderInfo(provPubkey).asDict()
-        assertArrayEquals(data["pubkey"]?.asByteArray(), provPubkey.hexStringToByteArray())
-        assertk.assert(data["name"]?.asString()).isEqualTo(name)
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(isActive)
+        val data = provExecutor.getProviderInfo(provPubkey)
+        assertArrayEquals(data.pubkey.data, provPubkey.hexStringToByteArray())
+        assertk.assert(data.name).isEqualTo(name)
+        assertk.assert(data.active).isEqualTo(isActive)
     }
 
     protected fun assertProviderEnabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(true)
+        val data = provExecutor.getProviderInfo(providerPublicKey)
+        assertk.assert(data.active).isEqualTo(true)
     }
 
     protected fun assertProviderDisabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey).asDict()
-        assertk.assert(data["active"]?.asBoolean()).isEqualTo(false)
+        val data = provExecutor.getProviderInfo(providerPublicKey)
+        assertk.assert(data.active).isEqualTo(false)
         val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(0, listReplicas.size)
 
@@ -99,21 +102,13 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.querySync(
-                "nm_find_next_configuration_height", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to GtvFactory.gtv(expectedHeight - 1)
-        )
-        )
-        assertk.assert(height.asInteger()).isEqualTo(expectedHeight)
+        val height = client.nmFindNextConfigurationHeight(config.blockchainRid,0)
+        assertk.assert(height).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.querySync(
-                "nm_get_blockchain_configuration", GtvFactory.gtv(
-                "blockchain_rid" to GtvFactory.gtv(config.blockchainRid), "height" to height
-        )
-        )
-        assertk.assert(bc.asByteArray()).isNotNull()
-        return bc.asByteArray()
+        val bc = client.nmGetBlockchainConfiguration(config.blockchainRid, height!!)
+        assertk.assert(bc).isNotNull()
+        return bc!!
     }
 
     /**
@@ -196,20 +191,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     private fun assertNodeInfo(
-            n: Gtv,
+            n: GetNodesWithProviderResult,
             nodeHost: String,
             nodePort: Long,
             nodePubkey: String,
             providerPubkey: String,
             b: Boolean
     ) {
-        val nodeDict = n.asDict()
-        assertEquals(nodeHost, nodeDict["host"]!!.asString())
-        assertEquals(nodePort, nodeDict["port"]!!.asInteger())
-        assertEquals(nodePubkey, nodeDict["pubkey"]!!.asByteArray().toHex())
+        assertEquals(nodeHost, n.host)
+        assertEquals(nodePort, n.port)
+        assertEquals(nodePubkey, n.pubkey.hex())
 
-        assertEquals(providerPubkey, nodeDict["provider"]!!.asByteArray().toHex())
-        assertEquals(b, nodeDict["provider_active"]!!.asBoolean())
+        assertEquals(providerPubkey, n.provider.toHex())
+        assertEquals(b, n.providerActive)
     }
 
     protected fun assertListNodes() {
@@ -219,9 +213,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val nodeList = provExecutor.listNodesWithProvider()
         assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
         assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubkey(), true)
-
-        PrintUtils.printNodes(nodeList)
-
     }
 
     protected fun buildAndAwaitBlocks(nBlocks: Int) {

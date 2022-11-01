@@ -1,6 +1,7 @@
 module;
 
 import ^.*;
+import ^^.model.*;
 
 query get_summary() {
 	return (

@@ -1,6 +1,8 @@
 
 query get_blockchain (rid: byte_array) = blockchain @ { rid };
 
+query get_bc_signers(blockchain_rid: byte_array) = get_blockchain_signers(blockchain @ { blockchain_rid }); // Temporary to speed up tests
+
 query get_blockchain_signers(bc: blockchain) {
 	val cl = container_blockchain @ {bc}.container.cluster;
 	var return_list = list<(byte_array, text, integer, boolean, integer)>();
@@ -49,9 +51,9 @@ query get_added_blockchain_rid(tx_rid: byte_array) {
 
 function get_blockchains_with_container(include_inactive:boolean) {
 	if (include_inactive) {
-		return (blockchain, container_blockchain) @* {} (blockchain=blockchain, container_blockchain.container) ;
+		return (b: blockchain, c: container_blockchain) @* { c.blockchain == b } (blockchain=b, c.container) ;
 	} else {
-		return (blockchain, container_blockchain) @* { blockchain.active == true} (blockchain=blockchain, container_blockchain.container);	
+		return (b: blockchain, c: container_blockchain) @* { c.blockchain ==b and b.active == true} (blockchain=b, c.container);	
 	}
 }
 
@@ -70,19 +72,7 @@ query get_blockchain_info_list(include_inactive: boolean): list<(rid:byte_array,
 	return result;
 }
 
-query get_blockchain_cluster(blockchain_rid: byte_array) {
-	return (container_blockchain, blockchain) @ { blockchain == container_blockchain.blockchain }
-	    ( container_blockchain.container.cluster.name );
-}
+query get_blockchain_cluster(blockchain_rid: byte_array) = cm_get_blockchain_cluster(blockchain_rid);
 
-query get_blockchain_api_urls(blockchain_rid: byte_array): list<text> {
-	return (blockchain, container_blockchain, cluster_node) @*
-	{
-		blockchain.rid == blockchain_rid,
-		container_blockchain.blockchain.rid == blockchain.rid,
-		container_blockchain.container.cluster == cluster_node.cluster
-	} (
-		cluster_node.node.api_url
-	);
-}
+query get_blockchain_api_urls(blockchain_rid: byte_array) = cm_get_blockchain_api_urls(blockchain_rid);
 

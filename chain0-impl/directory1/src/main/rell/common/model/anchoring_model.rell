@@ -1,4 +1,0 @@
-
-entity anchoring_chain {
-	key blockchain, cluster;
-}
