@@ -248,14 +248,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun addNode(key: String, host: String, port: Long, apiUrl: String, clusterName: String) {
-        sendTxSync(
-                addNodeAsync(key, host, port, apiUrl, clusterName),
-                "Node has been enabled",
-                "Cannot add node"
-        )
-    }
-
     fun addBlockchainReplica(blockchainRID: String, key: String) {
         sendTxSync(
                 addBlockchainReplicaAsync(blockchainRID, key),
