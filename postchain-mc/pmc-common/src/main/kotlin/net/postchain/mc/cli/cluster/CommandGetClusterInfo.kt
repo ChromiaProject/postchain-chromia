@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
+import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getClusterData
 import net.postchain.chain0.common.queries.getClusterNodes
@@ -22,26 +23,26 @@ class CommandGetClusterInfo : CliktCommand(
 
     private val name by nameOption("Cluster Name").required().validate(validateAlphaNumeric())
 
-    private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
-
     override fun run() {
         with (client.getClusterData(name)) {
             table {
 
-                row("", name)
-                row("", governor)
-                row("", deployer)
-                row("", isOperational.toString())
+                row("Name:", name)
+                row("Governor:", governor)
+                row("Deployer:", deployer)
+                row("Is Operational:", isOperational.toString())
 
                 row("")
+                row("Providers:")
                 client.getClusterProviders(name).forEach { provider ->
                     row(provider.name, provider.pubkey.toString())
                 }
                 row("")
-                row("Nodes")
+                row("Nodes:")
                 client.getClusterNodes(name).forEach { node ->
-                    row(node.pubkey)
+                    row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
                 }
+                hints { defaultAlignment = Table.Hints.Alignment.LEFT }
             }
         }.render().also { println(it) }
     }
