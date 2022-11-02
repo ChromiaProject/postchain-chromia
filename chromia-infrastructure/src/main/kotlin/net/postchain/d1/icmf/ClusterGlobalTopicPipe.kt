@@ -16,12 +16,15 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.TopicHeaderData
+import net.postchain.d1.anchor.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.rell.anchor.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessages
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.io.IOException
@@ -71,12 +74,12 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     }
 
     private suspend fun fetchMessages() {
+        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
         val clusterClient = clientProvider.cluster(clusterName)
         val anchoringClient = clusterClient.blockchain(cluster.anchoringChain)
-
-        val currentPackets = mutableListOf<IcmfPacket>()
 
         val fromAnchorHeight = lastAnchorHeight.get()
         val signedBlockHeaderWithAnchorHeights = try {
@@ -92,67 +95,127 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
             }
         }
 
-        var maxAnchorHeight = fromAnchorHeight
-        for (header in signedBlockHeaderWithAnchorHeights) {
-            val decodedHeader = BlockHeaderData.fromBinary(header.blockHeader.data)
-            val blockchainRid = BlockchainRid(decodedHeader.getBlockchainRid())
-
-            if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
-                continue // we only read from specific chains
-            }
-
-            val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-            val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.blockHeader.data, header.witness.data, blockRid, cryptoSystem, clusterManagement)
-                    ?: return
-
-            val topicData = topicHeaderData[route.topic]
-            if (topicData == null) {
-                logger.warn(
-                    "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${
-                        blockchainRid.toHex()
-                    } at height: ${decodedHeader.getHeight()}")
-                return
-            }
-
-            val currentPrevMessageBlockHeight = lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())]
-                    ?: -1
-            if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
-                continue // already processed in previous block, skip it here
-            } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn(
-                    "$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${
-                        blockchainRid.toHex()
-                    }")
-                return
-            }
-
-            if (header.anchorHeight > maxAnchorHeight) maxAnchorHeight = header.anchorHeight
-
-            val bodies = fetchMessageBodies(clusterClient, blockchainRid, decodedHeader.getHeight(), topicData.hash)
-
-            if (bodies.isNotEmpty()) {
-                currentPackets.add(
-                        IcmfPacket(
-                                height = decodedHeader.getHeight(),
-                                sender = blockchainRid,
-                                topic = route.topic,
-                                blockRid = blockRid,
-                                rawHeader = header.blockHeader.data,
-                                rawWitness = header.witness.data,
-                                prevMessageBlockHeight = topicData.prevMessageBlockHeight,
-                                bodies = bodies
-                        )
-                )
-            }
-            lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
+        val decodedBlockHeaderWithAnchorHeights = signedBlockHeaderWithAnchorHeights.map {
+            val decodedHeader = BlockHeaderData.fromBinary(it.blockHeader.data)
+            val blockRid = decodedHeader.toGtv().merkleHash(merkleHashCalculator)
+            DecodedBlockHeaderWithAnchorHeight(it.blockHeader.data, it.witness.data, it.anchorHeight, decodedHeader, blockRid)
         }
 
-        val packetsSizeBytes = currentPackets.sumOf { it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size } }
+        var lastSeenAnchorHeight = fromAnchorHeight
+        val icmfAnchorPackets = mutableListOf<IcmfAnchorPacket>()
+        for ((anchorHeight, headers) in decodedBlockHeaderWithAnchorHeights.groupBy { it.anchorHeight }.toList().sortedBy { it.first }) {
+            val hash = gtv(headers.map { gtv(it.blockRid) }).merkleHash(merkleHashCalculator)
+            val anchorBlock = try {
+                anchoringClient.blockAtHeightSync(anchorHeight)
+            } catch (e: Exception) {
+                when (e) {
+                    is UserMistake, is IOException -> {
+                        logger.warn("Unable to fetch block at height $anchorHeight on anchor chain: ${e.message}", e)
+                        return
+                    }
+
+                    else -> throw e
+                }
+            }
+            if (anchorBlock == null) {
+                logger.warn("Anchor block at height $anchorHeight not found")
+                return
+            }
+
+            val decodedHeader = BlockHeaderData.fromBinary(anchorBlock.header)
+            val blockRid = decodedHeader.toGtv().merkleHash(merkleHashCalculator)
+
+            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorBlock.header, anchorBlock.witness, blockRid, cryptoSystem, clusterManagement, ICMF_ANCHOR_HEADERS_EXTRA)
+                    ?: return
+
+            val anchorHeaderData = anchorExtraData[route.topic]
+            if (anchorHeaderData == null) {
+                logger.warn("Anchor block extra header missing topic ${route.topic} for block-rid: ${blockRid.toHex()} at height: $anchorHeight")
+                return
+            }
+
+            if (!anchorHeaderData.hash.contentEquals(hash)) {
+                logger.warn("Anchor block header has wrong hash for block-rid: ${blockRid.toHex()} at height: $anchorHeight, expected ${hash.toHex()} but was ${anchorHeaderData.hash.toHex()}")
+                return
+            }
+
+            if (anchorHeaderData.previousBlockHeight != lastSeenAnchorHeight) {
+                logger.warn("Anchor block header has wrong previous height for block-rid: ${blockRid.toHex()} at height: $anchorHeight, expected $lastSeenAnchorHeight but was ${anchorHeaderData.previousBlockHeight}")
+                return
+            }
+
+            val icmfPackets = mutableListOf<IcmfPacket>()
+            for (header in headers) {
+                val blockchainRid = BlockchainRid(header.decodedHeader.getBlockchainRid())
+
+                if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
+                    continue // we only read from specific chains
+                }
+
+                val topicHeaderData = TopicHeaderData.extractTopicHeaderData(header.decodedHeader, header.blockHeader, header.witness, header.blockRid, cryptoSystem, clusterManagement, ICMF_BLOCK_HEADER_EXTRA)
+                        ?: return
+
+                val topicData = topicHeaderData[route.topic]
+                if (topicData == null) {
+                    logger.warn(
+                            "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${header.blockRid.toHex()} for blockchain-rid: ${
+                                blockchainRid.toHex()
+                            } at height: ${header.decodedHeader.getHeight()}")
+                    return
+                }
+
+                val currentPrevMessageBlockHeight = lastMessageHeights[BlockchainRid(header.decodedHeader.getPreviousBlockRid())]
+                        ?: -1
+                if (header.decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
+                    continue // already processed in previous block, skip it here
+                } else if (topicData.previousBlockHeight != currentPrevMessageBlockHeight) {
+                    logger.warn(
+                            "$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.previousBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${
+                                blockchainRid.toHex()
+                            }")
+                    return
+                }
+
+                val bodies = fetchMessageBodies(clusterClient, blockchainRid, header.decodedHeader.getHeight(), topicData.hash)
+
+                if (bodies.isNotEmpty()) {
+                    icmfPackets.add(
+                            IcmfPacket(
+                                    height = header.decodedHeader.getHeight(),
+                                    sender = blockchainRid,
+                                    topic = route.topic,
+                                    blockRid = header.blockRid,
+                                    rawHeader = header.blockHeader,
+                                    rawWitness = header.witness,
+                                    prevMessageBlockHeight = topicData.previousBlockHeight,
+                                    bodies = bodies
+                            )
+                    )
+                }
+                lastMessageHeights[BlockchainRid(header.decodedHeader.getPreviousBlockRid())] = header.decodedHeader.getHeight()
+            }
+
+            icmfAnchorPackets.add(
+                    IcmfAnchorPacket(
+                            anchorBlock.header,
+                            anchorBlock.witness,
+                            icmfPackets
+                    )
+            )
+
+            lastSeenAnchorHeight = anchorHeight
+        }
+
+        val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
+            anchorPacket.packets.sumOf {
+                it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size }
+            }
+        }
         if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {
-            packets[maxAnchorHeight] = IcmfPackets(maxAnchorHeight, currentPackets) to packetsSizeBytes
+            packets[lastSeenAnchorHeight] = IcmfPackets(lastSeenAnchorHeight, icmfAnchorPackets) to packetsSizeBytes
             currentQueueSizeBytes.addAndGet(packetsSizeBytes)
 
-            lastAnchorHeight.set(maxAnchorHeight)
+            lastAnchorHeight.set(lastSeenAnchorHeight)
         } else {
             logger.info("pipe reached max capacity $maxQueueSizeBytes bytes")
         }
@@ -185,7 +248,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 }
             }
 
-            val computedHash = TopicHeaderData.calculateMessagesHash(bodies, cryptoSystem)
+            val computedHash = gtv(bodies).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
             if (!expectedMessagesHash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")
@@ -212,4 +275,12 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     override fun shutdown() {
         job.cancel()
     }
+
+    data class DecodedBlockHeaderWithAnchorHeight(
+            val blockHeader: ByteArray,
+            val witness: ByteArray,
+            val anchorHeight: Long,
+            val decodedHeader: BlockHeaderData,
+            val blockRid: ByteArray
+    )
 }

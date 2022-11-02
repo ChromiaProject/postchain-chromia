@@ -19,7 +19,13 @@ data class IcmfPacket(
         val bodies: List<Gtv> // (potentially) messages
 )
 
+data class IcmfAnchorPacket(
+        val rawAnchorHeader: ByteArray,
+        val rawAnchorWitness: ByteArray,
+        val packets: List<IcmfPacket>
+)
+
 data class IcmfPackets<PtrT>(
         val currentPointer: PtrT,
-        val packets: List<IcmfPacket>
+        val anchorPackets: List<IcmfAnchorPacket>
 )

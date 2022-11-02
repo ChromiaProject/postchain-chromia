@@ -1,6 +1,8 @@
 package net.postchain.d1.icmf
 
+import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainQuery
+import net.postchain.client.core.PostchainReadClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.Gtv
@@ -10,7 +12,7 @@ object QueryProviderMocks : ChromiaQueryProvider {
 
     var chain0Queries: ((String, Gtv) -> Gtv)? = null
 
-    var anchorQueries: ((String, Gtv) -> Gtv)? = null
+    var anchorQueries: PostchainReadClient? = null
 
     fun addMockQueries(blockchainRid: BlockchainRid, query: (String, Gtv) -> Gtv) {
         mockQueries[blockchainRid] = query
@@ -26,14 +28,18 @@ object QueryProviderMocks : ChromiaQueryProvider {
         override fun querySync(name: String, gtv: Gtv) = chain0Queries!!(name, gtv)
     }
 
-    override fun getAnchorQuery(): PostchainQuery? = anchorQueries?.let {
-        object : PostchainQuery {
-            override fun querySync(name: String, gtv: Gtv) = it(name, gtv)
-        }
-    }
+    override fun getAnchorQuery(): PostchainReadClient? = anchorQueries
 
-    override fun getQuery(blockchainRid: BlockchainRid): PostchainQuery? = mockQueries[blockchainRid]?.let {
-        object : PostchainQuery {
+    override fun getQuery(blockchainRid: BlockchainRid): PostchainReadClient? = mockQueries[blockchainRid]?.let {
+        object : PostchainReadClient {
+            override fun blockAtHeightSync(height: Long): BlockDetail? {
+                throw NotImplementedError()
+            }
+
+            override fun currentBlockHeightSync(): Long {
+                throw NotImplementedError()
+            }
+
             override fun querySync(name: String, gtv: Gtv) = it(name, gtv)
         }
     }

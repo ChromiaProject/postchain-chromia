@@ -7,8 +7,11 @@ import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.core.BlockEContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
@@ -41,7 +44,7 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic
                 .mapValues {
-                    TopicHeaderData.fromMessages(it.value.map { message -> message.body }, cryptoSystem, it.value.first().previousMessageBlockHeight).toGtv()
+                    TopicHeaderData(gtv(it.value.map { message -> message.body }).merkleHash(GtvMerkleHashCalculator(cryptoSystem)), it.value.first().previousMessageBlockHeight).toGtv()
                 }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
     }
