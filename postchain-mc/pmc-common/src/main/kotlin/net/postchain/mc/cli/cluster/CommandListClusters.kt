@@ -11,25 +11,21 @@ import net.postchain.mc.cli.util.configOption
 import java.lang.StringBuilder
 
 class CommandListClusters : CliktCommand(
-    name = "list",
-    help = "List all existing clusters"
+        name = "list",
+        help = "List all existing clusters"
 ) {
     private val config by configOption()
-    private val includeInactive by option("-i", "--includeinactive", help = "Include disabled/removed clusters (not implemented yet)").flag()
-
     override fun run() {
         val client = ClientUtil.fromConfig(config)
         println("Clusters:")
         table {
-            header("Name", "Governor", "Container deployer", "Operational")
+            header("Name", "Governor", "Operational")
             client.getClusters().forEach {
-                row(it.name, it.governor, it.containerDeployer, it.operational.toString())
+                row(it.name, it.governor, it.operational.toString())
             }
             hints {
                 borderStyle = Table.BorderStyle.SINGLE_LINE
             }
-        }
-            .render(StringBuilder())
-            .also { println(it) }
+        }.render().also { println(it) }
     }
 }

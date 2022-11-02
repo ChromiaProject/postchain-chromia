@@ -45,8 +45,10 @@ function add_node_internal(provider, node_pubkey: pubkey, host: text, port: inte
 	}
 	node_list.last_update = op_context.last_block_time;
 	//If a cluster is given and provider is part of that cluster, add node as block signer to this cluster
+	val node = node @ { node_pubkey };
 	for (cluster_name in clusters) {
-		add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster @ { cluster_name });
+		val cluster = require_cluster(cluster_name);
+		add_node_to_cluster_internal(provider, node, cluster);
 	}
 	return node @ { node_pubkey };
 }
