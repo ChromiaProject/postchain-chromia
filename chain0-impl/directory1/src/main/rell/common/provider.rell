@@ -4,7 +4,7 @@ operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
     val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
 	register_and_enable_provider(
-	    pubkey,
+		pubkey,
 		provider_tier,
 		cluster = null, 
 		voter_set = null, 
