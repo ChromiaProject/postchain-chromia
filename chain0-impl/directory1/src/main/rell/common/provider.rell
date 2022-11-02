@@ -3,7 +3,8 @@
 operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
     val me = require_provider(my_pubkey);
 	require_provider_auth_with_rl(me);
-	register_and_enable_provider(pubkey, 
+	register_and_enable_provider(
+	    pubkey,
 		provider_tier,
 		cluster = null, 
 		voter_set = null, 
@@ -16,7 +17,6 @@ operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
 }
 
 function _is_node_provider(tier: provider_tier) = tier == provider_tier.NODE_PROVIDER;
-
 
 @extendable function register_and_enable_provider(pubkey, provider_tier, cluster?, voter_set?, enabled_by_default: boolean = false) {
 	val provider = create provider (
@@ -75,9 +75,9 @@ function provider_rate_limit(provider) {
     );
 }
 
-operation transfer_action_points (from: provider, to: provider, amount: integer) {
+operation transfer_action_points(from: provider, to: provider, amount: integer) {
 	require_provider_auth_with_rl(from);
-	require( provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
+	require(provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
 	update provider_rl_state @ { from } ( .points -= amount );
 	update provider_rl_state @ { to } ( .points += amount );
 }
