@@ -1,8 +1,6 @@
 
 import ^.*;
 
-
-
 operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
 	val blockchain = blockchain @ { header.blockchain_rid };
 	val existing_ab = anchored_block @? { blockchain, header.height };
