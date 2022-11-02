@@ -9,7 +9,6 @@ query get_clusters() {
 	return cluster @* {} (
 		name = .name,
 		governor = .governance.name,
-		container_deployer = .governance.name,
 		operational = .operational
 	);
 }
@@ -18,7 +17,6 @@ query get_cluster_data(name) {
 	return cluster @ { name } (
 		name = .name,
      	governor = .governance.name,
-     	deployer = .governance.name,
      	is_operational = .operational
 	);
 }

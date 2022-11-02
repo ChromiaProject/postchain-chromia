@@ -5,7 +5,7 @@
 //Who can propose a new blockchain? The container deployer voter set
 operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name: text, container_name: text) {
 	val me = provider @ { my_pubkey };
-	val container = container @ { container_name };
+	val container = require_container(container_name);
 	require_provider_auth_with_rl(me);
 	require_container_deployer(container, me);
 
