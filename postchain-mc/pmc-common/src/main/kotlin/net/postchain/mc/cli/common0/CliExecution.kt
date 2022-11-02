@@ -345,7 +345,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String, name: String) {
         sendTxSync(
                 proposeBlockchainAsync(File(blockchainConfigFile), format, container, name),
-                "Blockchain has been proposed",
+                "Blockchain $name has been proposed",
                 "Cannot add bc proposal"
         )
     }

@@ -8,8 +8,6 @@ operation add_node_to_cluster(provider_pubkey: pubkey, node_pubkey: pubkey, clus
 	require_provider_auth_with_rl(provider);
 	val cluster = cluster @ { cluster_name };
 	add_node_to_cluster_internal(provider, node @ { node_pubkey }, cluster);
-	// check if cluster now is operational, if so update the flag:
-	check_operational(cluster);
 }
 
 /**
@@ -47,6 +45,8 @@ function add_node_to_cluster_internal(provider, node, cluster) {
 		require(empty(provider_cluster_nodes), "A provider can only provide one node to each cluster");
 		create cluster_node(cluster, node);
 		update_configuration_signers(cluster);
+		// check if cluster now is operational, if so update the flag:
+		check_operational(cluster);
 		print("blockchain configuration signers are updated");
 	}
 }

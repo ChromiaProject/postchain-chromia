@@ -50,7 +50,7 @@ class CommandProposeContainer : CliktCommand(
             }
             .postSyncAwaitConfirmation()
             .printResult(
-                "Container has been created",
+                "Container $name has been created",
                 "Failed to create container"
             )
     }

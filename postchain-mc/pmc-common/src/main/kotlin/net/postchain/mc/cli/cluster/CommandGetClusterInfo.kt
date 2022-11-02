@@ -29,7 +29,6 @@ class CommandGetClusterInfo : CliktCommand(
 
                 row("Name:", name)
                 row("Governor:", governor)
-                row("Deployer:", deployer)
                 row("Is Operational:", isOperational.toString())
 
                 row("")

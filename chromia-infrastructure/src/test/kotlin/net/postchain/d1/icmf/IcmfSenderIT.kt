@@ -5,6 +5,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
+import net.postchain.d1.TopicHeaderData
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -14,6 +15,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
@@ -81,17 +84,16 @@ class IcmfSenderIT : ManagedModeTest() {
                 val blockRid = blockQueries.getBlockRid(height).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
-                val expectedHash = TopicHeaderData.calculateMessagesHash(
-                        expectedMessages.map { message -> gtv(message) },
-                        cryptoSystem
-                )
-                val topicHeader = decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()[topic]!!.asDict()
+                val expectedHash = gtv(expectedMessages.map { message -> gtv(message) })
+                        .merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+
+                val topicHeader = TopicHeaderData.fromGtv(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()[topic]!!)
                 assertContentEquals(
                         expectedHash,
-                        topicHeader["hash"]!!.asByteArray()
+                        topicHeader.hash
                 )
 
-                assertEquals(expectedPreviousMessageBlockHeight, topicHeader["prev_message_block_height"]!!.asInteger())
+                assertEquals(expectedPreviousMessageBlockHeight, topicHeader.previousBlockHeight)
 
                 val allMessages =
                         query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(0)))).asArray()

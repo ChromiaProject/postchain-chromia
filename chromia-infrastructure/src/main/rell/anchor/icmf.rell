@@ -12,11 +12,14 @@ struct signed_block_header_with_anchor_height {
     anchor_height: integer;
 }
 
-function process_icmf(header: block_header) {
+function process_icmf(block_rid: byte_array, header: block_header) {
     if (not header.extra.contains("icmf_send")) return;
 
     val icmf_data = map<text,gtv>.from_gtv_pretty(header.extra["icmf_send"]);
     for (topic in icmf_data.keys()) {
+        val previous_anchor_height = icmf_messages_height @? { topic, .anchor_height < op_context.block_height } (@max .anchor_height) ?: -1;
+        op_context.emit_event("icmf_header", (block_rid = block_rid, topic = topic, previous_anchor_height = previous_anchor_height).to_gtv_pretty());
+
         create icmf_messages_height(
             topic = topic,
             sender = header.blockchain_rid,

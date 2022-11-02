@@ -6,6 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
+import net.postchain.d1.TopicHeaderData
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -78,7 +79,7 @@ class AnchorIT : ManagedModeTest() {
         // --------------------
         // Anchor chain: Check that we begin with nothing
         // --------------------
-        val blockQueries = anchorChain.nodes()[0].getBlockchainInstance(anchorChain.chain).blockchainEngine.getBlockQueries()
+        val anchorBlockQueries = anchorChain.nodes()[0].getBlockchainInstance(anchorChain.chain).blockchainEngine.getBlockQueries()
 
         // --------------------
         // Anchor chain: Build first anchor block
@@ -92,8 +93,18 @@ class AnchorIT : ManagedModeTest() {
         // --------------------
         val expectedNumberOfTxs = 1  // Only the first TX
 
-        val blockDataFull = blockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
+        val blockDataFull = anchorBlockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
+        val blockHeaderData = BlockHeaderData.fromBinary(blockDataFull.header.rawData)
+        val anchorHeaderExtra = blockHeaderData.getExtra()[ICMF_ANCHOR_HEADERS_EXTRA]!!
+        val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["my-topic"]!!)
+
+        assertEquals(-1L, topicHeaderData.previousBlockHeight)
+
+        val dappBlockQueries = dappChain.nodes()[0].getBlockchainInstance(dappChain.chain).blockchainEngine.getBlockQueries()
+        val dappBlockRids = (0..3).map { height -> gtv(dappBlockQueries.getBlockRid(height.toLong()).get()!!) }
+        val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        assertContentEquals(anchorHash, topicHeaderData.hash)
 
         withReadConnection(anchorChain.nodes()[0].postchainContext.storage, anchorChain.chain) {
             val db = DatabaseAccess.of(it)

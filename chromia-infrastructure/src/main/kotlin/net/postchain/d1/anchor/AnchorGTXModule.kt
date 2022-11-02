@@ -1,5 +1,6 @@
 package net.postchain.d1.anchor
 
+import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -17,6 +18,9 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
     private val _specialTxExtensions = listOf(AnchorSpecialTxExtension())
 
     override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchor module creates tables etc
+
+    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> =
+            listOf(AnchorBlockBuilderExtension())
 
     /**
      * We need to write our own special type of operation for each header message we get.
