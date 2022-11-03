@@ -1,6 +1,5 @@
 package net.postchain.d1.icmf
 
-import com.google.gson.Gson
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
@@ -11,6 +10,8 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.mapper.GtvObjectMapper
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -76,9 +77,9 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         } else {
                             val block: BlockDetail? = clientMock.blockAtHeightSync(height)
                             if (block == null) {
-                                Response(Status.OK).body("null")
+                                Response(Status.OK).body(GtvEncoder.encodeGtv(GtvNull).inputStream())
                             } else {
-                                Response(Status.OK).body(Gson().toJson(block))
+                                Response(Status.OK).body(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(block)).inputStream())
                             }
                         }
                     }
