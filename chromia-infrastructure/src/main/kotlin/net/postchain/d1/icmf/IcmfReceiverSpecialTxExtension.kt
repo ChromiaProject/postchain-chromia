@@ -104,7 +104,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             when (op.opName) {
                 AnchorHeaderOp.OP_NAME -> {
                     val anchorHeaderOp = AnchorHeaderOp.fromOpData(op) ?: return false
-                    
+
                     if (!validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)) return false
                     headerBlockRidsByTopic.clear()
 

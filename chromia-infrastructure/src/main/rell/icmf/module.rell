@@ -1,5 +1,7 @@
 module;
 
+val MAX_ICMF_MESSAGE_SIZE = 16 * 1024 * 1024; // 16 MiB
+
 @log
 entity sent_icmf_message {
     topic: text;
@@ -22,10 +24,12 @@ query icmf_get_messages(topic: text, height: integer): list<gtv> {
 }
 
 function send_message(topic: text, body: gtv) {
+    val encoded_body = body.to_bytes();
+    require(encoded_body.size() < MAX_ICMF_MESSAGE_SIZE, "Message body too big, max size is %d bytes".format(MAX_ICMF_MESSAGE_SIZE));
     create sent_icmf_message(
         topic = topic,
         block_height = op_context.block_height,
-        body = body.to_bytes()
+        body = encoded_body
     );
 
     val previous_message_block_height = sent_icmf_message @? { topic, .block_height < op_context.block_height } ( @max .block_height ) ?: -1;
