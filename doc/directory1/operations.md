@@ -23,8 +23,8 @@
 | create_cluster             | no                                   | actions    | TODO: Should be NP permission                                                                                                                                          |
 | add_bc_replica             | node provider                        | actions    | TODO: should be CNP but with a max limit                                                                                                                               |
 | remove_bc_replica          | node provider                        | actions    ||
-| make_vote                  | voter set member                     | actions    | TODO: actions -> no, i.e. remove limiting                                                                                                                              |
-| retract_vote               | voter set member                     | actions    | TODO: actions -> no, i.e. remove limiting                                                                                                                              |
+| make_vote                  | voter set member                     | no         ||
+| retract_vote               | voter set member                     | no         ||
 | propose_cluster_provider   | cluster governor                     | actions    ||
 | propose_enable_provider    | any                                  | actions    | NP can enable CNP without voting                                                                                                                                       |
 | propose_disable_provider   | any                                  | actions    | TODO: Add tiers? cf. propose_enable_provider / will disable all nodes as well                                                                                          |
