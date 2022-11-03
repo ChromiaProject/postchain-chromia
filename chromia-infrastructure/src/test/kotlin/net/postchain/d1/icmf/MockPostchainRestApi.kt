@@ -1,7 +1,9 @@
 package net.postchain.d1.icmf
 
 import net.postchain.client.config.FailOverConfig
-import net.postchain.client.core.*
+import net.postchain.client.core.BlockDetail
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.Queries
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -10,7 +12,15 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
-import org.http4k.core.*
+import org.http4k.core.Body
+import org.http4k.core.ContentType
+import org.http4k.core.HttpHandler
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Response
+import org.http4k.core.Status
+import org.http4k.core.then
+import org.http4k.core.with
 import org.http4k.filter.ServerFilters
 import org.http4k.format.Gson.auto
 import org.http4k.lens.Path
@@ -62,17 +72,6 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         } else {
                             val responseGtv = clientMock.querySync(queryName, queryArgs)
                             Response(Status.OK).with(Body.auto<List<String>>().toLens() of listOf(GtvEncoder.encodeGtv(responseGtv).toHex()))
-                        }
-                    },
-                    "/node/{blockchainRID}/height" bind Method.GET to { request ->
-                        val blockchainRid = BlockchainRid(blockchainRid(request).hexStringToByteArray())
-
-                        val clientMock = mockClients[blockchainRid]
-                        if (clientMock == null) {
-                            Response(Status.NOT_FOUND)
-                        } else {
-                            val blockHeight = clientMock.currentBlockHeightSync()
-                            Response(Status.OK).with(Body.auto<CurrentBlockHeight>().toLens() of CurrentBlockHeight(blockHeight))
                         }
                     },
                     "/blocks/{blockchainRID}/height/{height}" bind Method.GET to { request ->
