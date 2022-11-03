@@ -16,9 +16,7 @@
 | add_node                   | no                                   | actions    | TODO: Should be only NP? But others can add replicas, right? Limit number of nodes? https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1157664476 |
 | replace_node               | owned by                             | actions    |                                                                                                                                                                        |
 | remove_node                | no                                   | actions    | TODO: Should be owned by or system permission?                                                                                                                         |
-| update_node_host           | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
-| update_node_port           | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
-| update_node_api_url        | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
+| update_node                | node provider                        | actions    ||
 | add_container_replica      | no                                   | actions    | TODO: What is this? Redesign, https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1126303348                                                       |
 | remove_container_replica   | no                                   | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                                                 |
 | add_node_to_cluster        | cluster provider                     | actions    ||
@@ -41,5 +39,4 @@
 | propose_blockchain_action  | container deployer                   | actions    | Note: Provider can propose to stop other blockchains in the container                                                                                                  |
 | propose_update_voter_set   | voter set governor                   | actions    |                                                                                                                                                                        |
 | anchor_block               | no                                   | no         | Old anchoring implementation. Attack vector? Hard to make but perhaps we need some verification?                                                                       |
-
 
