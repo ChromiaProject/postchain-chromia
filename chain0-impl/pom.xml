@@ -12,6 +12,7 @@
 
     <modules>
         <module>directory1</module>
+        <module>chromia1</module>
     </modules>
 
     <groupId>net.postchain.chain0</groupId>
@@ -20,12 +21,34 @@
     <description>Parent module for chain0 implementations</description>
 
     <properties>
-        <rell.directory>${project.basedir}/src/main/rell</rell.directory>
+        <rell.directory>${project.basedir}/../rell/src</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
+        <rellTestModules>common,roles,container,cluster</rellTestModules>
     </properties>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>rell-test</id>
+                        <goals>
+                            <goal>rell-test</goal>
+                        </goals>
+                        <configuration>
+                            <source>rell/src</source>
+                            <testModule>${rellTestModules}</testModule>
+                            <skip>${skipTests}</skip>
+                            <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -40,7 +63,7 @@
                             </goals>
                             <configuration>
                                 <descriptors>
-                                    <descriptor>${project.basedir}/src/main/assembly/targz.xml</descriptor>
+                                    <descriptor>src/main/assembly/targz.xml</descriptor>
                                 </descriptors>
                             </configuration>
                         </execution>

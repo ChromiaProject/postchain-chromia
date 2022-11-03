@@ -10,9 +10,9 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
 
-    <artifactId>directory1</artifactId>
-    <name>Chain0 - D1</name>
-    <description>Chain0 implementations for Directory1</description>
+    <artifactId>chromia1</artifactId>
+    <name>Chain0 - C1</name>
+    <description>Chain0 implementations for Chromia1</description>
 
     <properties>
     </properties>
@@ -47,7 +47,7 @@
                             <source>${rell.directory}</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>directory1</mainModule>
+                                <mainModule>chromia1</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

@@ -24,6 +24,11 @@
         </dependency>
 
         <dependency>
+            <groupId>net.postchain.chain0</groupId>
+            <artifactId>chromia1</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>pmc-common</artifactId>
             <version>${project.version}</version>
