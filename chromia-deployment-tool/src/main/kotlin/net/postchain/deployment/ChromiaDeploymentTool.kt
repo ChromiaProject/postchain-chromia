@@ -5,10 +5,8 @@ import net.postchain.client.core.PostchainClientProvider
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.wrap
 import net.postchain.d1.common.proposal.proposeBlockchainOperation
 import net.postchain.d1.common.proposal.proposeConfigurationOperation
-import net.postchain.d1.container.container_proof.createContainerByProofOperation
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.rell.compiler.base.utils.C_SourceDir
@@ -62,25 +60,6 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
             height to chainConfig.gtvConfig
         }.sortedBy { it.first }
         return BlockchainConfigurations(BlockchainRid(chain.brid.toByteArray()), chain.name, configs)
-    }
-
-    override fun createContainer(clientConfig: PostchainClientConfig, containerName: String, clusterName: String, proof: ByteArray) {
-        val client = clientProvider.createClient(clientConfig)
-        val result = client
-                .transactionBuilder()
-                .createContainerByProofOperation(
-                        clientConfig.signers.first().pubKey.data,
-                        name = containerName,
-                        clusterName = clusterName,
-                        proof,
-                        null,
-                        null
-                )
-                .sign()
-                .postSyncAwaitConfirmation()
-        if (result.status != TransactionStatus.CONFIRMED) {
-            throw UserMistake("Deployment failed: ${result.rejectReason ?: "still waiting for confirmation"}")
-        }
     }
 
     override fun deployBlockchain(

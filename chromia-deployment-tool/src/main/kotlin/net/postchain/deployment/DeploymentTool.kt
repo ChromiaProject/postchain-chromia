@@ -7,13 +7,6 @@ import java.nio.file.Path
 interface DeploymentTool {
     fun generateConfig(sourceDir: Path, deployXmlFile: Path, outputDir: Path): BlockchainConfigurations
 
-    fun createContainer(
-            clientConfig: PostchainClientConfig,
-            containerName: String,
-            clusterName: String,
-            proof: ByteArray
-    )
-
     fun deployBlockchain(
             clientConfig: PostchainClientConfig,
             blockchainName: String,

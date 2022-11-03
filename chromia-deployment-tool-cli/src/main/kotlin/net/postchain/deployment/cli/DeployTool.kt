@@ -14,7 +14,6 @@ import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
-import net.postchain.common.hexStringToByteArray
 import net.postchain.deployment.ChromiaDeploymentTool
 import net.postchain.deployment.DeploymentTool
 import net.postchain.gtv.GtvEncoder
@@ -29,28 +28,6 @@ abstract class DeployXmlCommand(name: String, help: String) : CliktCommand(name 
     val outputDir by option("-o", "--output-dir", help = "Generated configuration output dir (defaults to 'rell/build')").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("rell/build"))
 
     val deployXmlFile by argument(name = "deploy.xml", help = "(defaults to 'rell/config/deploy.xml')").path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
-}
-
-class ContainerCommand : CliktCommand(name = "container", help = "Create container") {
-    private val clientConfig by clientConfigOption()
-
-    private val containerName by option("-c", "--container", help = "Container name").required()
-
-    private val clusterName by option("--cluster", help = "Cluster name").required()
-
-    private val proofHex by option("--proof", metavar = "HEX", help = "Hex encoded staking proof").required()
-
-    override fun run() {
-        val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
-
-        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
-        deploymentTool.createContainer(
-                clientConfig,
-                containerName = containerName,
-                clusterName = clusterName,
-                proofHex.hexStringToByteArray()
-        )
-    }
 }
 
 class DeployCommand : DeployXmlCommand(name = "deploy", help = "Deploy blockchain into container") {
@@ -96,4 +73,4 @@ fun ParameterHolder.clientConfigOption() = option("--config", help = "Client con
         .path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
 
 fun main(args: Array<String>) =
-        NoOpCliktCommand(name = "deploy-tool").subcommands(ContainerCommand(), DeployCommand(), UpdateCommand()).main(args)
+        NoOpCliktCommand(name = "deploy-tool").subcommands(DeployCommand(), UpdateCommand()).main(args)
