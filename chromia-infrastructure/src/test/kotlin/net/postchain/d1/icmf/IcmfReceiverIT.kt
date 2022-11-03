@@ -68,7 +68,6 @@ class IcmfReceiverIT : ManagedModeTest() {
 
     private fun setupClientMocks(anchorQueryResponse: Gtv = senderOneQueryResponse, messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
         MockPostchainRestApi.addMockClient(anchorChainRid, mock {
-            on { currentBlockHeightSync() } doReturn 1L
             on { blockAtHeightSync(0L) } doReturn buildAnchorHeader(listOf(anchorQueryResponse["block_header"]!!.asByteArray()))
             on {
                 querySync(
@@ -103,7 +102,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             override fun blockAtHeightSync(height: Long) =
                     buildAnchorHeader(listOf(senderTwoQueryResponse["block_header"]!!.asByteArray()))
 
-            override fun currentBlockHeightSync(): Long = 1
+            override fun currentBlockHeightSync(): Long = throw NotImplementedError()
 
             override fun querySync(name: String, gtv: Gtv): Gtv =
                     if (name == "icmf_get_headers_with_messages_after_height" && gtv["topic"] == gtv("my-topic") && gtv["from_anchor_height"] == gtv(
