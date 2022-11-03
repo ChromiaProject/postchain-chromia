@@ -1,6 +1,7 @@
 package net.postchain.d1.icmf
 
 import assertk.assert
+import assertk.assertions.contains
 import assertk.assertions.containsAll
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
@@ -25,10 +26,15 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import org.apache.logging.log4j.core.Logger
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.doReturn
@@ -49,12 +55,21 @@ class IcmfReceiverIT : ManagedModeTest() {
     private val senderTwoEncodedMessageBody = GtvEncoder.encodeGtv(senderTwoMessageBody)
     private val senderTwoQueryResponse = createQueryResponseForMessage(senderTwoChainRid, senderTwoMessageBody)
 
-    private fun setupClientMocks() {
-        PostchainClientMocks.clearMocks()
+    @BeforeEach
+    fun setup() {
+        MockPostchainRestApi.start()
+    }
 
-        PostchainClientMocks.addMockClient(anchorChainRid, mock {
+    @AfterEach
+    fun shutdown() {
+        MockPostchainRestApi.close()
+        MockPostchainRestApi.clearMocks()
+    }
+
+    private fun setupClientMocks(anchorQueryResponse: Gtv = senderOneQueryResponse, messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
+        MockPostchainRestApi.addMockClient(anchorChainRid, mock {
             on { currentBlockHeightSync() } doReturn 1L
-            on { blockAtHeightSync(0L) } doReturn buildAnchorHeader(listOf(senderOneQueryResponse["block_header"]!!.asByteArray()))
+            on { blockAtHeightSync(0L) } doReturn buildAnchorHeader(listOf(anchorQueryResponse["block_header"]!!.asByteArray()))
             on {
                 querySync(
                         "icmf_get_headers_with_messages_after_height", gtv(
@@ -64,10 +79,10 @@ class IcmfReceiverIT : ManagedModeTest() {
                         )
                 )
                 )
-            } doReturn gtv(listOf(senderOneQueryResponse))
+            } doReturn gtv(listOf(anchorQueryResponse))
         })
 
-        PostchainClientMocks.addMockClient(senderOneChainRid, mock {
+        MockPostchainRestApi.addMockClient(senderOneChainRid, mock {
             on {
                 querySync(
                         "icmf_get_messages", gtv(
@@ -77,7 +92,7 @@ class IcmfReceiverIT : ManagedModeTest() {
                         )
                 )
                 )
-            } doReturn gtv(listOf(senderOneMessageBody))
+            } doReturn gtv(messageQueryResponse)
         })
     }
 
@@ -223,6 +238,42 @@ class IcmfReceiverIT : ManagedModeTest() {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun maxMessageSize() {
+        val context = LoggerContext.getContext(false)
+        val logger = context.getLogger(ClusterGlobalTopicPipe::class.java)
+        val appender = ListAppender("List").apply {
+            start()
+        }
+        context.configuration.addLoggerAppender(logger as Logger, appender)
+
+        val messageBody = gtv("imtoobig".repeat(2 * 1024 * 1024))
+        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
+        val queryResponse = createQueryResponseForMessage(senderOneChainRid, messageBody)
+
+        setupClientMocks(queryResponse, listOf(messageBody))
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            assert(appender.events.map { it.message.toString() })
+                    .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: ${ClusterGlobalTopicPipe.maxMessageSize} bytes")
         }
     }
 

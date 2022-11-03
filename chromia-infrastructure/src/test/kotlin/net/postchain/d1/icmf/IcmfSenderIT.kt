@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -69,6 +70,32 @@ class IcmfSenderIT : ManagedModeTest() {
 
         // Expecting previous height to be 0
         verifyMessages(dappChain, 2, "my-topic", 0, block2Messages, block0Messages + block2Messages)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun icmfTooBigMessage() {
+        startManagedSystem(3, 0)
+
+        val rellCode = File("src/main/rell/icmf/module.rell").readText() +
+                """
+                    operation test_message(text) {
+                        send_message("my-topic", text.to_gtv());
+                    }
+                """
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
+                mapOf("rell" to gtv(rellCode)))
+
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
+                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+
+        val message = "imtoobig".repeat(2 * 1024 * 1024)
+        val tx = makeTransaction(dappChain.nodes()[0], dappChain.chain, 0, GtxOp("test_message", gtv(message)))
+        buildBlock(dappChain.chain, 0, tx)
+        val txStatus = dappChain.nodes()[0].getBlockchainInstance(1L).blockchainEngine.getTransactionQueue().getTransactionStatus(tx.getHash())
+        assertEquals(TransactionStatus.REJECTED, txStatus)
     }
 
     private fun verifyMessages(dappChain: NodeSet,

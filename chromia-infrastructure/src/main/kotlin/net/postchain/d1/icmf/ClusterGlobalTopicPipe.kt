@@ -44,7 +44,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                              _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
-        const val maxQueueSizeBytes = 10 * 1024 * 1024 // 10 MiB
+        const val maxQueueSizeBytes = 32 * 1024 * 1024 // 32 MiB
+        const val maxMessageSize = 16 * 1024 * 1024 // 16 MiB
     }
 
     private val clusterName = id
@@ -65,6 +66,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                     logger.info("Fetched messages")
                 } catch (e: CancellationException) {
                     break
+                } catch (e: UserMistake) {
+                    logger.warn(e.message)
                 } catch (e: Exception) {
                     logger.error("Message fetch failed: ${e.message}", e)
                 }
@@ -208,7 +211,11 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
         val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
             anchorPacket.packets.sumOf {
-                it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size }
+                it.bodies.sumOf { body ->
+                    val bodySize = GtvEncoder.encodeGtv(body).size
+                    if (bodySize > maxMessageSize) throw UserMistake("Message with size $bodySize bytes exceeds maximum size: $maxMessageSize bytes")
+                    bodySize
+                }
             }
         }
         if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {

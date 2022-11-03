@@ -15,5 +15,5 @@ class IcmfReceiverTestSynchronizationInfrastructureExtension(postchainContext: P
     override fun createClusterManagement(configuration: BlockchainConfiguration) = IcmfTestClusterManagement()
 
     override fun createClientProvider(clusterManagement: ClusterManagement) =
-        PostchainClientMocks.createProvider(clusterManagement)
+        MockPostchainRestApi.createProvider(clusterManagement)
 }
