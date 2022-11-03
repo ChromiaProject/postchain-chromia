@@ -29,7 +29,7 @@
 | propose_enable_provider    | any                                  | actions    | NP can enable CNP without voting                                                                                                                                       |
 | propose_disable_provider   | any                                  | actions    | TODO: Add tiers? cf. propose_enable_provider / will disable all nodes as well                                                                                          |
 | propose_provider_is_system | any                                  | actions    | can also demote                                                                                                                                                        |
-| propose_container          | cluster governor                     | actions    | TODO: No require_cluster_governor() ?! cf. propose_container_limits()                                                                                                  |
+| propose_container          | cluster governor                     | actions    |                                                                                                                                                                        |
 | propose_container_limits   | cluster governor                     | actions    ||
 | propose_remove_container   | cluster governor AND empty container | actions    ||
 | propose_cluster_limits     | cluster governor                     | actions    ||
