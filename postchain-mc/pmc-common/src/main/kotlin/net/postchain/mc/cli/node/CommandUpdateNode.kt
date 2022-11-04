@@ -46,8 +46,6 @@ class CommandUpdateNode : CliktCommand(
                     if (host != null || port != null || apiUrl != null) {
                         updateNodeOperation(provider, pubkey, host, port?.toLong(), apiUrl)
                     }
-                }
-                .apply {
                     clusterName?.forEach { addNodeToClusterOperation(provider, pubkey, it) }
                 }
                 .postSyncAwaitConfirmation()
