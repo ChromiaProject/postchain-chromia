@@ -26,7 +26,7 @@
 | make_vote                  | voter set member                     | no         ||
 | retract_vote               | voter set member                     | no         ||
 | propose_cluster_provider   | cluster governor                     | actions    ||
-| propose_enable_provider    | any                                  | actions    | NP can enable CNP without voting                                                                                                                                       |
+| propose_enable_provider    | SP > [SP, NP, CNP], NP > CNP         | actions    | NP can enable CNP without voting                                                                                                                                       |
 | propose_disable_provider   | any                                  | actions    | TODO: Add tiers? cf. propose_enable_provider / will disable all nodes as well                                                                                          |
 | propose_provider_is_system | any                                  | actions    | can also demote                                                                                                                                                        |
 | propose_container          | cluster governor                     | actions    |                                                                                                                                                                        |
