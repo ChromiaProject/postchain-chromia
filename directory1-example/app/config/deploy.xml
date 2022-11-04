@@ -1,10 +1,7 @@
-<run wipe-db="false">
-    <nodes>
-        <config add-signers="false" >#</config>
-    </nodes>
+<deploy>
     <chains>
-        <chain name="city" iid="100">
-            <config height="0">
+        <chain name="city">
+            <config version="0">
                 <app module="main" />
                 <gtv path="blockstrategy/blockdelay"><int>2000</int></gtv>
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
@@ -12,4 +9,4 @@
             </config>
         </chain>
     </chains>
-</run>
+</deploy>
