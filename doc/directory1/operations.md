@@ -16,22 +16,20 @@
 | add_node                   | no                                   | actions    | TODO: Should be only NP? But others can add replicas, right? Limit number of nodes? https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1157664476 |
 | replace_node               | owned by                             | actions    |                                                                                                                                                                        |
 | remove_node                | no                                   | actions    | TODO: Should be owned by or system permission?                                                                                                                         |
-| update_node_host           | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
-| update_node_port           | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
-| update_node_api_url        | node provider                        | actions    | TODO: Merge with other updates                                                                                                                                         |
+| update_node                | node provider                        | actions    ||
 | add_container_replica      | no                                   | actions    | TODO: What is this? Redesign, https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1126303348                                                       |
 | remove_container_replica   | no                                   | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                                                 |
 | add_node_to_cluster        | cluster provider                     | actions    ||
 | create_cluster             | no                                   | actions    | TODO: Should be NP permission                                                                                                                                          |
 | add_bc_replica             | node provider                        | actions    | TODO: should be CNP but with a max limit                                                                                                                               |
 | remove_bc_replica          | node provider                        | actions    ||
-| make_vote                  | voter set member                     | actions    | TODO: actions -> no, i.e. remove limiting                                                                                                                              |
-| retract_vote               | voter set member                     | actions    | TODO: actions -> no, i.e. remove limiting                                                                                                                              |
+| make_vote                  | voter set member                     | no         ||
+| retract_vote               | voter set member                     | no         ||
 | propose_cluster_provider   | cluster governor                     | actions    ||
 | propose_enable_provider    | any                                  | actions    | NP can enable CNP without voting                                                                                                                                       |
 | propose_disable_provider   | any                                  | actions    | TODO: Add tiers? cf. propose_enable_provider / will disable all nodes as well                                                                                          |
 | propose_provider_is_system | any                                  | actions    | can also demote                                                                                                                                                        |
-| propose_container          | cluster governor                     | actions    | TODO: No require_cluster_governor() ?! cf. propose_container_limits()                                                                                                  |
+| propose_container          | cluster governor                     | actions    |                                                                                                                                                                        |
 | propose_container_limits   | cluster governor                     | actions    ||
 | propose_remove_container   | cluster governor AND empty container | actions    ||
 | propose_cluster_limits     | cluster governor                     | actions    ||
@@ -41,5 +39,4 @@
 | propose_blockchain_action  | container deployer                   | actions    | Note: Provider can propose to stop other blockchains in the container                                                                                                  |
 | propose_update_voter_set   | voter set governor                   | actions    |                                                                                                                                                                        |
 | anchor_block               | no                                   | no         | Old anchoring implementation. Attack vector? Hard to make but perhaps we need some verification?                                                                       |
-
 
