@@ -4,15 +4,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import net.postchain.chain0.common.cluster.addNodeToClusterOperation
-import net.postchain.chain0.common.updateNodeApiUrlOperation
-import net.postchain.chain0.common.updateNodeHostOperation
-import net.postchain.chain0.common.updateNodePortOperation
+import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.hexStringToWrappedByteArray
-import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
@@ -38,14 +34,21 @@ class CommandUpdateNode : CliktCommand(
     ).split(",")
 
     override fun run() {
-        val pubkey = key.hexStringToByteArray()
+        if (host == null && port == null && apiUrl == null && clusterName == null) {
+            println("No properties to update. At least one node's property should be specified")
+            return
+        }
+
         val provider = client.config.pubkey().data
-        val builder = client.transactionBuilder()
-        host?.let { builder.updateNodeHostOperation(provider, pubkey, it) }
-        port?.let { builder.updateNodePortOperation(provider, pubkey, it.toLong()) }
-        apiUrl?.let { builder.updateNodeApiUrlOperation(provider, pubkey, it) }
-        clusterName?.forEach { builder.addNodeToClusterOperation(provider, pubkey, it) }
-        builder.postSyncAwaitConfirmation()
+        val pubkey = key.hexStringToByteArray()
+        client.transactionBuilder()
+                .apply {
+                    if (host != null || port != null || apiUrl != null) {
+                        updateNodeOperation(provider, pubkey, host, port?.toLong(), apiUrl)
+                    }
+                    clusterName?.forEach { addNodeToClusterOperation(provider, pubkey, it) }
+                }
+                .postSyncAwaitConfirmation()
                 .printResult("Node information was updated", "Node information update failed")
     }
 }
