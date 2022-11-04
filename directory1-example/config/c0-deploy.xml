@@ -1,10 +1,7 @@
-<run wipe-db="false">
-    <nodes>
-        <config add-signers="false" >#</config>
-    </nodes>
+<deploy>
     <chains>
-        <chain name="manager" iid="0">
-            <config height="0" add-dependencies="false">
+        <chain name="manager">
+            <config version="0">
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="directory1">
                     <args module="directory1">
@@ -21,7 +18,4 @@
             </config>
         </chain>
     </chains>
-</run>
-
-
-
+</deploy>

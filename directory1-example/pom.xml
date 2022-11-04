@@ -33,6 +33,14 @@
             <type>tar.gz</type>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-deployment-tool-cli</artifactId>
+            <version>${project.version}</version>
+            <classifier>dist</classifier>
+            <type>tar.gz</type>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
