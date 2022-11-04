@@ -9,8 +9,8 @@ DEPLOY=$(find "$D"/.. -maxdepth 1 -regex '.*chromia-deployment-tool-cli-[0-9]*.[
 tar xf "$C0_SOURCES"
 tar xf "$PMC"
 tar xf "$DEPLOY"
-bash "$D"/chromia-deploy compile --source-dir "$D/../directory1/rell" --output-dir "$D/../out" config/c0-deploy.xml
-bash "$D"/chromia-deploy compile --source-dir "$D/../app/src" --output-dir "$D/../app-out" "$D/../app/config/deploy.xml"
+bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../directory1/rell" --output-dir "$D/../out" config/c0-deploy.xml
+bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../app/src" --output-dir "$D/../app-out" "$D/../app/config/deploy.xml"
 
 BRID=$(cat "out/blockchains/0/brid.txt")
 echo "brid=$BRID" >> "$D/../provider/alpha/.pmc/config"
