@@ -33,10 +33,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.*
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.util.concurrent.TimeUnit
@@ -55,14 +52,23 @@ class IcmfReceiverIT : ManagedModeTest() {
     private val senderTwoEncodedMessageBody = GtvEncoder.encodeGtv(senderTwoMessageBody)
     private val senderTwoQueryResponse = createQueryResponseForMessage(senderTwoChainRid, senderTwoMessageBody)
 
-    @BeforeEach
-    fun setup() {
-        MockPostchainRestApi.start()
+    companion object {
+        @BeforeAll
+        @JvmStatic
+        fun start() {
+            MockPostchainRestApi.start()
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun stop() {
+            MockPostchainRestApi.close()
+        }
     }
 
+    @BeforeEach
     @AfterEach
     fun shutdown() {
-        MockPostchainRestApi.close()
         MockPostchainRestApi.clearMocks()
     }
 
