@@ -8,10 +8,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.ArgumentDelegate
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.default
-import com.github.ajalt.clikt.parameters.options.OptionWithValues
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.client.config.PostchainClientConfig
@@ -87,12 +84,15 @@ class CompileCommand : CliktCommand(help = "Compile an application and create a 
     private val sourceDir by sourceDirOption()
     private val outputDir by outputDirOption()
     private val deployXmlFile by deployXmlOption()
+    private val showBrid by option(help = "Show blockchain rid from this configuration").flag()
 
     override fun run() {
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
         deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
+                .apply {
+                    if (showBrid) println(blockchainRid)
+                }
     }
-
 }
 
 fun main(args: Array<String>) =
