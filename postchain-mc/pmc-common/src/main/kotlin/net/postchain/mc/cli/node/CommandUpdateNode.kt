@@ -34,10 +34,19 @@ class CommandUpdateNode : CliktCommand(
     ).split(",")
 
     override fun run() {
+        if (host == null && port == null && apiUrl == null && clusterName == null) {
+            println("No properties to update. At least one node's property should be specified")
+            return
+        }
+
         val provider = client.config.pubkey().data
         val pubkey = key.hexStringToByteArray()
         client.transactionBuilder()
-                .updateNodeOperation(provider, pubkey, host, port?.toLong(), apiUrl)
+                .apply {
+                    if (host != null || port != null || apiUrl != null) {
+                        updateNodeOperation(provider, pubkey, host, port?.toLong(), apiUrl)
+                    }
+                }
                 .apply {
                     clusterName?.forEach { addNodeToClusterOperation(provider, pubkey, it) }
                 }
