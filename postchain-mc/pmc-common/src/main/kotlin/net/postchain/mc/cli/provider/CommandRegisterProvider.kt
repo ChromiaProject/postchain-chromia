@@ -1,11 +1,9 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.context
-import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.options.*
-import net.postchain.chain0.common.proposal.proposeEnableProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
+import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.mc.cli.base.printResult
@@ -28,8 +26,8 @@ enum class ProviderType {
 }
 
 class CommandRegisterProvider : CliktCommand(
-    name = "add",
-    help = """Register new provider with given pubkey. There are three tiers of providers:
+        name = "add",
+        help = """Register new provider with given pubkey. There are three tiers of providers:
         ```
         - Community Node Provider: Basic provider, can deploy dapps and add nodes that replicates blockchains (replica) (default)
         - Node Provider:           Can add block builder nodes
@@ -39,6 +37,7 @@ class CommandRegisterProvider : CliktCommand(
 ) {
     init {
     }
+
     private val client by nopClientOption()
     private val pubkey by pubkeyOption("Public key to register as provider").required()
 
@@ -54,7 +53,7 @@ class CommandRegisterProvider : CliktCommand(
         client.transactionBuilder()
                 .registerProviderOperation(client.pubkey, pubkey, providerTier.toTier())
                 .apply {
-                    if (providerTier.shouldEnable(enable)) proposeEnableProviderOperation(client.pubkey, pubkey.data)
+                    if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkey.data, enable)
                     if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkey.data, true)
                 }
                 .postSyncAwaitConfirmation()
