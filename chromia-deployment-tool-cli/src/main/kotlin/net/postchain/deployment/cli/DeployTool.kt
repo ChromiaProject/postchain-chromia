@@ -7,7 +7,10 @@ import com.github.ajalt.clikt.core.ParameterHolder
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.default
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
@@ -32,7 +35,7 @@ private fun ParameterHolder.clientConfigOption() = option("--config", help = "Cl
 
 private fun CliktCommand.showBridOption() = option(help = "Show blockchain rid from this configuration").flag()
 
-class DeployCommand : CliktCommand(name = "deploy", help = "Deploy blockchain into container") {
+class DeployCommand : CliktCommand(help = "Deploy blockchain into container") {
     private val clientConfig by clientConfigOption()
 
     private val sourceDir by sourceDirOption()
@@ -57,7 +60,7 @@ class DeployCommand : CliktCommand(name = "deploy", help = "Deploy blockchain in
     }
 }
 
-class UpdateCommand : CliktCommand(name = "update", help = "Update configuration of running blockchain") {
+class UpdateCommand : CliktCommand(help = "Update configuration of running blockchain") {
     private val clientConfig by clientConfigOption()
 
     private val sourceDir by sourceDirOption()
@@ -80,7 +83,7 @@ class UpdateCommand : CliktCommand(name = "update", help = "Update configuration
     }
 }
 
-class CompileCommand : CliktCommand(name = "compile", help = "Compile an application and create a blockchain configuration") {
+class CompileCommand : CliktCommand(help = "Compile an application and create a blockchain configuration") {
     private val sourceDir by sourceDirOption()
     private val outputDir by outputDirOption()
     private val deployXmlFile by deployXmlOption()
