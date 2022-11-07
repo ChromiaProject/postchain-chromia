@@ -3,6 +3,7 @@ package net.postchain.deployment
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.d1.common.proposal.proposeBlockchainOperation
@@ -23,43 +24,46 @@ import kotlin.io.path.writeBytes
 import kotlin.io.path.writeText
 
 class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider) : DeploymentTool {
-    override fun generateConfig(sourceDir: Path, deployXmlFile: Path, outputDir: Path): BlockchainConfigurations {
+    override fun generateConfig(sourceDir: Path, deployXmlFile: Path, outputDir: Path): BlockchainConfiguration {
         val cSourceDir = C_SourceDir.diskDir(sourceDir.toFile())
         val configDir = deployXmlFile.absolute().parent
         val generalConfigDir = DiskGeneralDir(configDir.toFile())
         val params = RellRunConfigParams(cSourceDir, generalConfigDir, RellVersions.VERSION, false)
 
-        val runConfText = DeployXmlParser.parse(deployXmlFile)
+        val parsedConfiguration = DeployXmlParser.parse(deployXmlFile)
 
-        val blockchainConfigurations = extractChainConfig(
+        val blockchainConfiguration = extractChainConfig(
                 RellRunConfigGenerator.generate(
                         ExceptionCliEnv(),
                         params,
                         deployXmlFile.pathString,
-                        runConfText
-                )
+                        parsedConfiguration.runXml
+                ),
+                parsedConfiguration
         )
 
         Files.createDirectories(outputDir)
-        blockchainConfigurations.configurations.forEach { (height, gtvConfig) ->
-            // TODO Compression
 
-            val xml = GtvMLEncoder.encodeXMLGtv(gtvConfig)
-            outputDir.resolve("$height.xml").writeText(xml)
+        // TODO Compression
+        val xml = GtvMLEncoder.encodeXMLGtv(blockchainConfiguration.configuration)
+        outputDir.resolve("${blockchainConfiguration.blockchainName}.xml").writeText(xml)
 
-            val bytes = GtvEncoder.encodeGtv(gtvConfig)
-            outputDir.resolve("$height.gtv").writeBytes(bytes)
-        }
+        val bytes = GtvEncoder.encodeGtv(blockchainConfiguration.configuration)
+        outputDir.resolve("${blockchainConfiguration.blockchainName}.gtv").writeBytes(bytes)
 
-        return blockchainConfigurations
+        return blockchainConfiguration
     }
 
-    private fun extractChainConfig(config: RellPostAppConfig): BlockchainConfigurations {
+    private fun extractChainConfig(config: RellPostAppConfig, parsedConfiguration: ParsedConfiguration): BlockchainConfiguration {
         val chain = config.chains.first()
-        val configs = chain.configs.map { (height, chainConfig) ->
-            height to chainConfig.gtvConfig
-        }.sortedBy { it.first }
-        return BlockchainConfigurations(BlockchainRid(chain.brid.toByteArray()), chain.name, configs)
+        val gtvConfig = chain.configs[0]?.gtvConfig ?: throw ProgrammerMistake("No config found at height 0")
+        return BlockchainConfiguration(
+                parsedConfiguration.blockchainRid,
+                BlockchainRid(chain.brid.toByteArray()),
+                chain.name,
+                parsedConfiguration.container,
+                gtvConfig
+        )
     }
 
     override fun deployBlockchain(
