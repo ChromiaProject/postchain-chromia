@@ -4,7 +4,9 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.ParameterHolder
+import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.arguments.ArgumentDelegate
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.default
@@ -22,13 +24,13 @@ import kotlin.io.path.absolutePathString
 
 
 private fun  CliktCommand.sourceDirOption() =
-    option("-d", "--source-dir", help = "Rell source dir (defaults to 'rell/src')").path(mustExist = true, canBeDir = true, canBeFile = false).default(Path.of("rell/src"))
+    option("-d", "--source-dir", help = "Rell source dir").path(mustExist = true, canBeDir = true, canBeFile = false).default(Path.of("rell/src"))
 
 private fun CliktCommand.outputDirOption() =
-        option("-o", "--output-dir", help = "Generated configuration output dir (defaults to 'rell/build')").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("rell/build"))
+        option("-o", "--output-dir", help = "Generated configuration output dir").path(mustExist = false, canBeDir = true, canBeFile = false).default(Path.of("rell/build"))
 
 private fun CliktCommand.deployXmlOption() =
-        argument(name = "deploy.xml", help = "(defaults to 'rell/config/deploy.xml')").path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
+        argument(name = "deploy.xml", ).path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
 
 fun ParameterHolder.clientConfigOption() = option("--config", help = "Client configuration *.properties")
         .path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
@@ -43,6 +45,10 @@ abstract class DeployXmlCommand(name: String, help: String) : CliktCommand(name 
 
 class DeployCommand : DeployXmlCommand(name = "deploy", help = "Deploy blockchain into container") {
     private val containerName by option("-c", "--container", help = "Container name").required()
+
+    init {
+        context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
+    }
 
     override fun run() {
         val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
@@ -85,6 +91,10 @@ class CompileCommand : CliktCommand(help = "Compile an application and create a 
     private val outputDir by outputDirOption()
     private val deployXmlFile by deployXmlOption()
     private val showBrid by option(help = "Show blockchain rid from this configuration").flag()
+
+    init {
+        context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
+    }
 
     override fun run() {
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
