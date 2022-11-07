@@ -5,5 +5,5 @@ import net.postchain.common.BlockchainRid
 data class ParsedConfiguration(
         val runXml: String,
         val blockchainRid: BlockchainRid?,
-        val container: String?
+        val containerName: String?
 )

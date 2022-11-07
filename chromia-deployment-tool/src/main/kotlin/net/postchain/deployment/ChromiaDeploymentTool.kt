@@ -61,7 +61,7 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
                 parsedConfiguration.blockchainRid,
                 BlockchainRid(chain.brid.toByteArray()),
                 chain.name,
-                parsedConfiguration.container,
+                parsedConfiguration.containerName,
                 gtvConfig
         )
     }
