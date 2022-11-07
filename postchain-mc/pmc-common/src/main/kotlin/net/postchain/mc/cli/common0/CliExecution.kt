@@ -533,7 +533,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeEnableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeEnableProviderOperation(config.pubkey().data, key.hexStringToByteArray())
+        return makeTransactionWithNop()
+                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), true)
     }
 
     fun revokeProposalAsync(rowid: Long): TransactionBuilder {
@@ -543,10 +544,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeDisableProviderOperation(
-                config.pubkey().data,
-                key.hexStringToByteArray()
-        )
+        return makeTransactionWithNop()
+                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), false)
     }
 
     fun proposeConfigurationAsync(

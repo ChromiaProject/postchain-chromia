@@ -11,12 +11,13 @@
 
 | Operation                  | Permission                           | Rate limit | Comment                                                                                                                                                                |
 |----------------------------|--------------------------------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| register_provider          | SP > NP > CNP >= CNP                 | actions    | SP can register NP, NP can register CNP, CNP can register CNP                                                                                                          |
+| register_provider          | SP > NP > CNP >= CNP                 | actions    | SP can register NP, NP can register CNP, CNP can register CNP / TODO: Add a test                                                                                       |
 | transfer_action_points     | any                                  | actions    | TODO: should be: SP > NP > CNP >= CNP                                                                                                                                  |
 | add_node                   | no                                   | actions    | TODO: Should be only NP? But others can add replicas, right? Limit number of nodes? https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1157664476 |
 | replace_node               | owned by                             | actions    |                                                                                                                                                                        |
 | remove_node                | no                                   | actions    | TODO: Should be owned by or system permission?                                                                                                                         |
 | update_node                | node provider                        | actions    ||
+| promote_node_provider      | ?                                    | actions    | TODO: Add a test                                                                                                                                                       |
 | add_container_replica      | no                                   | actions    | TODO: What is this? Redesign, https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1126303348                                                       |
 | remove_container_replica   | no                                   | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                                                 |
 | add_node_to_cluster        | cluster provider                     | actions    ||
@@ -26,8 +27,7 @@
 | make_vote                  | voter set member                     | no         ||
 | retract_vote               | voter set member                     | no         ||
 | propose_cluster_provider   | cluster governor                     | actions    ||
-| propose_enable_provider    | any                                  | actions    | NP can enable CNP without voting                                                                                                                                       |
-| propose_disable_provider   | any                                  | actions    | TODO: Add tiers? cf. propose_enable_provider / will disable all nodes as well                                                                                          |
+| propose_provider_state     | SP > [SP, NP, CNP], NP > CNP         | actions    | NP can enable/disable CNP without voting. TODO: will disable all nodes as well (blocked by remove_node)?                                                               |
 | propose_provider_is_system | any                                  | actions    | can also demote                                                                                                                                                        |
 | propose_container          | cluster governor                     | actions    |                                                                                                                                                                        |
 | propose_container_limits   | cluster governor                     | actions    ||
