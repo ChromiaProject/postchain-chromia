@@ -72,7 +72,6 @@
                     <packageName>net.postchain.d1</packageName>
                     <mainModules>
                         <mainModule>common.proposal</mainModule>
-                        <mainModule>container.container_proof</mainModule>
                     </mainModules>
                 </configuration>
                 <executions>
