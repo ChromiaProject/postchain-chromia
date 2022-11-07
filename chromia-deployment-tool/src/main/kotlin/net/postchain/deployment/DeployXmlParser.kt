@@ -28,6 +28,7 @@ object DeployXmlParser {
         val nodesElement = runXml.createElement("nodes")
         runElement.appendChild(nodesElement)
         val nodeConfigElement = runXml.createElement("config")
+        nodeConfigElement.setAttribute("add-signers", "false")
         nodeConfigElement.textContent = "#"
         nodesElement.appendChild(nodeConfigElement)
 
