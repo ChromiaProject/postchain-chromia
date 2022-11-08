@@ -1,6 +1,6 @@
 # Directory1 Example
 
-In this guid you can learn how to set up your on blockchain network by studying a concrete example. The example project is called "The city tracker".
+In this guide you can learn how to set up your own blockchain network by studying a concrete example. The example project is called "The city tracker".
 
 The management chain (BC0) is set up on the first node and also added by the management client (postchain-mc) so that bc0 will become aware of itself. Then we can in a convenient way update configuration, add a second blockchain to be managed by bc0: ``city``. More nodes can optionally be added and be made signers. This sample provides configurations for up to 4 nodes.
 
@@ -44,7 +44,7 @@ This sample contains:
 
 `app` is the city tracker which can be deployed to the network.
 `config` contains node configurations for four nodes. By default, they are pointing to `docker.db.properties` which uses `host.docker.internal:5432`. Update this path to the real database that you are using.
-`provider` contains configurations for four providers. THey are all pointing towards node 0-3 respectively. Change this using `pmc config` command.
+`provider` contains configurations for four providers. They are all pointing towards node 0-3 respectively. Change this using `pmc config` command.
 `scripts` contains some utility scripts. `find-ip` lets you find your external ip address. Note that in a production environment, the IP of the server running the node must be used. 
 `setup.sh` will unpack all tarballs and generate blockchain configurations.
 

@@ -7,7 +7,7 @@ In this example we will use a single provider setup to manage the configuration 
 Start a node using:
 
 ```shell
-$ pmc node start --node-config config/config.0.properties --blockchain-config out/0.xml --name postchain0 --port 50050 --debug
+$ pmc node start --node-config config/config.0.properties --blockchain-config out/manager.xml --name postchain0 --port 50050 --debug
 ```
 
 This will start a node using docker with maintenance port 50050. This port can be used to send rpc requests directly to the node. In this guide we will only communicate with the node through the rest api configured on port 7740 as defined in `config.0.properties`.
@@ -61,7 +61,7 @@ $ pmc containers
 Launch a new blockchain using the `pmc blockchain add` command. A test blockchain configuration should be found in `app-out` folder after running the setup script. 
 
 ```shell
-$ pmc blockchain add --name city_tracker --container cities --blockchain-config app-out/0.xml
+$ pmc blockchain add --name city_tracker --container cities --blockchain-config app-out/city.xml
 ```
 
 > **Note**: The output will now say "Blockchain city_tracker has been proposed", but since you are the only provider in the network, you have indeed also added it.
@@ -100,7 +100,7 @@ app$ chromia-deploy.sh compile --source-dir src --output-dir build config/deploy
 You can now update the dapp using pmc
 
 ```shell
-app$ pmc blockchain update -bc build/0.xml --blockchain-rid $(pmc config --file config/client.properties --get brid)
+app$ pmc blockchain update -bc build/city.xml --blockchain-rid $(pmc config --file config/client.properties --get brid)
 ```
 
 Now, the new query should be accessible from the dapp chain
