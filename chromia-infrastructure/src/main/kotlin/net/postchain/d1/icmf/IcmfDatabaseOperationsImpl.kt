@@ -150,7 +150,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         }
     }
 
-    override fun deleteSpilledMessage(ctx: EContext, serial: Long) {
+    override fun imprecateSpilledMessage(ctx: EContext, serial: Long) {
         DatabaseAccess.of(ctx).run {
             createJooq(ctx).deleteFrom(table(tableSpilledMessage(ctx)))
                     .where(COLUMN_SERIAL.eq(serial))

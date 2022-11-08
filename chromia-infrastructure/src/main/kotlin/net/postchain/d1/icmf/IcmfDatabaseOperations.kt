@@ -14,7 +14,7 @@ interface IcmfDatabaseOperations {
     fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage?
     fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int>
     fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray)
-    fun deleteSpilledMessage(ctx: EContext, serial: Long)
+    fun imprecateSpilledMessage(ctx: EContext, serial: Long)
 }
 
 data class AnchorHeight(
