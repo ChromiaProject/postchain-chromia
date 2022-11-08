@@ -5,7 +5,7 @@ import net.postchain.common.BlockchainRid
 import java.nio.file.Path
 
 interface DeploymentTool {
-    fun generateConfig(sourceDir: Path, deployXmlFile: Path, outputDir: Path): BlockchainConfigurations
+    fun generateConfig(sourceDir: Path, deployXmlFile: Path, outputDir: Path): BlockchainConfiguration
 
     fun deployBlockchain(
             clientConfig: PostchainClientConfig,
