@@ -56,7 +56,7 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
 
     private fun extractChainConfig(config: RellPostAppConfig, parsedConfiguration: ParsedConfiguration): BlockchainConfiguration {
         val chain = config.chains.first()
-        val gtvConfig = chain.configs.firstOrNull()?.gtvConfig ?: throw ProgrammerMistake("No config found")
+        val gtvConfig = chain.configs[0]?.gtvConfig ?: throw ProgrammerMistake("No config found")
         return BlockchainConfiguration(
                 parsedConfiguration.blockchainRid,
                 BlockchainRid(chain.brid.toByteArray()),
