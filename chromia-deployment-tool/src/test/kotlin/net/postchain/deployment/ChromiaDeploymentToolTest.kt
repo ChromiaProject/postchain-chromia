@@ -33,6 +33,7 @@ class ChromiaDeploymentToolTest {
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
         assert(config).isEqualTo(configXml)
+        assert(config["blockstrategy"]!!["maxblocktime"]!!.asInteger()).isEqualTo(2000L)
 
         val expectedBlockchainRid = BlockchainRid(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
 
@@ -51,6 +52,7 @@ class ChromiaDeploymentToolTest {
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
         assert(config).isEqualTo(configXml)
+        assert(config["blockstrategy"]!!["maxblocktime"]!!.asInteger()).isEqualTo(2000L)
 
         val expectedBlockchainRid = BlockchainRid("6A9398B45D864BEF53BCBDF0F4B203701F986036AFE8A3544C9D681E30096E3B".hexStringToByteArray())
 
