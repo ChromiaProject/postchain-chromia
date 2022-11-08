@@ -1,0 +1,6 @@
+<deploy>
+    <chain name="city" blockchain-rid="6A9398B45D864BEF53BCBDF0F4B203701F986036AFE8A3544C9D681E30096E3B">
+        <app module="v1.main"/>
+        <include src="bc-params.xml" root="false"/>
+    </chain>
+</deploy>
