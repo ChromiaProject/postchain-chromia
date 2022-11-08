@@ -24,15 +24,8 @@
     <fileSets>
 
         <fileSet>
-            <directory>./_doc</directory>
-            <outputDirectory>./doc</outputDirectory>
-            <includes>
-                <include>_static/**</include>
-                <include>*0/*</include>
-                <include>*1/*</include>
-                <include>*.html</include>
-                <include>*.js</include>
-            </includes>
+            <directory>./docs</directory>
+            <outputDirectory>docs</outputDirectory>
             <filtered>false</filtered>
         </fileSet>
         <fileSet>

@@ -1,5 +1,11 @@
 # Start a node
 
+Before you start a node, postgres must be installed. See official [postgres](https://www.postgresql.org/download/) documentation or start a postgres instance using docker:
+
+```shell
+docker run --name postgres -e POSTGRES_PASSWORD=<postgres-user> -e POSTGRES_USER=<postgres-pw> -p 5432:5432 -d postgres
+```
+
 Using PMC, a node running Chromia can be started as a docker container or as a native process. A node configuration file is needed. See this sample file:
 
 ```properties
@@ -31,7 +37,10 @@ For a full list of available flags, use `--help`
 
 To start postchain using docker, set the database url to `jdbc:postgresql://host.docker.internal:5432/postchain` and set `--docker` flag.
 Additionally, you can set the name, image (if other than default) and mount volumes.
+
 If the genesis node is also run using the same docker daemon, use `--genesis-peer host.docker.internal:<port>` since they will both be part of dockers internal network.
+
+> **NOTE:** `host.docker.internal` is typically use for Mac, for linux and windows machines, the host 172.17.0.1 can be used to access the docker host
 
 ## Native process
 
