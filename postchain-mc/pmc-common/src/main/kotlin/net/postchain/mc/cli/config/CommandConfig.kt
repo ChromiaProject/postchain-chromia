@@ -42,7 +42,7 @@ class CommandConfig : CliktCommand(
         if (list) {
             configFile.readLines()
                     .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
-                    .also { return println(it) }
+                    .also { return echo(it) }
         }
         if (edit) {
             if (!Desktop.isDesktopSupported()) throw IllegalArgumentException("Cannot edit file interactively, set parameters one by one")
@@ -56,7 +56,7 @@ class CommandConfig : CliktCommand(
                             .configuration
                 }
         if (get != null) {
-            return println(configuration.getString(get))
+            return echo(configuration.getString(get))
         }
         if (set.isNotEmpty()) {
             set.forEach { (t, u) ->
