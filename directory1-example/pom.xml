@@ -18,6 +18,14 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.postchain.distribution</groupId>
+            <artifactId>postchain-client</artifactId>
+            <type>tar.gz</type>
+            <scope>provided</scope>
+            <classifier>dist</classifier>
+            <version>${postchain.version}</version>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
