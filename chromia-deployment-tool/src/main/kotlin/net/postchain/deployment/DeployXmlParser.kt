@@ -1,6 +1,8 @@
 package net.postchain.deployment
 
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.hexStringToByteArray
 import org.w3c.dom.Element
 import java.io.StringWriter
 import java.nio.file.Path
@@ -12,7 +14,7 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
 object DeployXmlParser {
-    fun parse(path: Path): String {
+    fun parse(path: Path): ParsedConfiguration {
         val factory = DocumentBuilderFactory.newInstance()
         val builder = factory.newDocumentBuilder()
         val deployXml = builder.parse(path.toFile())
@@ -20,6 +22,10 @@ object DeployXmlParser {
         val chainElement = deployElement.getElementsByTagName("chain").item(0) as? Element
             ?: throw UserMistake("deploy.xml missing chain element")
         val chainName = chainElement.getAttribute("name")
+        if (chainName.isBlank()) throw UserMistake("Chain must have a name")
+
+        val container = chainElement.getAttribute("container").let { it.ifBlank { null } }
+        val blockchainRid = chainElement.getAttribute("blockchain-rid").let { it.ifBlank { null } }
 
         val runXml = builder.newDocument()
         val runElement = runXml.createElement("run")
@@ -40,21 +46,15 @@ object DeployXmlParser {
         runChainElement.setAttribute("name", chainName)
         chainsElement.appendChild(runChainElement)
 
-        val configNodes = chainElement.getElementsByTagName("config")
-        var lastVersion = -1L
-        for (i in 0 until configNodes.length) {
-            val configElement = configNodes.item(i) as Element
-            val version = configElement.getAttribute("version").toLong()
-            if (i == 0 && version != 0L) throw UserMistake("First version must be 0")
-            if (version <= lastVersion) throw UserMistake("Versions must be in order")
+        val configElement = runXml.createElement("config")
+        configElement.setAttribute("height", "0")
 
-            configElement.setAttribute("height", version.toString())
-            configElement.removeAttribute("version")
-
-            runChainElement.appendChild(runXml.importNode(configElement, true))
-
-            lastVersion = version
+        for (index in 0 until chainElement.childNodes.length) {
+            val child = chainElement.childNodes.item(index)
+            configElement.appendChild(runXml.importNode(child, true))
         }
+
+        runChainElement.appendChild(configElement)
 
         val domSource = DOMSource(runXml)
         val transformer: Transformer = TransformerFactory.newInstance().newTransformer()
@@ -63,6 +63,11 @@ object DeployXmlParser {
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
         val sw = StringWriter()
         transformer.transform(domSource, StreamResult(sw))
-        return sw.buffer.toString()
+
+        return ParsedConfiguration(
+                sw.buffer.toString(),
+                blockchainRid?.let { BlockchainRid(it.hexStringToByteArray()) },
+                container
+        )
     }
 }

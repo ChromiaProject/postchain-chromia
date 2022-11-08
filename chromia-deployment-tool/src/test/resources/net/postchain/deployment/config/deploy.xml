@@ -1,12 +1,6 @@
 <deploy>
-    <chain name="city">
-        <config version="0">
-            <app module="v0.main"/>
-            <include src="bc-params.xml" root="false"/>
-        </config>
-        <config version="1">
-            <app module="v1.main"/>
-            <include src="bc-params.xml" root="false"/>
-        </config>
+    <chain name="city" container="test-container">
+        <app module="v0.main"/>
+        <include src="bc-params.xml" root="false"/>
     </chain>
 </deploy>

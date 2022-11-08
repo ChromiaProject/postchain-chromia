@@ -1,12 +1,8 @@
 <deploy>
-    <chains>
-        <chain name="city">
-            <config version="0">
-                <app module="main" />
-                <gtv path="blockstrategy/blockdelay"><int>2000</int></gtv>
-                <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
-                <gtv path="blockstrategy/maxblocktransactions"><int>500</int></gtv>
-            </config>
-        </chain>
-    </chains>
+    <chain name="city">
+        <app module="main" />
+        <gtv path="blockstrategy/blockdelay"><int>2000</int></gtv>
+        <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
+        <gtv path="blockstrategy/maxblocktransactions"><int>500</int></gtv>
+    </chain>
 </deploy>
