@@ -1,26 +1,68 @@
 package net.postchain.mc.cli.config
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.output.CliktHelpFormatter
+import com.github.ajalt.clikt.output.HelpFormatter
+import com.github.ajalt.clikt.parameters.groups.default
+import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.types.file
+import org.apache.commons.configuration2.PropertiesConfiguration
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
+import org.apache.commons.configuration2.builder.fluent.Parameters
 import java.awt.Desktop
+import java.io.FileWriter
 
+
+fun CliktCommand.configFileOption() = mutuallyExclusiveOptions(
+        option("--global", help = "use global configuration file").flag().convert { PmcConfigProvider.globalConfigurationFile() },
+        option("--local", help = "use project configuration file").flag().convert { PmcConfigProvider.localConfigurationFile() },
+        option("--file", envvar = "POSTCHAIN_CLIENT_CONFIG", help = "use given configuration file (env: POSTCHAIN_CLIENT_CONFIG)")
+                .file(mustExist = true, canBeDir = false),
+        name = "Config file location",
+).default(PmcConfigProvider.localConfigurationFile())
 
 class CommandConfig : CliktCommand(
-    name = "config",
-    help = "Configure the management console"
+        name = "config",
+        help = "Configure the management console"
 ) {
 
-    private val show by option(help = "Show current configuration").flag()
+    private val configFile by configFileOption()
 
-    private val config by pmcConfigFileOption()
+    private val get by option(help = "get value: name [value pattern]", metavar = "KEY")
+
+    private val edit by option("-e", "--edit", help = "edit file using default editor").flag()
+
+    private val list by option(help = "list all").flag()
+
+    private val set by option("-s", "--set", help = "set values [key=value]", metavar = "KEY=VALUE").associate()
 
     override fun run() {
-        if (show) {
-            config.readLines()
-                .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
-                .also { println(it) }
-            return
+        if (list) {
+            configFile.readLines()
+                    .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
+                    .also { return println(it) }
         }
-        if (!config.exists()) PmcConfigProvider.createConfigFile(config, null) else Desktop.getDesktop().edit(config)
+        if (edit) {
+            if (!Desktop.isDesktopSupported()) throw IllegalArgumentException("Cannot edit file interactively, set parameters one by one")
+            return Desktop.getDesktop().edit(configFile)
+        }
+        val configuration = Parameters().properties()
+                .setFile(configFile)
+                .let {
+                    FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
+                            .configure(it)
+                            .configuration
+                }
+        if (get != null) {
+            return println(configuration.getString(get))
+        }
+        if (set.isNotEmpty()) {
+            set.forEach { (t, u) ->
+                configuration.setProperty(t, u)
+            }
+            configuration.write(FileWriter(configFile))
+        }
     }
 }
