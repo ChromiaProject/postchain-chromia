@@ -50,6 +50,11 @@ This sample contains:
 
 > **Note**: We recommend installing [direnv](https://direnv.net) to easily access all scripts in the scripts folder and the management console directly from path.
 
+## Prerequisites
+
+- docker
+- [direnv](https://direnv.net) (this is not mandatory but the examples will assume that all scripts are found on path)
+
 ## Setup
 
 Run the script `scripts/setup.sh` to initiate this project. 
