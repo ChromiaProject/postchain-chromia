@@ -5,12 +5,14 @@ import assertk.assertions.isEqualTo
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.removeNodeOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -23,7 +25,10 @@ import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Paths
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class Directory1IT : ManagedModeTest() {
 
@@ -204,7 +209,7 @@ class Directory1IT : ManagedModeTest() {
                 provConfig, provExecutor.createClusterAsync(
                 newClusterName, providersList,
                 voterSetSystemP
-            )
+        )
         )
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
@@ -284,7 +289,12 @@ class Directory1IT : ManagedModeTest() {
         // Prov2 adds node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
-        doAndBuildBlocks(prov2Config, provExecutor.removeNodeAsync(node1Pubkey))
+        val tx = prov2Executor.getPostchainClient().transactionBuilder()
+                .removeNodeOperation(
+                        prov2Config.signers.first().pubKey.data,
+                        node1Pubkey.hexStringToByteArray()
+                )
+        doAndBuildBlocks(prov2Config, tx)
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
         assertEquals(1, listBlockchainSigners.size)
     }
@@ -381,20 +391,6 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testRemoveNode() {
-        // Add node1
-        addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
-        var nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
-        assertTrue(nodeInfo.get("active")!!.asBoolean())
-
-        // Remove node1
-        doAndBuildBlocks(provConfig, provExecutor.removeNodeAsync(node1Pubkey))
-
-        nodeInfo = provExecutor.getNodeInfo(node1Pubkey).asDict()
-        assertFalse(nodeInfo.get("active")!!.asBoolean())
-    }
-
-    @Test
     fun testListNodesWithProvider() {
         addNode0(provConfig, "")
         // Add node1
@@ -449,14 +445,13 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
                 clusterA, providersList,
-                voterSetSystemP
-            )
+                voterSetSystemP)
         )
+
         doAndBuildBlocks(
                 provConfig, provExecutor.createClusterAsync(
                 clusterB, providersList,
-                voterSetSystemP
-            )
+                voterSetSystemP)
         )
 
         val clusterList = provExecutor.listClusters()
