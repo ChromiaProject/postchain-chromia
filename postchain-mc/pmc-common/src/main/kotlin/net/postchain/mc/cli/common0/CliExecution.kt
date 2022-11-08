@@ -280,14 +280,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun removeNode(key: String) {
-        sendTxSync(
-                removeNodeAsync(key),
-                "Node removed",
-                "Cannot remove node"
-        )
-    }
-
     fun vote(rowid: Long, yes: Boolean) {
         sendTxSync(
                 voteAsync(rowid, yes),
@@ -514,14 +506,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         val cluster = clusterGtv(clusterName)
         val container = containerGtv(containerName)
         return makeTransactionWithNop().addOperation("remove_bc_replica", provider, cluster, container)
-    }
-
-    fun removeNodeAsync(key: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        return makeTransactionWithNop().addOperation(
-                "remove_node",
-                provider, gtv(key.hexStringToByteArray())
-        )
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
