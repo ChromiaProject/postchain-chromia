@@ -35,9 +35,6 @@ class CommandRegisterProvider : CliktCommand(
         ```
     """
 ) {
-    init {
-    }
-
     private val client by nopClientOption()
     private val pubkey by pubkeyOption("Public key to register as provider").required()
 
