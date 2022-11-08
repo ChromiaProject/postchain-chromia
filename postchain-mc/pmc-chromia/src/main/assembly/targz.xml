@@ -6,7 +6,7 @@
         <format>dir</format>
     </formats>
 
-    <baseDirectory>pmc</baseDirectory>
+    <baseDirectory>postchain-mc</baseDirectory>
     <dependencySets>
         <dependencySet>
             <outputDirectory>./lib</outputDirectory>
@@ -22,9 +22,6 @@
         <fileSet>
             <directory>${project.build.scriptSourceDirectory}</directory>
             <outputDirectory>./</outputDirectory>
-            <includes>
-                <include>*.sh</include>
-            </includes>
             <fileMode>0755</fileMode>
             <filtered>true</filtered>
         </fileSet>
