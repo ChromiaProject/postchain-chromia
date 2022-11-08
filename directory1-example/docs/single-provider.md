@@ -15,7 +15,7 @@ This will start a node using docker with maintenance port 50050. This port can b
 Check that your node is running
 
 ```shell
-docker ps --filter name=postchain0
+$ docker ps --filter name=postchain0
 ```
 
 Then, initialize the one-node-network
@@ -29,7 +29,7 @@ The host and port used is the external ip and port that other nodes can communic
 Check that the network is indeed initialized 
 
 ```shell
-pmc network summary
+$ pmc network summary
 ```
 
 This command should show non-zero values.
@@ -106,7 +106,7 @@ app$ pmc blockchain update -bc build/0.xml --blockchain-rid $(pmc config --file 
 Now, the new query should be accessible from the dapp chain
 
 ```shell
-app$ client.sh query --config config/client.properties get_hometown
+app$ client query --config config/client.properties get_hometown
 Query get_hometown returned
 "Lulea"
 ```

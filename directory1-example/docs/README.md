@@ -28,6 +28,7 @@ This sample contains:
 ├── logs
 │   └── postchain.log
 ├── pmc-directory-3.7.0-SNAPSHOT-dist.tar.gz
+├── postchain-client-3.7.0-SNAPSHOT-dist.tar.gz
 ├── provider
 │   ├── alpha
 │   ├── beta
@@ -42,8 +43,8 @@ This sample contains:
 ```
 
 `app` is the city tracker which can be deployed to the network.
-`config` contains node configurations for four nodes. By default, they are pointing to `docker.db.properties` which uses `host.docker.internal:5432`. Update this path to the real database that you are using. Read more in [start-a-node.md].
-`provider` contains configurations for four providers. THey are all pointing towards node 0-3 respectively. Change this using `pmc config` command. Read more about this in [setup-new-network.md].
+`config` contains node configurations for four nodes. By default, they are pointing to `docker.db.properties` which uses `host.docker.internal:5432`. Update this path to the real database that you are using.
+`provider` contains configurations for four providers. THey are all pointing towards node 0-3 respectively. Change this using `pmc config` command.
 `scripts` contains some utility scripts. `find-ip` lets you find your external ip address. Note that in a production environment, the IP of the server running the node must be used. 
 `setup.sh` will unpack all tarballs and generate blockchain configurations.
 
@@ -63,6 +64,15 @@ In the configuration for BC0 we have:
 
 which is configured to the provider called `alpha` (found in providers/alpha directory). This will be the initial provider of the network.
 
-## Initialization
+### Postgres
 
-Make sure you have a node running BC0
+You must have a postgres server running to be able to run nodes. You can start a postgres server using docker
+
+```shell
+$ docker run --name postgres -e POSTGRES_PASSWORD=postchain -e POSTGRES_USER=postchain -p 5432:5432 -d postgres
+```
+
+You then need to configure `config/docker.db.properties` to point the postgres instance. 
+
+> **Note**: The host must be the docker host. On mac, this is `host.docker.internal`, whereas on linux/windows, this is typically `172.17.0.1`
+
