@@ -283,6 +283,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     }
 
     private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBody: Gtv): Gtv {
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
                 gtv(blockchainRid.data),
@@ -294,14 +295,14 @@ class IcmfReceiverIT : ManagedModeTest() {
                         mapOf(
                                 ICMF_BLOCK_HEADER_EXTRA to gtv(
                                         "my-topic" to TopicHeaderData(
-                                                gtv(listOf(messageBody)).merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                                                gtv(listOf(gtv(messageBody.merkleHash(hashCalculator)))).merkleHash(hashCalculator),
                                                 -1L
                                         ).toGtv()
                                 )
                         )
                 )
         ).toGtv()
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(hashCalculator)
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(
                         cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(blockRid)

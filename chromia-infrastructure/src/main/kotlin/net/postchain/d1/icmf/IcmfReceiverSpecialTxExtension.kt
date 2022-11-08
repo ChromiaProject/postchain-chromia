@@ -21,12 +21,15 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 
 class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val BLOCK_SIZE_MARGIN = 100 * 1024
+    }
 
-    private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, HeaderOp.OP_NAME, MessageOp.OP_NAME)
+    private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, HeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
     val receivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     lateinit var clusterManagement: ClusterManagement
+    var maxBlockSize: Long = -1
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -43,10 +46,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val pipes = receivers.flatMap { it.getRelevantPipes() }
 
         val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 
+        var currentSize = 0
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
@@ -61,7 +66,17 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                             for (packet in anchorPacket.packets) {
                                 val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
                                 if (packet.height > currentPrevMessageBlockHeight) {
-                                    allOps.addAll(buildOpData(packet))
+                                    allOps.add(HeaderOp(packet.rawHeader, packet.rawWitness).toOpData())
+
+                                    for (message in packet.messages) {
+                                        allOps.add(MessageHashOp(packet.sender, packet.topic, message.body.merkleHash(hashCalculator)).toOpData())
+                                        if (currentSize + message.size > maxBlockSize - BLOCK_SIZE_MARGIN) {
+                                            // TODO: Add the rest of the messages in next block
+                                        } else {
+                                            allOps.add(MessageOp(packet.sender, packet.topic, message.body).toOpData())
+                                            currentSize += message.size
+                                        }
+                                    }
                                 }
                                 // else already processed in previous block, so skip it here
                             }
@@ -77,16 +92,6 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         return allOps
     }
 
-    private fun buildOpData(icmfPacket: IcmfPacket): List<OpData> {
-        val operations = mutableListOf<OpData>()
-        operations.add(HeaderOp(icmfPacket.rawHeader, icmfPacket.rawWitness).toOpData())
-
-        for (body in icmfPacket.bodies) {
-            operations.add(MessageOp(icmfPacket.sender, icmfPacket.topic, body).toOpData())
-        }
-        return operations
-    }
-
     /**
      * I am validator, validate messages.
      */
@@ -99,7 +104,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         var currentAnchorHeaderData: AnchorHeaderValidationInfo? = null
         val headerBlockRidsByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         var currentHeaderData: HeaderValidationInfo? = null
-        val bodiesByTopic: MutableMap<String, MutableList<Gtv>> = mutableMapOf()
+        val bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         for (op in ops) {
             when (op.opName) {
                 AnchorHeaderOp.OP_NAME -> {
@@ -124,8 +129,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 HeaderOp.OP_NAME -> {
                     val headerOp = HeaderOp.fromOpData(op) ?: return false
 
-                    if (!validateMessages(bodiesByTopic, currentHeaderData, bctx)) return false
-                    bodiesByTopic.clear()
+                    if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx)) return false
+                    bodyHashesByTopic.clear()
 
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
@@ -143,22 +148,26 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     )
                 }
 
-                MessageOp.OP_NAME -> {
-                    val messageOp = MessageOp.fromOpData(op) ?: return false
+                MessageHashOp.OP_NAME -> {
+                    val messageHashOp = MessageHashOp.fromOpData(op) ?: return false
 
                     if (currentHeaderData == null) {
-                        logger.warn("got ${MessageOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
+                        logger.warn("got ${MessageHashOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
                         return false
                     }
 
-                    val topicData = currentHeaderData.icmfHeaderData[messageOp.topic]
+                    val topicData = currentHeaderData.icmfHeaderData[messageHashOp.topic]
                     if (topicData == null) {
-                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $messageOp.topic for sender ${messageOp.sender.toHex()}")
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${messageHashOp.topic} for sender ${messageHashOp.sender.toHex()}")
                         return false
                     }
 
-                    bodiesByTopic.computeIfAbsent(messageOp.topic) { mutableListOf() }
-                            .add(messageOp.body)
+                    bodyHashesByTopic.computeIfAbsent(messageHashOp.topic) { mutableListOf() }
+                            .add(messageHashOp.hash)
+                }
+
+                MessageOp.OP_NAME -> {
+                    // TODO validate MessageOp
                 }
 
                 else -> {
@@ -167,7 +176,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 }
             }
         }
-        return validateMessages(bodiesByTopic, currentHeaderData, bctx) && validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)
+        return validateMessages(bodyHashesByTopic, currentHeaderData, bctx) && validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)
     }
 
     private fun validateHeaders(
@@ -207,12 +216,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     }
 
     private fun validateMessages(
-            bodiesByTopic: MutableMap<String, MutableList<Gtv>>,
+            bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>>,
             currentHeaderData: HeaderValidationInfo?,
             bctx: BlockEContext
     ): Boolean {
         if (currentHeaderData != null) {
-            if (!validateMessagesHash(bodiesByTopic, currentHeaderData)) return false
+            if (!validateMessagesHash(bodyHashesByTopic, currentHeaderData)) return false
             for ((topic, data) in currentHeaderData.icmfHeaderData) {
                 if (!validatePrevMessageHeight(
                                 bctx,
@@ -223,7 +232,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                         )
                 ) return false
             }
-        } else if (bodiesByTopic.isNotEmpty()) {
+        } else if (bodyHashesByTopic.isNotEmpty()) {
             logger.warn("got ${MessageOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
             return false
         }
@@ -263,21 +272,22 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     }
 
     private fun validateMessagesHash(
-            bodiesByTopic: MutableMap<String, MutableList<Gtv>>,
+            bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>>,
             headerData: HeaderValidationInfo
     ): Boolean {
-        if (headerData.icmfHeaderData.keys != bodiesByTopic.keys) {
+        if (headerData.icmfHeaderData.keys != bodyHashesByTopic.keys) {
             logger.warn("Header does not contain the same topics as messages received")
             return false
         }
-        for ((topic, bodies) in bodiesByTopic) {
+        for ((topic, hashes) in bodyHashesByTopic) {
             val topicData = headerData.icmfHeaderData[topic]
             if (topicData == null) {
                 logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic")
                 return false
             }
 
-            val computedHash = gtv(bodies).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+            val computedHash = gtv(hashes.map { gtv(it) }).merkleHash(hashCalculator)
             if (!topicData.hash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for topic: $topic")
                 return false
@@ -351,6 +361,34 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         }
 
         fun toOpData() = OpData(OP_NAME, arrayOf(gtv(rawHeader), gtv(rawWitness)))
+    }
+
+    data class MessageHashOp(
+            val sender: BlockchainRid,
+            val topic: String,
+            val hash: ByteArray
+    ) {
+        companion object {
+            // operation __icmf_message_hash(sender: byte_array, topic: text, hash: byte_array)
+            const val OP_NAME = "__icmf_message_hash"
+
+            fun fromOpData(opData: OpData): MessageHashOp? {
+                if (opData.opName != OP_NAME) return null
+                if (opData.args.size != 3) {
+                    logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
+                    return null
+                }
+
+                return try {
+                    MessageHashOp(BlockchainRid(opData.args[0].asByteArray()), opData.args[1].asString(), opData.args[2].asByteArray())
+                } catch (e: UserMistake) {
+                    logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
+                    null
+                }
+            }
+        }
+
+        fun toOpData() = OpData(OP_NAME, arrayOf(gtv(sender), gtv(topic), gtv(hash)))
     }
 
     data class MessageOp(

@@ -191,7 +191,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                                     rawHeader = header.blockHeader,
                                     rawWitness = header.witness,
                                     prevMessageBlockHeight = topicData.previousBlockHeight,
-                                    bodies = bodies
+                                    messages = bodies.map { IcmfMessage(it, GtvEncoder.encodeGtv(it).size) }
                             )
                     )
                 }
@@ -211,10 +211,9 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
         val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
             anchorPacket.packets.sumOf {
-                it.bodies.sumOf { body ->
-                    val bodySize = GtvEncoder.encodeGtv(body).size
-                    if (bodySize > maxMessageSize) throw UserMistake("Message with size $bodySize bytes exceeds maximum size: $maxMessageSize bytes")
-                    bodySize
+                it.messages.sumOf { message ->
+                    if (message.size > maxMessageSize) throw UserMistake("Message with size ${message.size} bytes exceeds maximum size: $maxMessageSize bytes")
+                    message.size
                 }
             }
         }
@@ -255,7 +254,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 }
             }
 
-            val computedHash = gtv(bodies).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+            val computedHash = gtv(bodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator)
 
             if (!expectedMessagesHash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")

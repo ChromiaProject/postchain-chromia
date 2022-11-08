@@ -1,6 +1,8 @@
 package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.PostchainQuery
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -17,6 +19,8 @@ import net.postchain.d1.query.DefaultChromiaQueryProvider
 import net.postchain.d1.query.LocalQueryProvider
 import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.DappBlockchainConfiguration
@@ -36,6 +40,9 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val clusterManagement = createClusterManagement(configuration)
                 val clientProvider = createClientProvider(clusterManagement)
                 txExt.clusterManagement = clusterManagement
+
+                val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
+                txExt.maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
 
                 val queryProvider = createQueryProvider(configuration, clusterManagement)
 

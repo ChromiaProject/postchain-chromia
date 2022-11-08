@@ -170,7 +170,7 @@ class IcmfValidationTest {
                 -1
         )
 
-        val ops1 = ops.subList(0, ops.size - 1)
+        val ops1 = ops.subList(0, ops.size - 2)
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
     }
 
@@ -186,7 +186,7 @@ class IcmfValidationTest {
                 -1
         )
 
-        val ops1 = ops.subList(0, ops.size - 2)
+        val ops1 = ops.subList(0, ops.size - 4)
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
     }
 
@@ -203,9 +203,10 @@ class IcmfValidationTest {
         )
 
         val injectedMessageBody = gtv("hej2")
+        val injectedMessageHashOp = IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, topic, injectedMessageBody.merkleHash(hashCalculator)).toOpData()
         val injectedMessageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageOp)))
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageHashOp, injectedMessageOp)))
     }
 
     @Test
@@ -291,7 +292,7 @@ class IcmfValidationTest {
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, messageExtraDataOverride ?: mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
                         topic to TopicHeaderData(
-                                gtv(messageBodies).merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                                gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
                                 previousMessageBlockHeight
                         ).toGtv()
                 ))
@@ -317,7 +318,12 @@ class IcmfValidationTest {
 
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
-        val messageOps = messageBodies.map { IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, it).toOpData() }
+        val messageOps = messageBodies.flatMap {
+            listOf(
+                    IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, topic, it.merkleHash(hashCalculator)).toOpData(),
+                    IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, it).toOpData()
+            )
+        }
 
         return listOf(anchorHeaderOp, headerOp) + messageOps
     }

@@ -12,6 +12,7 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchor.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessages
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
@@ -70,10 +71,10 @@ class LocalTopicPipe(
                     continue
                 }
 
-                val bodies = query.icmfGetMessages(
+                val messages = query.icmfGetMessages(
                         route.topic,
                         decodedHeader.getHeight()
-                )
+                ).map { IcmfMessage(it, GtvEncoder.encodeGtv(it).size) }
 
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
@@ -102,7 +103,7 @@ class LocalTopicPipe(
                                 rawHeader = header.blockHeader.data,
                                 rawWitness = header.witness.data,
                                 prevMessageBlockHeight = topicData.previousBlockHeight,
-                                bodies = bodies
+                                messages = messages
                         )
                 )
             }
