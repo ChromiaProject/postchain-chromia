@@ -12,7 +12,7 @@ tar xf "$DEPLOY"
 BRID=$(bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../directory1/rell" --output-dir "$D/../out" --show-brid config/c0-deploy.xml)
 bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../app/src" --output-dir "$D/../app-out" "$D/../app/config/deploy.xml"
 
-echo "brid=$BRID" >> "$D/../provider/alpha/.pmc/config"
-echo "brid=$BRID" >> "$D/../provider/beta/.pmc/config"
-echo "brid=$BRID" >> "$D/../provider/gamma/.pmc/config"
-echo "brid=$BRID" >> "$D/../provider/delta/.pmc/config"
+bash "$D/../postchain-mc/bin/pmc" config --file "$D/../provider/alpha/.pmc/config" --set brid="$BRID"
+bash "$D/../postchain-mc/bin/pmc" config --file "$D/../provider/beta/.pmc/config" --set brid="$BRID"
+bash "$D/../postchain-mc/bin/pmc" config --file "$D/../provider/gamma/.pmc/config" --set brid="$BRID"
+bash "$D/../postchain-mc/bin/pmc" config --file "$D/../provider/delta/.pmc/config" --set brid="$BRID"
