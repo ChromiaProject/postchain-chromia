@@ -27,6 +27,7 @@ data class IcmfPacket(
 data class IcmfAnchorPacket(
         val rawAnchorHeader: ByteArray,
         val rawAnchorWitness: ByteArray,
+        val height: Long,
         val packets: List<IcmfPacket>
 )
 

@@ -49,6 +49,7 @@ class LocalTopicPipe(
                 logger.warn("Anchor block at height $anchorHeight not found")
                 return null
             }
+            val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header)
 
             val packets = mutableListOf<IcmfPacket>()
             for (header in headers) {
@@ -111,6 +112,7 @@ class LocalTopicPipe(
             anchorPackets.add(IcmfAnchorPacket(
                     anchorBlock.header,
                     anchorBlock.witness,
+                    decodedAnchorHeader.getHeight(),
                     packets
             ))
         }

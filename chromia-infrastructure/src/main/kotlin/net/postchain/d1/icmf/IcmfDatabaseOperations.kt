@@ -11,6 +11,10 @@ interface IcmfDatabaseOperations {
     fun loadAllLastMessageHeights(ctx: EContext): List<MessageHeightForSender>
     fun loadLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String): Long
     fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long)
+    fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage?
+    fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int>
+    fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray)
+    fun deleteSpilledMessage(ctx: EContext, serial: Long)
 }
 
 data class AnchorHeight(
@@ -23,4 +27,9 @@ data class MessageHeightForSender(
         val sender: BlockchainRid,
         val topic: String,
         val height: Long
+)
+
+data class SpilledMessage(
+        val serial: Long,
+        val hash: ByteArray
 )

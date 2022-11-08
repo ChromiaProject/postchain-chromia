@@ -125,10 +125,10 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 return
             }
 
-            val decodedHeader = BlockHeaderData.fromBinary(anchorBlock.header)
-            val blockRid = decodedHeader.toGtv().merkleHash(merkleHashCalculator)
+            val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header)
+            val blockRid = decodedAnchorHeader.toGtv().merkleHash(merkleHashCalculator)
 
-            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorBlock.header, anchorBlock.witness, blockRid, cryptoSystem, clusterManagement, ICMF_ANCHOR_HEADERS_EXTRA)
+            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header, anchorBlock.witness, blockRid, cryptoSystem, clusterManagement, ICMF_ANCHOR_HEADERS_EXTRA)
                     ?: return
 
             val anchorHeaderData = anchorExtraData[route.topic]
@@ -202,6 +202,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                     IcmfAnchorPacket(
                             anchorBlock.header,
                             anchorBlock.witness,
+                            decodedAnchorHeader.getHeight(),
                             icmfPackets
                     )
             )
