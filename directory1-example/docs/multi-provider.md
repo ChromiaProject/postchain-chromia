@@ -1,0 +1,73 @@
+# Setting up and managing multiple providers
+
+In this example we will set up and use a few nodes and providers with different roles.
+
+The providers are called `alpha`, `beta`, `gamma` and `delta` and their configurations are found in the `provider` folder. `alpha$` means the command is executed from `provider/alpha` folder.
+
+The goal is to illustrate the different roles a provider can have on the network.
+
+```
+alpha - system provider and owner of node 0
+beta  - system provider and owner of node 1
+gamma - node provider and owner of node 2
+delta - dapp provider/community node provider and owner of node 3
+```
+
+## Initializing the network
+
+Start the genesis node and two other nodes
+
+```shell
+$ pmc node start -nc config/config.0.properties -bc out/manager.xml --name postchain0 --port 50050 --debug
+$ pmc node start -nc config/config.1.properties -bc out/manager.xml --name postchain1 --port 50051 --debug --genesis-pubkey 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 --genesis-peer $(find-ip):9870
+$ pmc node start -nc config/config.2.properties -bc out/manager.xml --name postchain2 --port 50052 --debug --genesis-pubkey 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 --genesis-peer $(find-ip):9870
+$ pmc node start -nc config/config.3.properties -bc out/manager.xml --name postchain3 --port 50052 --debug --genesis-pubkey 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 --genesis-peer $(find-ip):9870
+```
+
+Alpha will then initialize the network on node 0
+```shell
+alpha$ pmc network initialize --host $(find-ip) --port 9870
+```
+
+Verify that the network is initialized by noting non-zero values from
+```shell
+alpha$ pmc network summary
+```
+
+## Inviting providers
+
+Alpha then invites Beta and Gamma as node providers
+
+```shell
+alpha$ pmc provider add --pubkey $(pmc config --get pubkey --file ../beta/.pmc/config) -sp
+alpha$ pmc provider add --pubkey $(pmc config --get pubkey --file ../gamma/.pmc/config) -np
+alpha$ pmc provider add --pubkey $(pmc config --get pubkey --file ../delta/.pmc/config) -cnp
+```
+
+> **Note**: When adding a provider, it is only enabled if it fullfills certain conditions.
+> - SP enables NP and CNP
+> - NP enables CNP
+> - SP *proposes* SP
+> In this case, Alpha is the only SP which makes Beta enabled immediately. If a seconds SP is added, both Alpha and Beta must reach consensus in a voting.
+
+Verify the states of the providers
+
+```shell
+alpha$ pmc providers
+```
+
+## Adding a node to the system cluster
+
+As a newly joined system provider, Beta has the right (and should) to add a node to the system cluster. This is done by registering the node to the network
+
+```shell
+beta$ pmc config --set api.url=http://localhost:7740 # points to the rest api of node 0
+beta$ pmc node add --pubkey 035676109c54b9a16d271abeb4954316a40a32bcce023ac14c8e26e958aa68fba9 --host $(find-ip) --port 9871 --api-url http://localhost:7741 --cluster system
+beta$ pmc config --set api.url=http://localhost:7741 # Change back to point to node 1
+```
+
+Verify that the node is indeed added to the cluster (may take more than 10 seconds since this has a delay of 5 blocks)
+
+```shell
+beta$ pmc cluster info --name system
+```
