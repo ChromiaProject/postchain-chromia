@@ -21,7 +21,7 @@
 | add_container_replica      | no                                   | actions    | TODO: What is this? Redesign, https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1126303348                               |
 | remove_container_replica   | no                                   | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                         |
 | add_node_to_cluster        | cluster provider                     | actions    ||
-| create_cluster             | no                                   | actions    | TODO: Should be NP permission                                                                                                                  |
+| create_cluster             | node provider                        | actions    ||
 | add_bc_replica             | node provider                        | actions    | TODO: should be CNP but with a max limit                                                                                                       |
 | remove_bc_replica          | node provider                        | actions    ||
 | make_vote                  | voter set member                     | no         ||
