@@ -7,17 +7,18 @@ import com.github.ajalt.clikt.core.ParameterHolder
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.output.CliktHelpFormatter
-import com.github.ajalt.clikt.parameters.arguments.ArgumentDelegate
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.default
-import com.github.ajalt.clikt.parameters.options.*
-import com.github.ajalt.clikt.parameters.types.long
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.common.BlockchainRid
 import net.postchain.deployment.ChromiaDeploymentTool
 import net.postchain.deployment.DeploymentTool
-import net.postchain.devtools.cli.Cli
 import net.postchain.gtv.GtvEncoder
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -32,19 +33,20 @@ private fun CliktCommand.outputDirOption() =
 private fun CliktCommand.deployXmlOption() =
         argument(name = "deploy.xml", ).path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true).default(Path.of("rell/config/deploy.xml"))
 
-fun ParameterHolder.clientConfigOption() = option("--config", help = "Client configuration *.properties")
+private fun ParameterHolder.clientConfigOption() = option("--config", help = "Client configuration *.properties")
         .path(mustExist = true, canBeDir = false, canBeFile = true, mustBeReadable = true)
 
-abstract class DeployXmlCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
-    val clientConfig by clientConfigOption()
+private fun CliktCommand.showBridOption() = option(help = "Show blockchain rid from this configuration").flag()
 
-    val sourceDir by sourceDirOption()
-    val outputDir by outputDirOption()
-    val deployXmlFile by deployXmlOption()
-}
+class DeployCommand : CliktCommand(help = "Deploy blockchain into container") {
+    private val clientConfig by clientConfigOption()
 
-class DeployCommand : DeployXmlCommand(name = "deploy", help = "Deploy blockchain into container") {
-    private val containerName by option("-c", "--container", help = "Container name").required()
+    private val sourceDir by sourceDirOption()
+    private val outputDir by outputDirOption()
+    private val deployXmlFile by deployXmlOption()
+
+    private val containerName by option("-c", "--container", help = "Container name")
+    private val showBrid by showBridOption()
 
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
@@ -54,34 +56,36 @@ class DeployCommand : DeployXmlCommand(name = "deploy", help = "Deploy blockchai
         val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
-        val blockchainConfigurations = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
+        val blockchainConfiguration = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
         deploymentTool.deployBlockchain(
                 clientConfig,
-                blockchainConfigurations.name,
-                containerName,
-                GtvEncoder.encodeGtv(blockchainConfigurations.configurations.first().second)
+                blockchainConfiguration.blockchainName,
+                containerName ?: blockchainConfiguration.containerName ?: throw CliktError("No container specified"),
+                GtvEncoder.encodeGtv(blockchainConfiguration.configuration)
         )
+        if (showBrid) echo(blockchainConfiguration.generatedBlockchainRid)
     }
 }
 
-class UpdateCommand : DeployXmlCommand(name = "update", help = "Update configuration of running blockchain") {
-    private val configVersion by option("-v", "--version", help = "Configuration version to use").long()
+class UpdateCommand : CliktCommand(help = "Update configuration of running blockchain") {
+    private val clientConfig by clientConfigOption()
+
+    private val sourceDir by sourceDirOption()
+    private val outputDir by outputDirOption()
+    private val deployXmlFile by deployXmlOption()
+
+    private val blockchainRid by option("-brid", "--blockchain-rid", help = "Blockchain RID").convert { BlockchainRid.buildFromHex(it) }
 
     override fun run() {
         val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
-        val blockchainConfigurations = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
-        val configuration = if (configVersion != null) {
-            blockchainConfigurations.configurations.find { it.first == configVersion }?.second
-                    ?: throw CliktError("configuration version $configVersion not found")
-        } else {
-            blockchainConfigurations.configurations.last().second
-        }
+        val blockchainConfiguration = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
         deploymentTool.updateBlockchain(
                 clientConfig,
-                blockchainConfigurations.blockchainRid,
-                GtvEncoder.encodeGtv(configuration)
+                blockchainRid ?: blockchainConfiguration.specifiedBlockchainRid
+                ?: throw CliktError("No blockchain-rid specified"),
+                GtvEncoder.encodeGtv(blockchainConfiguration.configuration)
         )
     }
 }
@@ -90,7 +94,7 @@ class CompileCommand : CliktCommand(help = "Compile an application and create a 
     private val sourceDir by sourceDirOption()
     private val outputDir by outputDirOption()
     private val deployXmlFile by deployXmlOption()
-    private val showBrid by option(help = "Show blockchain rid from this configuration").flag()
+    private val showBrid by showBridOption()
 
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
@@ -100,7 +104,7 @@ class CompileCommand : CliktCommand(help = "Compile an application and create a 
         val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
         deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
                 .apply {
-                    if (showBrid) println(blockchainRid)
+                    if (showBrid) echo(specifiedBlockchainRid ?: generatedBlockchainRid)
                 }
     }
 }

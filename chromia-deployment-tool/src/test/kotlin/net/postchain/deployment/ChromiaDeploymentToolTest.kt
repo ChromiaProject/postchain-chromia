@@ -2,10 +2,10 @@ package net.postchain.deployment
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotEqualTo
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -24,60 +24,46 @@ class ChromiaDeploymentToolTest {
     private val cryptoSystem = Secp256K1CryptoSystem()
 
     @Test
-    fun generateConfiguration(@TempDir testOutput: Path) {
+    fun generateInitialConfiguration(@TempDir testOutput: Path) {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val runXmlFile = Path.of("$rootResourcePath/config/deploy.xml")
-        val blockchainConfigurations =
+        val blockchainConfiguration =
             ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, runXmlFile, testOutput)
 
-        assert(blockchainConfigurations.configurations.size).isEqualTo(2)
+        val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
+        val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
+        assert(config).isEqualTo(configXml)
+        assert(config["blockstrategy"]!!["maxblocktime"]!!.asInteger()).isEqualTo(2000L)
 
-        val config0 = GtvDecoder.decodeGtv(testOutput.resolve("0.gtv").readBytes())
-        val config0Xml = GtvMLParser.parseGtvML(testOutput.resolve("0.xml").readText())
-        assert(config0).isEqualTo(config0Xml)
+        val expectedBlockchainRid = BlockchainRid(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
 
-        val config1 = GtvDecoder.decodeGtv(testOutput.resolve("1.gtv").readBytes())
-        val config1Xml = GtvMLParser.parseGtvML(testOutput.resolve("1.xml").readText())
-        assert(config1).isEqualTo(config1Xml)
+        assert(blockchainConfiguration.blockchainName).isEqualTo("city")
+        assert(blockchainConfiguration.generatedBlockchainRid).isEqualTo(expectedBlockchainRid)
+        assert(blockchainConfiguration.containerName).isEqualTo("test-container")
+    }
 
-        assert(config1).isNotEqualTo(config0)
+    @Test
+    fun generateUpdateConfiguration(@TempDir testOutput: Path) {
+        val sourceDir = Path.of("$rootResourcePath/sources")
+        val runXmlFile = Path.of("$rootResourcePath/config/deploy-update.xml")
+        val blockchainConfiguration =
+            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, runXmlFile, testOutput)
 
-        val expectedBlockchainRid = BlockchainRid(config0.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
+        val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
+        assert(config).isEqualTo(configXml)
+        assert(config["blockstrategy"]!!["maxblocktime"]!!.asInteger()).isEqualTo(2000L)
 
-        assert(blockchainConfigurations.name).isEqualTo("city")
-        assert(blockchainConfigurations.blockchainRid).isEqualTo(expectedBlockchainRid)
+        val expectedBlockchainRid = BlockchainRid("6A9398B45D864BEF53BCBDF0F4B203701F986036AFE8A3544C9D681E30096E3B".hexStringToByteArray())
+
+        assert(blockchainConfiguration.blockchainName).isEqualTo("city")
+        assert(blockchainConfiguration.specifiedBlockchainRid).isEqualTo(expectedBlockchainRid)
     }
 
     @Test
     fun generateConfigurationSyntaxError(@TempDir testOutput: Path) {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val runXmlFile = Path.of("$rootResourcePath/config/broken-deploy.xml")
-        assertThrows<UserMistake> {
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
-                sourceDir,
-                runXmlFile,
-                testOutput
-            )
-        }
-    }
-
-    @Test
-    fun generateConfigurationFirstNot0(@TempDir testOutput: Path) {
-        val sourceDir = Path.of("$rootResourcePath/sources")
-        val runXmlFile = Path.of("$rootResourcePath/config/first-not-0-deploy.xml")
-        assertThrows<UserMistake> {
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
-                sourceDir,
-                runXmlFile,
-                testOutput
-            )
-        }
-    }
-
-    @Test
-    fun generateConfigurationWrongOrder(@TempDir testOutput: Path) {
-        val sourceDir = Path.of("$rootResourcePath/sources")
-        val runXmlFile = Path.of("$rootResourcePath/config/wrong-order-deploy.xml")
         assertThrows<UserMistake> {
             ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
                 sourceDir,
