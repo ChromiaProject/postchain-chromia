@@ -55,6 +55,11 @@ This sample contains:
 - docker
 - [direnv](https://direnv.net) (this is not mandatory but the examples will assume that all scripts are found on path)
 
+> **Note**: If you are on mac, it is recommended to install `coreutils` to ensure that the scripts in this distribution is working correctly
+> ```
+> brew install coreutils
+> ```
+
 ## Setup
 
 Run the script `scripts/setup.sh` to initiate this project. 
