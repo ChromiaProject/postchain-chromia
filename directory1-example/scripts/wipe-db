@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -eu
+CONFIG=$1 # Absolute path of config file
+
+CONFIG_DIR=$(realpath $(dirname "$CONFIG"))
+CONFIG_FILE=$(basename "$CONFIG")
+
+docker run --rm -v "$CONFIG_DIR":/config -e POSTCHAIN_CONFIG="/config/$CONFIG_FILE" registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT wipe-db

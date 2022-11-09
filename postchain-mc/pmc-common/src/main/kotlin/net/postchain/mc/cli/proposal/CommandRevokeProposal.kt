@@ -8,7 +8,7 @@ import net.postchain.mc.cli.util.configOption
 
 class CommandRevokeProposal : CliktCommand(
     name = "revoke",
-    help = "Revoke a given proposal"
+    help = "Revoke/remove a proposal submitted by you"
 ) {
     private val config by configOption()
     private val idx by proposalIndexOption().required()
