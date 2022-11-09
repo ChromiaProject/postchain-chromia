@@ -18,7 +18,7 @@
 | remove_node                | node provider: (SP, NP, SP > NP)         | actions    | SP can remove NP's node                                                                                                                        |
 | update_node                | node provider                            | actions    ||
 | promote_node_provider      | system provider                          | actions    | Only SP can promote CNP                                                                                                                        |
-| add_container_replica      | no                                       | actions    | TODO: What is this? Redesign, https://gitlab.com/chromaway/postchain-chromia/-/merge_requests/96#note_1126303348                               |
+| add_container_replica      | no                                       | actions    | TODO: What is this?                                                                                                                            |
 | remove_container_replica   | no                                       | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                         |
 | add_node_to_cluster        | cluster provider                         | actions    ||
 | create_cluster             | node provider                            | actions    ||
