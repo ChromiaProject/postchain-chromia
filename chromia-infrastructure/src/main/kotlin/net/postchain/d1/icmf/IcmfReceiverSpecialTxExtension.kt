@@ -56,6 +56,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             if (pipe.mightHaveNewPackets() && !hasSpilledMessages) {
                 val clusterName = pipe.id
                 val lastAnchoredHeight = lastAnchoredHeights[clusterName to pipe.route.topic] ?: -1
+                // Clean up packets that are no longer relevant
+                pipe.markTaken(lastAnchoredHeight, bctx)
+
                 var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets() && !hasSpilledMessages) {
                     val icmfPackets = pipe.fetchNext(currentHeight)
@@ -95,9 +98,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                                     }
                                     // else already processed in previous block, so skip it here
                                 }
-                                if (!hasSpilledMessages) pipe.markTaken(icmfPackets.currentPointer, bctx)
-                                currentHeight = icmfPackets.currentPointer
                             }
+                            if (!hasSpilledMessages) pipe.markTaken(icmfPackets.currentPointer, bctx)
+                            currentHeight = icmfPackets.currentPointer
                         }
                     } else {
                         break // Nothing more to find

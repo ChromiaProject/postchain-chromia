@@ -54,6 +54,9 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
     private val job: Job
 
+    internal val currentQueueSize: Int
+        get() = currentQueueSizeBytes.get()
+
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
 
@@ -278,8 +281,10 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
-            packets.remove(currentPointer)?.let {
-                currentQueueSizeBytes.addAndGet(-it.second)
+            for (height in packets.navigableKeySet().headSet(currentPointer, true)) {
+                packets.remove(height)?.let {
+                    currentQueueSizeBytes.addAndGet(-it.second)
+                }
             }
         }
     }

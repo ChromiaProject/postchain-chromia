@@ -21,6 +21,7 @@ import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.getModules
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -208,6 +209,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                 }
             }
         }
+
+        verifyPipesAreEmpty(dappChain)
     }
 
     @Test
@@ -336,6 +339,23 @@ class IcmfReceiverIT : ManagedModeTest() {
                     }
                 }
             }
+        }
+
+        verifyPipesAreEmpty(dappChain)
+    }
+
+    private fun verifyPipesAreEmpty(dappChain: NodeSet) {
+        // Let all nodes be primary once, so they can clean their pipes
+        repeat(nodes.size) {
+            buildBlock(dappChain)
+        }
+
+        nodes.forEach { node ->
+            val receiverGTXModule = node.getModules(1L).find { it is IcmfReceiverGTXModule }!!
+            val receiverSpecialTxExtension = receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
+            val globalTopicPipe = receiverSpecialTxExtension.receivers[0].getRelevantPipes()[0] as ClusterGlobalTopicPipe
+
+            assert(globalTopicPipe.currentQueueSize).isEqualTo(0)
         }
     }
 

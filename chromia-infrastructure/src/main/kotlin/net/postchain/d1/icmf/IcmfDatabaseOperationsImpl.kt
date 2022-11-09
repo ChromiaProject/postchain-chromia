@@ -56,9 +56,6 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .column(COLUMN_MESSAGE_HASH)
                     .constraint(constraint("PK_${spilledMessageTable}").primaryKey("serial"))
                     .execute()
-            jooq.createIndex("spilled_message_index")
-                    .on(spilledMessageTable, COLUMN_SENDER, COLUMN_TOPIC)
-                    .execute()
         }
     }
 
