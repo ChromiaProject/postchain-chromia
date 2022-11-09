@@ -89,4 +89,3 @@ If you want to restart and give up your progress, all you need to do is wipe the
 ```shell
 $ wipe-db config/config.0.properties
 ```
-> **Note**: make sure the mount point is correctly set to the config directory and that the correct properties file is referenced.
