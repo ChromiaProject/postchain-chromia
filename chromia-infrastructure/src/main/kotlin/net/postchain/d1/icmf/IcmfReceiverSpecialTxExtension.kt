@@ -21,9 +21,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 
 class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
-    companion object : KLogging() {
-        const val BLOCK_SIZE_MARGIN = 100 * 1024
-    }
+    companion object : KLogging()
 
     private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, HeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem

@@ -45,7 +45,6 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 32 * 1024 * 1024 // 32 MiB
-        const val maxMessageSize = 16 * 1024 * 1024 // 16 MiB
     }
 
     private val clusterName = id
@@ -213,7 +212,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
             anchorPacket.packets.sumOf {
                 it.messages.sumOf { message ->
-                    if (message.size > maxMessageSize) throw UserMistake("Message with size ${message.size} bytes exceeds maximum size: $maxMessageSize bytes")
+                    if (message.size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size ${message.size} bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
                     message.size
                 }
             }
@@ -228,7 +227,10 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         }
     }
 
-    private suspend fun fetchMessageBodies(clusterClient: ChromiaClientProvider.ClusterPostchainClient, blockchainRid: BlockchainRid, height: Long, expectedMessagesHash: ByteArray): List<Gtv> {
+    private suspend fun fetchMessageBodies(clusterClient: ChromiaClientProvider.ClusterPostchainClient,
+                                           blockchainRid: BlockchainRid,
+                                           height: Long,
+                                           expectedMessagesHash: ByteArray): List<Gtv> {
         val client = clusterClient.blockchain(blockchainRid)
 
         while (true) {

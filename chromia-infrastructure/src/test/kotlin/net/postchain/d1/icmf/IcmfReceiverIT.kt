@@ -282,7 +282,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
             assert(appender.events.map { it.message.toString() })
-                    .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: ${ClusterGlobalTopicPipe.maxMessageSize} bytes")
+                    .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
         }
     }
 
