@@ -228,7 +228,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             }
         }
 
-        if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx) && validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)) {
+        if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx)) {
+            return false
+        }
+        if (!validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)) {
             return false
         }
 
