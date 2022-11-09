@@ -208,6 +208,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
             lastSeenAnchorHeight = anchorHeight
         }
+        // No new packets we can return
+        if (icmfAnchorPackets.all { it.packets.isEmpty() }) return
 
         val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
             anchorPacket.packets.sumOf {

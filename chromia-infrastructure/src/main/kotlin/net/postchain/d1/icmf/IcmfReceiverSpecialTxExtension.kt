@@ -243,7 +243,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
             for (topic in headerBlockRidsByTopic.keys) {
                 // If there is no spill we can save as last anchor height
-                if (!bodyHashesBySenderAndTopic.keys.any { it.second == topic }) {
+                if (bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }) {
                     dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
                 }
             }
