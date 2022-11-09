@@ -55,6 +55,11 @@ This sample contains:
 - docker
 - [direnv](https://direnv.net) (this is not mandatory but the examples will assume that all scripts are found on path)
 
+> **Note**: If you are on mac, it is recommended to install `coreutils` to ensure that the scripts in this distribution is working correctly
+> ```
+> brew install coreutils
+> ```
+
 ## Setup
 
 Run the script `scripts/setup.sh` to initiate this project. 
@@ -81,3 +86,21 @@ You then need to configure `config/docker.db.properties` to point the postgres i
 
 > **Note**: The host must be the docker host. On mac, this is `host.docker.internal`, whereas on linux/windows, this is typically `172.17.0.1`
 
+### Starting over
+
+If you want to restart and give up your progress, all you need to do is wipe the database. In a production environment, you never want to do this, but when practicing/testing, it can be useful. You can do this in two ways.
+1. Delete the postgres container and all its data
+2. Wipe the database schema associated with the node in question
+```shell
+$ wipe-db config/config.0.properties
+```
+
+## Guides
+
+### Managing dapp configurations on a single node
+
+In the guide [single provider](single-provider.md), a single node is used to deploy and update a dapp.
+
+### Setting up a network managed by multiple providers
+
+The guide [multi provider](multi-provider.md) shows how to add a provider and how a provider can register nodes to a cluster.

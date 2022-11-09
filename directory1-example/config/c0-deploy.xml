@@ -1,6 +1,7 @@
 <deploy>
     <chain name="manager">
         <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
+        <gtv path="fast_revolt_status_timeout"><int>1000</int></gtv>
         <app module="directory1">
             <args module="directory1">
                 <arg key="initial_provider">
