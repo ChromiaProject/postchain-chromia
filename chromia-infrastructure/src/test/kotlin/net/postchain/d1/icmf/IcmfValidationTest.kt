@@ -32,12 +32,20 @@ class IcmfValidationTest {
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val chainID: Long = 1
+    private val spilledMessage = gtv("hej")
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
     private val dbMock: IcmfDatabaseOperations = mock {
         on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
         on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
+        on { loadOldestSpilledMessage(mockContext, blockchainRID, topic) } doReturn SpilledMessage(
+                0,
+                spilledMessage.merkleHash(hashCalculator),
+                cluster,
+                0
+        )
+        on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
     }
 
     @Test
@@ -275,7 +283,39 @@ class IcmfValidationTest {
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
-    private fun createTxExt(): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(dbMock).apply {
+    @Test
+    fun successWithSpilledMessages() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    @Test
+    fun incorrectSpilledMessageBody() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, gtv("fel")).toOpData()
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    @Test
+    fun unexpectedSpilledMessage() {
+        val unexpectedDbMock: IcmfDatabaseOperations = mock {
+            on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
+            on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
+            on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
+        }
+        val icmfReceiverSpecialTxExtension = createTxExt(unexpectedDbMock)
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         clusterManagement = IcmfTestClusterManagement()
     }
