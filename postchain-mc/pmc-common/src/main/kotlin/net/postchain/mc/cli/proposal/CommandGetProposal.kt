@@ -28,7 +28,7 @@ class CommandGetProposal : CliktCommand(
 ) {
     private val config by configOption()
 
-    private val id by proposalIndexOption().convert { RowId(it) }.required()
+    private val id by proposalIndexOption().convert { RowId(it) }
 
     private val verbose by option("-v", "--verbose", help = "Show proposal content").flag()
 
@@ -37,7 +37,7 @@ class CommandGetProposal : CliktCommand(
         val proposal = client.getProposal(id) ?: return println("Proposal $id not found")
         val proposedBy = client.getProviderData(PubKey(proposal.proposedBy))
         println("""
-            Proposal: ${id.id} - ${proposal.type.name}
+            Proposal: ${proposal.id.id} - ${proposal.type.name}
             Proposed by ${proposedBy.name} - ${proposedBy.pubkey.hex()}
             Time: ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
         """.trimIndent())

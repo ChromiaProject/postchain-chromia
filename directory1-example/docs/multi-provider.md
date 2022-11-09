@@ -96,13 +96,13 @@ Alpha must now vote on the proposal to accept it. Check which proposals are pres
 
 ```shell
 alpha$ pmc proposals
-alpha$ pmc proposal show --verbose # shows latest proposal, use --id to see info about a specific
+alpha$ pmc proposal info --verbose # shows latest proposal, use --id to see info about a specific
 ```
 
 Alpha can now vote on the proposal
 
 ```shell
-alpha$ pmc proposal vote --id <id> --yes
+alpha$ pmc proposal vote --id <id> --accept # or --reject
 ```
 
 Verify that gamma has been promoted to system and let gamma add its node:

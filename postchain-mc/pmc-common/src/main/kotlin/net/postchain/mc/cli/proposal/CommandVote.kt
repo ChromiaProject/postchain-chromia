@@ -17,7 +17,7 @@ class CommandVote : CliktCommand(
 
     private val id by proposalIndexOption().required()
 
-    private val vote by option("-y", "--approve", help = "Approve or reject this proposal")
+    private val vote by option("-y", "--accept", help = "Accept or reject this proposal")
         .flag("-n", "--reject", default = true)
 
     override fun run() {
