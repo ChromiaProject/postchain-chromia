@@ -15,13 +15,13 @@ class CommandVote : CliktCommand(
 
     private val config by configOption()
 
-    private val idx by proposalIndexOption().required()
+    private val id by proposalIndexOption().required()
 
-    private val vote by option("-y", "--approve", help = "Vote yes or no on this proposal")
-        .flag("-n", "--revoke", default = true)
+    private val vote by option("-y", "--approve", help = "Approve or reject this proposal")
+        .flag("-n", "--reject", default = true)
 
     override fun run() {
-        CliExecution(config).vote(idx, vote)
+        CliExecution(config).vote(id, vote)
         println("Your vote is registered")
     }
 }
