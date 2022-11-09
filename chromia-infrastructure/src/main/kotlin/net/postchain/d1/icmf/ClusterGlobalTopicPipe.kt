@@ -202,7 +202,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                     IcmfAnchorPacket(
                             anchorBlock.header,
                             anchorBlock.witness,
-                            decodedAnchorHeader.getHeight(),
+                            anchorHeight,
                             icmfPackets
                     )
             )
