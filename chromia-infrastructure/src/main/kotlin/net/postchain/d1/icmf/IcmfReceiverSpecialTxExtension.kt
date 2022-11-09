@@ -209,6 +209,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                             return false
                         }
                         dbOperations.imprecateSpilledMessage(bctx, spilledMessage.serial)
+
+                        if (dbOperations.loadSpilledMessageCounts(bctx, spilledMessage.cluster, spilledMessage.anchorHeight, messageOp.topic).isEmpty()) {
+                            dbOperations.saveLastAnchoredHeight(bctx, spilledMessage.cluster, messageOp.topic, spilledMessage.anchorHeight)
+                        }
                     } else {
                         if (!latestReceivedHashForTopic.contentEquals(messageBodyHash)) {
                             logger.warn("Hash of message body ${messageBodyHash.toHex()} does not match latest received message hash operation value ${latestReceivedHashForTopic.toHex()} for topic ${messageOp.topic}")

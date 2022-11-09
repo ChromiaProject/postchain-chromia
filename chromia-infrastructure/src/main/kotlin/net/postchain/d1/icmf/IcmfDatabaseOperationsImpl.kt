@@ -118,14 +118,14 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
     override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? =
             DatabaseAccess.of(ctx).run {
-                createJooq(ctx).select(COLUMN_MESSAGE_HASH, COLUMN_SERIAL)
+                createJooq(ctx).select(COLUMN_MESSAGE_HASH, COLUMN_SERIAL, COLUMN_CLUSTER, COLUMN_ANCHOR_HEIGHT)
                         .from(tableSpilledMessage(ctx))
                         .where(COLUMN_SENDER.eq(sender.data))
                         .and(COLUMN_TOPIC.eq(topic))
                         .orderBy(COLUMN_SERIAL)
                         .limit(1)
                         .fetchOne()
-            }.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH]) }
+            }.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH], it[COLUMN_CLUSTER], it[COLUMN_ANCHOR_HEIGHT]) }
 
     override fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int> =
             DatabaseAccess.of(ctx).run {

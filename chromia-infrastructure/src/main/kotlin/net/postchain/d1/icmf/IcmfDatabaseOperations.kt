@@ -31,5 +31,7 @@ data class MessageHeightForSender(
 
 data class SpilledMessage(
         val serial: Long,
-        val hash: ByteArray
+        val hash: ByteArray,
+        val cluster: String,
+        val anchorHeight: Long
 )
