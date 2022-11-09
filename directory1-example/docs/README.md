@@ -87,6 +87,6 @@ If you want to restart and give up your progress, all you need to do is wipe the
 1. Delete the postgres container and all its data
 2. Wipe the database schema associated with the node in question
 ```shell
-$ docker run --rm -v $(pwd)/config:/config -e POSTCHAIN_CONFIG=/config/config.0.properties registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT wipe-db
+$ wipe-db config/config.0.properties
 ```
 > **Note**: make sure the mount point is correctly set to the config directory and that the correct properties file is referenced.
