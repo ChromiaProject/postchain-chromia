@@ -69,7 +69,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                             if (spilledMessageCounts.isNotEmpty()) {
                                 for (packet in anchorPacket.packets) {
                                     val spilledCount = spilledMessageCounts[packet.sender] ?: 0
-                                    for (message in packet.messages.subList(packet.messages.size - spilledCount - 1, packet.messages.size)) {
+                                    for (message in packet.messages.subList(packet.messages.size - spilledCount, packet.messages.size)) {
                                         if (currentSize + message.size < maxBlockSize - BLOCK_SIZE_MARGIN) {
                                             allOps.add(MessageOp(packet.sender, packet.topic, message.body).toOpData())
                                             currentSize += message.size
