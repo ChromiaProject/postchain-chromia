@@ -89,3 +89,13 @@ If you want to restart and give up your progress, all you need to do is wipe the
 ```shell
 $ wipe-db config/config.0.properties
 ```
+
+## Guides
+
+### Managing dapp configurations on a single node
+
+In the guide [single provider](single-provider.md), a single node is used to deploy and update a dapp.
+
+### Setting up a network managed by multiple providers
+
+The guide [multi provider](multi-provider.md) shows how to add a provider and how a provider can register nodes to a cluster.
