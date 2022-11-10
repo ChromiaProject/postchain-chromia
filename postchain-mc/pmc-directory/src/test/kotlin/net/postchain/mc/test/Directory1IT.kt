@@ -91,20 +91,6 @@ class Directory1IT : ManagedModeTest() {
         assertProviderDisabled(prov2Config.pubkey())
     }
 
-    @Test
-    fun testTransferActionPoints() {
-        //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
-        addSystemProv2()
-        val myAP = provExecutor.listProvidersActionPoints(provConfig.pubkey())
-        val othersAP = provExecutor.listProvidersActionPoints(prov2Config.pubkey())
-        val amount: Long = 20
-        doAndBuildBlocks(provConfig, provExecutor.transferActionPointsAsync(prov2Config.pubkey(), amount))
-        val othersAPAfter = provExecutor.listProvidersActionPoints(prov2Config.pubkey())
-        assertEquals(othersAP + amount, othersAPAfter)
-        val myAPAfter = provExecutor.listProvidersActionPoints(provConfig.pubkey())
-        assertEquals(myAP - amount - 1, myAPAfter)
-    }
-
     /**
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
@@ -274,7 +260,7 @@ class Directory1IT : ManagedModeTest() {
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)
 
-        // Try to send tnx to api end point after the blockhain was re-configuration with new block signer
+        // Try to send tnx to api end point after the blockchain was re-configuration with new block signer
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {
                 doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))

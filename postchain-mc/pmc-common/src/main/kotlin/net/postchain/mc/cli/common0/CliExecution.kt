@@ -2,14 +2,23 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.addNodeOperation
-import net.postchain.chain0.common.cluster.addNodeToClusterOperation
-import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.proposal.getProposalsSince
+import net.postchain.chain0.common.proposal.proposeBlockchainOperation
+import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
+import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
+import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
+import net.postchain.chain0.common.proposal.proposeProviderStateOperation
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
+import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchains
-import net.postchain.chain0.common.voting.createVoterSetOperation
-import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.queries.getClusterProviders
+import net.postchain.chain0.common.queries.getNodesWithProvider
+import net.postchain.chain0.common.queries.getProviderClusters
+import net.postchain.chain0.common.queries.getProviderData
+import net.postchain.chain0.common.queries.listClusters
 import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
@@ -26,8 +35,9 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -55,11 +65,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun getProviderInfo(key: String) = getPostchainClient().getProviderData(PubKey(key))
 
-    fun getClusterInfo(name: String) = getPostchainClient().getClusterData(name)
-
     fun getClusterProviders(name: String) = getPostchainClient().getClusterProviders(name)
-
-    fun listProvidersActionPoints(key: String) = getPostchainClient().getProviderPoints(PubKey(key))
 
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
@@ -224,27 +230,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun registerProvider(key: String, node_provider: Boolean) {
-        sendTxSync(
-                registerProviderAsync(key, node_provider),
-                "Provider has been registered",
-                "Cannot register provider"
-        )
-    }
-
     fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
         sendTxSync(
                 createVoterSetAsync(name, providers, threshold, governorName),
                 "voter set created",
                 "Cannot create voter set"
-        )
-    }
-
-    fun transferActionPoints(to: String, amount: Long) {
-        sendTxSync(
-                transferActionPointsAsync(to, amount),
-                "Action points transferred",
-                "Transferring action points failed"
         )
     }
 
@@ -318,35 +308,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeVoterSetGovernor(name: String, new: String) {
-        sendTxSync(
-                proposeVoterSetGovernorAsync(name, new),
-                "Voter set governor update proposed",
-                "Failed proposing voter set governor"
-        )
-    }
-
-    fun proposeVoterSetMember(voterSet: String, member: String, add: Boolean) {
-        sendTxSync(
-                proposeVoterSetMemberAsync(voterSet, member, add),
-                "Voter set member update proposed",
-                "Failed proposing voter set member update"
-        )
-    }
-
     fun proposeBlockchain(blockchainConfigFile: String, format: String?, container: String, name: String) {
         sendTxSync(
                 proposeBlockchainAsync(File(blockchainConfigFile), format, container, name),
                 "Blockchain $name has been proposed",
                 "Cannot add bc proposal"
-        )
-    }
-
-    private fun voterSetGtv(name: String): Gtv {
-        return getPostchainClient().querySync(
-                "get_voter_set", gtv(
-                "name" to gtv(name)
-        )
         )
     }
 
@@ -364,17 +330,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 "name" to gtv(name)
         )
         )
-    }
-
-    //comma separeted list of providers
-    fun providersGtv(keys: String): Gtv {
-        val gtvList = keys.split(",").map {
-            getPostchainClient().querySync(
-                    "get_provider",
-                    gtv("pubkey" to gtv(it.hexStringToByteArray()))
-            )
-        }
-        return gtv(gtvList)
     }
 
     //Single provider
@@ -421,7 +376,7 @@ open class CliExecution(val config: PostchainClientConfig) {
             governorName: String?
     ): TransactionBuilder {
         return makeTransactionWithNop().createVoterSetOperation(
-            config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
+                config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
         )
     }
 
@@ -448,27 +403,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    /** Add existing node to existing cluster
-     * */
-    fun addNodeToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        val provider = config.pubkey().data
-        return makeTransactionWithNop().addNodeToClusterOperation(
-                provider,
-                key.hexStringToByteArray(), clusterName
-        )
-    }
-
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
     fun createContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
         return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
-    }
-
-    fun transferActionPointsAsync(to: String, amount: Long): TransactionBuilder {
-        val meProvider = providerGtv(config.signers.first().pubKey.hex())
-        val toProvider = providerGtv(to)
-        return makeTransactionWithNop().addOperation("transfer_action_points", meProvider, toProvider, gtv(amount))
     }
 
     fun createClusterAsync(
@@ -558,11 +497,6 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(data, container, name)
-    }
-
-    fun proposeBlockchainGtvAsync(blockchainConfig: Gtv, container: String, name: String): TransactionBuilder {
-        val data = GtvEncoder.encodeGtv(blockchainConfig)
         return proposeBc(data, container, name)
     }
 

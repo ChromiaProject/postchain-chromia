@@ -1,15 +1,25 @@
 
-// Registers and enables a provider
+/*
+    The provider with type in line can (+) / can not (-) register a provider with the type in the column:
+
+         | CNP | NP
+    -----|-----|-----
+     CNP |  +  |  -
+     NP  |  +  |  -
+     SP  |  +  |  +
+*/
 operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
     val me = require_provider(my_pubkey);
-	require_provider_auth_with_rl(me);
-	register_and_enable_provider(
-		pubkey,
-		provider_tier,
-		cluster = null, 
-		voter_set = null, 
-		enabled_by_default = _is_node_provider(provider_tier) == false
-	);
+    require_provider_auth_with_rl(me);
+    require(empty(provider @* { pubkey }), "Provider already exists: " + pubkey);
+
+    register_and_enable_provider(
+        pubkey,
+        provider_tier,
+        cluster = null,
+        voter_set = null,
+        enabled_by_default = _is_node_provider(me.tier) and not(_is_node_provider(provider_tier))
+    );
     if (_is_node_provider(provider_tier)) {
         require(roles.has_system_access(me), "Must be system provider to add a node provider");
         enroll.node(provider @ { pubkey });
@@ -19,7 +29,7 @@ operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
 function _is_node_provider(tier: provider_tier) = tier == provider_tier.NODE_PROVIDER;
 
 @extendable function register_and_enable_provider(pubkey, provider_tier, cluster?, voter_set?, enabled_by_default: boolean = false) {
-	val provider = create provider (
+	val provider = create provider(
 		pubkey,
 		name = "",
         active = enabled_by_default,
@@ -35,13 +45,14 @@ function _is_node_provider(tier: provider_tier) = tier == provider_tier.NODE_PRO
 }
 
 operation promote_node_provider(my_pubkey: pubkey, provider_pubkey: pubkey) { // TODO: Should be able to demote
-    val me = require_is_system_provider(my_pubkey);
+    val me = require_is_provider_with_rl(my_pubkey);
+    require_is_system_provider(my_pubkey);
     val p = require_provider(provider_pubkey);
     require(p.tier != provider_tier.NODE_PROVIDER, "Provider already has this role");
     enroll.node(p);
 }
 
-// recover provider's action points and consume one, if possible
+// Recover provider's action points and consume one, if possible
 function provider_rate_limit(provider) {
 	val max_actions_per_day = provider_quota @ {
 			.tier == provider.tier,
@@ -75,10 +86,11 @@ function provider_rate_limit(provider) {
     );
 }
 
-operation transfer_action_points(from: provider, to: provider, amount: integer) {
-	require_provider_auth_with_rl(from);
-	require(provider_rl_state @ { from } .points >= amount, "Not enough action points to transfer from.");
-	update provider_rl_state @ { from } ( .points -= amount );
-	update provider_rl_state @ { to } ( .points += amount );
+operation transfer_action_points(from: pubkey, to: pubkey, amount: integer) {
+	val _from = require_is_provider_with_rl(from);
+	val _to = require_provider(to);
+	require(provider_rl_state @ { _from } .points >= amount, "Not enough action points to transfer from.");
+	update provider_rl_state @ { _from } ( .points -= amount );
+	update provider_rl_state @ { _to } ( .points += amount );
 }
 
