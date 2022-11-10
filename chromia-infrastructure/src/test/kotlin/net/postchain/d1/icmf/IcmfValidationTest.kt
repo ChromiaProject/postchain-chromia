@@ -32,12 +32,20 @@ class IcmfValidationTest {
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val chainID: Long = 1
+    private val spilledMessage = gtv("hej")
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
     private val dbMock: IcmfDatabaseOperations = mock {
         on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
         on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
+        on { loadOldestSpilledMessage(mockContext, blockchainRID, topic) } doReturn SpilledMessage(
+                0,
+                spilledMessage.merkleHash(hashCalculator),
+                cluster,
+                0
+        )
+        on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
     }
 
     @Test
@@ -170,7 +178,7 @@ class IcmfValidationTest {
                 -1
         )
 
-        val ops1 = ops.subList(0, ops.size - 1)
+        val ops1 = ops.subList(0, ops.size - 2)
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
     }
 
@@ -186,7 +194,7 @@ class IcmfValidationTest {
                 -1
         )
 
-        val ops1 = ops.subList(0, ops.size - 2)
+        val ops1 = ops.subList(0, ops.size - 4)
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
     }
 
@@ -203,9 +211,10 @@ class IcmfValidationTest {
         )
 
         val injectedMessageBody = gtv("hej2")
+        val injectedMessageHashOp = IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, topic, injectedMessageBody.merkleHash(hashCalculator)).toOpData()
         val injectedMessageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageOp)))
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageHashOp, injectedMessageOp)))
     }
 
     @Test
@@ -274,7 +283,39 @@ class IcmfValidationTest {
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
-    private fun createTxExt(): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(dbMock).apply {
+    @Test
+    fun successWithSpilledMessages() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    @Test
+    fun incorrectSpilledMessageBody() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, gtv("fel")).toOpData()
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    @Test
+    fun unexpectedSpilledMessage() {
+        val unexpectedDbMock: IcmfDatabaseOperations = mock {
+            on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
+            on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
+            on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
+        }
+        val icmfReceiverSpecialTxExtension = createTxExt(unexpectedDbMock)
+
+        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+    }
+
+    private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         clusterManagement = IcmfTestClusterManagement()
     }
@@ -291,7 +332,7 @@ class IcmfValidationTest {
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, messageExtraDataOverride ?: mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
                         topic to TopicHeaderData(
-                                gtv(messageBodies).merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                                gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
                                 previousMessageBlockHeight
                         ).toGtv()
                 ))
@@ -317,7 +358,12 @@ class IcmfValidationTest {
 
         val headerOp = IcmfReceiverSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
 
-        val messageOps = messageBodies.map { IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, it).toOpData() }
+        val messageOps = messageBodies.flatMap {
+            listOf(
+                    IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, topic, it.merkleHash(hashCalculator)).toOpData(),
+                    IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, it).toOpData()
+            )
+        }
 
         return listOf(anchorHeaderOp, headerOp) + messageOps
     }

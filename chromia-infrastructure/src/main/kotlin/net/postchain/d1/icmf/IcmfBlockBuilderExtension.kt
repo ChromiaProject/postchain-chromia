@@ -40,11 +40,15 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
      * @return extra data for block header
      */
     override fun finalize(): Map<String, Gtv> {
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val hashesByTopic = queuedEvents
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic
                 .mapValues {
-                    TopicHeaderData(gtv(it.value.map { message -> message.body }).merkleHash(GtvMerkleHashCalculator(cryptoSystem)), it.value.first().previousMessageBlockHeight).toGtv()
+                    TopicHeaderData(gtv(
+                            it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                            it.value.first().previousMessageBlockHeight
+                    ).toGtv()
                 }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
     }

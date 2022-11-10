@@ -5,6 +5,7 @@ import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.AnchorHeaderOp
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.HeaderOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageHashOp
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
@@ -19,6 +20,13 @@ class IcmfReceiverGTXModule : SimpleGTXModule<Unit>(
                     }
                 },
                 HeaderOp.OP_NAME to { _, _ ->
+                    object : Transactor {
+                        override fun isSpecial() = true
+                        override fun isCorrect() = true
+                        override fun apply(ctx: TxEContext) = true
+                    }
+                },
+                MessageHashOp.OP_NAME to { _, _ ->
                     object : Transactor {
                         override fun isSpecial() = true
                         override fun isCorrect() = true
