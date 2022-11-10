@@ -22,7 +22,6 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.rell.anchor.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessages
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -181,9 +180,9 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                     return
                 }
 
-                val bodies = fetchMessageBodies(clusterClient, blockchainRid, header.decodedHeader.getHeight(), topicData.hash)
+                val messages = fetchMessages(clusterClient, blockchainRid, header.decodedHeader.getHeight(), topicData.hash)
 
-                if (bodies.isNotEmpty()) {
+                if (messages.isNotEmpty()) {
                     icmfPackets.add(
                             IcmfPacket(
                                     height = header.decodedHeader.getHeight(),
@@ -193,7 +192,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                                     rawHeader = header.blockHeader,
                                     rawWitness = header.witness,
                                     prevMessageBlockHeight = topicData.previousBlockHeight,
-                                    messages = bodies.map { IcmfMessage(it, GtvEncoder.encodeGtv(it).size) }
+                                    messages = messages
                             )
                     )
                 }
@@ -215,11 +214,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         if (icmfAnchorPackets.all { it.packets.isEmpty() }) return
 
         val packetsSizeBytes = icmfAnchorPackets.sumOf { anchorPacket ->
-            anchorPacket.packets.sumOf {
-                it.messages.sumOf { message ->
-                    if (message.size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size ${message.size} bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
-                    message.size
-                }
+            anchorPacket.packets.sumOf { packet ->
+                packet.messages.sumOf { it.size }
             }
         }
         if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {
@@ -232,10 +228,10 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         }
     }
 
-    private suspend fun fetchMessageBodies(clusterClient: ChromiaClientProvider.ClusterPostchainClient,
-                                           blockchainRid: BlockchainRid,
-                                           height: Long,
-                                           expectedMessagesHash: ByteArray): List<Gtv> {
+    private suspend fun fetchMessages(clusterClient: ChromiaClientProvider.ClusterPostchainClient,
+                                      blockchainRid: BlockchainRid,
+                                      height: Long,
+                                      expectedMessagesHash: ByteArray): List<IcmfMessage> {
         val client = clusterClient.blockchain(blockchainRid)
 
         while (true) {
@@ -262,6 +258,12 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 }
             }
 
+            val messages = bodies.map {
+                val size = GtvEncoder.encodeGtv(it).size
+                if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
+                IcmfMessage(it, size)
+            }
+
             val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
             val computedHash = gtv(bodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator)
 
@@ -269,7 +271,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
                 logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")
                 delay(pollInterval)
             } else {
-                return bodies
+                return messages
             }
         }
     }
