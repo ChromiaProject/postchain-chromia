@@ -24,6 +24,10 @@
         </dependency>
 
         <dependency>
+            <groupId>com.github.ajalt.clikt</groupId>
+            <artifactId>clikt-jvm</artifactId>
+        </dependency>
+        <dependency>
             <!-- CliKt Utils -->
             <groupId>net.postchain</groupId>
             <artifactId>postchain-cli</artifactId>
