@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import kotlin.io.path.pathString
 import kotlin.io.path.readBytes
 import kotlin.io.path.readText
 
@@ -26,9 +27,9 @@ class ChromiaDeploymentToolTest {
     @Test
     fun generateInitialConfiguration(@TempDir testOutput: Path) {
         val sourceDir = Path.of("$rootResourcePath/sources")
-        val runXmlFile = Path.of("$rootResourcePath/config/deploy.xml")
+        val deployXmlFile = Path.of("$rootResourcePath/config/deploy.xml")
         val blockchainConfiguration =
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, runXmlFile, testOutput)
+            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, deployXmlFile, testOutput)
 
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
@@ -45,9 +46,9 @@ class ChromiaDeploymentToolTest {
     @Test
     fun generateUpdateConfiguration(@TempDir testOutput: Path) {
         val sourceDir = Path.of("$rootResourcePath/sources")
-        val runXmlFile = Path.of("$rootResourcePath/config/deploy-update.xml")
+        val deployXmlFile = Path.of("$rootResourcePath/config/deploy-update.xml")
         val blockchainConfiguration =
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, runXmlFile, testOutput)
+            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, deployXmlFile, testOutput)
 
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
@@ -63,13 +64,45 @@ class ChromiaDeploymentToolTest {
     @Test
     fun generateConfigurationSyntaxError(@TempDir testOutput: Path) {
         val sourceDir = Path.of("$rootResourcePath/sources")
-        val runXmlFile = Path.of("$rootResourcePath/config/broken-deploy.xml")
+        val deployXmlFile = Path.of("$rootResourcePath/config/broken-deploy.xml")
         assertThrows<UserMistake> {
             ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
                 sourceDir,
-                runXmlFile,
+                deployXmlFile,
                 testOutput
             )
         }
+    }
+
+    @Test
+    fun generateConfigurationTopLevelError(@TempDir testOutput: Path) {
+        val sourceDir = Path.of("$rootResourcePath/sources")
+        val deployXmlFile = Path.of("$rootResourcePath/config/broken-top-level-deploy.xml")
+        val exception = assertThrows<UserMistake> {
+            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
+                    sourceDir,
+                    deployXmlFile,
+                    testOutput
+            )
+        }
+
+        assert(exception.message)
+                .isEqualTo("${deployXmlFile.pathString}: element 'chain': must have no text [path: deploy]")
+    }
+
+    @Test
+    fun generateConfigurationNestedLevelError(@TempDir testOutput: Path) {
+        val sourceDir = Path.of("$rootResourcePath/sources")
+        val deployXmlFile = Path.of("$rootResourcePath/config/broken-nested-level-deploy.xml")
+        val exception = assertThrows<UserMistake> {
+            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
+                    sourceDir,
+                    deployXmlFile,
+                    testOutput
+            )
+        }
+
+        assert(exception.message)
+                .isEqualTo("${deployXmlFile.pathString}: element 'entry': expected exactly one nested element, but found 2 [path: deploy -> chain -> gtv -> dict]")
     }
 }

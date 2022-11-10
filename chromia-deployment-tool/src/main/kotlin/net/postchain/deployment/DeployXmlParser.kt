@@ -15,8 +15,7 @@ import javax.xml.transform.stream.StreamResult
 
 object DeployXmlParser {
     fun parse(path: Path): ParsedConfiguration {
-        val factory = DocumentBuilderFactory.newInstance()
-        val builder = factory.newDocumentBuilder()
+        val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val deployXml = builder.parse(path.toFile())
         val deployElement = deployXml.documentElement
         val chainElement = deployElement.getElementsByTagName("chain").item(0) as? Element
@@ -24,8 +23,8 @@ object DeployXmlParser {
         val chainName = chainElement.getAttribute("name")
         if (chainName.isBlank()) throw UserMistake("Chain must have a name")
 
-        val container = chainElement.getAttribute("container").let { it.ifBlank { null } }
-        val blockchainRid = chainElement.getAttribute("blockchain-rid").let { it.ifBlank { null } }
+        val container = chainElement.getAttribute("container").ifBlank { null }
+        val blockchainRid = chainElement.getAttribute("blockchain-rid").ifBlank { null }
 
         val runXml = builder.newDocument()
         val runElement = runXml.createElement("run")

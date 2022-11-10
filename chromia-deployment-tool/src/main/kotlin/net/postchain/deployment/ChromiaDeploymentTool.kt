@@ -16,6 +16,7 @@ import net.postchain.rell.tools.runcfg.RellPostAppConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import net.postchain.rell.tools.runcfg.RellRunConfigParams
 import net.postchain.rell.utils.DiskGeneralDir
+import net.postchain.rell.utils.RellCliErr
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.absolute
@@ -32,13 +33,37 @@ class ChromiaDeploymentTool(private val clientProvider: PostchainClientProvider)
 
         val parsedConfiguration = DeployXmlParser.parse(deployXmlFile)
 
+        val rellPostAppConfig = try {
+            RellRunConfigGenerator.generate(
+                    ExceptionCliEnv(),
+                    params,
+                    deployXmlFile.pathString,
+                    parsedConfiguration.runXml
+            )
+        } catch (e: RellCliErr) {
+            val errorMsg = e.message
+            if (errorMsg == null) {
+                throw UserMistake("Rell parsing failed for unknown reason", e)
+            } else if (errorMsg.startsWith(deployXmlFile.pathString) && errorMsg.contains(Regex("\\[path:.*]"))) {
+                // Error is related to xml format and contains a run.xml path that needs to be converted
+                val (file, element, error, path) = errorMsg.split(":")
+
+                val runXmlRootPath = "run -> chains -> chain"
+                val convertedElement = if (path.endsWith("$runXmlRootPath]")) {
+                    element.replace("config", "chain")
+                } else element
+
+                val convertedPath = path.replace(runXmlRootPath, "deploy")
+                        .replace("config", "chain")
+
+                throw UserMistake("$file:$convertedElement:$error:$convertedPath")
+            } else {
+                throw UserMistake(errorMsg)
+            }
+        }
+
         val blockchainConfiguration = extractChainConfig(
-                RellRunConfigGenerator.generate(
-                        ExceptionCliEnv(),
-                        params,
-                        deployXmlFile.pathString,
-                        parsedConfiguration.runXml
-                ),
+                rellPostAppConfig,
                 parsedConfiguration
         )
 
