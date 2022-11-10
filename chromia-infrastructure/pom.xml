@@ -100,17 +100,28 @@
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>rell-client-gen</id>
+                        <id>rell-client-gen-anchoring</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <target>${project.build.directory}/generated-sources/anchoring-rell-client</target>
                             <packageName>net.postchain.d1.rell</packageName>
-                            <mainModules>
-                                <mainModule>anchor</mainModule>
-                                <mainModule>icmf</mainModule>
-                            </mainModules>
+                            <mainModule>common.anchoring.rell_module</mainModule>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-client-gen-icmf</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <target>${project.build.directory}/generated-sources/icmf-rell-client</target>
+                            <packageName>net.postchain.d1.rell</packageName>
+                            <mainModule>icmf</mainModule>
                         </configuration>
                     </execution>
                 </executions>
