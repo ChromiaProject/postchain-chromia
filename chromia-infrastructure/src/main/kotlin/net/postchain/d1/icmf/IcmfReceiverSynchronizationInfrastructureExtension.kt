@@ -1,6 +1,9 @@
 package net.postchain.d1.icmf
 
+import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.PostchainQuery
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -17,6 +20,8 @@ import net.postchain.d1.query.DefaultChromiaQueryProvider
 import net.postchain.d1.query.LocalQueryProvider
 import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.DappBlockchainConfiguration
@@ -28,6 +33,8 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     private val dbOperations = IcmfDatabaseOperationsImpl()
     private val cryptoSystem = postchainContext.cryptoSystem
 
+    companion object : KLogging()
+
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
@@ -36,6 +43,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val clusterManagement = createClusterManagement(configuration)
                 val clientProvider = createClientProvider(clusterManagement)
                 txExt.clusterManagement = clusterManagement
+
+                val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
+                txExt.maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
+                if (txExt.maxBlockSize < MAX_MESSAGE_SIZE + BLOCK_SIZE_MARGIN) {
+                    logger.warn("Configured max block size ${txExt.maxBlockSize} for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + BLOCK_SIZE_MARGIN}")
+                }
 
                 val queryProvider = createQueryProvider(configuration, clusterManagement)
 

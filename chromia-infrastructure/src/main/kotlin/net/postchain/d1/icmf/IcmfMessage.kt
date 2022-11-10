@@ -5,6 +5,11 @@ package net.postchain.d1.icmf
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 
+data class IcmfMessage(
+        val body: Gtv,
+        val size: Int
+)
+
 /**
  * Conceptually = all messages related to a block
  */
@@ -16,12 +21,13 @@ data class IcmfPacket(
         val rawHeader: ByteArray, // Header of the block
         val rawWitness: ByteArray, // Must send the witness so the recipient can validate
         val prevMessageBlockHeight: Long,
-        val bodies: List<Gtv> // (potentially) messages
+        val messages: List<IcmfMessage> // (potentially) messages
 )
 
 data class IcmfAnchorPacket(
         val rawAnchorHeader: ByteArray,
         val rawAnchorWitness: ByteArray,
+        val height: Long,
         val packets: List<IcmfPacket>
 )
 

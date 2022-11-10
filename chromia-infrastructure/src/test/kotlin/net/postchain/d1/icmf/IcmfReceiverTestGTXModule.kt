@@ -5,6 +5,7 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
@@ -32,6 +33,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
         val COLUMN_SENDER: Field<ByteArray> = DSL.field("sender", PostgresDataType.BYTEA.nullable(false))
         val COLUMN_TOPIC: Field<String> = DSL.field("topic", PostgresDataType.TEXT.nullable(false))
         val COLUMN_BODY: Field<ByteArray> = DSL.field("body", PostgresDataType.BYTEA.nullable(false))
+        val COLUMN_HEIGHT: Field<Long> = DSL.field("height", PostgresDataType.BIGINT.nullable(false))
     }
 
     override fun initializeDB(ctx: EContext) {
@@ -42,6 +44,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
                     .column(COLUMN_SENDER)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_BODY)
+                    .column(COLUMN_HEIGHT)
                     .constraint(constraint("PK").primaryKey(COLUMN_ID))
                     .execute()
         }
@@ -61,6 +64,7 @@ class IcmfMessageOp(@Suppress("UNUSED_PARAMETER") u: Unit, private val opdata: E
                     .set(COLUMN_SENDER, opdata.args[0].asByteArray())
                     .set(COLUMN_TOPIC, opdata.args[1].asString())
                     .set(COLUMN_BODY, GtvEncoder.encodeGtv(opdata.args[2]))
+                    .set(COLUMN_HEIGHT, ctx.height)
                     .execute()
         }
         return true

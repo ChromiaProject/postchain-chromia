@@ -2,10 +2,13 @@ package net.postchain.mc.cli.config
 
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.common.BlockchainRid
+import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.mc.cli.util.POSTCHAIN_CLIENT_CONFIG
+import org.apache.commons.configuration2.Configuration
+import org.apache.commons.configuration2.PropertiesConfiguration
 import org.bitcoinj.crypto.MnemonicCode
 import java.awt.Desktop
 import java.io.File
@@ -16,11 +19,16 @@ const val configFileName = ".pmc/config"
 object PmcConfigProvider {
 
     fun fromSystemConfig(): PostchainClientConfig {
-        return when {
-            envConfigurationFile().exists() -> PostchainClientConfig.fromProperties(envConfigurationFile().absolutePath)
-            localConfigurationFile().exists() -> PostchainClientConfig.fromProperties(configFileName)
-            globalConfigurationFile().exists() -> PostchainClientConfig.fromProperties(globalConfigurationFile().absolutePath)
-            else -> throw IllegalArgumentException("Configuration file for pmc was not found")
+        val config = globalConfigurationFile().let { if (it.exists()) PropertiesFileLoader.load(it.absolutePath) else PropertiesConfiguration() }
+        setValuesFromFile(localConfigurationFile(), config)
+        setValuesFromFile(envConfigurationFile(), config)
+        return PostchainClientConfig.fromConfiguration(config)
+    }
+
+    private fun setValuesFromFile(file: File, config: Configuration) {
+        if (file.exists()) {
+            val c = PropertiesFileLoader.load(file.absolutePath)
+            c.keys.forEach { key -> config.setProperty(key, c.getString(key)) }
         }
     }
 
