@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
@@ -74,7 +75,11 @@ class LocalTopicPipe(
                 val messages = query.icmfGetMessages(
                         route.topic,
                         decodedHeader.getHeight()
-                ).map { IcmfMessage(it, GtvEncoder.encodeGtv(it).size) }
+                ).map {
+                    val size = GtvEncoder.encodeGtv(it).size
+                    if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
+                    IcmfMessage(it, size)
+                }
 
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
