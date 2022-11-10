@@ -34,6 +34,16 @@
             <artifactId>rell</artifactId>
             <version>${rellr.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
