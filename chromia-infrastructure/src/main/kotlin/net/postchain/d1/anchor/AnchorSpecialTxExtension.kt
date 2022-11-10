@@ -131,14 +131,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
     }
 
-
-    // TODO Validation discussions
-    // 1. Save time:
-    //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
-    //    (But when we are copying finished anchor block from another node we actually should validate)
-    // 2. In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
-    //    config too.
-
     /**
      * We look at the content of all operations (to check if the block headers are ok and nothing is missing)
      */
