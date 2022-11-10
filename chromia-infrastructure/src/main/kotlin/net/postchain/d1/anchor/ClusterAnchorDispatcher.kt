@@ -29,7 +29,6 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
         }
     }
 
-    // TODO: [POS-358]: Subnode OR Remote ?
     fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
         connectChainInternal(chainID, brid) {
             ClusterAnchorSubnodePipe(chainID, brid, restApiUrl)
