@@ -30,5 +30,14 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-core</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache-async</artifactId>
+        </dependency>
     </dependencies>
 </project>
