@@ -54,8 +54,8 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
     private val job: Job
 
-    internal val currentQueueSize: Int
-        get() = currentQueueSizeBytes.get()
+    internal val queueIsEmpty: Boolean
+        get() = currentQueueSizeBytes.get() == 0
 
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }

@@ -16,9 +16,9 @@ import net.postchain.common.BlockchainRid
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchor.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
-import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.getModules
@@ -36,7 +36,12 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.util.concurrent.TimeUnit
@@ -355,7 +360,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             val receiverSpecialTxExtension = receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
             val globalTopicPipe = receiverSpecialTxExtension.receivers[0].getRelevantPipes()[0] as ClusterGlobalTopicPipe
 
-            assert(globalTopicPipe.currentQueueSize).isEqualTo(0)
+            assert(globalTopicPipe.queueIsEmpty).isTrue()
         }
     }
 
