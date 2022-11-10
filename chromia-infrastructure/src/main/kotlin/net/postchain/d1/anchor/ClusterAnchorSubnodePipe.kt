@@ -31,25 +31,20 @@ class ClusterAnchorSubnodePipe(
     override fun mightHaveNewPackets() = true
 
     // TODO: [POS-358]: Make it async
-    override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
-        val block = try {
-            client.blockAtHeightSync(currentPointer)
-        } catch (e: Exception) {
-            logger.warn("Block fetching from sub node failed")
-            return null
-        }
-
-        return if (block != null) {
-            ClusterAnchorPacket(
-                    currentPointer,
-                    block.rid,
-                    block.header,
-                    block.witness
-            )
-        } else {
-            null
-        }
-    }
+    override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? =
+            try {
+                client.blockAtHeightSync(currentPointer)
+            } catch (e: Exception) {
+                logger.warn("Block fetching from sub node failed")
+                null
+            }?.let {
+                ClusterAnchorPacket(
+                        currentPointer,
+                        it.rid,
+                        it.header,
+                        it.witness
+                )
+            }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {}
 }
