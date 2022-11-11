@@ -1,8 +1,6 @@
 package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import de.m3y.kformat.Table
@@ -10,9 +8,7 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getClusterData
 import net.postchain.chain0.common.queries.getClusterNodes
 import net.postchain.chain0.common.queries.getClusterProviders
-import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.*
-import net.postchain.mc.cli.util.PrintUtils.printClusters
 
 class CommandGetClusterInfo : CliktCommand(
         name = "info",
