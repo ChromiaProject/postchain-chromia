@@ -1,11 +1,14 @@
 package net.postchain.images.directory1
 
 import assertk.assert
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEmpty
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
+import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
@@ -15,9 +18,12 @@ import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.nm_api.nmComputeSystemBlockchainList
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
+import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
@@ -25,6 +31,8 @@ import net.postchain.containers.bpm.resources.*
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.images.common.ManagedModeBase
@@ -33,6 +41,7 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -45,6 +54,7 @@ internal class Directory1DeploymentNightly {
         private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
+        private const val globalAnchoringContainer = "anchoring_system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -106,6 +116,36 @@ internal class Directory1DeploymentNightly {
             assert(isNode(node1.nodeKeyPair.pubKey)).isTrue()
             assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
+
+        assertAnchoringChainProperties()
+    }
+
+    private fun assertAnchoringChainProperties() {
+        // System chains via NP API
+        val systemChains = node1.c0.nmComputeSystemBlockchainList(node1.nodeKeyPair.pubKey.data)
+        assertEquals(2, systemChains.size)
+
+        // Getting anchoring chain for system cluster via CM API
+        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+        // Asserting anchoring chain is in system_chains list of NP API
+        assert(systemChains.map { it.wrap() }).contains(anchoringChainBrid)
+
+        // Getting config of anchoring chain
+        val anchoringChainConfig = node1.c0.nmGetBlockchainConfiguration(BlockchainRid(anchoringChainBrid), 0)
+
+        // Asserting the config is not null and not empty
+        assertNotNull(anchoringChainConfig)
+        assert(anchoringChainConfig.isNotEmpty())
+
+        // Asserting config properties: /cluster == system
+        val configGtv = GtvDecoder.decodeGtv(anchoringChainConfig)
+        assertEquals("system", configGtv["cluster"]?.asString())
+        // /gtx/modules contains AnchorGTXModule module
+        assert(configGtv["gtx"]?.get("modules")?.asArray()?.map(Gtv::asString) ?: emptyList())
+                .contains("net.postchain.d1.anchor.AnchorGTXModule")
+        // /gtx/rell/sources/module.rell contains rell code
+        assert(configGtv["gtx"]?.get("rell")?.get("sources")?.get("module.rell")?.asString() ?: "")
+                .isNotEmpty()
     }
 
     @Test
@@ -114,7 +154,7 @@ internal class Directory1DeploymentNightly {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
-                assert(getSummary().containers).isEqualTo(1L)
+                assert(getSummary().containers).isEqualTo(2L)
             }
 
             transactionBuilder()
@@ -129,7 +169,7 @@ internal class Directory1DeploymentNightly {
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, foobarContainer), containers)
+                assertEquals(setOf(systemContainer, globalAnchoringContainer, foobarContainer), containers)
             }
         }
     }
@@ -231,7 +271,7 @@ internal class Directory1DeploymentNightly {
     @Order(7)
     fun `Deploy new dapp`() {
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(1)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(2)
         }
 
         deployDapp("test-dapp", systemContainer)
@@ -239,7 +279,7 @@ internal class Directory1DeploymentNightly {
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(3)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(4)
         }
     }
 
