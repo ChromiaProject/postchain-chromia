@@ -372,7 +372,7 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testGetNodeListVersion() {
         addNode0(provConfig, "")
-        val version = provExecutor.getNodeListVersion()
+        val version = provExecutor.getPeerListVersion()
         assertTrue(version > 0)
     }
 

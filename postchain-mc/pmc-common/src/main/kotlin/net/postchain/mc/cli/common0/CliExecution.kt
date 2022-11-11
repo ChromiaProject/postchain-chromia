@@ -108,7 +108,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun getBlockchainLastHeight(blockchainRID: String) = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
 
-    fun getNodeListVersion() = getPostchainClient().nmGetPeerListVersion()
+    fun getPeerListVersion() = getPostchainClient().nmGetPeerListVersion()
 
     fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
 

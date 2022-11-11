@@ -14,14 +14,16 @@ class CommandListNodes : CliktCommand(
     private val config by configOption()
 
     override fun run() {
-        println("Nodes:")
         table {
             header("Pubkey", "Host", "Port", "Active", "Provided by")
 
             ClientUtil.fromConfig(config).getNodesWithProvider().forEach {
                 row(it.pubkey.hex(), it.host, it.port.toString(), it.nodeActive.toString(), it.provider.toHex())
             }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            hints {
+                defaultAlignment = Table.Hints.Alignment.LEFT
+                borderStyle = Table.BorderStyle.SINGLE_LINE
+            }
         }.render().also { println(it) }
     }
 }
