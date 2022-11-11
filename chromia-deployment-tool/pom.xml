@@ -32,7 +32,6 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell</artifactId>
-            <version>${rellr.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

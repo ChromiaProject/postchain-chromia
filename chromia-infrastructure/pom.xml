@@ -88,7 +88,6 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell</artifactId>
-            <version>${rellr.version}</version>
             <scope>test</scope>
         </dependency>
 
