@@ -91,6 +91,12 @@
             </dependency>
 
             <dependency>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell</artifactId>
+                <version>${rellr.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-jdk8</artifactId>
                 <version>${kotlin.version}</version>
@@ -122,9 +128,25 @@
             </dependency>
 
             <dependency>
+                <groupId>de.m3y.kformat</groupId>
+                <artifactId>kformat</artifactId>
+                <version>0.9</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.mockito.kotlin</groupId>
                 <artifactId>mockito-kotlin</artifactId>
                 <version>4.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>1.17.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit-pioneer</groupId>
+                <artifactId>junit-pioneer</artifactId>
+                <version>1.7.1</version>
             </dependency>
 
             <dependency>
@@ -213,6 +235,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>3.3.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>3.0.0</version>
                 </plugin>
                 <plugin>
                     <groupId>net.postchain.rell</groupId>

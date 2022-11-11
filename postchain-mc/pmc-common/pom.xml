@@ -103,7 +103,6 @@
         <dependency>
             <groupId>de.m3y.kformat</groupId>
             <artifactId>kformat</artifactId>
-            <version>0.9</version>
         </dependency>
 
         <dependency>
@@ -124,7 +123,6 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell</artifactId>
-            <version>${rellr.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

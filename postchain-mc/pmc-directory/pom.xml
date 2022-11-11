@@ -73,7 +73,6 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell</artifactId>
-            <version>${rellr.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -116,7 +115,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.0.0</version>
                 <configuration>
                     <mainClass>${main-class}</mainClass>
                 </configuration>

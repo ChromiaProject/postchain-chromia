@@ -23,7 +23,6 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
-            <version>${postchain.version}</version>
         </dependency>
         <dependency>
             <groupId>com.spotify</groupId>
