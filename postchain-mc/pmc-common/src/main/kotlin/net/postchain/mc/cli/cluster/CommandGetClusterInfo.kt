@@ -22,22 +22,24 @@ class CommandGetClusterInfo : CliktCommand(
     override fun run() {
         with (client.getClusterData(name)) {
             table {
-
                 row("Name:", name)
                 row("Governor:", governor)
                 row("Is Operational:", isOperational.toString())
-
-                row("")
-                row("Providers:")
+                row()
+            }.render().also { println(it) }
+            table {
+                header("Provider", "Alias")
                 client.getClusterProviders(name).forEach { provider ->
-                    row(provider.name, provider.pubkey.toString())
+                    row(provider.pubkey.toString(), provider.name)
                 }
-                row("")
-                row("Nodes:")
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            }.render().also { println(it) }
+            table {
+                header("Node", "Address")
                 client.getClusterNodes(name).forEach { node ->
                     row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
                 }
-                hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
             }
         }.render().also { println(it) }
     }
