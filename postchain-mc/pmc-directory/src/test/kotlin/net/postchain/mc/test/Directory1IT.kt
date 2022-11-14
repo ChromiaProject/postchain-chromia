@@ -42,6 +42,14 @@ class Directory1IT : ManagedModeTest() {
                         <app module="$module">
                             <args module="$module">
                                 <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
+                                <arg key="genesis_node">
+                                    <array>
+                                        <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
+                                        <string>${node0Host}</string>
+                                        <int>${node0Port}</int>
+                                        <string>{apiUrl}</string>
+                                    </array>
+                                </arg>
                             </args>
                         </app>
                         <gtv path="signers">
@@ -71,7 +79,7 @@ class Directory1IT : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(node0Host, node0Port))
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation())
     }
 
     @Test
