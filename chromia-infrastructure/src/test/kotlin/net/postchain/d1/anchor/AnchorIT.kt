@@ -59,10 +59,11 @@ class AnchorIT : ManagedModeTest() {
 
         val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
-        val moduleRellCode = File("../chain0-impl/rell/src/common/anchoring/rell_module.rell").readText()
+        val moduleRellCode = File("src/main/rell/anchor/module.rell").readText()
+        val icmfRellCode = File("src/main/rell/anchor/icmf.rell").readText()
         val anchorGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/anchor/blockchain_config_2_anchor.xml")!!.readText(),
-                mapOf("rell" to gtv(moduleRellCode)))
+                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
 
         val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
 
