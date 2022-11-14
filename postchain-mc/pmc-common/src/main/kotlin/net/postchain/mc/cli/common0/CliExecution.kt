@@ -11,6 +11,8 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
+import net.postchain.chain0.common.queries.getBlockchainReplicas
+import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesWithProvider
@@ -106,7 +108,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun getBlockchainLastHeight(blockchainRID: String) = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
 
-    fun getNodeListVersion() = getPostchainClient().nmGetPeerListVersion()
+    fun getPeerListVersion() = getPostchainClient().nmGetPeerListVersion()
 
     fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
 
@@ -145,19 +147,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
     }
 
-    fun listBlockchainSigners(blockchainRID: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val blockchain = blockchainGtv(blockchainRID)
-            val list = getPostchainClient().querySync(
-                    "get_blockchain_signers",
-                    gtv("bc" to gtv(blockchain.asInteger()))
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
+    fun listBlockchainSigners(blockchainRID: String): List<Array<out Gtv>> {
+        val blockchain = blockchainGtv(blockchainRID)
+        return getPostchainClient().getBlockchainSigners(RowId(blockchain.asInteger()))
     }
 
     fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
@@ -166,19 +158,9 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
 
-    fun listBlockchainReplicas(blockchainRID: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val blockchain = blockchainGtv(blockchainRID)
-            val list = getPostchainClient().querySync(
-                    "get_blockchain_replicas",
-                    gtv("blockchain" to gtv(blockchain.asInteger()))
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
+    fun listBlockchainReplicas(blockchainRID: String): List<Array<out Gtv>> {
+        val blockchain = blockchainGtv(blockchainRID)
+        return getPostchainClient().getBlockchainReplicas(RowId(blockchain.asInteger()))
     }
 
 
