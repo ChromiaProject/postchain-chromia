@@ -5,11 +5,13 @@ import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.anchoring.rell_module.getLastAnchoredBlock
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation
@@ -143,8 +145,8 @@ internal class Directory1DeploymentNightly {
         // /gtx/modules contains AnchorGTXModule module
         assert(configGtv["gtx"]?.get("modules")?.asArray()?.map(Gtv::asString) ?: emptyList())
                 .contains("net.postchain.d1.anchor.AnchorGTXModule")
-        // /gtx/rell/sources/module.rell contains rell code
-        assert(configGtv["gtx"]?.get("rell")?.get("sources")?.get("module.rell")?.asString() ?: "")
+        // /gtx/rell/sources/anchoring/module.rell contains rell code
+        assert(configGtv["gtx"]?.get("rell")?.get("sources")?.get("anchoring/module.rell")?.asString() ?: "")
                 .isNotEmpty()
     }
 
@@ -365,6 +367,34 @@ internal class Directory1DeploymentNightly {
                 val cities = awaitQueryResult { node.client(brid).querySync(query) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
+            }
+        }
+    }
+
+    @Test
+    @Order(12)
+    fun `Blocks can be anchored`() {
+        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[100]!!)
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[101]!!)
+    }
+
+    private fun assertThatDappBlocksAreAnchored(anchoringChainBrid: BlockchainRid, dappBrid: BlockchainRid) {
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val lastAnchoredBlock = awaitQueryResult {
+                    node.client(anchoringChainBrid).getLastAnchoredBlock(dappBrid)
+                }
+                assert(lastAnchoredBlock).isNotNull()
+
+                val dappChainBlock = awaitQueryResult {
+                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.blockHeight)
+                }
+                assert(dappChainBlock).isNotNull()
+
+                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock.witness.wrap()).isEqualTo(lastAnchoredBlock.witness)
             }
         }
     }

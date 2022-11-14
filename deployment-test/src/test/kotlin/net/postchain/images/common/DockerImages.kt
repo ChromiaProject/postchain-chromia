@@ -12,9 +12,9 @@ object DockerImages {
         return DockerImageName.parse(imageName)
     }
 
-    fun postchainServerImage(): DockerImageName {
+    fun chromiaServerImage(): DockerImageName {
         val imageName = System.getenv("POSTCHAIN_TEST_DOCKER_IMAGE_POSTCHAIN_SERVER")
-                ?: "registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:${versionTag()}"
+                ?: "chromaway/chromia-server:latest"
 
         return DockerImageName
                 .parse(imageName)
