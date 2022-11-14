@@ -417,42 +417,6 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(2, listBlockchainSigners.size)
     }
 
-    /**
-     * Includes also test of listClusters
-     */
-    @Test
-    fun testListContainerReplicas() {
-        //create new cluster Vera.
-        val clusterA = "A"
-        val clusterB = "B"
-        val containerName = "C"
-        val providersList = provConfig.pubkey()
-        //create two new clusters with initial provider added
-        doAndBuildBlocks(
-                provConfig, provExecutor.createClusterAsync(
-                clusterA, providersList,
-                voterSetSystemP)
-        )
-
-        doAndBuildBlocks(
-                provConfig, provExecutor.createClusterAsync(
-                clusterB, providersList,
-                voterSetSystemP)
-        )
-
-        val clusterList = provExecutor.listClusters()
-        assertEquals(listOf("system", clusterA, clusterB), clusterList)
-
-        //add a container C to cluster A
-        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(containerName, clusterA, voterSetSystemP))
-        // add a replica of C in cluster B
-        doAndBuildBlocks(provConfig, provExecutor.addContainerReplicaAsync(clusterB, containerName))
-
-        val listContainerReplicas = provExecutor.listContainerReplicas(containerName)
-        assertEquals(1, listContainerReplicas.size)
-        assertEquals(clusterB, listContainerReplicas[0].asString())
-    }
-
     @Test
     fun testGetProposal() {
         addSystemProv2()

@@ -16,7 +16,6 @@ import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesWithProvider
 import net.postchain.chain0.common.queries.getProviderClusters
 import net.postchain.chain0.common.queries.getProviderData
-import net.postchain.chain0.common.queries.listClusters
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
@@ -181,22 +180,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnList
     }
 
-
-    fun listContainerReplicas(containerName: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val container = containerGtv(containerName)
-            val list = getPostchainClient().querySync(
-                    "get_container_replicas",
-                    gtv("container" to gtv(container.asInteger()))
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
-
     fun listNodesByProvider(key: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
@@ -210,8 +193,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
         return returnList
     }
-
-    fun listClusters() = getPostchainClient().listClusters()
 
     fun listProposalsSince(rowid: Long) = getPostchainClient().getProposalsSince(RowId(rowid))
 
@@ -424,13 +405,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         val blockchain = blockchainGtv(blockchainRID)
         val node = nodeGtv(key)
         return makeTransactionWithNop().addOperation("add_bc_replica", provider, blockchain, node)
-    }
-
-    fun addContainerReplicaAsync(clusterName: String, containerName: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val cluster = clusterGtv(clusterName)
-        val container = containerGtv(containerName)
-        return makeTransactionWithNop().addOperation("add_container_replica", provider, cluster, container)
     }
 
     fun removeBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {

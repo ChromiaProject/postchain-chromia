@@ -18,8 +18,6 @@
 | remove_node                | node provider: (SP, NP, SP > NP)         | actions    | SP can remove NP's node                                                                                                                        |
 | update_node                | node provider                            | actions    ||
 | promote_node_provider      | system provider                          | actions    | Only SP can promote CNP                                                                                                                        |
-| add_container_replica      | no                                       | actions    | TODO: What is this?                                                                                                                            |
-| remove_container_replica   | no                                       | actions    | TODO: What is this? Should be owned by or system permission? Redesign.                                                                         |
 | add_node_to_cluster        | cluster provider                         | actions    ||
 | create_cluster             | node provider                            | actions    ||
 | add_bc_replica             | node provider                            | actions    | TODO: should be CNP but with a max limit                                                                                                       |
