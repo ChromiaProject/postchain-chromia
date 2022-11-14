@@ -29,9 +29,7 @@ class CommandListBlockchains : CliktCommand(
                 row(it.name, it.rid.toHex(), it.active.toString(), it.container, it.cluster)
             }
 
-            hints {
-                borderStyle = Table.BorderStyle.SINGLE_LINE
-            }
+            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
         }
             .render(StringBuilder())
             .also { println(it) }

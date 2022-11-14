@@ -6,12 +6,12 @@ import net.postchain.mc.cli.util.configOption
 
 class CommandGetNodeListVersion : CliktCommand(
     name = "version",
-    help = "Node list version"
+    help = "Peer list version"
 ) {
     private val config by configOption()
 
     override fun run() {
-        val version = CliExecution(config).getNodeListVersion()
+        val version = CliExecution(config).getPeerListVersion()
         println("version: $version")
     }
 }

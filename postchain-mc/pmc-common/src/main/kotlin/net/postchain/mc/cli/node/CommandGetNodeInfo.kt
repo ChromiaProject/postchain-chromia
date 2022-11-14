@@ -1,6 +1,8 @@
 package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
+import de.m3y.kformat.Table
+import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.listClustersOfNode
 import net.postchain.cli.util.requiredPubkeyOption
@@ -21,11 +23,14 @@ class CommandGetNodeInfo : CliktCommand(
     override fun run() {
         val client = ClientUtil.fromConfig(config)
         val node = client.getNodeData(PubKey(key))
-        println("Active: ${node.active}")
-        println("Host: ${node.host}")
-        println("Port: ${node.port}")
-        println("Provided by: ${node.provider.toHex()}")
-        val clusters = client.listClustersOfNode(node.pubkey)
-        println("Used by clusters: $clusters")
+        table {
+            row("Active:", "${node.active}")
+            row("Host:", "${node.host}")
+            row("Port:", "${node.port}")
+            row("Provided by:", "${node.provider.toHex()}")
+            val clusters = client.listClustersOfNode(node.pubkey)
+            row("Used by clusters:", "$clusters")
+            hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+        }.render().also { echo(it) }
     }
 }
