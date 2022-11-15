@@ -1,8 +1,7 @@
 module;
 
 entity anchor_block {
-    key blockchain_rid: byte_array,
-        block_height: integer;
+    key blockchain_rid: byte_array, block_height: integer;
     block_rid: byte_array;
     block_header: byte_array;
     witness: byte_array;

@@ -16,7 +16,6 @@
         <image.name>chromaway/chromia-server</image.name>
         <gitlab.registry>registry.gitlab.com/chromaway/postchain-chromia</gitlab.registry>
         <gitlab.distribution.registry>registry.gitlab.com/chromaway/postchain-distribution</gitlab.distribution.registry>
-        <docker.buildArg.POSTCHAIN_SERVER_IMAGE>registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT</docker.buildArg.POSTCHAIN_SERVER_IMAGE>
     </properties>
 
     <dependencies>
