@@ -9,6 +9,14 @@
                 <app module="directory1">
                     <args module="directory1">
                         <arg key="initial_provider"><bytea>0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57</bytea></arg>
+                        <arg key="genesis_node">
+                            <array>
+                                <bytea>0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57</bytea>
+                                <string>node1</string>
+                                <int>9871</int>
+                                <string>{apiUrl}</string>
+                            </array>
+                        </arg>
                     </args>
                     <args module="common.anchoring">
                         <arg key="anchoring_code">

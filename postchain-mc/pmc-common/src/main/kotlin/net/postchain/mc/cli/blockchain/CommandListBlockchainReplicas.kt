@@ -1,15 +1,19 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
+import de.m3y.kformat.Table
+import de.m3y.kformat.table
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.mc.cli.util.PrintUtils
+import net.postchain.common.toHex
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.configOption
+import java.time.Instant
+import java.util.Date
 
 class CommandListBlockchainReplicas : CliktCommand(
-    name = "replicas",
-    help = "List blockchain replicas"
+        name = "replicas",
+        help = "List blockchain replicas"
 ) {
     private val config by configOption()
 
@@ -19,7 +23,14 @@ class CommandListBlockchainReplicas : CliktCommand(
 
     override fun run() {
         val list = CliExecution(config).listBlockchainReplicas(blockchainRID.toHex())
-        println("Replicas:")
-        PrintUtils.printBlockchainReplicas(list, includeInactive)
+        table {
+            header("Blockchain RID", "pubkey", "host", "port", "active", "Last update")
+            list.forEach {
+                if (includeInactive || it[4].asBoolean()) {
+                    row(it[0].asByteArray().toHex(), it[1].asByteArray().toHex(), it[2].asString(), it[3].asInteger().toString(), it[4].asBoolean().toString(), Date.from(Instant.ofEpochMilli(it[5].asInteger())))
+                }
+            }
+            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+        }.render().also { println(it) }
     }
 }

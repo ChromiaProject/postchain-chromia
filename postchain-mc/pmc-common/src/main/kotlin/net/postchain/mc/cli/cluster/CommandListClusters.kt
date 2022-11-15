@@ -17,7 +17,6 @@ class CommandListClusters : CliktCommand(
     private val config by configOption()
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        println("Clusters:")
         table {
             header("Name", "Governor", "Operational")
             client.getClusters().forEach {

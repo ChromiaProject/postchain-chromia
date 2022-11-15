@@ -17,7 +17,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.PrintUtils
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
 import kotlin.test.assertEquals
@@ -181,13 +180,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val executor = cliExecution(clientConfig)
         val listReplicas = executor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(1, listReplicas.size)
-        val bc = listReplicas.get(0).asArray()
-        assertEquals(clientConfig.blockchainRid.toHex(), bc.get(0).asByteArray().toHex())
-        assertEquals(nodePubkey, bc.get(1).asByteArray().toHex())
-        assertEquals(host, bc.get(2).asString())
-        assertEquals(port, bc.get(3).asInteger())
-        assertTrue(bc.get(4).asBoolean())
-        PrintUtils.printBlockchainReplicas(listReplicas)
+        val bc = listReplicas[0]
+        assertEquals(clientConfig.blockchainRid.toHex(), bc[0].asByteArray().toHex())
+        assertEquals(nodePubkey, bc[1].asByteArray().toHex())
+        assertEquals(host, bc[2].asString())
+        assertEquals(port, bc[3].asInteger())
+        assertTrue(bc[4].asBoolean())
     }
 
     private fun assertNodeInfo(
