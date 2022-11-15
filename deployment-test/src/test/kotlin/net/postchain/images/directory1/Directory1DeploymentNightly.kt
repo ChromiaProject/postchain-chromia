@@ -99,7 +99,7 @@ internal class Directory1DeploymentNightly {
     fun `Initialize network with provider1`() {
         with(node1.c0) {
             transactionBuilder()
-                    .initOperation(node1.nodeHost, node1.nodePort.toLong())
+                    .initOperation()
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
