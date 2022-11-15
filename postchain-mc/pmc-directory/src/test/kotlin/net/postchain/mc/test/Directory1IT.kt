@@ -6,6 +6,7 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.removeNodeOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
@@ -18,6 +19,7 @@ import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -79,7 +81,8 @@ class Directory1IT : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation())
+        val anchoringConfig = GtvMLParser.parseGtvML(anchorConfigXmlFile.readText())
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().addOperation("init", anchoringConfig))
     }
 
     @Test
@@ -172,23 +175,25 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
-        assertEquals(2, provExecutor.listBlockchains(false).size)
+        assertEquals(3, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
-        buildBlock(100, 4)
+        buildBlock(101, 4)
 
         //add yet another bc, dependent on previous one
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
-        val listOfBcs = provExecutor.listBlockchains(false)
-        val listOfDependencies = provExecutor.listBlockchainDependencies(listOfBcs[2].toHex(), 0)
+        val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
+        val bc1 = listOfBcs.find { it.name == "1" }!!
+        val bc2 = listOfBcs.find { it.name == "2" }!!
 
+        val listOfDependencies = provExecutor.listBlockchainDependencies(bc2.rid.toHex(), 0)
         assertEquals(1, listOfDependencies.size)
-        assertEquals(listOfBcs[1].toHex(), listOfDependencies[0].first.toHex())
+        assertEquals(bc1.rid.toHex(), listOfDependencies[0].first.toHex())
         assertEquals(container1, listOfDependencies[0].second)
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
-        proposeBlockchainAction(provClient, listOfBcs[1], BlockchainAction.remove)
-        assertEquals(3, provExecutor.listBlockchains(false).size)
+        proposeBlockchainAction(provClient, bc1.rid.data, BlockchainAction.remove)
+        assertEquals(4, provExecutor.listBlockchains(false).size)
     }
 
     /**
@@ -301,24 +306,26 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
-        var bcs = provExecutor.listBlockchains(false)
-        val bridToPause = bcs[1]
+        val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
+        val bridToPause = listOfBcs.find { it.name == "1" }!!.rid.data
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.pause)
 
-        bcs = provExecutor.listBlockchains(true)
-        assertEquals(2, bcs.size)
+        var bcs = provExecutor.listBlockchains(true)
+        assertEquals(3, bcs.size)
         bcs = provExecutor.listBlockchains(false)
-        assertEquals(1, bcs.size)
+        assertEquals(2, bcs.size)
 
         // try building blocks of pause bc
-        assertBuildBlockFailure()
+        assertThrows<NullPointerException> {
+            buildBlock(101, 2)
+        }
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
         bcs = provExecutor.listBlockchains(false)
-        assertEquals(2, bcs.size)
+        assertEquals(3, bcs.size)
 
         // build after unpause
-        buildBlock(100, 3)
+        buildBlock(101, 3)
     }
 
     @Test
@@ -328,27 +335,20 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
-        var bcs = provExecutor.listBlockchains(false)
-        assertEquals(2, bcs.size)
+        val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
+        val bc1 = listOfBcs.find { it.name == "1" }!!.rid.data
+        assertEquals(3, listOfBcs.size)
 
         // delete new bc
-        proposeBlockchainAction(provClient, bcs[1], BlockchainAction.remove)
+        proposeBlockchainAction(provClient, bc1, BlockchainAction.remove)
 
-        bcs = provExecutor.listBlockchains(true)
-        assertEquals(1, bcs.size)
+        val bcs = provExecutor.listBlockchains(true)
+        assertEquals(2, bcs.size)
 
         // try building blocks of deleted bc
-        assertBuildBlockFailure()
-    }
-
-    private fun assertBuildBlockFailure() {
-        var buildFailed = false
-        try {
-            buildBlock(100, 2)
-        } catch (e: Exception) {
-            buildFailed = true
+        assertThrows<NullPointerException> {
+            buildBlock(101, 2)
         }
-        assertTrue(buildFailed)
     }
 
     @Test
@@ -357,7 +357,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(1, listBlockchains.size) // Always know about itself
 
         listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
-        assertEquals(1, listBlockchains.size)
+        assertEquals(2, listBlockchains.size)
     }
 
 
@@ -395,7 +395,7 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testListBlockchains() {
         val listBlockchains = provExecutor.listBlockchains(false)
-        assertEquals(1, listBlockchains.size)
+        assertEquals(2, listBlockchains.size)
     }
 
     @Test

@@ -11,9 +11,6 @@
 
     <artifactId>deployment-test</artifactId>
 
-    <properties>
-    </properties>
-
     <dependencies>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain</groupId>
@@ -126,6 +123,25 @@
                             <includeArtifactIds>directory1</includeArtifactIds>
                             <includeTypes>tar.gz</includeTypes>
                             <outputDirectory>${project.build.directory}/chain0</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>rell-client-gen</id>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.parent.basedir}/chromia-infrastructure/src/main/rell</source>
+                            <packageName>net.postchain.chain0</packageName>
+                            <mainModules>
+                                <mainModule>anchoring</mainModule>
+                            </mainModules>
                         </configuration>
                     </execution>
                 </executions>

@@ -46,7 +46,7 @@ open class ManagedModeBase(rellFolder: String) {
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
         return PostchainContainer(
-                DockerImages.postchainServerImage(),
+                DockerImages.chromiaServerImage(),
                 appConfig,
                 startupMsg = "Postchain server started, listening on 50051",
                 nodeHost = hostName,

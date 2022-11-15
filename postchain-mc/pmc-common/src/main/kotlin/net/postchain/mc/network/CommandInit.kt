@@ -2,6 +2,7 @@ package net.postchain.mc.network
 
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.util.nopClientOption
 
@@ -14,7 +15,7 @@ class CommandInit : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .initOperation()
+                .addOperation("init", GtvNull) // TODO use code generation when it is fixed
                 .postSyncAwaitConfirmation()
                 .printResult(
                         "Network was initiated",

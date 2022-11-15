@@ -11,7 +11,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.rell.common.anchoring.rell_module.icmfGetHeadersWithMessagesAfterHeight
+import net.postchain.d1.rell.anchoring.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessages
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator

@@ -1,11 +1,15 @@
 package net.postchain.images.directory1
 
 import assertk.assert
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
+import net.postchain.chain0.anchoring.getLastAnchoredBlock
+import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.*
@@ -15,18 +19,21 @@ import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
+import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
-import net.postchain.crypto.KeyPair
 import net.postchain.containers.bpm.resources.*
+import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -45,6 +52,7 @@ internal class Directory1DeploymentNightly {
         private val dapps = mutableMapOf<Long, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
+        private const val globalAnchoringContainer = "anchoring_system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -98,14 +106,28 @@ internal class Directory1DeploymentNightly {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
+            val anchorConfigXml = String(this::class.java.getResourceAsStream("/anchoring/blockchain_config_anchor.xml")!!.readAllBytes())
+            val anchorConfig = GtvMLParser.parseGtvML(anchorConfigXml)
             transactionBuilder()
-                    .initOperation()
+                    .addOperation("init", anchorConfig)
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
             assert(isNode(node1.nodeKeyPair.pubKey)).isTrue()
             assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
+
+        assertAnchoringChainProperties()
+    }
+
+    private fun assertAnchoringChainProperties() {
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
+        assertEquals(2, systemChains.size)
+
+        // Getting anchoring chain for system cluster via CM API
+        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+        // Asserting anchoring chain is in system_chains list of NP API
+        assert(systemChains.map { it.rid }).contains(anchoringChainBrid)
     }
 
     @Test
@@ -114,7 +136,7 @@ internal class Directory1DeploymentNightly {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
-                assert(getSummary().containers).isEqualTo(1L)
+                assert(getSummary().containers).isEqualTo(2L)
             }
 
             transactionBuilder()
@@ -129,7 +151,7 @@ internal class Directory1DeploymentNightly {
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, foobarContainer), containers)
+                assertEquals(setOf(systemContainer, globalAnchoringContainer, foobarContainer), containers)
             }
         }
     }
@@ -231,7 +253,7 @@ internal class Directory1DeploymentNightly {
     @Order(7)
     fun `Deploy new dapp`() {
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(1)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(2)
         }
 
         deployDapp("test-dapp", systemContainer)
@@ -239,7 +261,7 @@ internal class Directory1DeploymentNightly {
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(3)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(4)
         }
     }
 
@@ -282,7 +304,7 @@ internal class Directory1DeploymentNightly {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(2)
+            assert(runningSubnodes.size).isEqualTo(3) // TODO Should just be 2 since anchoring chain should not be launched in a subnode
         }
     }
 
@@ -325,6 +347,35 @@ internal class Directory1DeploymentNightly {
                 val cities = awaitQueryResult { node.client(brid).querySync(query) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
+            }
+        }
+    }
+
+    @Test
+    @Order(12)
+    @Disabled // TODO This needs further implementation
+    fun `Blocks can be anchored`() {
+        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[100]!!)
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[101]!!)
+    }
+
+    private fun assertThatDappBlocksAreAnchored(anchoringChainBrid: BlockchainRid, dappBrid: BlockchainRid) {
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val lastAnchoredBlock = awaitQueryResult {
+                    node.client(anchoringChainBrid).getLastAnchoredBlock(dappBrid)
+                }
+                assert(lastAnchoredBlock).isNotNull()
+
+                val dappChainBlock = awaitQueryResult {
+                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.blockHeight)
+                }
+                assert(dappChainBlock).isNotNull()
+
+                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock.witness.wrap()).isEqualTo(lastAnchoredBlock.witness)
             }
         }
     }

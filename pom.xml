@@ -22,6 +22,7 @@
         <module>postchain-container</module>
         <module>chromia-deployment-tool</module>
         <module>chromia-deployment-tool-cli</module>
+        <module>chromia-server</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -94,6 +95,11 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>chromia-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>chromia-infrastructure</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

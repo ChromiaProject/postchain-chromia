@@ -24,7 +24,7 @@
         <rell.directory>${project.basedir}/../rell/src</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
-        <rellTestModules>common,roles,container,cluster</rellTestModules>
+        <rellTestModules>common,roles,container,cluster,nm_api</rellTestModules>
     </properties>
 
     <build>
