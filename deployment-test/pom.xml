@@ -19,6 +19,14 @@
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-server</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
