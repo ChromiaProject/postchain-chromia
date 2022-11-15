@@ -14,6 +14,9 @@
 
     <properties>
         <image.name>chromaway/chromia-server</image.name>
+        <gitlab.registry>registry.gitlab.com/chromaway/postchain-chromia</gitlab.registry>
+        <gitlab.distribution.registry>registry.gitlab.com/chromaway/postchain-distribution</gitlab.distribution.registry>
+        <docker.buildArg.POSTCHAIN_SERVER_IMAGE>registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT</docker.buildArg.POSTCHAIN_SERVER_IMAGE>
     </properties>
 
     <dependencies>
@@ -46,6 +49,9 @@
                             <build>
                                 <contextDir>${project.basedir}</contextDir>
                                 <filter>@</filter>
+                                <args>
+                                    <postchain_server_image>${gitlab.distribution.registry}/chromaway/postchain-server:${project.version}</postchain_server_image>
+                                </args>
                             </build>
                         </image>
                     </images>
@@ -130,6 +136,8 @@
                                             </argument>
                                             <argument>${project.basedir}/.</argument>
                                             <argument>--push</argument>
+                                            <argument>--build-arg</argument>
+                                            <argument>postchain_server_image=${gitlab.distribution.registry}/chromaway/postchain-server:${project.version}</argument>
                                         </arguments>
                                     </configuration>
                                 </execution>
