@@ -31,10 +31,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-            </plugin>
-            <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
@@ -44,7 +40,7 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${rell.directory}</source>
+                            <source>${rell.directory}/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
                                 <mainModule>chromia1</mainModule>
