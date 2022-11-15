@@ -11,6 +11,7 @@ import mu.KotlinLogging
 import net.postchain.chain0.anchoring.getLastAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerProviderOperation

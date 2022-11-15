@@ -1,6 +1,7 @@
 package net.postchain.mc.network
 
 import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.chain0.common.init.initOperation
 import net.postchain.gtv.GtvNull
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.util.nopClientOption

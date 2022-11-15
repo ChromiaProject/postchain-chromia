@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
@@ -41,7 +42,7 @@ class Directory1IT : ManagedModeTest() {
                 <chain name="manager" iid="0">
                     <config height="0" add-dependencies="false">
                         <app module="$module">
-                            <args module="$module">
+                            <args module="common.init">
                                 <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
                                 <arg key="genesis_node">
                                     <array>
@@ -422,42 +423,6 @@ class Directory1IT : ManagedModeTest() {
 
         val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
         assertEquals(2, listBlockchainSigners.size)
-    }
-
-    /**
-     * Includes also test of listClusters
-     */
-    @Test
-    fun testListContainerReplicas() {
-        //create new cluster Vera.
-        val clusterA = "A"
-        val clusterB = "B"
-        val containerName = "C"
-        val providersList = provConfig.pubkey()
-        //create two new clusters with initial provider added
-        doAndBuildBlocks(
-                provConfig, provExecutor.createClusterAsync(
-                clusterA, providersList,
-                voterSetSystemP)
-        )
-
-        doAndBuildBlocks(
-                provConfig, provExecutor.createClusterAsync(
-                clusterB, providersList,
-                voterSetSystemP)
-        )
-
-        val clusterList = provExecutor.listClusters()
-        assertEquals(listOf("system", clusterA, clusterB), clusterList)
-
-        //add a container C to cluster A
-        doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(containerName, clusterA, voterSetSystemP))
-        // add a replica of C in cluster B
-        doAndBuildBlocks(provConfig, provExecutor.addContainerReplicaAsync(clusterB, containerName))
-
-        val listContainerReplicas = provExecutor.listContainerReplicas(containerName)
-        assertEquals(1, listContainerReplicas.size)
-        assertEquals(clusterB, listContainerReplicas[0].asString())
     }
 
     @Test

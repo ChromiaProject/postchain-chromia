@@ -7,7 +7,7 @@
             <config height="0" add-dependencies="false">
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="directory1">
-                    <args module="directory1">
+                    <args module="common.init">
                         <arg key="initial_provider"><bytea>0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57</bytea></arg>
                         <arg key="genesis_node">
                             <array>
