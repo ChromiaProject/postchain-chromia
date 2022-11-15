@@ -18,7 +18,7 @@ import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmComputeSystemBlockchainList
+import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
@@ -120,14 +120,13 @@ internal class Directory1DeploymentNightly {
     }
 
     private fun assertAnchoringChainProperties() {
-        // System chains via NP API
-        val systemChains = node1.c0.nmComputeSystemBlockchainList(node1.nodeKeyPair.pubKey.data)
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
         assertEquals(2, systemChains.size)
 
         // Getting anchoring chain for system cluster via CM API
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
         // Asserting anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it.wrap() }).contains(anchoringChainBrid)
+        assert(systemChains.map { it.rid }).contains(anchoringChainBrid)
     }
 
     @Test
