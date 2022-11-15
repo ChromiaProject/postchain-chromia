@@ -131,7 +131,7 @@
                         <configuration>
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
-                                <mainModule>anchor</mainModule>
+                                <mainModule>anchoring</mainModule>
                                 <mainModule>icmf</mainModule>
                             </mainModules>
                         </configuration>

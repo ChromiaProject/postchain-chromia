@@ -137,10 +137,10 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <source>${project.parent.basedir}/chromia-infrastructure/src/main/rell</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>common.anchoring.rell_module</mainModule>
+                                <mainModule>anchoring</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

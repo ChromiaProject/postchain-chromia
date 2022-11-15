@@ -7,7 +7,6 @@ import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.removeNodeOperation
-import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
@@ -19,6 +18,7 @@ import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -80,7 +80,8 @@ class Directory1IT : ManagedModeTest() {
     fun setup() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation())
+        val anchoringConfig = GtvMLParser.parseGtvML(anchorConfigXmlFile.readText())
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().addOperation("init", anchoringConfig))
     }
 
     @Test
@@ -176,7 +177,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(3, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
-        buildBlock(100, 4)
+        buildBlock(101, 4)
 
         //add yet another bc, dependent on previous one
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
@@ -315,7 +316,7 @@ class Directory1IT : ManagedModeTest() {
 
         // try building blocks of pause bc
         assertThrows<NullPointerException> {
-            buildBlock(100, 2)
+            buildBlock(101, 2)
         }
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
@@ -323,7 +324,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(3, bcs.size)
 
         // build after unpause
-        buildBlock(100, 3)
+        buildBlock(101, 3)
     }
 
     @Test
@@ -345,7 +346,7 @@ class Directory1IT : ManagedModeTest() {
 
         // try building blocks of deleted bc
         assertThrows<NullPointerException> {
-            buildBlock(100, 2)
+            buildBlock(101, 2)
         }
     }
 
@@ -355,7 +356,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(1, listBlockchains.size) // Always know about itself
 
         listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
-        assertEquals(1, listBlockchains.size)
+        assertEquals(2, listBlockchains.size)
     }
 
 
