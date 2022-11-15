@@ -40,7 +40,7 @@ class Directory1IT : ManagedModeTest() {
                 <chain name="manager" iid="0">
                     <config height="0" add-dependencies="false">
                         <app module="$module">
-                            <args module="init">
+                            <args module="common.init">
                                 <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
                                 <arg key="genesis_node">
                                     <array>
