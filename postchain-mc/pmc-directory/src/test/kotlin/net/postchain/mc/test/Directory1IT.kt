@@ -2,11 +2,11 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.removeNodeOperation
-import net.postchain.chain0.directory1.initOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
@@ -40,7 +40,7 @@ class Directory1IT : ManagedModeTest() {
                 <chain name="manager" iid="0">
                     <config height="0" add-dependencies="false">
                         <app module="$module">
-                            <args module="$module">
+                            <args module="init">
                                 <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
                                 <arg key="genesis_node">
                                     <array>
