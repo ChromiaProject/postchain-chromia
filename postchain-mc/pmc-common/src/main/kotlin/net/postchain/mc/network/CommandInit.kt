@@ -15,16 +15,12 @@ class CommandInit : CliktCommand(
 
     private val client by nopClientOption()
 
-    private val host by hostOption().required()
-
-    private val port by portOption().required()
-
     override fun run() {
         client.transactionBuilder()
-                .initOperation(host, port.toLong())
+                .initOperation()
                 .postSyncAwaitConfirmation()
                 .printResult(
-                        "Network was initiated with node $host:$port in the system cluster",
+                        "Network was initiated",
                         "Failed to initiate network"
                 )
     }

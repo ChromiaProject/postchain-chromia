@@ -11,6 +11,8 @@ tar xf "$C0_SOURCES"
 tar xf "$PMC"
 tar xf "$DEPLOY"
 tar xf "$CLIENT"
+sed -i'' -e "s/{hostName}/$(bash $D/find-ip)/g" "$D/../config/c0-deploy.xml"
+sed -i'' -e "s/{apiUrl}/http:\/\/localhost:7740/g" "$D/../config/c0-deploy.xml"
 BRID=$(bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../directory1/rell" --output-dir "$D/../out" --show-brid config/c0-deploy.xml)
 bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../app/src" --output-dir "$D/../app-out" "$D/../app/config/deploy.xml"
 
