@@ -60,7 +60,6 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
     }
 
     fun afterCommit(chainID: Long, height: Long) {
-        // TODO: prefetch packet
         receivers.values.forEach {
             it.localPipes[chainID]?.setHighestSeenHeight(height)
         }
