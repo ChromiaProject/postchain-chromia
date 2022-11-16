@@ -304,7 +304,7 @@ internal class Directory1DeploymentNightly {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(3) // TODO Should just be 2 since anchoring chain should not be launched in a subnode
+            assert(runningSubnodes.size).isEqualTo(2)
         }
     }
 
