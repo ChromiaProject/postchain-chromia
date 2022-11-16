@@ -80,7 +80,7 @@ class Directory1IT : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
-        val resourceDirectory = Paths.get("target", "directory1", "rell")
+        val resourceDirectory = Paths.get("target", "directory1", "rell", "src")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
         val anchoringConfig = GtvMLParser.parseGtvML(anchorConfigXmlFile.readText())
         doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(GtvEncoder.encodeGtv(anchoringConfig)))
