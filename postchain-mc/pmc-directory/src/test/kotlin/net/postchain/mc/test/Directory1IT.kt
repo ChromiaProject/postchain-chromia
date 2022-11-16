@@ -178,7 +178,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(3, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
-        buildBlock(101, 4)
+        buildBlock(100, 4)
 
         //add yet another bc, dependent on previous one
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
@@ -317,7 +317,7 @@ class Directory1IT : ManagedModeTest() {
 
         // try building blocks of pause bc
         assertThrows<NullPointerException> {
-            buildBlock(101, 2)
+            buildBlock(100, 2)
         }
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
@@ -325,7 +325,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(3, bcs.size)
 
         // build after unpause
-        buildBlock(101, 3)
+        buildBlock(100, 3)
     }
 
     @Test
@@ -347,7 +347,7 @@ class Directory1IT : ManagedModeTest() {
 
         // try building blocks of deleted bc
         assertThrows<NullPointerException> {
-            buildBlock(101, 2)
+            buildBlock(100, 2)
         }
     }
 
