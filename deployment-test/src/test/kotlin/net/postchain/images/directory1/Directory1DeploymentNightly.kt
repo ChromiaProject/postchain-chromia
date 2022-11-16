@@ -109,7 +109,7 @@ internal class Directory1DeploymentNightly {
             val anchorConfigXml = String(this::class.java.getResourceAsStream("/anchoring/blockchain_config_anchor.xml")!!.readAllBytes())
             val anchorConfig = GtvMLParser.parseGtvML(anchorConfigXml)
             transactionBuilder()
-                    .addOperation("init", anchorConfig)
+                    .initOperation(GtvEncoder.encodeGtv(anchorConfig))
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)

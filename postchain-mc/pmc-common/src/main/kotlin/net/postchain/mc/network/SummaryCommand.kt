@@ -22,6 +22,7 @@ class SummaryCommand : CliktCommand(
             row("Clusters", summary.clusters.toString())
             row("Containers", summary.containers.toString())
             row("Nodes", summary.nodes.toString())
+            row("Blockchains", summary.blockchains.toString())
             hints {
                 borderStyle = Table.BorderStyle.SINGLE_LINE
                 alignment(0, Table.Hints.Alignment.LEFT)

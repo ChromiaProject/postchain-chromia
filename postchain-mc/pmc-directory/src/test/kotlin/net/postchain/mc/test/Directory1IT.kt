@@ -17,6 +17,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -82,7 +83,7 @@ class Directory1IT : ManagedModeTest() {
         val resourceDirectory = Paths.get("target", "directory1", "rell")
         blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
         val anchoringConfig = GtvMLParser.parseGtvML(anchorConfigXmlFile.readText())
-        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().addOperation("init", anchoringConfig))
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(GtvEncoder.encodeGtv(anchoringConfig)))
     }
 
     @Test
