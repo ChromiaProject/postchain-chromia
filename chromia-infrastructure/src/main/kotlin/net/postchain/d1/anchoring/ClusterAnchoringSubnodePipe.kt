@@ -30,7 +30,7 @@ class ClusterAnchoringSubnodePipe(
     override fun setHighestSeenHeight(height: Long) {}
     override fun mightHaveNewPackets() = true
 
-    override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? =
+    override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
                 // TODO set timeout
                 client.blockAtHeightSync(currentPointer)
