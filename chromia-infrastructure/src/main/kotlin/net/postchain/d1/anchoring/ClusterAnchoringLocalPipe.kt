@@ -18,7 +18,6 @@ class ClusterAnchoringLocalPipe(
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
-    // TODO: prefetch packet in dispatcher instead of just setting height
     override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()

@@ -30,9 +30,9 @@ class ClusterAnchoringSubnodePipe(
     override fun setHighestSeenHeight(height: Long) {}
     override fun mightHaveNewPackets() = true
 
-    // TODO: [POS-358]: Make it async
     override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
+                // TODO set timeout
                 client.blockAtHeightSync(currentPointer)
             } catch (e: Exception) {
                 logger.warn("Block fetching from sub node failed")
