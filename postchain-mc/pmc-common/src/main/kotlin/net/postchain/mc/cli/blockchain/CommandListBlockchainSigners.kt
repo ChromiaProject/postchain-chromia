@@ -25,10 +25,16 @@ class CommandListBlockchainSigners : CliktCommand(
         val listSigners = CliExecution(config).listBlockchainSigners(blockchainRID.toHex())
 
         table {
-            header("pubkey", "host", "port", "active", "Last update")
+            header("pubkey", "host", "port", "active", "last updated")
             listSigners.forEach {
                 if (includeInactive || it[3].asBoolean()) {
-                    row(it[0].asByteArray().toHex(), it[1].asString(), it[2].asInteger().toString(), it[3].asBoolean().toString(), Date.from(Instant.ofEpochMilli(it[3].asInteger())))
+                    row(
+                            it[0].asByteArray().toHex(),
+                            it[1].asString(),
+                            it[2].asInteger().toString(),
+                            it[3].asBoolean().toString(),
+                            Date.from(Instant.ofEpochMilli(it[4].asInteger()))
+                    )
                 }
             }
             hints { borderStyle = Table.BorderStyle.SINGLE_LINE }

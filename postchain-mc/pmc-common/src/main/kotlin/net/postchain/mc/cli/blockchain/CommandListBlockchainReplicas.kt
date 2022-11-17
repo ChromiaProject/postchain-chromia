@@ -24,10 +24,16 @@ class CommandListBlockchainReplicas : CliktCommand(
     override fun run() {
         val list = CliExecution(config).listBlockchainReplicas(blockchainRID.toHex())
         table {
-            header("Blockchain RID", "pubkey", "host", "port", "active", "Last update")
+            header("pubkey", "host", "port", "active", "last updated")
             list.forEach {
-                if (includeInactive || it[4].asBoolean()) {
-                    row(it[0].asByteArray().toHex(), it[1].asByteArray().toHex(), it[2].asString(), it[3].asInteger().toString(), it[4].asBoolean().toString(), Date.from(Instant.ofEpochMilli(it[5].asInteger())))
+                if (includeInactive || it[3].asBoolean()) {
+                    row(
+                            it[0].asByteArray().toHex(),
+                            it[1].asString(),
+                            it[2].asInteger().toString(),
+                            it[3].asBoolean().toString(),
+                            Date.from(Instant.ofEpochMilli(it[4].asInteger()))
+                    )
                 }
             }
             hints { borderStyle = Table.BorderStyle.SINGLE_LINE }

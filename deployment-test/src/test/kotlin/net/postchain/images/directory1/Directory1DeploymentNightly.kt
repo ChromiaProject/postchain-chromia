@@ -8,7 +8,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
-import net.postchain.chain0.anchoring.getLastAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.init.initOperation
@@ -28,6 +27,7 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
+import net.postchain.d1.rell.anchoring.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -202,8 +202,8 @@ internal class Directory1DeploymentNightly {
             .postTransactionUntilConfirmed("add node 2 to system cluster")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(brid).size).isEqualTo(2)
-            assert(node2.c0.getBcSigners(brid).size).isEqualTo(2)
+            assert(node1.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(2)
+            assert(node2.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(2)
         }
     }
 
@@ -235,9 +235,9 @@ internal class Directory1DeploymentNightly {
 
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(brid).size).isEqualTo(3)
-            assert(node2.c0.getBcSigners(brid).size).isEqualTo(3)
-            assert(node3.c0.getBcSigners(brid).size).isEqualTo(3)
+            assert(node1.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
+            assert(node2.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
+            assert(node3.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
         }
     }
 
@@ -291,9 +291,9 @@ internal class Directory1DeploymentNightly {
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
         awaitQueryResult {
-            assert(node1.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node2.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node3.c0.getBcSigners(blockchainRid!!).size).isEqualTo(3)
+            assert(node1.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
+            assert(node2.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
+            assert(node3.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
         }
     }
 
