@@ -9,13 +9,17 @@ import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import java.lang.Long.max
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         restApiUrl: String
 ) : ClusterAnchoringPipe {
+    private val highestSeen = AtomicLong(-1L)
+    private val lastCommitted = AtomicLong(-1L)
 
     companion object : KLogging()
 
@@ -29,8 +33,9 @@ class ClusterAnchoringSubnodePipe(
             )
     )
 
-    override fun setHighestSeenHeight(height: Long) {}
-    override fun mightHaveNewPackets() = true
+    override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
+
+    override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
     override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
@@ -47,5 +52,9 @@ class ClusterAnchoringSubnodePipe(
                 )
             }
 
-    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {}
+    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
+        bctx.addAfterCommitHook {
+            lastCommitted.getAndUpdate { max(it, currentPointer) }
+        }
+    }
 }
