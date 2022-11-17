@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import mu.KLogging
 import net.postchain.base.data.MinimalBlockHeaderInfo
@@ -26,8 +26,8 @@ data class AnchorOpData(
          * @return is a simple DTO or null if decode failed
          */
         fun validateAndDecodeOpData(op: OpData): AnchorOpData? {
-            if (AnchorSpecialTxExtension.OP_BLOCK_HEADER != op.opName) {
-                logger.info("Invalid spcl operation: Expected op name ${AnchorSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
+            if (AnchoringSpecialTxExtension.OP_BLOCK_HEADER != op.opName) {
+                logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
                 return null
             }
 

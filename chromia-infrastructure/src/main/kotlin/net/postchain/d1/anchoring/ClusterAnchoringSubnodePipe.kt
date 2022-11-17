@@ -1,6 +1,6 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import mu.KLogging
 import net.postchain.client.config.FailOverConfig
@@ -11,11 +11,11 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import java.time.Duration
 
-class ClusterAnchorSubnodePipe(
+class ClusterAnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         restApiUrl: String
-) : ClusterAnchorPipe {
+) : ClusterAnchoringPipe {
 
     companion object : KLogging()
 
@@ -38,7 +38,7 @@ class ClusterAnchorSubnodePipe(
                 logger.warn("Block fetching from sub node failed")
                 null
             }?.let {
-                ClusterAnchorPacket(
+                ClusterAnchoringPacket(
                         currentPointer,
                         it.rid,
                         it.header,

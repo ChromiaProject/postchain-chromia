@@ -1,20 +1,20 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Storage
 
-class ClusterAnchorDispatcher(private val storage: Storage) {
-    private val receivers = mutableMapOf<Long, ClusterAnchorReceiver>()
+class ClusterAnchoringDispatcher(private val storage: Storage) {
+    private val receivers = mutableMapOf<Long, ClusterAnchoringReceiver>()
     private val chains = mutableMapOf<Long, BlockchainRid>()
 
-    fun connectReceiver(chainID: Long, receiver: ClusterAnchorReceiver) {
+    fun connectReceiver(chainID: Long, receiver: ClusterAnchoringReceiver) {
         receivers[chainID] = receiver
         chains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
-            receiver.localPipes[currentChainID] = ClusterAnchorLocalPipe(
+            receiver.localPipes[currentChainID] = ClusterAnchoringLocalPipe(
                     currentChainID, brid, storage)
         }
     }
@@ -25,17 +25,17 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
         }
 
         connectChainInternal(chainID, brid) {
-            ClusterAnchorLocalPipe(chainID, brid, storage)
+            ClusterAnchoringLocalPipe(chainID, brid, storage)
         }
     }
 
     fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
         connectChainInternal(chainID, brid) {
-            ClusterAnchorSubnodePipe(chainID, brid, restApiUrl)
+            ClusterAnchoringSubnodePipe(chainID, brid, restApiUrl)
         }
     }
 
-    private fun connectChainInternal(chainID: Long, brid: BlockchainRid, pipeSupplier: () -> ClusterAnchorPipe) {
+    private fun connectChainInternal(chainID: Long, brid: BlockchainRid, pipeSupplier: () -> ClusterAnchoringPipe) {
         receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values
                 .forEach {
                     it.localPipes[chainID] = pipeSupplier()

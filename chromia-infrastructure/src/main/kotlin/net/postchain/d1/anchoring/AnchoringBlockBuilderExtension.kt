@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
