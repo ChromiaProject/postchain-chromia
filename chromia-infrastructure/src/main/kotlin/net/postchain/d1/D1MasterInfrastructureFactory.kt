@@ -9,14 +9,14 @@ import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.containers.infra.MasterManagedEbftInfraFactory
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.d1.anchor.AnchorProcessManagerExtension
+import net.postchain.d1.anchoring.AnchoringProcessManagerExtension
 
 class D1MasterInfrastructureFactory : MasterManagedEbftInfraFactory() {
     override fun makeProcessManager(postchainContext: PostchainContext, blockchainInfrastructure: BlockchainInfrastructure, blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
         return ContainerManagedBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure as MasterBlockchainInfra,
                 blockchainConfigurationProvider,
-                listOf(AnchorProcessManagerExtension(postchainContext))
+                listOf(AnchoringProcessManagerExtension(postchainContext))
         )
     }
 }

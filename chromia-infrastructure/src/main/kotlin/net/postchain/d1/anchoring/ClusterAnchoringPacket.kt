@@ -1,6 +1,6 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
-data class ClusterAnchorPacket(
+data class ClusterAnchoringPacket(
         val height: Long, // Block height this package corresponds to
         val blockRid: ByteArray, // The BlockRid that goes with the header (for the cases where we cannot calculate it from the header)
         val rawHeader: ByteArray, // Header of the block

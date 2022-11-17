@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -6,7 +6,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
 
-class AnchorTestClusterManagement : ClusterManagement {
+class AnchoringTestClusterManagement : ClusterManagement {
     override fun getClusterInfo(clusterName: String): D1ClusterInfo {
         throw NotImplementedError("Not yet implemented")
     }

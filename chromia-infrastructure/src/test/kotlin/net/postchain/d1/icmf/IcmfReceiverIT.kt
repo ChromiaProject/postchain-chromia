@@ -14,7 +14,7 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainReadClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchor.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
