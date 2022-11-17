@@ -23,7 +23,9 @@ class ClusterAnchoringSubnodePipe(
             PostchainClientConfig(
                     blockchainRid = blockchainRid,
                     endpointPool = EndpointPool.singleUrl(restApiUrl),
-                    failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
+                    failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO),
+                    connectTimeout = Duration.ofSeconds(10),
+                    responseTimeout = Duration.ofSeconds(10)
             )
     )
 
@@ -32,10 +34,9 @@ class ClusterAnchoringSubnodePipe(
 
     override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
-                // TODO set timeout
                 client.blockAtHeightSync(currentPointer)
             } catch (e: Exception) {
-                logger.warn("Block fetching from sub node failed")
+                logger.warn(e) { "Block fetching from sub node failed: $e" }
                 null
             }?.let {
                 ClusterAnchoringPacket(
