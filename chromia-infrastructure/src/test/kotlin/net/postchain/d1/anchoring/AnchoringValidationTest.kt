@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
@@ -22,7 +22,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 
-class AnchorValidationTest {
+class AnchoringValidationTest {
     private val mockModule: GTXModule = mock {
         on { query(any(), eq("get_last_anchored_block"), any()) }.doReturn(GtvNull)
     }
@@ -54,11 +54,11 @@ class AnchorValidationTest {
 
         assertTrue(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid0),
                                 blockHeader0,
                                 gtv(rawWitness0))),
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid1),
                                 blockHeader1,
                                 gtv(rawWitness1)))
@@ -73,7 +73,7 @@ class AnchorValidationTest {
         val rawWitness = ByteArray(0)
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                listOf(OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                         gtv(blockRid.data),
                         GtvNull,
                         gtv(rawWitness))))))
@@ -91,11 +91,11 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid),
                                 blockHeader,
                                 gtv(rawWitness))),
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid),
                                 blockHeader,
                                 gtv(rawWitness)))
@@ -114,7 +114,7 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid),
                                 blockHeader,
                                 gtv(rawWitness)))
@@ -139,11 +139,11 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid0),
                                 blockHeader0,
                                 gtv(rawWitness0))),
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid1),
                                 blockHeader1,
                                 gtv(rawWitness1)))
@@ -168,11 +168,11 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid0),
                                 blockHeader0,
                                 gtv(rawWitness0))),
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid1),
                                 blockHeader1,
                                 gtv(rawWitness1)))
@@ -191,7 +191,7 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid),
                                 blockHeader,
                                 gtv(rawWitness)))
@@ -211,15 +211,15 @@ class AnchorValidationTest {
 
         assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
                 listOf(
-                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
                                 gtv(blockRid),
                                 blockHeader,
                                 gtv(rawWitness)))
                 )))
     }
 
-    private fun createAnchorSpecialTxExtension(): AnchorSpecialTxExtension {
-        val txExtension = AnchorSpecialTxExtension()
+    private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
+        val txExtension = AnchoringSpecialTxExtension()
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.clusterManagement = clusterManagement
         return txExtension

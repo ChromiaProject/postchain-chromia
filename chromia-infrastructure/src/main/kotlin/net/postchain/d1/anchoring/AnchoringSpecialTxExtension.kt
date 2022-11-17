@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
@@ -29,7 +29,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchorSpecialTxExtension : GTXSpecialTxExtension {
+class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -37,10 +37,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    val icmfReceiver = ClusterAnchorReceiver()
+    val icmfReceiver = ClusterAnchoringReceiver()
     lateinit var clusterManagement: ClusterManagement
 
-    /** This is for querying ourselves, i.e. the "anchor Rell app" */
+    /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
 
     private lateinit var cryptoSystem: CryptoSystem
@@ -93,10 +93,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: ClusterAnchorPipe,
+            pipe: ClusterAnchoringPipe,
             bctx: BlockEContext
-    ): List<ClusterAnchorPacket> {
-        val packets = mutableListOf<ClusterAnchorPacket>()
+    ): List<ClusterAnchoringPacket> {
+        val packets = mutableListOf<ClusterAnchoringPacket>()
         val blockchainRid = pipe.blockchainRid
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
@@ -119,12 +119,12 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
 
     /**
-     * Transform to [ClusterAnchorPacket] to [OpData] put arguments in correct order
+     * Transform to [ClusterAnchoringPacket] to [OpData] put arguments in correct order
      *
      * @param clusterAnchorPacket is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(clusterAnchorPacket: ClusterAnchorPacket): OpData {
+    private fun buildOpData(clusterAnchorPacket: ClusterAnchoringPacket): OpData {
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
         val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
@@ -214,7 +214,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     /**
-     * @return the data we expect to find, fetched from Anchor module's own tables,
+     * @return the data we expect to find, fetched from anchoring module's own tables,
      *         or null if we've never anchored any block for this chain before.
      */
     private fun getExpectedData(ctxt: EContext, bcRid: BlockchainRid): MinimalBlockHeaderInfo? =
@@ -228,7 +228,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             }
 
     /**
-     * Ask the Anchor Module for last anchored block
+     * Ask the anchoring Module for last anchored block
      *
      * @param bcRid is the chain we are interested in
      * @return the block info for the last anchored block, or nothing if not found
@@ -247,7 +247,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     /**
-     * Ask the Anchor Module for anchored block at height
+     * Ask the anchoring module for anchored block at height
      *
      * @param bcRid is the chain we are interested in
      * @param height is the block height we want to look at

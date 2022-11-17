@@ -1,23 +1,23 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.PostchainContext
 import net.postchain.client.core.PostchainQuery
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
 
-open class AnchorProcessManagerExtension(
-    postchainContext: PostchainContext
+open class AnchoringProcessManagerExtension(
+        postchainContext: PostchainContext
 ) : BlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
-    private val localDispatcher = ClusterAnchorDispatcher(postchainContext.storage)
+    private val localDispatcher = ClusterAnchoringDispatcher(postchainContext.storage)
 
     /**
      * Connect process to ICMF:
@@ -43,13 +43,13 @@ open class AnchorProcessManagerExtension(
 
     /**
      *
-     * Note: having more than one [AnchorSpecialTxExtension] tied to the Anchor process would be wrong I guess, but
+     * Note: having more than one [AnchoringSpecialTxExtension] tied to the anchoring process would be wrong I guess, but
      * we don't care about that here.
      */
-    private fun getAnchorSpecialTxExtension(module: GTXModule): AnchorSpecialTxExtension? {
+    private fun getAnchorSpecialTxExtension(module: GTXModule): AnchoringSpecialTxExtension? {
         return module.getSpecialTxExtensions().firstOrNull { ext ->
-            (ext is AnchorSpecialTxExtension)
-        } as AnchorSpecialTxExtension?
+            (ext is AnchoringSpecialTxExtension)
+        } as AnchoringSpecialTxExtension?
     }
 
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =

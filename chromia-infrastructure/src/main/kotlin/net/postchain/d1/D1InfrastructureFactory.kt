@@ -6,7 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.d1.anchor.AnchorProcessManagerExtension
+import net.postchain.d1.anchoring.AnchoringProcessManagerExtension
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
@@ -15,7 +15,7 @@ class D1InfrastructureFactory : ManagedEBFTInfrastructureFactory() {
         return ManagedBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
-                listOf(AnchorProcessManagerExtension(postchainContext))
+                listOf(AnchoringProcessManagerExtension(postchainContext))
         )
     }
 }

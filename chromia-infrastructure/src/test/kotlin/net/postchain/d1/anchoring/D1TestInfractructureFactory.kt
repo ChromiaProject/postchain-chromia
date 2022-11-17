@@ -1,6 +1,6 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -16,7 +16,7 @@ class D1TestInfrastructureFactory : TestManagedEBFTInfrastructureFactory() {
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
                 dataSource,
-                listOf(AnchorTestProcessManagerExtension(postchainContext))
+                listOf(AnchoringTestProcessManagerExtension(postchainContext))
         )
     }
 }
