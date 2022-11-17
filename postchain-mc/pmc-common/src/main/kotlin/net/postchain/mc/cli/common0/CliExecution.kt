@@ -339,7 +339,7 @@ open class CliExecution(val config: PostchainClientConfig) {
             governorName: String?
     ): TransactionBuilder {
         return makeTransactionWithNop().createVoterSetOperation(
-                config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
+                config.pubkey().data, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
         )
     }
 
