@@ -66,10 +66,9 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var brid: BlockchainRid
 
     init {
-        val applicationFolder = this::class.java.getResource(rellFolder)!!
         val runConf = this::class.java.getResource("run.xml")!!
         val configFiles = RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
+                File(rellFolder),
                 File(runConf.toURI()),
                 RellVersions.VERSION,
                 false

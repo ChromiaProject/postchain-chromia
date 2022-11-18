@@ -39,14 +39,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-            <classifier>sources</classifier>
-            <scope>provided</scope>
-            <type>tar.gz</type>
-        </dependency>
-        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
             <scope>test</scope>
@@ -116,25 +108,6 @@
             </testResource>
         </testResources>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>chain0</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <classifier>sources</classifier>
-                            <includeArtifactIds>directory1</includeArtifactIds>
-                            <includeTypes>tar.gz</includeTypes>
-                            <outputDirectory>${project.build.directory}/chain0</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
