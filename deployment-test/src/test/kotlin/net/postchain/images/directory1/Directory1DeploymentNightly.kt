@@ -8,6 +8,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
+import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.anchoring.getLastAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.io.File
 import kotlin.test.assertEquals
 
 @Testcontainers
@@ -106,10 +108,14 @@ internal class Directory1DeploymentNightly {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val anchorConfigXml = String(this::class.java.getResourceAsStream("/anchoring/blockchain_config_anchor.xml")!!.readAllBytes())
-            val anchorConfig = GtvMLParser.parseGtvML(anchorConfigXml)
+            val moduleRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/module.rell").readText()
+            val icmfRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/icmf.rell").readText()
+            val anchorGtvConfig = GtvMLParser.parseGtvML(
+                    javaClass.getResource("/anchoring/blockchain_config_anchor.xml")!!.readText(),
+                    mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
+
             transactionBuilder()
-                    .initOperation(GtvEncoder.encodeGtv(anchorConfig))
+                    .initOperation(GtvEncoder.encodeGtv(anchorGtvConfig))
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
@@ -353,7 +359,6 @@ internal class Directory1DeploymentNightly {
 
     @Test
     @Order(12)
-    @Disabled // TODO This needs further implementation
     fun `Blocks can be anchored`() {
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
 
@@ -375,7 +380,16 @@ internal class Directory1DeploymentNightly {
                 assert(dappChainBlock).isNotNull()
 
                 assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
-                assert(dappChainBlock.witness.wrap()).isEqualTo(lastAnchoredBlock.witness)
+
+                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness)
+                val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
+
+                assert(dappWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
+                dappWitness.getSignatures().forEach { dappSignature ->
+                    assert(anchorWitness.getSignatures().any {
+                        it.subjectID.contentEquals(dappSignature.subjectID) && it.data.contentEquals(dappSignature.data)
+                    }).isTrue()
+                }
             }
         }
     }

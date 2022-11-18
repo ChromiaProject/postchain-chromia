@@ -36,6 +36,7 @@ This is a Anchor Chain configuration specifically for testing.
                 <array>
                     <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
                     <string>net.postchain.d1.anchoring.AnchoringGTXModule</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
             </entry>
