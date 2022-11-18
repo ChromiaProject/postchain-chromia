@@ -10,6 +10,7 @@ import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.anchoring.getLastAnchoredBlock
+import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.init.initOperation
@@ -359,6 +360,31 @@ internal class Directory1DeploymentNightly {
 
     @Test
     @Order(12)
+    fun `Legacy anchoring can anchor blocks`() {
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
+    }
+
+    private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val lastAnchoredBlock = awaitQueryResult {
+                    node.c0.getLastLegacyAnchoredBlock(dappBrid)
+                }
+                assert(lastAnchoredBlock).isNotNull()
+
+                val dappChainBlock = awaitQueryResult {
+                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.height)
+                }
+                assert(dappChainBlock).isNotNull()
+
+                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+            }
+        }
+    }
+
+    @Test
+    @Order(13)
     fun `Blocks can be anchored`() {
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
 
