@@ -3,9 +3,10 @@ package net.postchain.mc.test
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import net.postchain.chain0.common.addBlockchainReplicaOperation
+import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
-import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClient
@@ -102,7 +103,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
         // Get next configuration height of new blockchain configuration
         val client = getPostchainClient(config)
-        val height = client.nmFindNextConfigurationHeight(config.blockchainRid,0)
+        val height = client.nmFindNextConfigurationHeight(config.blockchainRid, 0)
         assertk.assert(height).isEqualTo(expectedHeight)
 
         // Get next configuration
@@ -152,12 +153,16 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      * function addNode0AndBlockchain). Finally, node1 is added as replica for bc0.
      * */
     protected fun initAndNode1ReplicaOfBc0() {
-
         //add node1 (no specified cluster)
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica for bc0
-        provExecutor.sendTxUnconfirmed(provExecutor.addBlockchainReplicaAsync(clientConfig.blockchainRid.toHex(), node1Pubkey))
+        val tx = provExecutor.getPostchainClient().transactionBuilder()
+                .addBlockchainReplicaOperation(
+                        provConfig.signers.first().pubKey.data,
+                        clientConfig.blockchainRid,
+                        node1Pubkey.hexStringToByteArray())
+        provExecutor.sendTxUnconfirmed(tx)
         buildAndAwaitBlocks(5)
 
         val replicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
@@ -182,11 +187,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         val listReplicas = executor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
         assertEquals(1, listReplicas.size)
         val bc = listReplicas[0]
-        assertEquals(clientConfig.blockchainRid.toHex(), bc[0].asByteArray().toHex())
-        assertEquals(nodePubkey, bc[1].asByteArray().toHex())
-        assertEquals(host, bc[2].asString())
-        assertEquals(port, bc[3].asInteger())
-        assertTrue(bc[4].asBoolean())
+        assertEquals(nodePubkey, bc[0].asByteArray().toHex())
+        assertEquals(host, bc[1].asString())
+        assertEquals(port, bc[2].asInteger())
+        assertTrue(bc[3].asBoolean())
     }
 
     private fun assertNodeInfo(
