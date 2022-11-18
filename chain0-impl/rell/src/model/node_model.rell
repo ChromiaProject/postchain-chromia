@@ -21,7 +21,7 @@ object node_list {
 }
 
 entity node_replica {
-    replica: node;
     original: node;
-    key replica, original;
+    replica: node;
+    key original, replica;
 }

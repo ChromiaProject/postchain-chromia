@@ -229,17 +229,17 @@ function test_add_remove_node_replica() {
 
     // adding another provider's node replica: must fail
     rell.test.tx().op(
-        add_node_replica(initial_provider.pub, np1_node_key, test_node.pubkey)
+        add_node_replica(initial_provider.pub, test_node.pubkey, np1_node_key)
     ).sign(initial_provider).run_must_fail();
 
     // np1 adds np1_node as a replica of ip's node (test_node)
     rell.test.tx().op(
-        add_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+        add_node_replica(node_provider1.pub, test_node.pubkey, np1_node_key)
     ).sign(node_provider1).run();
 
     // np1 adds AGAIN np1_node as a replica of ip's node (test_node), and fails
     rell.test.tx().op(
-        add_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+        add_node_replica(node_provider1.pub, test_node.pubkey, np1_node_key)
     ).sign(node_provider1).run_must_fail();
 
     // asserting node_replica is added
@@ -247,12 +247,12 @@ function test_add_remove_node_replica() {
 
     // removing another provider's node replica: must fail
     rell.test.tx().op(
-        remove_node_replica(initial_provider.pub, np1_node_key, test_node.pubkey)
+        remove_node_replica(initial_provider.pub, test_node.pubkey, np1_node_key)
     ).sign(initial_provider).run_must_fail();
 
     // removing node replica
     rell.test.tx().op(
-        remove_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+        remove_node_replica(node_provider1.pub, test_node.pubkey, np1_node_key)
     ).sign(node_provider1).run();
 
     // asserting node_replica is removed
@@ -265,5 +265,4 @@ function _get_node_data(provider)
 
 function _prev_block_time()
     = (block @* { } ( @omit @sort_desc .block_height, .timestamp ) limit 2)[1];
-
 
