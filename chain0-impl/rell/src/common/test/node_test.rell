@@ -214,9 +214,56 @@ function test_update_node() {
     );
 }
 
+
+function test_add_remove_node_replica() {
+    setup_module();
+
+    rell.test.tx().op(
+        register_provider(initial_provider.pub, node_provider1.pub, provider_tier.NODE_PROVIDER),
+        propose_provider_state(initial_provider.pub, node_provider1.pub, true)
+    ).sign(initial_provider).run();
+    // Adding np1's node
+    rell.test.tx().op(
+        add_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
+    ).sign(node_provider1).run();
+
+    // adding another provider's node replica: must fail
+    rell.test.tx().op(
+        add_node_replica(initial_provider.pub, np1_node_key, test_node.pubkey)
+    ).sign(initial_provider).run_must_fail();
+
+    // np1 adds np1_node as a replica of ip's node (test_node)
+    rell.test.tx().op(
+        add_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+    ).sign(node_provider1).run();
+
+    // np1 adds AGAIN np1_node as a replica of ip's node (test_node), and fails
+    rell.test.tx().op(
+        add_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+    ).sign(node_provider1).run_must_fail();
+
+    // asserting node_replica is added
+    assert_true(exists(node_replica @? { .replica.pubkey == np1_node_key, .original.pubkey == test_node.pubkey }));
+
+    // removing another provider's node replica: must fail
+    rell.test.tx().op(
+        remove_node_replica(initial_provider.pub, np1_node_key, test_node.pubkey)
+    ).sign(initial_provider).run_must_fail();
+
+    // removing node replica
+    rell.test.tx().op(
+        remove_node_replica(node_provider1.pub, np1_node_key, test_node.pubkey)
+    ).sign(node_provider1).run();
+
+    // asserting node_replica is removed
+    assert_true(empty(node_replica @? { .replica.pubkey == np1_node_key, .original.pubkey == test_node.pubkey }));
+
+}
+
 function _get_node_data(provider)
     = node @ { provider } ( _ = .host, _ = .port, _ = .api_url, _ = .last_updated, _ = node_list.last_update );
 
 function _prev_block_time()
     = (block @* { } ( @omit @sort_desc .block_height, .timestamp ) limit 2)[1];
+
 

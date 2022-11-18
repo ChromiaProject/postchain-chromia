@@ -110,3 +110,22 @@ function require_node_provider(node_pubkey: pubkey, provider_pubkey: pubkey) {
 	require(node.provider == provider, "Must be provider of node to update its state");
 	return node;
 }
+
+operation add_node_replica(my_pubkey: pubkey, replica_pubkey: byte_array, original_pubkey: byte_array) {
+    val provider = require_provider(my_pubkey);
+	require_provider_auth_with_rl(provider);
+	val replica = require_node(replica_pubkey);
+	val original = require_node(original_pubkey);
+	require(empty(node_replica @? { replica, original }), "Node %s is already a replica of the node %s".format(replica, original));
+	require(replica.provider == provider, "It is only allowed to add own node as a node replica");
+	create node_replica(replica, original);
+}
+
+operation remove_node_replica(my_pubkey: pubkey, replica_pubkey: byte_array, original_pubkey: byte_array) {
+    val provider = require_provider(my_pubkey);
+	require_provider_auth_with_rl(provider);
+	val replica = require_node(replica_pubkey);
+    val original = require_node(original_pubkey);
+	require(replica.provider == provider, "It is only allowed to remove own replica node; provider:%s, node: %s".format(provider.pubkey, replica.pubkey));
+	delete node_replica @? { replica, original };
+}

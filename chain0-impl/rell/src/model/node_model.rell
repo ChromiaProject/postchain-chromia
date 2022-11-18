@@ -19,3 +19,9 @@ struct node_info {
 object node_list {
 	mutable last_update: timestamp = 0;
 }
+
+entity node_replica {
+    replica: node;
+    original: node;
+    key replica, original;
+}
