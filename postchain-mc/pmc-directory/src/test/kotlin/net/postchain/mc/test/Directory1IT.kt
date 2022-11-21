@@ -25,7 +25,7 @@ import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
-import java.nio.file.Paths
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -78,8 +78,7 @@ class Directory1IT : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
-        val resourceDirectory = Paths.get("target", "directory1", "rell", "src")
-        blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
+        blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
         doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(null))
     }
 
