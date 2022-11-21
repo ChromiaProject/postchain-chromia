@@ -1,13 +1,13 @@
 package net.postchain.mc.cli.replica
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.addBlockchainReplicaOperation
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandAddBlockchainReplica : CliktCommand(
         name = "add",
@@ -18,14 +18,14 @@ class CommandAddBlockchainReplica : CliktCommand(
 
     private val blockchainRID by blockchainRidOption()
 
-    private val key by requiredPubkeyOption()
+    private val nodePubKey by pubkeyOption().required()
 
     override fun run() {
         client.transactionBuilder()
                 .addBlockchainReplicaOperation(
                         client.pubkey,
                         blockchainRID,
-                        key.hexStringToByteArray()
+                        nodePubKey.data
                 )
                 .postSyncAwaitConfirmation()
                 .printResult(
