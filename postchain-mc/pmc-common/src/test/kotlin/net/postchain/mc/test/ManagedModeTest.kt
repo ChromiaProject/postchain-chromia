@@ -5,6 +5,8 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.chain0.common.addBlockchainReplicaOperation
 import net.postchain.chain0.common.queries.GetNodesWithProviderResult
+import net.postchain.chain0.common.queries.getBlockchainReplicas
+import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
@@ -92,10 +94,10 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     protected fun assertProviderDisabled(providerPublicKey: String) {
         val data = provExecutor.getProviderInfo(providerPublicKey)
         assertk.assert(data.active).isEqualTo(false)
-        val listReplicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
+        val listReplicas = provExecutor.getPostchainClient().getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(0, listReplicas.size)
 
-        val listSigners = provExecutor.listBlockchainSigners(clientConfig.blockchainRid.toHex())
+        val listSigners = provExecutor.getPostchainClient().getBlockchainSigners(clientConfig.blockchainRid)
         assertEquals(1, listSigners.size)
     }
 
@@ -165,7 +167,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         provExecutor.sendTxUnconfirmed(tx)
         buildAndAwaitBlocks(5)
 
-        val replicas = provExecutor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
+        val replicas = provExecutor.getPostchainClient().getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(1, replicas.size)
     }
 
@@ -184,7 +186,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     protected fun assertBlockchainReplica(clientConfig: PostchainClientConfig, nodePubkey: String, host: String, port: Long) {
         val executor = cliExecution(clientConfig)
-        val listReplicas = executor.listBlockchainReplicas(clientConfig.blockchainRid.toHex())
+        val listReplicas = executor.getPostchainClient().getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(1, listReplicas.size)
         val bc = listReplicas[0]
         assertEquals(nodePubkey, bc[0].asByteArray().toHex())

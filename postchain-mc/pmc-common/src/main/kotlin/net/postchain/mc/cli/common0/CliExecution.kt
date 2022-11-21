@@ -11,8 +11,6 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
-import net.postchain.chain0.common.queries.getBlockchainReplicas
-import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesWithProvider
@@ -146,21 +144,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
     }
 
-    fun listBlockchainSigners(blockchainRID: String): List<Array<out Gtv>> {
-        val blockchain = blockchainGtv(blockchainRID)
-        return getPostchainClient().getBlockchainSigners(RowId(blockchain.asInteger()))
-    }
-
     fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
 
     fun listVoterSets() = getPostchainClient().getVoterSets()
 
     fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
-
-    fun listBlockchainReplicas(blockchainRID: String): List<Array<out Gtv>> {
-        val blockchain = blockchainGtv(blockchainRID)
-        return getPostchainClient().getBlockchainReplicas(RowId(blockchain.asInteger()))
-    }
 
     fun listNodesByProvider(key: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
@@ -275,7 +263,7 @@ open class CliExecution(val config: PostchainClientConfig) {
             governorName: String?
     ): TransactionBuilder {
         return makeTransactionWithNop().createVoterSetOperation(
-                config.pubkey().key, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
+                config.pubkey().data, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
         )
     }
 

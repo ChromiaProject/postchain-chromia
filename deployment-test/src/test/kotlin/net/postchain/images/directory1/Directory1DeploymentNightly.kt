@@ -184,26 +184,26 @@ internal class Directory1DeploymentNightly {
         consoleLogger.info("Adding node2 to the cluster")
         consoleLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
-            .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
-            .postTransactionUntilConfirmed("Register p2 as system")
+                .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
+                .postTransactionUntilConfirmed("Register p2 as system")
 
         voteOnAllProposals(node2.provider)
 
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
-            .addNodeOperation(
-                node2.providerPubkey,
-                node2.nodeKeyPair.pubKey.data,
-                node2.nodeHost,
-                node2.nodePort.toLong(),
-                node2.apiPath(),
-                listOf("system")
-            )
-            .postTransactionUntilConfirmed("add node 2 to system cluster")
+                .addNodeOperation(
+                        node2.providerPubkey,
+                        node2.nodeKeyPair.pubKey.data,
+                        node2.nodeHost,
+                        node2.nodePort.toLong(),
+                        node2.apiPath(),
+                        listOf("system")
+                )
+                .postTransactionUntilConfirmed("add node 2 to system cluster")
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(2)
-            assert(node2.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(2)
+            assert(node1.c0.getBlockchainSigners(brid).size).isEqualTo(2)
+            assert(node2.c0.getBlockchainSigners(brid).size).isEqualTo(2)
         }
     }
 
@@ -214,38 +214,38 @@ internal class Directory1DeploymentNightly {
         consoleLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-            .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
-            .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
-            .postTransactionUntilConfirmed("Register p3 as system")
+                .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
+                .postTransactionUntilConfirmed("Register p3 as system")
 
         voteOnAllProposals(node2.provider)
         voteOnAllProposals(node3.provider)
 
         consoleLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
-            .addNodeOperation(
-                node3.providerPubkey,
-                node3.pubkey.data,
-                node3.nodeHost,
-                node3.nodePort.toLong(),
-                node3.apiPath(),
-                listOf("system")
-            )
-            .postTransactionUntilConfirmed("add node 3 to system cluster")
+                .addNodeOperation(
+                        node3.providerPubkey,
+                        node3.pubkey.data,
+                        node3.nodeHost,
+                        node3.nodePort.toLong(),
+                        node3.apiPath(),
+                        listOf("system")
+                )
+                .postTransactionUntilConfirmed("add node 3 to system cluster")
 
         // Asserting that node2 is signers of chain0
         awaitQueryResult {
-            assert(node1.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSignersByBrid(brid).size).isEqualTo(3)
+            assert(node1.c0.getBlockchainSigners(brid).size).isEqualTo(3)
+            assert(node2.c0.getBlockchainSigners(brid).size).isEqualTo(3)
+            assert(node3.c0.getBlockchainSigners(brid).size).isEqualTo(3)
         }
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
         node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
             node1.client(brid, listOf(provider)).transactionBuilder()
-                .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
-                .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
+                    .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
+                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
         }
     }
 
@@ -291,9 +291,9 @@ internal class Directory1DeploymentNightly {
 
         // Asserting that node1/node2/node3 are signers of newly added blockchain
         awaitQueryResult {
-            assert(node1.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSignersByBrid(blockchainRid!!).size).isEqualTo(3)
+            assert(node1.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
+            assert(node2.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
+            assert(node3.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
         }
     }
 

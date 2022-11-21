@@ -1,24 +1,24 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.NodeListFormatter
-import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.clientOption
 
 class CommandListBlockchainReplicas : CliktCommand(
         name = "replicas",
         help = "List blockchain replicas"
 ) {
-    private val config by configOption()
+    private val client by clientOption()
 
     private val blockchainRID by blockchainRidOption()
 
     private val includeInactive by includeInactiveOption()
 
     override fun run() {
-        val list = CliExecution(config).listBlockchainReplicas(blockchainRID.toHex())
-        println(NodeListFormatter.render(list, includeInactive))
+        NodeListFormatter.render(client.getBlockchainReplicas(blockchainRID), includeInactive)
+                .also { println(it) }
     }
 }
