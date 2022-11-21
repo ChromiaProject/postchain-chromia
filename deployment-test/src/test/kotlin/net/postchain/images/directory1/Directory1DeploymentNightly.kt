@@ -8,6 +8,8 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
 import mu.KotlinLogging
+import net.postchain.base.BaseBlockWitness
+import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.init.initOperation
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.*
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.io.File
 import kotlin.test.assertEquals
 
 @Testcontainers
@@ -46,10 +49,10 @@ import kotlin.test.assertEquals
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentNightly {
 
-    companion object : ManagedModeBase("/directory1/rell/src") {
+    companion object : ManagedModeBase("../chain0-impl/rell/src") {
         val subnodeLogger = KotlinLogging.logger("SubNode")
         private val dockerClient: DockerClient = DockerClientFactory.create()
-        private val dapps = mutableMapOf<Long, BlockchainRid>()
+        private val dapps = mutableMapOf<String, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
         private const val globalAnchoringContainer = "anchoring_system"
@@ -106,10 +109,14 @@ internal class Directory1DeploymentNightly {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val anchorConfigXml = String(this::class.java.getResourceAsStream("/anchoring/blockchain_config_anchor.xml")!!.readAllBytes())
-            val anchorConfig = GtvMLParser.parseGtvML(anchorConfigXml)
+            val moduleRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/module.rell").readText()
+            val icmfRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/icmf.rell").readText()
+            val anchorGtvConfig = GtvMLParser.parseGtvML(
+                    javaClass.getResource("/anchoring/blockchain_config_anchor.xml")!!.readText(),
+                    mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
+
             transactionBuilder()
-                    .initOperation(GtvEncoder.encodeGtv(anchorConfig))
+                    .initOperation(GtvEncoder.encodeGtv(anchorGtvConfig))
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
@@ -272,10 +279,10 @@ internal class Directory1DeploymentNightly {
 
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
-            consoleLogger.info { "Adding test dapp $dappName:${chain.iid}" }
+            consoleLogger.info { "Adding test dapp $dappName" }
             chain.configs.forEach { (height, config) ->
                 blockchainRid = BlockchainRid(chain.brid.toByteArray())
-                dapps[chain.iid] = blockchainRid!!
+                dapps[dappName] = blockchainRid!!
                 consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
                 node3Db.awaitNewBlock()
@@ -304,7 +311,7 @@ internal class Directory1DeploymentNightly {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(3) // TODO Should just be 2 since anchoring chain should not be launched in a subnode
+            assert(runningSubnodes.size).isEqualTo(2)
         }
     }
 
@@ -329,14 +336,14 @@ internal class Directory1DeploymentNightly {
 
     @Test
     @Order(10)
-    fun `Transactions can be sent to dapp 100`() {
-        assertThatDappProcessesTx(dapps[100]!!, "add_city", "Heraklion", "get_cities")
+    fun `Transactions can be sent to test-dapp`() {
+        assertThatDappProcessesTx(dapps["test-dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
     @Order(11)
-    fun `Transactions can be sent to dapp 101`() {
-        assertThatDappProcessesTx(dapps[101]!!, "add_book", "Mastering Bitcoin", "get_books")
+    fun `Transactions can be sent to test-dapp2`() {
+        assertThatDappProcessesTx(dapps["test-dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
 
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
@@ -353,12 +360,36 @@ internal class Directory1DeploymentNightly {
 
     @Test
     @Order(12)
-    @Disabled // TODO This needs further implementation
+    fun `Legacy anchoring can anchor blocks`() {
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
+    }
+
+    private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val lastAnchoredBlock = awaitQueryResult {
+                    node.c0.getLastLegacyAnchoredBlock(dappBrid)
+                }
+                assert(lastAnchoredBlock).isNotNull()
+
+                val dappChainBlock = awaitQueryResult {
+                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.height)
+                }
+                assert(dappChainBlock).isNotNull()
+
+                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+            }
+        }
+    }
+
+    @Test
+    @Order(13)
     fun `Blocks can be anchored`() {
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
 
-        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[100]!!)
-        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps[101]!!)
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp"]!!)
+        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp2"]!!)
     }
 
     private fun assertThatDappBlocksAreAnchored(anchoringChainBrid: BlockchainRid, dappBrid: BlockchainRid) {
@@ -375,7 +406,16 @@ internal class Directory1DeploymentNightly {
                 assert(dappChainBlock).isNotNull()
 
                 assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
-                assert(dappChainBlock.witness.wrap()).isEqualTo(lastAnchoredBlock.witness)
+
+                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness)
+                val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
+
+                assert(dappWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
+                dappWitness.getSignatures().forEach { dappSignature ->
+                    assert(anchorWitness.getSignatures().any {
+                        it.subjectID.contentEquals(dappSignature.subjectID) && it.data.contentEquals(dappSignature.data)
+                    }).isTrue()
+                }
             }
         }
     }

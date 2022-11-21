@@ -21,7 +21,7 @@ $ docker ps --filter name=postchain0
 Then, initialize the one-node-network
 
 ```shell
-$ pmc network initialize --host $(find-ip) --port 9870
+$ pmc network initialize
 ```
 
 The host and port used is the external ip and port that other nodes can communicate with the initial node. In this example, we only use a single node, so this can be set to any non-null values, but it is better to use real values if more nodes are added at a later stage.

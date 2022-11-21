@@ -9,7 +9,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchor.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv

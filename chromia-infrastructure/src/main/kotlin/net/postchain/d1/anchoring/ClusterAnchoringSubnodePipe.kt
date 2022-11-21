@@ -1,6 +1,6 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import mu.KLogging
 import net.postchain.client.config.FailOverConfig
@@ -9,13 +9,17 @@ import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import java.lang.Long.max
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 
-class ClusterAnchorSubnodePipe(
+class ClusterAnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         restApiUrl: String
-) : ClusterAnchorPipe {
+) : ClusterAnchoringPipe {
+    private val highestSeen = AtomicLong(-1L)
+    private val lastCommitted = AtomicLong(-1L)
 
     companion object : KLogging()
 
@@ -23,22 +27,24 @@ class ClusterAnchorSubnodePipe(
             PostchainClientConfig(
                     blockchainRid = blockchainRid,
                     endpointPool = EndpointPool.singleUrl(restApiUrl),
-                    failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
+                    failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO),
+                    connectTimeout = Duration.ofSeconds(10),
+                    responseTimeout = Duration.ofSeconds(10)
             )
     )
 
-    override fun setHighestSeenHeight(height: Long) {}
-    override fun mightHaveNewPackets() = true
+    override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
-    // TODO: [POS-358]: Make it async
-    override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? =
+    override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
+
+    override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
                 client.blockAtHeightSync(currentPointer)
             } catch (e: Exception) {
-                logger.warn("Block fetching from sub node failed")
+                logger.warn(e) { "Block fetching from sub node failed: $e" }
                 null
             }?.let {
-                ClusterAnchorPacket(
+                ClusterAnchoringPacket(
                         currentPointer,
                         it.rid,
                         it.header,
@@ -46,5 +52,9 @@ class ClusterAnchorSubnodePipe(
                 )
             }
 
-    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {}
+    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
+        bctx.addAfterCommitHook {
+            lastCommitted.getAndUpdate { max(it, currentPointer) }
+        }
+    }
 }

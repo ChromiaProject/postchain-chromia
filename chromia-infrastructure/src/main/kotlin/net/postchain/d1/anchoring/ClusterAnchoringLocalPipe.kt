@@ -1,6 +1,6 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
@@ -10,20 +10,19 @@ import net.postchain.core.Storage
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
-class ClusterAnchorLocalPipe(
+class ClusterAnchoringLocalPipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         private val storage: Storage
-) : ClusterAnchorPipe {
+) : ClusterAnchoringPipe {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
-    // TODO: prefetch packet in dispatcher instead of just setting height
     override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
+    override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
@@ -34,7 +33,7 @@ class ClusterAnchorLocalPipe(
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
-                ClusterAnchorPacket(currentPointer, blockRID, rawHeader, rawWitness)
+                ClusterAnchoringPacket(currentPointer, blockRID, rawHeader, rawWitness)
             } else {
                 null
             }

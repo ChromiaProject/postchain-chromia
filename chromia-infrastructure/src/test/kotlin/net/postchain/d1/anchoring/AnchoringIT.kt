@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
  * Produce blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
-class AnchorIT : ManagedModeTest() {
+class AnchoringIT : ManagedModeTest() {
     companion object {
         val messagesHash = ByteArray(32) { i -> i.toByte() }
     }

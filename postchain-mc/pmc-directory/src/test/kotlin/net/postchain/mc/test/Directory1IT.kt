@@ -20,17 +20,15 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.mc.cli.common0.CliExecution
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
-import java.nio.file.Paths
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -83,10 +81,8 @@ class Directory1IT : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
-        val resourceDirectory = Paths.get("target", "directory1", "rell", "src")
-        blockchain0ConfigGtv = run(runXmlFile(), resourceDirectory.toFile())
-        val anchoringConfig = GtvMLParser.parseGtvML(anchorConfigXmlFile.readText())
-        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(GtvEncoder.encodeGtv(anchoringConfig)))
+        blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
+        doAndBuildBlocks(provConfig, provExecutor.getPostchainClient().transactionBuilder().initOperation(null))
     }
 
     @Test
@@ -179,7 +175,7 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provConfig, provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provConfig, provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
-        assertEquals(3, provExecutor.listBlockchains(false).size)
+        assertEquals(2, provExecutor.listBlockchains(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
@@ -197,7 +193,7 @@ class Directory1IT : ManagedModeTest() {
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
         proposeBlockchainAction(provClient, bc1.rid.data, BlockchainAction.remove)
-        assertEquals(4, provExecutor.listBlockchains(false).size)
+        assertEquals(3, provExecutor.listBlockchains(false).size)
     }
 
     /**
@@ -315,13 +311,13 @@ class Directory1IT : ManagedModeTest() {
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.pause)
 
         var bcs = provExecutor.listBlockchains(true)
-        assertEquals(3, bcs.size)
-        bcs = provExecutor.listBlockchains(false)
         assertEquals(2, bcs.size)
+        bcs = provExecutor.listBlockchains(false)
+        assertEquals(1, bcs.size)
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
         bcs = provExecutor.listBlockchains(false)
-        assertEquals(3, bcs.size)
+        assertEquals(2, bcs.size)
 
         // build after unpause
         buildBlock(100, 3)
@@ -336,13 +332,13 @@ class Directory1IT : ManagedModeTest() {
 
         val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
         val bc1 = listOfBcs.find { it.name == "1" }!!.rid.data
-        assertEquals(3, listOfBcs.size)
+        assertEquals(2, listOfBcs.size)
 
         // delete new bc
         proposeBlockchainAction(provClient, bc1, BlockchainAction.remove)
 
         val bcs = provExecutor.listBlockchains(true)
-        assertEquals(2, bcs.size)
+        assertEquals(1, bcs.size)
     }
 
     @Test
@@ -351,7 +347,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(1, listBlockchains.size) // Always know about itself
 
         listBlockchains = provExecutor.listBlockchainsForNode(nodes[0].pubKey)
-        assertEquals(2, listBlockchains.size)
+        assertEquals(1, listBlockchains.size)
     }
 
 
@@ -389,7 +385,7 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testListBlockchains() {
         val listBlockchains = provExecutor.listBlockchains(false)
-        assertEquals(2, listBlockchains.size)
+        assertEquals(1, listBlockchains.size)
     }
 
     @Test
