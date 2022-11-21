@@ -49,7 +49,7 @@ import kotlin.test.assertEquals
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class Directory1DeploymentNightly {
 
-    companion object : ManagedModeBase("/directory1/rell/src") {
+    companion object : ManagedModeBase("../chain0-impl/rell/src") {
         val subnodeLogger = KotlinLogging.logger("SubNode")
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
