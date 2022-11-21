@@ -25,7 +25,7 @@ $ pmc node start -nc config/config.2.properties -bc out/manager.xml --name postc
 
 Alpha will then initialize the network on node 0
 ```shell
-alpha$ pmc network initialize --host $(find-ip) --port 9870
+alpha$ pmc network initialize
 ```
 
 Verify that the network is initialized by noting non-zero values from
