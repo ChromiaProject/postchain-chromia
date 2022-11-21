@@ -54,14 +54,6 @@
             <groupId>net.postchain.chain0</groupId>
             <artifactId>directory1</artifactId>
             <version>${project.version}</version>
-            <classifier>sources</classifier>
-            <scope>provided</scope>
-            <type>tar.gz</type>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- Test dependencies -->
@@ -94,24 +86,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <classifier>sources</classifier>
-                            <includeArtifactIds>directory1</includeArtifactIds>
-                            <includeTypes>tar.gz</includeTypes>
-                            <outputDirectory>${project.build.directory}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
