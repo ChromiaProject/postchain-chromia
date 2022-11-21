@@ -11,8 +11,6 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
-import net.postchain.chain0.common.queries.getBlockchainReplicas
-import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesWithProvider
@@ -146,21 +144,11 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
     }
 
-    fun listBlockchainSigners(blockchainRID: String): List<Array<out Gtv>> {
-        val blockchain = blockchainGtv(blockchainRID)
-        return getPostchainClient().getBlockchainSigners(RowId(blockchain.asInteger()))
-    }
-
     fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
 
     fun listVoterSets() = getPostchainClient().getVoterSets()
 
     fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
-
-    fun listBlockchainReplicas(blockchainRID: String): List<Array<out Gtv>> {
-        val blockchain = blockchainGtv(blockchainRID)
-        return getPostchainClient().getBlockchainReplicas(RowId(blockchain.asInteger()))
-    }
 
     fun listNodesByProvider(key: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
@@ -198,38 +186,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 createVoterSetAsync(name, providers, threshold, governorName),
                 "voter set created",
                 "Cannot create voter set"
-        )
-    }
-
-    fun addBlockchainReplica(blockchainRID: String, key: String) {
-        sendTxSync(
-                addBlockchainReplicaAsync(blockchainRID, key),
-                "Replica added",
-                "Cannot add replica"
-        )
-    }
-
-    fun addContainerReplica(clusterName: String, containerName: String) {
-        sendTxSync(
-                addBlockchainReplicaAsync(clusterName, containerName),
-                "Replica added",
-                "Cannot add replica"
-        )
-    }
-
-    fun removeBlockchainReplica(blockchainRID: String, key: String) {
-        sendTxSync(
-                removeBlockchainReplicaAsync(blockchainRID, key),
-                "Replica removed",
-                "Cannot remove replica node"
-        )
-    }
-
-    fun removeContainerReplica(clusterName: String, containerName: String) {
-        sendTxSync(
-                removeContainerReplicaAsync(clusterName, containerName),
-                "Replica removed",
-                "Cannot remove replica"
         )
     }
 
@@ -279,38 +235,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun clusterGtv(name: String): Gtv {
-        return getPostchainClient().querySync(
-                "get_cluster", gtv(
-                "name" to gtv(name)
-        )
-        )
-    }
-
-    fun containerGtv(name: String): Gtv {
-        return getPostchainClient().querySync(
-                "get_container", gtv(
-                "name" to gtv(name)
-        )
-        )
-    }
-
-    //Single provider
-    fun providerGtv(key: String): Gtv {
-        return getPostchainClient().querySync(
-                "get_provider", gtv(
-                "pubkey" to gtv(key.hexStringToByteArray())
-        )
-        )
-    }
-
-    fun nodeGtv(key: String): Gtv {
-        return getPostchainClient().querySync(
-                "get_node",
-                gtv("pubkey" to gtv(key.hexStringToByteArray()))
-        )
-    }
-
     fun blockchainGtv(blockchainRID: String): Gtv {
         return getPostchainClient().querySync(
                 "get_blockchain",
@@ -355,17 +279,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    /** Add existing provider to existing cluster
-     * */
-    fun addProviderToClusterAsync(key: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeClusterProviderOperation(
-                config.pubkey().data,
-                clusterName,
-                key.hexStringToByteArray(),
-                true
-        )
-    }
-
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
@@ -380,27 +293,6 @@ open class CliExecution(val config: PostchainClientConfig) {
     ): TransactionBuilder {
         return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
 
-    }
-
-    fun addBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val blockchain = blockchainGtv(blockchainRID)
-        val node = nodeGtv(key)
-        return makeTransactionWithNop().addOperation("add_bc_replica", provider, blockchain, node)
-    }
-
-    fun removeBlockchainReplicaAsync(blockchainRID: String, key: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val blockchain = blockchainGtv(blockchainRID)
-        val node = nodeGtv(key)
-        return makeTransactionWithNop().addOperation("remove_bc_replica", provider, blockchain, node)
-    }
-
-    fun removeContainerReplicaAsync(clusterName: String, containerName: String): TransactionBuilder {
-        val provider = providerGtv(config.signers.first().pubKey.hex())
-        val cluster = clusterGtv(clusterName)
-        val container = containerGtv(containerName)
-        return makeTransactionWithNop().addOperation("remove_bc_replica", provider, cluster, container)
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {

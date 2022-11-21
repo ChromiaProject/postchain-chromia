@@ -2,10 +2,13 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.common.addBlockchainReplicaOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.queries.getBlockchainReplicas
+import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.removeNodeOperation
 import net.postchain.chain0.model.BlockchainAction
@@ -284,6 +287,7 @@ class Directory1IT : ManagedModeTest() {
         addSystemProv2()
         // Prov2 adds node1 to system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
+        assertEquals(2, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
 
         val tx = prov2Executor.getPostchainClient().transactionBuilder()
                 .removeNodeOperation(
@@ -291,8 +295,7 @@ class Directory1IT : ManagedModeTest() {
                         node1Pubkey.hexStringToByteArray()
                 )
         doAndBuildBlocks(prov2Config, tx)
-        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
-        assertEquals(1, listBlockchainSigners.size)
+        assertEquals(1, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
     }
 
     @Test
@@ -311,11 +314,6 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(2, bcs.size)
         bcs = provExecutor.listBlockchains(false)
         assertEquals(1, bcs.size)
-
-        // try building blocks of pause bc
-        assertThrows<NullPointerException> {
-            buildBlock(100, 2)
-        }
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
         bcs = provExecutor.listBlockchains(false)
@@ -341,11 +339,6 @@ class Directory1IT : ManagedModeTest() {
 
         val bcs = provExecutor.listBlockchains(true)
         assertEquals(1, bcs.size)
-
-        // try building blocks of deleted bc
-        assertThrows<NullPointerException> {
-            buildBlock(100, 2)
-        }
     }
 
     @Test
@@ -400,10 +393,15 @@ class Directory1IT : ManagedModeTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // add node 1 as replica
-        doAndBuildBlocks(provConfig, provExecutor.addBlockchainReplicaAsync(provConfig.blockchainRid.toHex(), node1Pubkey), 1)
+        val tx = provExecutor.getPostchainClient().transactionBuilder()
+                .addBlockchainReplicaOperation(
+                        provConfig.signers.first().pubKey.data,
+                        provConfig.blockchainRid,
+                        node1Pubkey.hexStringToByteArray())
+        doAndBuildBlocks(provConfig, tx, 1)
         assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
 
-        val listBlockchainReplicas = provExecutor.listBlockchainReplicas(provConfig.blockchainRid.toHex())
+        val listBlockchainReplicas = provExecutor.getPostchainClient().getBlockchainReplicas(provConfig.blockchainRid)
         assertEquals(1, listBlockchainReplicas.size)
     }
 
@@ -412,13 +410,10 @@ class Directory1IT : ManagedModeTest() {
         //Add second system provider
         addSystemProv2()
 
-        //prov adds prov2 to system cluster
-        doAndBuildBlocks(provConfig, provExecutor.addProviderToClusterAsync(prov2Config.pubkey(), "system"))
-
         // Prov2 adds new node to system cluster => Two blockchain signers in system cluster
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, "system")
 
-        val listBlockchainSigners = provExecutor.listBlockchainSigners(provConfig.blockchainRid.toHex())
+        val listBlockchainSigners = provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid)
         assertEquals(2, listBlockchainSigners.size)
     }
 
