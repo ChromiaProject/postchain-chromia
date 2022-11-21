@@ -3,20 +3,16 @@
 package net.postchain.d1
 
 import net.postchain.PostchainContext
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
-import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.containers.infra.MasterManagedEbftInfraFactory
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcessManager
-import net.postchain.d1.anchor.AnchorProcessManagerExtension
+import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.d1.anchoring.AnchoringProcessManagerExtension
+import net.postchain.managed.LegacyAnchoringBlockchainProcessManagerExtension
 
 class D1MasterInfrastructureFactory : MasterManagedEbftInfraFactory() {
-    override fun makeProcessManager(postchainContext: PostchainContext, blockchainInfrastructure: BlockchainInfrastructure, blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
-        return ContainerManagedBlockchainProcessManager(postchainContext,
-                blockchainInfrastructure as MasterBlockchainInfra,
-                blockchainConfigurationProvider,
-                listOf(AnchorProcessManagerExtension(postchainContext))
+    override fun getProcessManagerExtensions(postchainContext: PostchainContext): List<BlockchainProcessManagerExtension> {
+        return listOf(
+                AnchoringProcessManagerExtension(postchainContext),
+                LegacyAnchoringBlockchainProcessManagerExtension(postchainContext) // TODO: Temporary until new config update functionality
         )
     }
 }

@@ -1,23 +1,28 @@
-package net.postchain.d1.anchor
+package net.postchain.d1.anchoring
 
 import net.postchain.PostchainContext
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.core.PostchainQuery
+import net.postchain.cm.cm_api.ClusterManagementImpl
+import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
+import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainProcess
-import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
 
-open class AnchorProcessManagerExtension(
-    postchainContext: PostchainContext
-) : BlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
+open class AnchoringProcessManagerExtension(
+        postchainContext: PostchainContext
+) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
-    private val localDispatcher = ClusterAnchorDispatcher(postchainContext.storage)
+    private val localDispatcher = ClusterAnchoringDispatcher(postchainContext.storage)
+    private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
 
     /**
      * Connect process to ICMF:
@@ -43,13 +48,13 @@ open class AnchorProcessManagerExtension(
 
     /**
      *
-     * Note: having more than one [AnchorSpecialTxExtension] tied to the Anchor process would be wrong I guess, but
+     * Note: having more than one [AnchoringSpecialTxExtension] tied to the anchoring process would be wrong I guess, but
      * we don't care about that here.
      */
-    private fun getAnchorSpecialTxExtension(module: GTXModule): AnchorSpecialTxExtension? {
+    private fun getAnchorSpecialTxExtension(module: GTXModule): AnchoringSpecialTxExtension? {
         return module.getSpecialTxExtensions().firstOrNull { ext ->
-            (ext is AnchorSpecialTxExtension)
-        } as AnchorSpecialTxExtension?
+            (ext is AnchoringSpecialTxExtension)
+        } as AnchoringSpecialTxExtension?
     }
 
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
@@ -73,10 +78,22 @@ open class AnchorProcessManagerExtension(
     }
 
     @Synchronized
+    override fun afterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
+        val chainId = remoteProcessChainIds[blockchainRid]
+                ?: throw ProgrammerMistake("Received commit from blockchain with rid ${blockchainRid.toHex()} that has no mapped chain id")
+        val height = BlockHeaderData.fromBinary(blockHeader).getHeight()
+        localDispatcher.afterCommit(
+                chainId,
+                height
+        )
+    }
+
+    @Synchronized
     override fun shutdown() {
     }
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
+        remoteProcessChainIds[process.blockchainRid] = process.chainId
         localDispatcher.connectSubnodeChain(
             process.chainId, process.blockchainRid, process.restApiUrl
         )
@@ -84,5 +101,6 @@ open class AnchorProcessManagerExtension(
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {
         localDispatcher.disconnectSubnodeChain(process.chainId)
+        remoteProcessChainIds.remove(process.blockchainRid)
     }
 }
