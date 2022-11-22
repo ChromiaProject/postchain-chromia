@@ -49,4 +49,4 @@ Postchain in managed mode expects that bc0 provides the following queries:
 | nm_get_blockchain_configuration    | Return the effective configuration, as a byte array, of a blockchain with RID brid at the provided height.                                                                                                              |
 | nm_find_next_configuration_height  | Return the height at which the next configuration change takes place. If no future configuration changes are planned, or if brid doesn't exist, null is returned. The returned integer is strictly greater than height. |
 | nm_get_blockchain_replica_node_map | Returns all replicas for each blockchain, thus a map from brid to replica node's pubkey.                                                                                                                                |
-| nm_get_node_replica_map            | For making a node a full clone of another node.                                                                                                                                                                         |
+
