@@ -4,10 +4,15 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.output.HelpFormatter
+import com.github.ajalt.clikt.output.TermUi.editFile
 import com.github.ajalt.clikt.parameters.groups.default
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.file
+import net.postchain.chain0.common.proposal.ProposalType
+import net.postchain.mc.cli.config.PmcConfigProvider.configurationFromSystem
+import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
+import net.postchain.mc.cli.config.PmcConfigProvider.localConfigurationFile
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
@@ -21,7 +26,7 @@ fun CliktCommand.configFileOption() = mutuallyExclusiveOptions(
         option("--file", envvar = "POSTCHAIN_CLIENT_CONFIG", help = "use given configuration file (env: POSTCHAIN_CLIENT_CONFIG)")
                 .file(mustExist = true, canBeDir = false),
         name = "Config file location",
-).default(PmcConfigProvider.localConfigurationFile())
+)
 
 class CommandConfig : CliktCommand(
         name = "config",
@@ -40,13 +45,17 @@ class CommandConfig : CliktCommand(
 
     override fun run() {
         if (list) {
-            configFile.readLines()
+            (configFile ?: localConfigurationFile() ).readLines()
                     .joinToString("\n") { if (it.startsWith("privkey")) "privkey=********************************" else it }
                     .also { return echo(it) }
         }
         if (edit) {
-            if (!Desktop.isDesktopSupported()) throw IllegalArgumentException("Cannot edit file interactively, set parameters one by one")
-            return Desktop.getDesktop().edit(configFile)
+            return editFile(configFile.absolutePath)
+        }
+
+        if (get != null) {
+            val configuration = configurationFromSystem()
+            return echo(configuration.getString(get))
         }
         val configuration = Parameters().properties()
                 .setFile(configFile)
@@ -55,14 +64,11 @@ class CommandConfig : CliktCommand(
                             .configure(it)
                             .configuration
                 }
-        if (get != null) {
-            return echo(configuration.getString(get))
-        }
         if (set.isNotEmpty()) {
             set.forEach { (t, u) ->
                 configuration.setProperty(t, u)
             }
-            configuration.write(FileWriter(configFile))
+            configuration.write(FileWriter(configFile ?: localConfigurationFile()))
         }
     }
 }
