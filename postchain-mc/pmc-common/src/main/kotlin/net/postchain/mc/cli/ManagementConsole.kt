@@ -2,6 +2,7 @@ package net.postchain.mc.cli
 
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.versionOption
 import net.postchain.cli.CommandKeygen
 import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.clusterCommands
@@ -15,6 +16,7 @@ import net.postchain.mc.network.networkCommands
 class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
 
     init {
+        versionOption(this::class.java.`package`.implementationVersion)
         subcommands(
                 CommandKeygen(),
                 networkCommands(),

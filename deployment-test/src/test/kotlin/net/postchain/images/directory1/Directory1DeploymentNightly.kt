@@ -38,6 +38,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -91,7 +92,7 @@ internal class Directory1DeploymentNightly {
 
         private fun removeSubnodeContainers() {
             dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
-                if (it.image().contains("postchain-subnode")) {
+                if (it.image().contains("chromia-subnode")) {
                     dockerClient.stopContainer(it.id(), 0)
                     dockerClient.removeContainer(it.id())
                 }
@@ -258,12 +259,13 @@ internal class Directory1DeploymentNightly {
 
     @Test
     @Order(7)
-    fun `Deploy new dapp`() {
+    fun `Deploy new dapp`(@TempDir tmpSources: File) {
         listOf(node1, node2, node3).forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(2)
         }
 
-        deployDapp("test-dapp", systemContainer)
+        File("../chromia-infrastructure/src/main/rell/icmf").copyRecursively(tmpSources.resolve("icmf"))
+        deployDapp("test-dapp", systemContainer, tmpSources)
         deployDapp("test-dapp2", foobarContainer)
 
         // Asserting that blockchain is added
@@ -272,10 +274,10 @@ internal class Directory1DeploymentNightly {
         }
     }
 
-    private fun deployDapp(dappName: String, containerName: String) {
+    private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null) {
         consoleLogger.info("Deploy new dapp $dappName")
 
-        val rellConfig = compileDapp(dappName)
+        val rellConfig = compileDapp(dappName, additionalSources)
 
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
@@ -310,7 +312,7 @@ internal class Directory1DeploymentNightly {
         consoleLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            val runningSubnodes = all.filter { it.image().contains("postchain-subnode") && it.state() == "running" }
+            val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
             assert(runningSubnodes.size).isEqualTo(2)
         }
     }
@@ -416,6 +418,19 @@ internal class Directory1DeploymentNightly {
                         it.subjectID.contentEquals(dappSignature.subjectID) && it.data.contentEquals(dappSignature.data)
                     }).isTrue()
                 }
+            }
+        }
+    }
+
+    @Test
+    @Order(14)
+    fun `ICMF messages are delivered`() {
+        val receiverDapp = dapps["test-dapp2"]!!
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val cities = awaitQueryResult { node.client(receiverDapp).querySync("get_icmf_cities") }!!
+                        .asArray().map { it.asString() }
+                assert(cities).containsExactly("Heraklion")
             }
         }
     }
