@@ -23,6 +23,7 @@
         <module>chromia-deployment-tool</module>
         <module>chromia-deployment-tool-cli</module>
         <module>chromia-server</module>
+        <module>chromia-subnode</module>
     </modules>
     <packaging>pom</packaging>
 
