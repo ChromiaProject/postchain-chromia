@@ -69,6 +69,24 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
                             <execution>
+                                <id>docker-login</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>docker</executable>
+                                    <arguments>
+                                        <argument>login</argument>
+                                        <argument>registry.gitlab.com</argument>
+                                        <argument>-u</argument>
+                                        <argument>${env.CI_REGISTRY_USER}</argument>
+                                        <argument>-p</argument>
+                                        <argument>${env.CI_REGISTRY_PASSWORD}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>build-image</id>
                                 <phase>package</phase>
                                 <goals>
