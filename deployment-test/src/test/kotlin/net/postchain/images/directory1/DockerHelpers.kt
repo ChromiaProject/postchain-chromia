@@ -44,7 +44,7 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
 // Keeping this for future debugging purposes
 internal fun printSubnodeLogs(dockerClient: DockerClient, logger: KLogger) {
     val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-    val subnodeContainer = all.find { it.image().contains("postchain-subnode") }
+    val subnodeContainer = all.find { it.image().contains("chromia-subnode") }
     if (subnodeContainer != null) {
         logger.info("------------------------- CONTAINER LOGS ---------------------\n")
         logger.info(

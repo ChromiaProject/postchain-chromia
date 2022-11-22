@@ -24,6 +24,11 @@
                         <bytea>02839DDE1D2121CE72794E54180F5F5C3AD23543D419CB4C3640A854ACB1ADA9E6</bytea>
                     </array>
                 </gtv>
+                <gtv path="gtx/modules">
+                    <array>
+                       <string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>
+                    </array>
+                </gtv>
             </config>
         </chain>
     </chains>

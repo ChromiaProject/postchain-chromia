@@ -55,7 +55,8 @@ open class ManagedModeBase(rellFolder: String) {
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
-                .withExposedPorts(50051, apiPort)
+                .withFixedExposedPort(apiPort, apiPort) // Must be fixed so subnode can connect
+                .withExposedPorts(50051)
                 .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
@@ -142,11 +143,17 @@ open class ManagedModeBase(rellFolder: String) {
                 ).brid
     }
 
-    fun compileDapp(dappName: String = "test-dapp"): RellPostAppCliConfig {
-        val applicationFolder = this::class.java.classLoader.getResource(dappName)!!
+    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null): RellPostAppCliConfig {
+        val dappSources = this::class.java.classLoader.getResource(dappName)!!
+        val applicationFolder = if (additionalSources != null) {
+            File(dappSources.toURI()).copyRecursively(additionalSources)
+            additionalSources
+        } else {
+            File(dappSources.toURI())
+        }
         val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
         return RellRunConfigGenerator.generateCli(
-                File(applicationFolder.toURI()),
+                applicationFolder,
                 File(runConf.toURI()),
                 RellVersions.VERSION,
                 false
