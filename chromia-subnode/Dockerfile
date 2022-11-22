@@ -1,6 +1,8 @@
 # Copyright (c) 2019 ChromaWay Inc. See README for license information.
 # Postchain Node Docker file with postgres
-FROM chromaway/chromia-server:latest AS postchain
+ARG postchain_image=chromaway/chromia-server
+ARG postchain_version
+FROM $postchain_image:$postchain_version AS postchain
 
 # --- INTERNAL POSTGRES DB ---
 FROM postgres:11-alpine
