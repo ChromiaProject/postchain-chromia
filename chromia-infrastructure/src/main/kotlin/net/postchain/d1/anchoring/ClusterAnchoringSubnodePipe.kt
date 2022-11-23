@@ -5,7 +5,7 @@ package net.postchain.d1.anchoring
 import mu.KLogging
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
@@ -23,7 +23,7 @@ class ClusterAnchoringSubnodePipe(
 
     companion object : KLogging()
 
-    private val client = ConcretePostchainClientProvider().createClient(
+    private val client = PostchainClientProviderImpl().createClient(
             PostchainClientConfig(
                     blockchainRid = blockchainRid,
                     endpointPool = EndpointPool.singleUrl(restApiUrl),
@@ -39,7 +39,7 @@ class ClusterAnchoringSubnodePipe(
 
     override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
             try {
-                client.blockAtHeightSync(currentPointer)
+                client.blockAtHeight(currentPointer)
             } catch (e: Exception) {
                 logger.warn(e) { "Block fetching from sub node failed: $e" }
                 null

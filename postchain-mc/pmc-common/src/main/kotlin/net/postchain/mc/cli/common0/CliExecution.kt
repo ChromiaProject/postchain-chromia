@@ -69,11 +69,11 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
         doInTryBlock {
-            val info = getPostchainClient().querySync(
+            val info = getPostchainClient().query(
                     "get_node_data",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             ).asDict().toMutableMap()
-            val clusterInfo = getPostchainClient().querySync(
+            val clusterInfo = getPostchainClient().query(
                     "list_clusters_of_node",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             )
@@ -91,7 +91,7 @@ open class CliExecution(val config: PostchainClientConfig) {
             if (height == -1L) {
                 heightConfiguration = getBlockchainLastHeight(blockchainRID)
             }
-            val conf = getPostchainClient().querySync(
+            val conf = getPostchainClient().query(
                     "nm_get_blockchain_configuration",
                     gtv(
                             "blockchain_rid" to gtv(blockchainRID.hexStringToByteArray()),
@@ -121,7 +121,7 @@ open class CliExecution(val config: PostchainClientConfig) {
         val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
         doInTryBlock {
             val blockchain = blockchainGtv(blockchainRID)
-            val list = getPostchainClient().querySync(
+            val list = getPostchainClient().query(
                     "nm_get_blockchain_dependencies",
                     gtv(
                             "blockchain" to gtv(blockchain.asInteger()),
@@ -153,7 +153,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun listNodesByProvider(key: String): List<Gtv> {
         val returnList = arrayListOf<Gtv>()
         doInTryBlock {
-            val list = getPostchainClient().querySync(
+            val list = getPostchainClient().query(
                     "get_nodes_by_provider",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
             )
@@ -167,12 +167,12 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun listProposalsSince(rowid: Long) = getPostchainClient().getProposalsSince(RowId(rowid))
 
     open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
-        return tx.postSync()
+        return tx.post()
     }
 
     open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
         doInTryBlock(false) {
-            val txResult = tx.postSyncAwaitConfirmation()
+            val txResult = tx.postAwaitConfirmation()
             when (txResult.status) {
                 TransactionStatus.CONFIRMED -> println(onSuccess)
                 TransactionStatus.REJECTED -> println(onFail + ": " + txResult.rejectReason)
@@ -236,7 +236,7 @@ open class CliExecution(val config: PostchainClientConfig) {
     }
 
     fun blockchainGtv(blockchainRID: String): Gtv {
-        return getPostchainClient().querySync(
+        return getPostchainClient().query(
                 "get_blockchain",
                 gtv("rid" to gtv(blockchainRID.hexStringToByteArray()))
         )

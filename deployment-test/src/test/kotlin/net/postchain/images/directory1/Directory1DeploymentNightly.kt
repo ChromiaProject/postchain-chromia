@@ -353,7 +353,7 @@ internal class Directory1DeploymentNightly {
         node2.tx(brid, txOp, gtv(txArg))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                val cities = awaitQueryResult { node.client(brid).querySync(query) }!!
+                val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
             }
@@ -376,7 +376,7 @@ internal class Directory1DeploymentNightly {
                 assert(lastAnchoredBlock).isNotNull()
 
                 val dappChainBlock = awaitQueryResult {
-                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.height)
+                    node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.height)
                 }
                 assert(dappChainBlock).isNotNull()
 
@@ -403,7 +403,7 @@ internal class Directory1DeploymentNightly {
                 assert(lastAnchoredBlock).isNotNull()
 
                 val dappChainBlock = awaitQueryResult {
-                    node.client(dappBrid).blockAtHeightSync(lastAnchoredBlock!!.blockHeight)
+                    node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.blockHeight)
                 }
                 assert(dappChainBlock).isNotNull()
 
@@ -428,7 +428,7 @@ internal class Directory1DeploymentNightly {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
-                val cities = awaitQueryResult { node.client(receiverDapp).querySync("get_icmf_cities") }!!
+                val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
             }

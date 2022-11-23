@@ -26,7 +26,7 @@ class CommandRemoveBlockchainReplica : CliktCommand(
                         blockchainRID,
                         key.hexStringToByteArray()
                 )
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Replica removed",
                         "Cannot remove replica node"

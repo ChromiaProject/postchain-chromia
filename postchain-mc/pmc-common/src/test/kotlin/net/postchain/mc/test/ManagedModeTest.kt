@@ -10,7 +10,7 @@ import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
@@ -73,7 +73,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     protected fun getPostchainClient(appConfig: PostchainClientConfig): PostchainClient {
-        return ConcretePostchainClientProvider().createClient(appConfig)
+        return PostchainClientProviderImpl().createClient(appConfig)
     }
 
     abstract fun cliExecution(cliConfig: PostchainClientConfig): CliExecution
@@ -132,7 +132,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
         val client = getPostchainClient(provConfig)
-        val vs = client.querySync(opName, GtvFactory.gtv(keyName to addedItem))
+        val vs = client.query(opName, GtvFactory.gtv(keyName to addedItem))
         assertk.assert(vs.asInteger()).isGreaterThan(0L)
     }
 

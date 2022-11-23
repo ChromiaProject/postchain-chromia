@@ -19,7 +19,7 @@ class CommandProposeRemoveContainer : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .removeContainerOperation(client.config.pubkey().data, name)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Container removal proposed",
                         "Failed proposing container removal"

@@ -53,7 +53,7 @@ class CommandRegisterProvider : CliktCommand(
                     if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkey.data, enable)
                     if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkey.data, true)
                 }
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Provider has been added ${enable.let { if (it) "and proposed for enabling " else "" }}",
                         "Failed to add provider"

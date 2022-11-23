@@ -23,7 +23,7 @@ class CommandUpdateProvider : CliktCommand(
     override fun run() {
         client.transactionBuilder()
             .updateProviderOperation(client.config.pubkey().data, name, beneficiary)
-            .postSyncAwaitConfirmation()
+            .postAwaitConfirmation()
             .printResult("Information updated",
             "Could not update provider data")
     }

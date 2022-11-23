@@ -16,7 +16,7 @@ object MasterApiProvider {
 
     fun getDirectoryManagement(appConfig: AppConfig): DirectoryDataSource {
         return BaseDirectoryDataSource(
-            MasterQueryProvider.getChain0Client(appConfig)::querySync,
+            MasterQueryProvider.getChain0Client(appConfig)::query,
             appConfig
         )
     }
