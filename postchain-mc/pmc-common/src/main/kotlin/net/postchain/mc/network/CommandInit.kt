@@ -15,7 +15,7 @@ class CommandInit : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .initOperation(null)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Network was initiated",
                         "Failed to initiate network"

@@ -23,7 +23,7 @@ class CommandProposeResumeBlockchain : CliktCommand(
                         blockchainRID,
                         BlockchainAction.resume
                 )
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Blockchain resume proposition was added successfully",
                         "Cannot add proposal for resuming blockchain"

@@ -110,7 +110,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         for ((anchorHeight, headers) in decodedBlockHeaderWithAnchorHeights.groupBy { it.anchorHeight }.toList().sortedBy { it.first }) {
             val hash = gtv(headers.map { gtv(it.blockRid) }).merkleHash(merkleHashCalculator)
             val anchorBlock = try {
-                anchoringClient.blockAtHeightSync(anchorHeight)
+                anchoringClient.blockAtHeight(anchorHeight)
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {

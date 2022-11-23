@@ -34,7 +34,7 @@ class CommandAddNode : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .addNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Node added",
                 "Failed to add node"

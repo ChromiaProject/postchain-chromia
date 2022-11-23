@@ -2,7 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainQuery
-import net.postchain.client.core.PostchainReadClient
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.Gtv
@@ -10,9 +10,9 @@ import net.postchain.gtv.Gtv
 object QueryProviderMocks : ChromiaQueryProvider {
     private val mockQueries = mutableMapOf<BlockchainRid, (String, Gtv) -> Gtv>()
 
-    var chain0Queries: ((String, Gtv) -> Gtv)? = null
+    var chain0Queries: PostchainQuery? = null
 
-    var anchorQueries: PostchainReadClient? = null
+    var anchorQueries: PostchainBlockClient? = null
 
     fun addMockQueries(blockchainRid: BlockchainRid, query: (String, Gtv) -> Gtv) {
         mockQueries[blockchainRid] = query
@@ -24,23 +24,21 @@ object QueryProviderMocks : ChromiaQueryProvider {
         anchorQueries = null
     }
 
-    override fun getChain0Query(): PostchainQuery = object : PostchainQuery {
-        override fun querySync(name: String, gtv: Gtv) = chain0Queries!!(name, gtv)
-    }
+    override fun getChain0Query()= chain0Queries!!
 
-    override fun getAnchorQuery(): PostchainReadClient? = anchorQueries
+    override fun getAnchorQuery(): PostchainBlockClient? = anchorQueries
 
-    override fun getQuery(blockchainRid: BlockchainRid): PostchainReadClient? = mockQueries[blockchainRid]?.let {
-        object : PostchainReadClient {
-            override fun blockAtHeightSync(height: Long): BlockDetail? {
+    override fun getQuery(blockchainRid: BlockchainRid): PostchainBlockClient? = mockQueries[blockchainRid]?.let {
+        object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long): BlockDetail? {
                 throw NotImplementedError()
             }
 
-            override fun currentBlockHeightSync(): Long {
+            override fun currentBlockHeight(): Long {
                 throw NotImplementedError()
             }
 
-            override fun querySync(name: String, gtv: Gtv) = it(name, gtv)
+            override fun query(name: String, gtv: Gtv) = it(name, gtv)
         }
     }
 }

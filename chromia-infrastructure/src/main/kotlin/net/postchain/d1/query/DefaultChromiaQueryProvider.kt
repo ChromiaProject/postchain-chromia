@@ -1,6 +1,6 @@
 package net.postchain.d1.query
 
-import net.postchain.client.core.PostchainReadClient
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.block.BlockQueriesProvider
@@ -15,15 +15,15 @@ class DefaultChromiaQueryProvider(
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
-    override fun getChain0Query(): PostchainReadClient = MasterQueryProvider.getChain0Client(appConfig)
+    override fun getChain0Query(): PostchainBlockClient = MasterQueryProvider.getChain0Client(appConfig)
 
-    override fun getAnchorQuery(): PostchainReadClient {
+    override fun getAnchorQuery(): PostchainBlockClient {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
         val info = clusterManagement.getClusterInfo(cluster)
         return MasterQueryProvider.getClient(appConfig, info.anchoringChain)
     }
 
-    override fun getQuery(blockchainRid: BlockchainRid): PostchainReadClient? {
+    override fun getQuery(blockchainRid: BlockchainRid): PostchainBlockClient? {
         val thisContainer = directoryDataSource.getContainerForBlockchain(this.blockchainRid)
         val chainContainer = directoryDataSource.getContainerForBlockchain(blockchainRid)
         return if (thisContainer == chainContainer) {

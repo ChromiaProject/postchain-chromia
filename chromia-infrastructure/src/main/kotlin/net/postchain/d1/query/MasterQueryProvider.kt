@@ -3,8 +3,8 @@ package net.postchain.d1.query
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
-import net.postchain.client.core.PostchainReadClient
+import net.postchain.client.impl.PostchainClientProviderImpl
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
@@ -14,14 +14,14 @@ import java.time.Duration
 
 object MasterQueryProvider {
 
-    fun getClient(appConfig: AppConfig, blockchainRid: BlockchainRid): PostchainReadClient {
-        return ConcretePostchainClientProvider().createClient(
+    fun getClient(appConfig: AppConfig, blockchainRid: BlockchainRid): PostchainBlockClient {
+        return PostchainClientProviderImpl().createClient(
                 buildConfig(appConfig, blockchainRid = blockchainRid)
         )
     }
 
-    fun getChain0Client(appConfig: AppConfig): PostchainReadClient {
-        return ConcretePostchainClientProvider().createClient(
+    fun getChain0Client(appConfig: AppConfig): PostchainBlockClient {
+        return PostchainClientProviderImpl().createClient(
                 buildConfig(appConfig, queryByChainId = 0L)
         )
     }

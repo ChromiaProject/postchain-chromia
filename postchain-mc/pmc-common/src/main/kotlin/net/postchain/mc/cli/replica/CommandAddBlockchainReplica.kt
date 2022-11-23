@@ -27,7 +27,7 @@ class CommandAddBlockchainReplica : CliktCommand(
                         blockchainRID,
                         nodePubKey.data
                 )
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Replica added",
                         "Cannot add replica"

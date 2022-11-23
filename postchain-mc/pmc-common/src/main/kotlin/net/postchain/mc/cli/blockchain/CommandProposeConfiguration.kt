@@ -46,7 +46,7 @@ class CommandProposeConfiguration : CliktCommand(
                         proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force)
                     }
                 }
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult("Configuration was proposed",
                         "Failed to propose configuration")
     }

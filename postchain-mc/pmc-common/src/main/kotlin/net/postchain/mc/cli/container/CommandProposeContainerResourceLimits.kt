@@ -40,7 +40,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
         client.transactionBuilder()
                 .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Container limits proposed",
                         "Failed proposing new container limits")

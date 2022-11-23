@@ -24,7 +24,7 @@ class CommandTransferActionPoints : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .transferActionPointsOperation(client.config.pubkey().data, pubkey.hexStringToByteArray(), amount)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Action points transferred",
                         "Transferring action points failed"
