@@ -58,9 +58,7 @@ open class AnchoringProcessManagerExtension(
     }
 
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
-        ClusterManagementImpl(object : PostchainQuery {
-            override fun querySync(name: String, gtv: Gtv): Gtv = configuration.dataSource.query(name, gtv)
-        })
+        ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {

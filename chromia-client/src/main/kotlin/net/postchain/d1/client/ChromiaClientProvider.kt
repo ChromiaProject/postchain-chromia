@@ -2,21 +2,19 @@ package net.postchain.d1.client
 
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClient
+import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.cm.cm_api.ClusterManagementImpl
-import org.http4k.client.ApacheAsyncClient
-import org.http4k.client.AsyncHttpHandler
 
 /**
  * Provides postchain clients that can be used to communicate with dapps within the chromia network
  *
  * @param failOverConfig fail-over configuration
  */
-open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val clusterManagement: ClusterManagement, private val httpClient: AsyncHttpHandler = ApacheAsyncClient()) {
+open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val clusterManagement: ClusterManagement) {
 
     /**
      * Gets the names of all clusters in the network
@@ -53,13 +51,12 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
         open fun blockchain(blockchainRid: BlockchainRid): PostchainClient = client(blockchainRid, endpointPool)
     }
 
-    private fun client(blockchainRid: BlockchainRid, endpointPool: EndpointPool) = ConcretePostchainClient(
+    private fun client(blockchainRid: BlockchainRid, endpointPool: EndpointPool) = PostchainClientImpl(
         PostchainClientConfig(
             failOverConfig = failOverConfig,
             blockchainRid = blockchainRid,
             endpointPool = endpointPool
-        ),
-        httpClient
+        )
     )
 
     companion object {
@@ -68,10 +65,9 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
          * Builds an instance of [ChromiaClientProvider] that uses a http client to query chain0
          */
         fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
-            val httpClient = ApacheAsyncClient()
-            val chain0Client: PostchainClient = ConcretePostchainClient(config, httpClient)
+            val chain0Client: PostchainClient = PostchainClientImpl(config)
             val clusterManagement = ClusterManagementImpl(chain0Client)
-            return ChromiaClientProvider(config.failOverConfig, clusterManagement, httpClient)
+            return ChromiaClientProvider(config.failOverConfig, clusterManagement)
         }
     }
 }

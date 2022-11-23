@@ -1,13 +1,13 @@
 package net.postchain.d1.query
 
 import net.postchain.client.core.BlockDetail
-import net.postchain.client.core.PostchainReadClient
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.TxDetail
 import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.Gtv
 
-class BlockQueriesAdapter(private val blockQueries: BlockQueries) : PostchainReadClient {
-    override fun blockAtHeightSync(height: Long): BlockDetail? {
+class BlockQueriesAdapter(private val blockQueries: BlockQueries) : PostchainBlockClient {
+    override fun blockAtHeight(height: Long): BlockDetail? {
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockRid?.let {
             blockQueries.getBlock(it, true).get()?.let { block ->
@@ -30,7 +30,7 @@ class BlockQueriesAdapter(private val blockQueries: BlockQueries) : PostchainRea
         }
     }
 
-    override fun currentBlockHeightSync() = blockQueries.getBestHeight().get()
+    override fun currentBlockHeight() = blockQueries.getBestHeight().get()
 
-    override fun querySync(name: String, gtv: Gtv) = blockQueries.query(name, gtv).get()
+    override fun query(name: String, gtv: Gtv) = blockQueries.query(name, gtv).get()
 }

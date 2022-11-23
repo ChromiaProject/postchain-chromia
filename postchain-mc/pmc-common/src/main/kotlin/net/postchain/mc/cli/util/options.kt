@@ -7,7 +7,7 @@ import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClient
+import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.crypto.PubKey
 import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.CommandBase
@@ -20,14 +20,14 @@ fun CliktCommand.pubkeyOption(helpMsg: String = "Public key") = option("-pk", "-
     .convert { PubKey(it) } // TODO: Update this in postchain repo
 fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
-        .defaultLazy { ConcretePostchainClient(fromSystemConfig()) }
+        .defaultLazy { PostchainClientImpl(fromSystemConfig()) }
 
 fun CliktCommand.nopClientOption() = clientOptionBase()
         .convert { NopPostchainClient(it) }
-        .defaultLazy { NopPostchainClient(ConcretePostchainClient(fromSystemConfig())) }
+        .defaultLazy { NopPostchainClient(PostchainClientImpl(fromSystemConfig())) }
 
 private fun CliktCommand.clientOptionBase() = configOptionBase()
-        .convert { ConcretePostchainClient(it) }
+        .convert { PostchainClientImpl(it) }
 
 private fun CliktCommand.configOptionBase() =
         option("-cfg", "--config", help = "Configuration file for PMC (overrides system configuration)", envvar = POSTCHAIN_CLIENT_CONFIG)

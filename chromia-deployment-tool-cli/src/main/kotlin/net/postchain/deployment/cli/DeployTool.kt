@@ -15,7 +15,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.deployment.ChromiaDeploymentTool
 import net.postchain.deployment.DeploymentTool
@@ -55,7 +55,7 @@ class DeployCommand : CliktCommand(help = "Deploy blockchain into container") {
     override fun run() {
         val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
-        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
+        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(PostchainClientProviderImpl())
         val blockchainConfiguration = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
         deploymentTool.deployBlockchain(
                 clientConfig,
@@ -79,7 +79,7 @@ class UpdateCommand : CliktCommand(help = "Update configuration of running block
     override fun run() {
         val clientConfig = PostchainClientConfig.fromProperties(clientConfig?.absolutePathString())
 
-        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
+        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(PostchainClientProviderImpl())
         val blockchainConfiguration = deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
         deploymentTool.updateBlockchain(
                 clientConfig,
@@ -101,7 +101,7 @@ class CompileCommand : CliktCommand(help = "Compile an application and create a 
     }
 
     override fun run() {
-        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(ConcretePostchainClientProvider())
+        val deploymentTool: DeploymentTool = ChromiaDeploymentTool(PostchainClientProviderImpl())
         deploymentTool.generateConfig(sourceDir, deployXmlFile, outputDir)
                 .apply {
                     if (showBrid) echo(specifiedBlockchainRid ?: generatedBlockchainRid)

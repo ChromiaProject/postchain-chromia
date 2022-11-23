@@ -11,7 +11,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.BlockDetail
-import net.postchain.client.core.PostchainReadClient
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
@@ -82,9 +82,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
     private fun setupClientMocks(anchorQueryResponse: Gtv = senderOneQueryResponse, messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
         MockPostchainRestApi.addMockClient(anchorChainRid, mock {
-            on { blockAtHeightSync(0L) } doReturn buildAnchorHeader(listOf(anchorQueryResponse["block_header"]!!.asByteArray()))
+            on { blockAtHeight(0L) } doReturn buildAnchorHeader(listOf(anchorQueryResponse["block_header"]!!.asByteArray()))
             on {
-                querySync(
+                query(
                         "icmf_get_headers_with_messages_after_height", gtv(
                         mapOf(
                                 "topic" to gtv("my-topic"),
@@ -97,7 +97,7 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         MockPostchainRestApi.addMockClient(senderOneChainRid, mock {
             on {
-                querySync(
+                query(
                         "icmf_get_messages", gtv(
                         mapOf(
                                 "topic" to gtv("my-topic"),
@@ -112,13 +112,13 @@ class IcmfReceiverIT : ManagedModeTest() {
     private fun setupQueriesMocks() {
         QueryProviderMocks.clearMocks()
 
-        QueryProviderMocks.anchorQueries = object : PostchainReadClient {
-            override fun blockAtHeightSync(height: Long) =
+        QueryProviderMocks.anchorQueries = object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long) =
                     buildAnchorHeader(listOf(senderTwoQueryResponse["block_header"]!!.asByteArray()))
 
-            override fun currentBlockHeightSync(): Long = throw NotImplementedError()
+            override fun currentBlockHeight(): Long = throw NotImplementedError()
 
-            override fun querySync(name: String, gtv: Gtv): Gtv =
+            override fun query(name: String, gtv: Gtv): Gtv =
                     if (name == "icmf_get_headers_with_messages_after_height" && gtv["topic"] == gtv("my-topic") && gtv["from_anchor_height"] == gtv(
                                     -1
                             )

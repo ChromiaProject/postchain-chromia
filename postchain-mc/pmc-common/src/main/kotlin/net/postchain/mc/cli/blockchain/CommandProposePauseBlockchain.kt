@@ -23,7 +23,7 @@ class CommandProposePauseBlockchain : CliktCommand(
                         blockchainRID,
                         BlockchainAction.pause
                 )
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Blockchain pause proposition was added successfully",
                         "Cannot add proposal for pausing blockchain"
