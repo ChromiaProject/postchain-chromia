@@ -37,7 +37,7 @@ class CommandAddCluster : CliktCommand(
                     is VoterSetOrPubkeysOption.VoterSet -> createClusterFromOperation(client.pubkey, name, governorName, (providerOptions as VoterSetOrPubkeysOption.VoterSet).data)
                 }
             }
-            .postSyncAwaitConfirmation()
+            .postAwaitConfirmation()
             .printResult(
                 "Cluster $name added",
                 "Could not create cluster"

@@ -34,7 +34,7 @@ class CommandReplaceNode : CliktCommand(
     override fun run() {
         client.transactionBuilder()
             .replaceNodeOperation(client.config.pubkey().data, old.data, new.data, host, port?.toLong(), apiUrl)
-            .postSyncAwaitConfirmation()
+            .postAwaitConfirmation()
             .printResult(
                 "Node has been replaced",
                 "Failed to replace node"

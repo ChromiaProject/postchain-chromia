@@ -48,7 +48,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
         client.transactionBuilder()
                 .proposeClusterLimitsOperation(client.config.pubkey().data, clusterName, limits)
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Cluster limits proposed",
                         "Failed proposing new cluster limits")

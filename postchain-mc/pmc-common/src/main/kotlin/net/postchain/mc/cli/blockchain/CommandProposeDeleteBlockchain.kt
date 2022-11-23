@@ -23,7 +23,7 @@ class CommandProposeDeleteBlockchain : CliktCommand(
                         blockchainRID,
                         BlockchainAction.remove
                 )
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult(
                         "Blockchain delete proposition was added successfully",
                         "Cannot add proposal for deleting blockchain"

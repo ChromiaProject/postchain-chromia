@@ -2,7 +2,7 @@ package net.postchain.deployment
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -29,7 +29,7 @@ class ChromiaDeploymentToolTest {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val deployXmlFile = Path.of("$rootResourcePath/config/deploy.xml")
         val blockchainConfiguration =
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, deployXmlFile, testOutput)
+            ChromiaDeploymentTool(PostchainClientProviderImpl()).generateConfig(sourceDir, deployXmlFile, testOutput)
 
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
@@ -48,7 +48,7 @@ class ChromiaDeploymentToolTest {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val deployXmlFile = Path.of("$rootResourcePath/config/deploy-update.xml")
         val blockchainConfiguration =
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(sourceDir, deployXmlFile, testOutput)
+            ChromiaDeploymentTool(PostchainClientProviderImpl()).generateConfig(sourceDir, deployXmlFile, testOutput)
 
         val config = GtvDecoder.decodeGtv(testOutput.resolve("city.gtv").readBytes())
         val configXml = GtvMLParser.parseGtvML(testOutput.resolve("city.xml").readText())
@@ -66,7 +66,7 @@ class ChromiaDeploymentToolTest {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val deployXmlFile = Path.of("$rootResourcePath/config/broken-deploy.xml")
         assertThrows<UserMistake> {
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
+            ChromiaDeploymentTool(PostchainClientProviderImpl()).generateConfig(
                 sourceDir,
                 deployXmlFile,
                 testOutput
@@ -79,7 +79,7 @@ class ChromiaDeploymentToolTest {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val deployXmlFile = Path.of("$rootResourcePath/config/broken-top-level-deploy.xml")
         val exception = assertThrows<UserMistake> {
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
+            ChromiaDeploymentTool(PostchainClientProviderImpl()).generateConfig(
                     sourceDir,
                     deployXmlFile,
                     testOutput
@@ -95,7 +95,7 @@ class ChromiaDeploymentToolTest {
         val sourceDir = Path.of("$rootResourcePath/sources")
         val deployXmlFile = Path.of("$rootResourcePath/config/broken-nested-level-deploy.xml")
         val exception = assertThrows<UserMistake> {
-            ChromiaDeploymentTool(ConcretePostchainClientProvider()).generateConfig(
+            ChromiaDeploymentTool(PostchainClientProviderImpl()).generateConfig(
                     sourceDir,
                     deployXmlFile,
                     testOutput

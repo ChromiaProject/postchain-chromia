@@ -25,7 +25,7 @@ class CommandPromoteProvider : CliktCommand(
                 if (system) proposeProviderIsSystemOperation(client.pubkey, key.data, true)
                 else promoteNodeProviderOperation(client.pubkey, key.data)
             }
-            .postSyncAwaitConfirmation()
+            .postAwaitConfirmation()
             .printResult(
                 "Provider was promoted",
                 "Failed to promote provider"

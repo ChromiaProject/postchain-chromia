@@ -124,9 +124,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
          * configuration. [ClusterManagement] uses the remote query runner to chain0: [PostchainClient].
          */
         return if (configuration is DappBlockchainConfiguration) {
-            ClusterManagementImpl(object : PostchainQuery {
-                override fun querySync(name: String, gtv: Gtv): Gtv = configuration.dataSource.query(name, gtv)
-            })
+            ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
         } else {
             MasterApiProvider.getClusterManagement(postchainContext.appConfig)
         }

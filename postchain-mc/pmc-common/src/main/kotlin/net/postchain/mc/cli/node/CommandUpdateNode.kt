@@ -48,7 +48,7 @@ class CommandUpdateNode : CliktCommand(
                     }
                     clusterName?.forEach { addNodeToClusterOperation(provider, pubkey, it) }
                 }
-                .postSyncAwaitConfirmation()
+                .postAwaitConfirmation()
                 .printResult("Node information was updated", "Node information update failed")
     }
 }
