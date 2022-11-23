@@ -194,7 +194,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertTrue(bc[3].asBoolean())
     }
 
-    private fun assertNodeInfo(
+    protected fun assertNodeInfo(
             n: GetNodesWithProviderResult,
             nodeHost: String,
             nodePort: Long,
@@ -210,15 +210,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assertEquals(b, n.providerActive)
     }
 
-    protected fun assertListNodes() {
-        val providerNodes = provExecutor.listNodesByProvider(provConfig.pubkey())
-        assertEquals(2, providerNodes.size)
-
-        val nodeList = provExecutor.listNodesWithProvider()
-        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
-        assertNodeInfo(nodeList[1], node1Host, node1Port, node1Pubkey, provConfig.pubkey(), true)
-    }
-
     protected fun buildAndAwaitBlocks(nBlocks: Int) {
         val strat = strategy()
         val height = strat.committedHeight + nBlocks
@@ -228,8 +219,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     }
 
     private fun strategy(): SmartOnDemandBlockBuildingStrategy {
-        val strat = nodes[0].blockBuildingStrategy(0) as SmartOnDemandBlockBuildingStrategy
-        return strat
+        return nodes[0].blockBuildingStrategy(0) as SmartOnDemandBlockBuildingStrategy
     }
 
     fun doAndBuildBlocks(clientConfig: PostchainClientConfig, txBuilder: TransactionBuilder, nBlocks: Int = 1) {

@@ -10,6 +10,8 @@ import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.queries.getClusterNodes
+import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.chain0.common.removeNodeOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
@@ -19,6 +21,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
@@ -377,32 +380,18 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testListNodesWithProvider() {
         addNode0(provConfig, "")
-        // Add node1
-        addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
-        assertListNodes()
+
+        val providerNodes = provExecutor.listNodesByProvider(provConfig.pubkey())
+        assertEquals(1, providerNodes.size)
+
+        val nodeList = provExecutor.listNodesWithProvider()
+        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
     }
 
     @Test
     fun testListBlockchains() {
         val listBlockchains = provExecutor.listBlockchains(false)
         assertEquals(1, listBlockchains.size)
-    }
-
-    @Test
-    fun testAddBlockchainReplicas() {
-        addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
-
-        // add node 1 as replica
-        val tx = provExecutor.getPostchainClient().transactionBuilder()
-                .addBlockchainReplicaOperation(
-                        provConfig.signers.first().pubKey.data,
-                        provConfig.blockchainRid,
-                        node1Pubkey.hexStringToByteArray())
-        doAndBuildBlocks(provConfig, tx, 1)
-        assertBlockchainReplica(provConfig, node1Pubkey, node1Host, node1Port)
-
-        val listBlockchainReplicas = provExecutor.getPostchainClient().getBlockchainReplicas(provConfig.blockchainRid)
-        assertEquals(1, listBlockchainReplicas.size)
     }
 
     @Test
