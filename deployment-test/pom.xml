@@ -21,7 +21,7 @@
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain</groupId>
-            <artifactId>chromia-server</artifactId>
+            <artifactId>chromia-subnode</artifactId>
             <version>${project.version}</version>
             <type>pom</type>
             <scope>provided</scope>
