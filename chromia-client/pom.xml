@@ -37,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>org.http4k</groupId>
-            <artifactId>http4k-client-apache-async</artifactId>
+            <artifactId>http4k-client-apache</artifactId>
         </dependency>
     </dependencies>
 </project>

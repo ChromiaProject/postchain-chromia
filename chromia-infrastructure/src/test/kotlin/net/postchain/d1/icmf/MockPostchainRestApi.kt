@@ -63,7 +63,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         if (clientMock == null) {
                             Response(Status.NOT_FOUND)
                         } else {
-                            val responseGtv = clientMock.querySync(queryName, queryArgs)
+                            val responseGtv = clientMock.query(queryName, queryArgs)
                             Response(Status.OK).body(GtvEncoder.encodeGtv(responseGtv).inputStream())
                         }
                     },
@@ -75,7 +75,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         if (clientMock == null) {
                             Response(Status.NOT_FOUND)
                         } else {
-                            val block: BlockDetail? = clientMock.blockAtHeightSync(height)
+                            val block: BlockDetail? = clientMock.blockAtHeight(height)
                             if (block == null) {
                                 Response(Status.OK).body(GtvEncoder.encodeGtv(GtvNull).inputStream())
                             } else {

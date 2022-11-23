@@ -45,7 +45,7 @@ class LocalTopicPipe(
         val anchorPackets = mutableListOf<IcmfAnchorPacket>()
         var maxAnchorHeight = currentPointer
         for ((anchorHeight, headers) in signedBlockHeaderWithAnchorHeights.groupBy { it.anchorHeight }.toList().sortedBy { it.first }) {
-            val anchorBlock = anchorQuery.blockAtHeightSync(anchorHeight)
+            val anchorBlock = anchorQuery.blockAtHeight(anchorHeight)
             if (anchorBlock == null) {
                 logger.warn("Anchor block at height $anchorHeight not found")
                 return null

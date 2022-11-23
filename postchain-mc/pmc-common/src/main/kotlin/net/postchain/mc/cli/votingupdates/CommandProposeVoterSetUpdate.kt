@@ -42,7 +42,7 @@ class CommandProposeVoterSetUpdate : CliktCommand(
                 client.config.pubkey().data,
                 voterSet, threshold, governor, newMember, removeMember
             )
-            .postSyncAwaitConfirmation()
+            .postAwaitConfirmation()
             .printResult(
                 "Proposal for voter set $voterSet has been added",
                 "Failed to add proposal"
