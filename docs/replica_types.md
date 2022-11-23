@@ -1,12 +1,13 @@
 # Replica types:
 
-* Node Replica: Node replicates node(s)
+~~* Node Replica: Node replicates node(s)
     - Doc: For making a node a full clone of another node.
     - D1: `query nm_get_node_replica_map(): list<list<byte_array>>`
       -- always empty
       -- TODO: change return type from [[key_peer_id, replica_peer_id_1, replica_peer_id_2, ...], ...] to map
     - Kotlin side: `fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>>`
-      -- TODO: figure out how and where it is used
+      -- TODO: figure out how and where it is used~~
+    - 2022.11.22: Removed: https://gitlab.com/chromaway/postchain/-/merge_requests/498
 
 * Blockchain Replica: `entity blockchain_replica_node{ key blockchain, node; }`
     - D1: used in `query nm_compute_blockchain_list(node_id: pubkey): list<byte_array>`
