@@ -10,7 +10,6 @@ image: maven:3.8.4-jdk-11
     - mkdir -p $TEST_MOUNT_DIRECTORY
     - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
     - docker image pull -q registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT
-    - docker image pull -q registry.gitlab.com/chromaway/postchain-distribution/chromaway/postgres:3.7.0-SNAPSHOT
   artifacts:
     when: on_failure
     paths:
