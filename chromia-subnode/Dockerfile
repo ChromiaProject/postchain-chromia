@@ -5,7 +5,7 @@ ARG postchain_version
 FROM $postchain_image:$postchain_version AS postchain
 
 # --- INTERNAL POSTGRES DB ---
-FROM postgres:11-alpine
+FROM postgres:11-alpine@sha256:8b4ef4f2a222f3fd9b77cd8db54547cdda0aee66dade441c5ac2dbfbb54e8312
 ARG postchain_dir=/opt/chromaway/postchain
 COPY --from=postchain $postchain_dir $postchain_dir
 
