@@ -8,15 +8,13 @@ import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.cm.cm_api.ClusterManagementImpl
-import org.http4k.client.ApacheClient
-import org.http4k.core.HttpHandler
 
 /**
  * Provides postchain clients that can be used to communicate with dapps within the chromia network
  *
  * @param failOverConfig fail-over configuration
  */
-open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val clusterManagement: ClusterManagement, private val httpClient: HttpHandler = ApacheClient()) {
+open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val clusterManagement: ClusterManagement) {
 
     /**
      * Gets the names of all clusters in the network
@@ -58,8 +56,7 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
             failOverConfig = failOverConfig,
             blockchainRid = blockchainRid,
             endpointPool = endpointPool
-        ),
-        httpClient
+        )
     )
 
     companion object {
@@ -68,10 +65,9 @@ open class ChromiaClientProvider(val failOverConfig: FailOverConfig, val cluster
          * Builds an instance of [ChromiaClientProvider] that uses a http client to query chain0
          */
         fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
-            val httpClient = ApacheClient()
-            val chain0Client: PostchainClient = PostchainClientImpl(config, httpClient)
+            val chain0Client: PostchainClient = PostchainClientImpl(config)
             val clusterManagement = ClusterManagementImpl(chain0Client)
-            return ChromiaClientProvider(config.failOverConfig, clusterManagement, httpClient)
+            return ChromiaClientProvider(config.failOverConfig, clusterManagement)
         }
     }
 }
