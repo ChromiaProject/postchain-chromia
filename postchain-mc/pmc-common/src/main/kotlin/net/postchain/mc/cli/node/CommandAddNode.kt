@@ -13,8 +13,8 @@ import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandAddNode : CliktCommand(
-    name = "add",
-    help = "Add or update node information"
+        name = "add",
+        help = "Add or update node information"
 ) {
     private val client by nopClientOption()
 
@@ -27,17 +27,18 @@ class CommandAddNode : CliktCommand(
     private val apiUrl by option("-a", "--api-url", help = "api url").required()
 
     private val clusters by option(
-        "-c",
-        "--cluster",
-        help = "comma delimited list of clusters this node belongs to"
+            "-c",
+            "--cluster",
+            help = "comma delimited list of clusters this node belongs to"
     ).split(",").required()
+
     override fun run() {
         client.transactionBuilder()
                 .addNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
                 .postAwaitConfirmation()
                 .printResult(
                         "Node added",
-                "Failed to add node"
+                        "Failed to add node"
                 )
     }
 }
