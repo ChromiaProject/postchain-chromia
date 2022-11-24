@@ -2,17 +2,14 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.chain0.common.addBlockchainReplicaOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
-import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
-import net.postchain.chain0.common.queries.getClusterNodes
-import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.chain0.common.removeNodeOperation
+import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
@@ -21,7 +18,6 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
-import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
@@ -372,9 +368,18 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testGetNodeListVersion() {
-        addNode0(provConfig, "")
-        val version = provExecutor.getPeerListVersion()
-        assertTrue(version > 0)
+        assertEquals(-1, provExecutor.getPeerListVersion()) // first block
+
+        val tx = provExecutor.getPostchainClient().transactionBuilder()
+                .updateNodeOperation(
+                        provConfig.signers.first().pubKey.data,
+                        nodes[0].pubKey.hexStringToByteArray(),
+                        null, 1234, null
+                )
+        provExecutor.sendTxUnconfirmed(tx)
+        buildAndAwaitBlocks(1)
+
+        assertTrue(provExecutor.getPeerListVersion() > 0)
     }
 
     @Test
