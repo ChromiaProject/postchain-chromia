@@ -122,7 +122,7 @@ class CommandStartNode : CliktCommand(
             val conf = PostchainContainerConfig(
                     imageName = image,
                     containerName = name,
-                    configFileName = config,
+                    configFile = config,
                     serverConfig = tlsOptions?.let {
                         PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
                     } ?: PostchainServerConfig(port),
@@ -146,7 +146,7 @@ class CommandStartNode : CliktCommand(
         val processBuilder = ProcessBuilder(args)
         processBuilder.environment().apply {
             putAll(environment())
-            put("POSTCHAIN_CONFIG", config)
+            put("POSTCHAIN_CONFIG", config.absolutePath)
             put("POSTCHAIN_SERVER_PORT", port.toString())
         }
         val process = processBuilder.start()

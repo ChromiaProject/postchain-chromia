@@ -9,7 +9,7 @@ import java.io.File
 data class PostchainContainerConfig(
     val imageName: String,
     val containerName: String?,
-    private val configFileName: String,
+    val configFile: File,
     val command: List<String> = listOf("run-server"),
     val serverConfig: PostchainServerConfig = PostchainServerConfig(),
     val volumes: Map<String, String> = mapOf(),
@@ -17,7 +17,6 @@ data class PostchainContainerConfig(
     val resourceLimits: ContainerResourceLimits = ContainerResourceLimits.default(),
     val debug: Boolean = true
 ) {
-    val configFile = File(configFileName)
-    val appConfig = AppConfig.fromPropertiesFile(configFileName, debug)
+    val appConfig = AppConfig.fromPropertiesFile(configFile, debug)
     val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 }
