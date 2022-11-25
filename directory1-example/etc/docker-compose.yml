@@ -3,12 +3,14 @@ version: '3.1'
 services:
 
   postgres:
-    image: chromaway/postgres:latest
+    image: postgres:14.1-alpine
     restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
+      POSTGRES_DB: postchain
       POSTGRES_PASSWORD: postchain
+      POSTGRES_USER: postchain
 
   postchain0:
     image: chromaway/postchain-server

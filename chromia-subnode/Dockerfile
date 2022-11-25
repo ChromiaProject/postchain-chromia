@@ -5,9 +5,8 @@ ARG postchain_version
 FROM $postchain_image:$postchain_version AS postchain
 
 # --- INTERNAL POSTGRES DB ---
-FROM postgres:11-alpine
-ARG postchain_dir=/opt/chromaway/postchain
-COPY --from=postchain $postchain_dir $postchain_dir
+FROM postgres:11-alpine@sha256:8b4ef4f2a222f3fd9b77cd8db54547cdda0aee66dade441c5ac2dbfbb54e8312
+
 
 RUN apk update && apk add openjdk17 bash curl libc6-compat gcompat
 
@@ -44,8 +43,11 @@ ENV POSTGRES_USER=postchain
 ENV POSTGRES_PASSWORD=postchain
 # --- INTERNAL POSTGRES DB END ---
 
+ARG postchain_dir=/opt/chromaway/postchain
+COPY --from=postchain $postchain_dir $postchain_dir
+
 # Scripts
-COPY src/main/docker/scripts/* /opt/chromaway/postchain/
+COPY src/main/docker/scripts/* ${postchain_dir}/
 
 ENV POSTCHAIN_DIR=$postchain_dir
 ENV RELL_OUT=$POSTCHAIN_DIR/target

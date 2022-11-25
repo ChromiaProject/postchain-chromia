@@ -32,6 +32,7 @@
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
                 <configuration>
+                    <skip>${skipDockerBuild}</skip>
                     <images>
                         <image>
                             <name>${image.name}:latest</name>
