@@ -45,7 +45,7 @@ if [ "$1" = 'postgres' ] && [ "$(id -u)" = '0' ]; then
 		chmod 700 "$POSTGRES_INITDB_XLOGDIR"
 	fi
 
-	exec gosu postgres bash "$BASH_SOURCE" "$@"
+	exec su-exec postgres bash "$BASH_SOURCE" "$@"
 fi
 
 if [ "$1" = 'postgres' ]; then
