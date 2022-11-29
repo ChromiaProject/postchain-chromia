@@ -31,13 +31,13 @@ class GlobalTopicIcmfReceiver(
     private val clusterManagement: ClusterManagement,
     private val clientProvider: ChromiaClientProvider,
     private val dbOperations: IcmfDatabaseOperations
-) : IcmfReceiver<TopicRoute, Long, String>, Shutdownable {
+) : IcmfReceiver<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
 
     private val routes = topics.map { TopicRoute(it.key, it.value) }
-    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, IcmfPipe<TopicRoute, Long, String>> = ConcurrentHashMap()
+    private val pipes: ConcurrentMap<Pair<String, TopicRoute>, IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
 
@@ -87,9 +87,9 @@ class GlobalTopicIcmfReceiver(
         clusterName: String,
         route: TopicRoute,
         lastMessageHeights: List<Pair<BlockchainRid, Long>>
-    ): IcmfPipe<TopicRoute, Long, String> {
+    ): IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String> {
         return if (clusterName == myCluster) {
-            LocalTopicPipe(
+            IntraClusterAnchoredTopicPipe(
                 queryProvider,
                 route,
                 clusterName,
@@ -101,7 +101,7 @@ class GlobalTopicIcmfReceiver(
                 dbOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
             }
 
-            ClusterGlobalTopicPipe(
+            InterClusterAnchoredTopicPipe(
                 route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
                 clusterManagement, lastMessageHeights
             )
@@ -125,7 +125,7 @@ class GlobalTopicIcmfReceiver(
         }
     }
 
-    override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, String>> {
+    override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>> {
         synchronized(jobSynchronizer) {
             if (job == null) {
                 job = start()

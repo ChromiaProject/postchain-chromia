@@ -10,9 +10,9 @@ data class IcmfReceiverBlockchainConfigData(
         @Nullable
         val global: IcmfReceiverGlobalConfig?,
 
-        @Name("blockchains")
+        @Name("local")
         @Nullable
-        val blockchains: List<IcmfReceiverSpecificBlockChainConfig>?
+        val local: List<IcmfReceiverSpecificBlockChainConfig>?,
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): IcmfReceiverBlockchainConfigData = gtv.toObject()
@@ -21,7 +21,12 @@ data class IcmfReceiverBlockchainConfigData(
 
 data class IcmfReceiverGlobalConfig(
         @Name("topics")
-        val topics: List<String>
+        @Nullable
+        val topics: List<String>?,
+
+        @Name("blockchains")
+        @Nullable
+        val blockchains: List<IcmfReceiverSpecificBlockChainConfig>?
 )
 
 data class IcmfReceiverSpecificBlockChainConfig(
