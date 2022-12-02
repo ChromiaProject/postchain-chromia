@@ -9,7 +9,7 @@
     <version>3.7.0-SNAPSHOT</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
-    <url>http://postchain.net</url>
+    <url>https://docs.chromia.com/</url>
 
     <modules>
         <module>chain0-impl</module>
