@@ -31,8 +31,6 @@
         <postchain.version>3.7.0-SNAPSHOT</postchain.version>
         <rellr.version>0.10.11-SNAPSHOT</rellr.version>
         <kotlin.version>1.6.21</kotlin.version>
-        <junit.version>5.8.2</junit.version>
-        <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>10</project.build.outputTimestamp>
@@ -44,6 +42,7 @@
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <!-- Distribution -->
         <assembly.path>${project.basedir}/src/main/assembly/targz.xml</assembly.path>
@@ -61,7 +60,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>${junit.version}</version>
+                <version>5.9.1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -121,16 +120,6 @@
                 <artifactId>jooq</artifactId>
                 <version>3.10.4</version>
             </dependency>
-            <dependency>
-                <groupId>org.glassfish.jersey.core</groupId>
-                <artifactId>jersey-client</artifactId>
-                <version>2.22.2</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-api</artifactId>
-                <version>1.48.0</version>
-            </dependency>
 
             <dependency>
                 <groupId>de.m3y.kformat</groupId>
@@ -154,12 +143,6 @@
                 <groupId>org.junit-pioneer</groupId>
                 <artifactId>junit-pioneer</artifactId>
                 <version>1.7.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.spotify</groupId>
-                <artifactId>docker-client</artifactId>
-                <version>8.16.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
