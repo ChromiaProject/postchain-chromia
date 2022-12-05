@@ -180,8 +180,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            for (node in dappChain.nodes()) {
-                withReadConnection(node.postchainContext.storage, dappChain.chain) { ctx ->
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
@@ -218,8 +218,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            for (node in dappChain.nodes()) {
-                withReadConnection(node.postchainContext.storage, dappChain.chain) { ctx ->
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
@@ -260,8 +260,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            for (node in dappChain.nodes()) {
-                withReadConnection(node.postchainContext.storage, dappChain.chain) { ctx ->
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
@@ -300,8 +300,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            for (node in dappChain.nodes()) {
-                withReadConnection(node.postchainContext.storage, dappChain.chain) { ctx ->
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
@@ -382,8 +382,8 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            for (node in dappChain.nodes()) {
-                withReadConnection(node.postchainContext.storage, dappChain.chain) { ctx ->
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
                         val messages = jooq.select()
@@ -411,7 +411,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         verifyPipesAreEmpty(dappChain)
     }
 
-    private fun verifyPipesAreEmpty(dappChain: NodeSet) {
+    private fun verifyPipesAreEmpty(dappChain: Long) {
         // Let all nodes be primary once, so they can clean their pipes
         repeat(nodes.size) {
             buildBlock(dappChain)
