@@ -23,7 +23,7 @@ class CommandTransferActionPoints : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .transferActionPointsOperation(client.config.pubkey().data, pubkey.hexStringToByteArray(), amount)
+                .transferActionPointsOperation(client.config.pubkey().data, pubkey.data, amount)
                 .postAwaitConfirmation()
                 .printResult(
                         "Action points transferred",
