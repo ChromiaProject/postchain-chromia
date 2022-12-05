@@ -24,7 +24,7 @@ class CommandRemoveBlockchainReplica : CliktCommand(
                 .removeBlockchainReplicaOperation(
                         client.pubkey,
                         blockchainRID,
-                        key.hexStringToByteArray()
+                        key.data
                 )
                 .postAwaitConfirmation()
                 .printResult(

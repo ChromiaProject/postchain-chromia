@@ -22,7 +22,7 @@ class CommandGetNodeInfo : CliktCommand(
 
     override fun run() {
         val client = ClientUtil.fromConfig(config)
-        val node = client.getNodeData(PubKey(key))
+        val node = client.getNodeData(key)
         table {
             row("Active:", "${node.active}")
             row("Host:", "${node.host}")

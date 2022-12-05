@@ -14,7 +14,7 @@ class CommandProposeEnableProvider : CliktCommand(
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        CliExecution(config).proposeEnableProvider(key)
+        CliExecution(config).proposeEnableProvider(key.hex())
         println("Proposal is registered.")
     }
 }
