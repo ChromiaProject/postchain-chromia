@@ -31,7 +31,7 @@ data class IcmfAnchorPacket(
         val packets: List<IcmfPacket>
 )
 
-data class IcmfPackets<PtrT>(
+data class IcmfPackets<PtrT, PktT>(
         val currentPointer: PtrT,
-        val anchorPackets: List<IcmfAnchorPacket>
+        val packets: List<PktT>
 )

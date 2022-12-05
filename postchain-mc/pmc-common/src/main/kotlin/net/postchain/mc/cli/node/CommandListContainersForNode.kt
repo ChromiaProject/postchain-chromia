@@ -18,7 +18,7 @@ class CommandListContainersForNode : CliktCommand(
     override fun run() {
         table {
             header("Name", "Cluster", "Deployer")
-            client.getNodeContainers(PubKey(key)).forEach {
+            client.getNodeContainers(key).forEach {
                 row(it.name, it.cluster, it.deployer)
             }
             hints { borderStyle = Table.BorderStyle.SINGLE_LINE }

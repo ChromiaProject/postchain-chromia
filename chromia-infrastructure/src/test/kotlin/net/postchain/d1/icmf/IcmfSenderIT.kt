@@ -124,14 +124,14 @@ class IcmfSenderIT : ManagedModeTest() {
                 assertEquals(expectedPreviousMessageBlockHeight, topicHeader.previousBlockHeight)
 
                 val allMessages =
-                        query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(0)))).asArray()
+                        query(node, it, dappChain.chain, "icmf_get_messages_after_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(-1)))).asArray()
                 assertEquals(expectedAllMessages.size, allMessages.size)
                 expectedAllMessages.forEachIndexed { index, expectedMessage ->
                     assertEquals(expectedMessage, allMessages[index]["body"]!!.asString())
                 }
 
                 val messages =
-                        query(node, it, dappChain.chain, "icmf_get_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))).asArray()
+                        query(node, it, dappChain.chain, "icmf_get_messages_at_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))).asArray()
                 assertEquals(expectedMessages.size, messages.size)
                 expectedMessages.forEachIndexed { index, expectedMessage ->
                     assertEquals(expectedMessage, messages[index].asString())
