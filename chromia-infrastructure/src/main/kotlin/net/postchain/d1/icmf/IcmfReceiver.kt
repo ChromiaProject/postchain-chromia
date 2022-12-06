@@ -2,6 +2,6 @@
 
 package net.postchain.d1.icmf
 
-interface IcmfReceiver<out RT : Route, PtrT, IdT> {
-    fun getRelevantPipes(): List<IcmfPipe<RT, PtrT, IdT>>
+interface IcmfReceiver<out RT : Route, PtrT, PktT, IdT> {
+    fun getRelevantPipes(): List<IcmfPipe<RT, PtrT, PktT, IdT>>
 }

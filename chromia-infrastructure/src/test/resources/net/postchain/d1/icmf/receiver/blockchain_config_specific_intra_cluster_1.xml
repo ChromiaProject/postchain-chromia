@@ -27,17 +27,21 @@
         <dict>
             <entry key="receiver">
                 <dict>
-                    <entry key="blockchains">
-                        <array>
-                            <dict>
-                                <entry key="bc-rid">
-                                    <bytea>0202020202020202020202020202020202020202020202020202020202020202</bytea>
-                                </entry>
-                                <entry key="topic">
-                                    <string>my-topic</string>
-                                </entry>
-                            </dict>
-                        </array>
+                    <entry key="global">
+                        <dict>
+                            <entry key="blockchains">
+                                <array>
+                                    <dict>
+                                        <entry key="bc-rid">
+                                            <bytea>0202020202020202020202020202020202020202020202020202020202020202</bytea>
+                                        </entry>
+                                        <entry key="topic">
+                                            <string>my-topic</string>
+                                        </entry>
+                                    </dict>
+                                </array>
+                            </entry>
+                        </dict>
                     </entry>
                 </dict>
             </entry>

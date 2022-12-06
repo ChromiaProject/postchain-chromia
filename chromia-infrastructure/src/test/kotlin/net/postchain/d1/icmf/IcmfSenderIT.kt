@@ -52,9 +52,9 @@ class IcmfSenderIT : ManagedModeTest() {
         // Messages in block 0
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.mapIndexed { index, message ->
-            makeTransaction(dappChain.nodes()[0], dappChain.chain, index, GtxOp("test_message", gtv(message)))
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, index, GtxOp("test_message", gtv(message)))
         }
-        buildBlock(dappChain.chain, 0, *block0Txs.toTypedArray())
+        buildBlock(dappChain, 0, *block0Txs.toTypedArray())
 
         verifyMessages(dappChain, 0, "my-topic", -1, block0Messages, block0Messages)
 
@@ -64,9 +64,9 @@ class IcmfSenderIT : ManagedModeTest() {
         // Messages in block 2
         val block2Messages = listOf("test2", "test3")
         val block2Txs = block2Messages.mapIndexed { index, message ->
-            makeTransaction(dappChain.nodes()[0], dappChain.chain, block0Messages.size + index, GtxOp("test_message", gtv(message)))
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, block0Messages.size + index, GtxOp("test_message", gtv(message)))
         }
-        buildBlock(dappChain.chain, 2, *block2Txs.toTypedArray())
+        buildBlock(dappChain, 2, *block2Txs.toTypedArray())
 
         // Expecting previous height to be 0
         verifyMessages(dappChain, 2, "my-topic", 0, block2Messages, block0Messages + block2Messages)
@@ -92,22 +92,22 @@ class IcmfSenderIT : ManagedModeTest() {
                 blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
 
         val message = "imtoobig".repeat(2 * 1024 * 1024)
-        val tx = makeTransaction(dappChain.nodes()[0], dappChain.chain, 0, GtxOp("test_message", gtv(message)))
-        buildBlock(dappChain.chain, 0, tx)
-        val txStatus = dappChain.nodes()[0].getBlockchainInstance(1L).blockchainEngine.getTransactionQueue().getTransactionStatus(tx.getHash())
+        val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, 0, GtxOp("test_message", gtv(message)))
+        buildBlock(dappChain, 0, tx)
+        val txStatus = getChainNodes(dappChain)[0].getBlockchainInstance(1L).blockchainEngine.getTransactionQueue().getTransactionStatus(tx.getHash())
         assertEquals(TransactionStatus.REJECTED, txStatus)
     }
 
-    private fun verifyMessages(dappChain: NodeSet,
+    private fun verifyMessages(dappChain: Long,
                                height: Long,
                                topic: String,
                                expectedPreviousMessageBlockHeight: Long,
                                expectedMessages: List<String>,
                                expectedAllMessages: List<String>
     ) {
-        for (node in dappChain.nodes()) {
-            withReadConnection(node.postchainContext.storage, dappChain.chain) {
-                val blockQueries = node.getBlockchainInstance(dappChain.chain).blockchainEngine.getBlockQueries()
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.storage, dappChain) {
+                val blockQueries = node.getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(height).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
@@ -124,14 +124,14 @@ class IcmfSenderIT : ManagedModeTest() {
                 assertEquals(expectedPreviousMessageBlockHeight, topicHeader.previousBlockHeight)
 
                 val allMessages =
-                        query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(0)))).asArray()
+                        query(node, it, dappChain, "icmf_get_messages_after_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(-1)))).asArray()
                 assertEquals(expectedAllMessages.size, allMessages.size)
                 expectedAllMessages.forEachIndexed { index, expectedMessage ->
                     assertEquals(expectedMessage, allMessages[index]["body"]!!.asString())
                 }
 
                 val messages =
-                        query(node, it, dappChain.chain, "icmf_get_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))).asArray()
+                        query(node, it, dappChain, "icmf_get_messages_at_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))).asArray()
                 assertEquals(expectedMessages.size, messages.size)
                 expectedMessages.forEachIndexed { index, expectedMessage ->
                     assertEquals(expectedMessage, messages[index].asString())
