@@ -74,12 +74,12 @@ class AnchoringIT : ManagedModeTest() {
             buildBlock(dappChain, height.toLong())
         }
 
-        val blockchainRID: BlockchainRid = ChainUtil.ridOf(dappChain.chain)
+        val blockchainRID: BlockchainRid = ChainUtil.ridOf(dappChain)
 
         // --------------------
         // Anchor chain: Check that we begin with nothing
         // --------------------
-        val anchorBlockQueries = anchorChain.nodes()[0].getBlockchainInstance(anchorChain.chain).blockchainEngine.getBlockQueries()
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].getBlockchainInstance(anchorChain).blockchainEngine.getBlockQueries()
 
         // --------------------
         // Anchor chain: Build first anchor block
@@ -101,12 +101,12 @@ class AnchoringIT : ManagedModeTest() {
 
         assertEquals(-1L, topicHeaderData.previousBlockHeight)
 
-        val dappBlockQueries = dappChain.nodes()[0].getBlockchainInstance(dappChain.chain).blockchainEngine.getBlockQueries()
+        val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
         val dappBlockRids = (0..3).map { height -> gtv(dappBlockQueries.getBlockRid(height.toLong()).get()!!) }
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         assertContentEquals(anchorHash, topicHeaderData.hash)
 
-        withReadConnection(anchorChain.nodes()[0].postchainContext.storage, anchorChain.chain) {
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
             val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
@@ -128,7 +128,7 @@ class AnchoringIT : ManagedModeTest() {
 
             val headers =
                     query(
-                            anchorChain.nodes()[0],
+                            getChainNodes(anchorChain)[0],
                             it,
                             "icmf_get_headers_with_messages_after_height",
                             gtv(
@@ -137,7 +137,7 @@ class AnchoringIT : ManagedModeTest() {
                                             "from_anchor_height" to gtv(-1)
                                     )
                             ),
-                            anchorChain.chain
+                            anchorChain
                     ).asArray()
             assertEquals(4, headers.size)
             headers.forEachIndexed { index, header ->

@@ -5,7 +5,7 @@ package net.postchain.d1.icmf
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 
-interface IcmfPipe<out RT : Route, PtrT, IdT> : Shutdownable {
+interface IcmfPipe<out RT : Route, PtrT, PktT, IdT> : Shutdownable {
     val route: RT
     val id: IdT
 
@@ -14,6 +14,6 @@ interface IcmfPipe<out RT : Route, PtrT, IdT> : Shutdownable {
     /**
      * Fetches next packets with pointer greater than currentPointer
      */
-    fun fetchNext(currentPointer: PtrT): IcmfPackets<PtrT>?
+    fun fetchNext(currentPointer: PtrT): IcmfPackets<PtrT, PktT>?
     fun markTaken(currentPointer: PtrT, bctx: BlockEContext)
 }

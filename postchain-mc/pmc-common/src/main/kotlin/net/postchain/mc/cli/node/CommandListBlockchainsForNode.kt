@@ -15,7 +15,7 @@ class CommandListBlockchainsForNode : CliktCommand(
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        val listBlockchains = CliExecution(config).listBlockchainsForNode(key)
+        val listBlockchains = CliExecution(config).listBlockchainsForNode(key.hex())
         listBlockchains.forEach { blockchain ->
             println(blockchain.toHex())
         }

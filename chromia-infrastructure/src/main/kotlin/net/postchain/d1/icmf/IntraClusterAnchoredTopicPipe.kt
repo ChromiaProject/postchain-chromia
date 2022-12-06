@@ -12,25 +12,25 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchoring.icmfGetHeadersWithMessagesAfterHeight
-import net.postchain.d1.rell.icmf.icmfGetMessages
+import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
-class LocalTopicPipe(
+class IntraClusterAnchoredTopicPipe(
     private val queryProvider: ChromiaQueryProvider,
     override val route: TopicRoute,
     override val id: String,
     private val cryptoSystem: CryptoSystem,
     private val clusterManagement: ClusterManagement
-) : IcmfPipe<TopicRoute, Long, String>, Shutdownable {
+) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging()
 
     private val clusterName = id
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
         val anchorQuery = queryProvider.getAnchorQuery()
         if (anchorQuery == null) {
             logger.warn("Anchor chain does not exist!")
@@ -72,7 +72,7 @@ class LocalTopicPipe(
                     continue
                 }
 
-                val messages = query.icmfGetMessages(
+                val messages = query.icmfGetMessagesAtHeight(
                         route.topic,
                         decodedHeader.getHeight()
                 ).map {

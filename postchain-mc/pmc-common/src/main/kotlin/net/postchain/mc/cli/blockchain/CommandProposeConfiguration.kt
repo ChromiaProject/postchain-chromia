@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
+import net.postchain.cli.AlreadyExistMode
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.heightOption
@@ -43,7 +44,7 @@ class CommandProposeConfiguration : CliktCommand(
                     if (height == null) {
                         proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force)
+                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
                     }
                 }
                 .postAwaitConfirmation()
