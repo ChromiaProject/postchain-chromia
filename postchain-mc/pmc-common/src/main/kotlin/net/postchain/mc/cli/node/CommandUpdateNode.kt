@@ -8,7 +8,6 @@ import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
@@ -40,13 +39,12 @@ class CommandUpdateNode : CliktCommand(
         }
 
         val provider = client.config.pubkey().data
-        val pubkey = key.hexStringToByteArray()
         client.transactionBuilder()
                 .apply {
                     if (host != null || port != null || apiUrl != null) {
-                        updateNodeOperation(provider, pubkey, host, port?.toLong(), apiUrl)
+                        updateNodeOperation(provider, key.data, host, port?.toLong(), apiUrl)
                     }
-                    clusterName?.forEach { addNodeToClusterOperation(provider, pubkey, it) }
+                    clusterName?.forEach { addNodeToClusterOperation(provider, key.data, it) }
                 }
                 .postAwaitConfirmation()
                 .printResult("Node information was updated", "Node information update failed")

@@ -26,7 +26,7 @@ class CommandProposeClusterProvider : CliktCommand(
         .flag("-r", "--remove", default = true)
 
     override fun run() {
-        CliExecution(config).proposeClusterProvider(clusterName, provider, add)
+        CliExecution(config).proposeClusterProvider(clusterName, provider.hex(), add)
         println("proposal for provider update of cluster $clusterName has been added successfully")
     }
 }

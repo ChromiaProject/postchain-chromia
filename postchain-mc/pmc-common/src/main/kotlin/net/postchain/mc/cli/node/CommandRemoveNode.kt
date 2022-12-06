@@ -18,7 +18,7 @@ class CommandRemoveNode : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .removeNodeOperation(client.config.pubkey().data, key.hexStringToByteArray())
+                .removeNodeOperation(client.config.pubkey().data, key.data)
                 .postAwaitConfirmation()
                 .printResult(
                         "Node removed",

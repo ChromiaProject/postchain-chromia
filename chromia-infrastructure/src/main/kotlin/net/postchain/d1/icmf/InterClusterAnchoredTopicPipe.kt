@@ -21,7 +21,7 @@ import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.rell.anchoring.icmfGetHeadersWithMessagesAfterHeight
-import net.postchain.d1.rell.icmf.icmfGetMessages
+import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -34,20 +34,20 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class ClusterGlobalTopicPipe(override val route: TopicRoute,
-                             override val id: String,
-                             private val cryptoSystem: CryptoSystem,
-                             lastAnchorHeight: Long,
-                             private val clientProvider: ChromiaClientProvider,
-                             private val clusterManagement: ClusterManagement,
-                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long, String>, Shutdownable {
+class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
+                                    override val id: String,
+                                    private val cryptoSystem: CryptoSystem,
+                                    lastAnchorHeight: Long,
+                                    private val clientProvider: ChromiaClientProvider,
+                                    private val clusterManagement: ClusterManagement,
+                                    _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 32 * 1024 * 1024 // 32 MiB
     }
 
     private val clusterName = id
-    private val packets = ConcurrentSkipListMap<Long, Pair<IcmfPackets<Long>, Int>>()
+    private val packets = ConcurrentSkipListMap<Long, Pair<IcmfPackets<Long, IcmfAnchorPacket>, Int>>()
     private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
@@ -237,7 +237,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
         while (true) {
             logger.info("Fetching messages from ${blockchainRid.toHex()} at height $height")
             val bodies = try {
-                client.icmfGetMessages(route.topic, height)
+                client.icmfGetMessagesAtHeight(route.topic, height)
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {
@@ -278,7 +278,7 @@ class ClusterGlobalTopicPipe(override val route: TopicRoute,
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? =
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? =
             packets.higherEntry(currentPointer)?.value?.first
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {

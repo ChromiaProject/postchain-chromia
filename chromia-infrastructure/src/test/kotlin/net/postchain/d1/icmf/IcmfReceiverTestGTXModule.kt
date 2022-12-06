@@ -3,7 +3,6 @@ package net.postchain.d1.icmf
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
@@ -22,7 +21,7 @@ import org.jooq.util.postgres.PostgresDataType
 
 class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
         Unit,
-        mapOf(MessageOp.OP_NAME to ::IcmfMessageOp),
+        mapOf(IcmfReceiverSpecialTxExtension.MessageOp.OP_NAME to ::IcmfMessageOp),
         mapOf()
 ) {
 
