@@ -19,8 +19,8 @@ Start the genesis node and two other nodes
 
 ```shell
 $ pmc node start -nc config/config.0.properties -bc out/manager.xml --name postchain0 --port 50050 --debug
-$ pmc node start -nc config/config.1.properties -bc out/manager.xml --name postchain1 --port 50051 --debug --genesis-pubkey 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 --genesis-peer $(find-ip):9870
-$ pmc node start -nc config/config.2.properties -bc out/manager.xml --name postchain2 --port 50052 --debug --genesis-pubkey 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57 --genesis-peer $(find-ip):9870
+$ pmc node start -nc config/config.1.properties -bc out/manager.xml --name postchain1 --port 50051 --debug 
+$ pmc node start -nc config/config.2.properties -bc out/manager.xml --name postchain2 --port 50052 --debug
 ```
 
 Alpha will then initialize the network on node 0
