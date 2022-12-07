@@ -33,14 +33,25 @@
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <inherited>false</inherited>
+                <configuration>
+                    <source>rell/src</source>
+                </configuration>
                 <executions>
+                    <execution>
+                        <id>devnet-compile</id>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <mainModule>devnet</mainModule>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>rell-test</id>
                         <goals>
                             <goal>rell-test</goal>
                         </goals>
                         <configuration>
-                            <source>rell/src</source>
                             <testModule>${rellTestModules}</testModule>
                             <skip>${skipTests}</skip>
                             <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
