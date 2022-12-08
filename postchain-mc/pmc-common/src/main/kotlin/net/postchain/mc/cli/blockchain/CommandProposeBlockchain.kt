@@ -14,7 +14,7 @@ class CommandProposeBlockchain: CliktCommand(
 ) {
     private val config by configOption()
 
-    private val blockchainConfigFile by blockchainConfigOption()
+    private val blockchainConfigFile by blockchainConfigOption().required()
 
     private val container by option("-c", "--container", help = "Name of container to run in").required()
 
