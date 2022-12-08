@@ -222,8 +222,8 @@ open class CliExecution(val config: PostchainClientConfig) {
     fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
         sendTxSync(
                 proposeClusterProviderAsync(clusterName, key, add),
-                "Cluster providers update proposed",
-                "Failed proposing cluster providers update"
+                "Cluster $clusterName providers update proposed",
+                "Failed proposing cluster $clusterName providers update"
         )
     }
 

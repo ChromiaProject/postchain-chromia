@@ -15,6 +15,5 @@ class CommandProposeDisableProvider : CliktCommand(
 
     override fun run() {
         CliExecution(config).proposeDisableProvider(key.hex())
-        println("Proposal is registered.")
     }
 }
