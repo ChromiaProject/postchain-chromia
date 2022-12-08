@@ -1,9 +1,0 @@
-module;
-
-entity city { key name; population: integer; }
-
-operation add_city (name) { create city (name, 0); }
-
-operation add_city_with_population (name, population: integer) { create city (name, population); }
-
-query get_cities () { return city @* {} ( .name ); }
