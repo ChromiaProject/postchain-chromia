@@ -14,6 +14,7 @@ tar xf "$CLIENT"
 DIRECTORY1_PATH="$D/../directory1/rell"
 MODULE="directory1"
 sed -i'' -e "s/{hostName}/$(bash $D/find-ip)/g" "$DIRECTORY1_PATH/config/genesis-node-arg.xml"
+sed -i'' -e "s/{hostName}/$(bash $D/find-ip)/g" "$D/../config/genesis.properties"
 sed -i'' -e "s/{apiUrl}/http:\/\/localhost:7740/g" "$DIRECTORY1_PATH/config/genesis-node-arg.xml"
 BRID=$(bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$DIRECTORY1_PATH/src" --output-dir "$D/../out" --show-brid "$DIRECTORY1_PATH/config/$MODULE.xml")
 bash "$D/../chromia-deploy/bin/chromia-deploy.sh" compile --source-dir "$D/../app/src" --output-dir "$D/../app-out" "$D/../app/config/deploy.xml"

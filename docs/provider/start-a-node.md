@@ -25,11 +25,16 @@ database.username=<postgres-user>
 database.password=<postgres-pw>
 database.schema=<postgres-schema>
 database.url=jdbc:postgresql://localhost:5432/<db-name>
+
+# Node information to connect to an existing network
+genesis.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f56
+genesis.host=231.123.12.2
+genesis.port=9870
 ```
 
 The node can then be started using `pmc.sh node start --node-config <file>`. Use the `--debug` flag to enable the debug api which gives you an overview of the chains that are running on the node.
 To start a blockchain immediately, supply its blockchain configuration using `--blockchain-config <file>`.
-If the node is not the first one in the network, you must also supply parameters `--genesis-pubkey` and `--generis-peer` pointing to a node in the network.
+If the node is not the first one in the network, you must also supply genesis node configuration properties pointing to a node in the network. These can also be specified via the `--genesis-peer` options.
 
 For a full list of available flags, use `--help`
 
@@ -42,9 +47,9 @@ PMC includes a few convenience functions for starting postchain as docker contai
 To start postchain using docker, set the database url to `jdbc:postgresql://host.docker.internal:5432/postchain` and set `--docker` flag.
 Additionally, you can set the name, image (if other than default) and mount volumes.
 
-If the genesis node is also run using the same docker daemon, use `--genesis-peer host.docker.internal:<port>` since they will both be part of dockers internal network.
+If the genesis node is also run using the same docker daemon, you can use `genesis.host=host.docker.internal` since they will both be part of dockers internal network.
 
-> **NOTE:** `host.docker.internal` is typically use for Mac, for linux and windows machines, the host 172.17.0.1 can be used to access the docker host
+> **NOTE:** `host.docker.internal` is typically use for Mac, for linux and Windows machines, the host 172.17.0.1 can be used to access the docker host
 
 ### Native process
 
