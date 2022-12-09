@@ -15,13 +15,10 @@
         <module>chain0-impl</module>
         <module>chromia-client</module>
         <module>deployment-test</module>
-        <module>directory1-example</module>
         <module>postchain-mc</module>
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
-        <module>chromia-deployment-tool</module>
-        <module>chromia-deployment-tool-cli</module>
         <module>chromia-server</module>
         <module>chromia-subnode</module>
     </modules>

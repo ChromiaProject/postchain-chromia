@@ -1,6 +1,0 @@
-<deploy>
-    <cha name="city">
-        <app module="v0.main"/>
-        <include src="bc-params.xml" root="false"/>
-    </cha>
-</deploy>
