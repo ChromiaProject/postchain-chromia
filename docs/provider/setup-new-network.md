@@ -36,7 +36,7 @@ ifconfig | grep "inet " | grep -v "127.0.0.1" | awk '{print $2}'
 
 Now you can initialize the network using:
 ```shell
-pmc network initialize --host <ip> --port <node-messaging-port>
+pmc network initialize
 ```
 
 ## Add system provider N+1

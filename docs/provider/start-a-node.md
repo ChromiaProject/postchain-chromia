@@ -50,12 +50,6 @@ container.subnode-host=host.docker.internal
 container.subnode-database-url=jdbc:postgresql://localhost:5432/postchain
 ```
 
-The node can then be started using `pmc.sh node start --node-config <file>`. Use the `--debug` flag to enable the debug api which gives you an overview of the chains that are running on the node.
-To start a blockchain immediately, supply its blockchain configuration using `--blockchain-config <file>`.
-If the node is not the first one in the network, you must also supply genesis node configuration properties pointing to a node in the network. These can also be specified via the `--genesis-peer` options.
-
-For a full list of available flags, use `--help`
-
 ## Docker
 
 When starting a node using docker you must expose a few ports and add some mount points. Folders containing node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, the api port and the subnode port must be exposed. 
