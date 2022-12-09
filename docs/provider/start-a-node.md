@@ -21,10 +21,11 @@ configuration.provider.node=managed
 infrastructure=net.postchain.managed.Chromia0MasterInfrastructureFactory
 
 # Storage
-database.driverclass=org.postgresql.Driver
 database.username=<postgres-user>
 database.password=<postgres-pw>
 database.schema=<postgres-schema>
+# Url to database. the host must point in respect to the nodes network. 
+# If node is run as a docker container, and the db is also on docker, then this would be the internal docker host.
 database.url=jdbc:postgresql://localhost:5432/<db-name>
 
 # Node information to connect to an existing network
@@ -32,7 +33,7 @@ genesis.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f5
 genesis.host=231.123.12.2
 genesis.port=9870
 
-#Container
+# Container
 container.testmode=false
 # Path to image used by subnode containers
 container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
@@ -41,6 +42,8 @@ container.host-mount-dir=/tmp/subnode
 # Hostname of the master host as seen by a subnode. If master is on docker, then the subnode will perceive the host as the internal docker host
 # 172.17.0.1 on linux/Windows. Can be localhost if master node is a native java process
 container.master-host=host.docker.internal
+# Port used by the master node to establish connections with subnodes
+container.master-port=9880
 # Hostname of subnodes as seen by the master host. See above
 container.subnode-host=host.docker.internal
 # Subnodes will spawn and host its own database, use this if you want all subnodes to use another external database
@@ -53,43 +56,33 @@ If the node is not the first one in the network, you must also supply genesis no
 
 For a full list of available flags, use `--help`
 
-## PMC convenience script
+## Docker
 
-PMC includes a few convenience functions for starting postchain as docker container or as a native process
-
-### Docker
-
-To start postchain using docker, set the database url to `jdbc:postgresql://host.docker.internal:5432/postchain` and set `--docker` flag.
-Additionally, you can set the name, image (if other than default) and mount volumes.
-
-If the genesis node is also run using the same docker daemon, you can use `genesis.host=host.docker.internal` since they will both be part of dockers internal network.
-
-> **NOTE:** `host.docker.internal` is typically use for Mac, for linux and Windows machines, the host 172.17.0.1 can be used to access the docker host
-
-### Native process
-
-Using the `--native` flag, postchain will start as a native process. Supply the path to the postchain binary (postchain.sh) using `--postchain-path` or environment variable `POSTCHAIN_PATH`. 
+When starting a node using docker you must expose a few ports and add some mount points. Folders containing node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, the api port and the subnode port must be exposed. 
+Example:
+```shell
+docker run -it -d --name postchain \
+    --volume /var/run/docker.sock:/var/run/docker.sock \
+    --mount type=bind,source=/tmp/subnode,target=/tmp/subnode \
+    --mount type=bind,source="$(pwd)/config",target=/config,readonly \
+    --mount type=bind,source="$(pwd)/build",target=/build,readonly \
+    -e POSTCHAIN_DEBUG=true \
+    -e POSTCHAIN_CONFIG=/config/node-config.properties \
+    -e POSTCHAIN_BLOCKCHAIN_CONFIG=/build/bc-config.xml \
+    -p 9870:9870/tcp \
+    -p 7740:7740/tcp -p 9880:9880/tcp \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.7.0 \
+    run-node
+```
 
 ## Native background process
 
-Add the peer information of a node in the network
-
-```shell
-$ postchain.sh peerinfo-add -nc config/config.0.properties -h <host> -p <port> -pk <pubkey>
-```
-
-Add the blockchain configuration of the manager chain to the database
-
-```shell
-$ postchain.sh add-blockchain -bc manager.xml -cid 0 -nc config/config.0.properties
-```
-
-Now the node can be started as a background process using for example `screen`
+The node can be started as a background process using for example `screen`
 
 ```shell
 $ screen -S n0
 # Ctrl+a, d  (means detach)
 # screen -r n0  (means reattach)
 
-$ postchain.sh run-node -cid 0 -nc conf0/node-config.properties
+$ postchain.sh run-node -nc config/node-config.properties --blockchain-config build/bc-config.xml --debug
 ```
