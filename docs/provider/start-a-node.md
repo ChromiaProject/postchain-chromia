@@ -17,7 +17,8 @@ api.port=7740
 
 # Postchain configuration
 configuration.provider.node=managed
-infrastructure=net.postchain.managed.Chromia0InfrastructureFactory
+# Infrastructure to use. Can be  net.postchain.managed.Chromia0InfrastructureFactory if all blockchains should be in the same process
+infrastructure=net.postchain.managed.Chromia0MasterInfrastructureFactory
 
 # Storage
 database.driverclass=org.postgresql.Driver
@@ -30,6 +31,20 @@ database.url=jdbc:postgresql://localhost:5432/<db-name>
 genesis.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f56
 genesis.host=231.123.12.2
 genesis.port=9870
+
+#Container
+container.testmode=false
+# Path to image used by subnode containers
+container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
+# Mount path to a directory on the host that can be used to store configurations
+container.host-mount-dir=/tmp/subnode
+# Hostname of the master host as seen by a subnode. If master is on docker, then the subnode will perceive the host as the internal docker host
+# 172.17.0.1 on linux/Windows. Can be localhost if master node is a native java process
+container.master-host=host.docker.internal
+# Hostname of subnodes as seen by the master host. See above
+container.subnode-host=host.docker.internal
+# Subnodes will spawn and host its own database, use this if you want all subnodes to use another external database
+container.subnode-database-url=jdbc:postgresql://localhost:5432/postchain
 ```
 
 The node can then be started using `pmc.sh node start --node-config <file>`. Use the `--debug` flag to enable the debug api which gives you an overview of the chains that are running on the node.
