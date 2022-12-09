@@ -1,13 +1,12 @@
 package net.postchain.mc.cli.config
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.context
-import com.github.ajalt.clikt.output.CliktHelpFormatter
-import com.github.ajalt.clikt.output.HelpFormatter
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.groups.default
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.file
+import net.postchain.mc.cli.config.PmcConfigProvider.collectConfiguration
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
@@ -48,6 +47,10 @@ class CommandConfig : CliktCommand(
             if (!Desktop.isDesktopSupported()) throw IllegalArgumentException("Cannot edit file interactively, set parameters one by one")
             return Desktop.getDesktop().edit(configFile)
         }
+        if (get != null) {
+            if (get == "privkey") throw CliktError("Cannot print private key to stdout")
+            return echo(collectConfiguration().getString(get))
+        }
         val configuration = Parameters().properties()
                 .setFile(configFile)
                 .let {
@@ -55,9 +58,6 @@ class CommandConfig : CliktCommand(
                             .configure(it)
                             .configuration
                 }
-        if (get != null) {
-            return echo(configuration.getString(get))
-        }
         if (set.isNotEmpty()) {
             set.forEach { (t, u) ->
                 configuration.setProperty(t, u)
