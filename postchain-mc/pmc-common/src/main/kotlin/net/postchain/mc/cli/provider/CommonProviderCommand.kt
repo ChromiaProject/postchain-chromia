@@ -4,15 +4,19 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 
 class CommonProviderCommand : CliktCommand(
-    name = "provider",
-    help = "Provider commands"
+        name = "provider",
+        help = "Provider commands"
 ) {
     override fun run() = Unit
 }
 
-fun commonProviderCommands() = CommonProviderCommand().subcommands(
-    CommandGetProviderInfo(),
-    CommandListProviderNodes(),
-    CommandListProviders(),
-    CommandRegisterProvider(),
+fun providerCommands() = CommonProviderCommand().subcommands(
+        CommandGetProviderInfo(),
+        CommandListProviderNodes(),
+        CommandListProviders(),
+        CommandRegisterProvider(),
+        CommandProposeEnableProvider(),
+        CommandPromoteProvider(),
+        CommandProposeDisableProvider(),
+        CommandTransferActionPoints(),
 )
