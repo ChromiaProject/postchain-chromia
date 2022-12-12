@@ -19,24 +19,21 @@ open class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
 
     init {
         versionOption(this::class.java.`package`.implementationVersion)
-        arrayOf(
+        subcommands(
                 CommandKeygen(),
                 CommandConfig(),
                 networkCommands(),
                 nodeCommands(),
-                providerCommands(),
+                providerCommands().also { extraProviderCommands(it) },
                 proposalCommands(),
                 voterSetCommands(),
                 clusterCommands(),
                 containerCommands(),
                 blockchainCommands()
-        ).forEach {
-            beforeCommandAdded(it)
-            subcommands(it)
-        }
+        )
     }
 
-    protected open fun beforeCommandAdded(command: CliktCommand) {}
+    protected open fun extraProviderCommands(command: CliktCommand) {}
 
     override fun aliases(): Map<String, List<String>> {
         return mapOf(
