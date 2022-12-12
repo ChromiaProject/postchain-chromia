@@ -66,7 +66,8 @@ class GenesisPeerOptions :
 
 class CommandStartNode : CliktCommand(
         name = "start",
-        help = "Start a node locally from configuration file"
+        help = "Start a node locally from configuration file. Deprecated, start node with docker run according to documentation instead.",
+        hidden = true
 ) {
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
