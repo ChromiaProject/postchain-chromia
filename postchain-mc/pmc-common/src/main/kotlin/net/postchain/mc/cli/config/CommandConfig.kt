@@ -51,14 +51,19 @@ class CommandConfig : CliktCommand(
             if (get == "privkey") throw CliktError("Cannot print private key to stdout")
             return echo(collectConfiguration().getString(get))
         }
-        val configuration = Parameters().properties()
-                .setFile(configFile)
-                .let {
-                    FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
-                            .configure(it)
-                            .configuration
-                }
         if (set.isNotEmpty()) {
+            val configuration = if (configFile.exists()) {
+                Parameters().properties()
+                        .setFile(configFile)
+                        .let {
+                            FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
+                                    .configure(it)
+                                    .configuration
+                        }
+            } else {
+                configFile.parentFile?.mkdirs()
+                PropertiesConfiguration()
+            }
             set.forEach { (t, u) ->
                 configuration.setProperty(t, u)
             }
