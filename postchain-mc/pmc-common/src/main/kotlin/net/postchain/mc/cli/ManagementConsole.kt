@@ -18,7 +18,7 @@ import net.postchain.mc.network.networkCommands
 open class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
 
     init {
-        versionOption(this::class.java.`package`.implementationVersion)
+        versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
         subcommands(
                 CommandKeygen(),
                 CommandConfig(),
