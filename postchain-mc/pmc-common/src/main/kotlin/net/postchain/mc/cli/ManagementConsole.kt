@@ -45,7 +45,8 @@ open class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
                 "containers" to listOf("container", "list"),
                 "clusters" to listOf("cluster", "list"),
                 "providers" to listOf("provider", "list"),
-                "proposals" to listOf("proposal", "list")
+                "proposals" to listOf("proposal", "list"),
+                "nodes" to listOf("node", "list")
         )
     }
 }
