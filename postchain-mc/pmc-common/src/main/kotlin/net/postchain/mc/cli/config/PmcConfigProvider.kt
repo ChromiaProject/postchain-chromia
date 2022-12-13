@@ -18,11 +18,13 @@ const val configFileName = ".pmc/config"
 
 object PmcConfigProvider {
 
-    fun fromSystemConfig(): PostchainClientConfig {
+    fun fromSystemConfig() = PostchainClientConfig.fromConfiguration(collectConfiguration())
+
+    fun collectConfiguration(): Configuration {
         val config = globalConfigurationFile().let { if (it.exists()) PropertiesFileLoader.load(it.absolutePath) else PropertiesConfiguration() }
-        setValuesFromFile(localConfigurationFile(), config)
-        setValuesFromFile(envConfigurationFile(), config)
-        return PostchainClientConfig.fromConfiguration(config)
+        localConfigurationFile().let { if (it.exists()) setValuesFromFile(it, config) }
+        envConfigurationFile().let { if (it.exists()) setValuesFromFile(it, config) }
+        return config
     }
 
     private fun setValuesFromFile(file: File, config: Configuration) {

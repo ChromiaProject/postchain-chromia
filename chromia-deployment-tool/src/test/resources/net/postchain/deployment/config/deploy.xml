@@ -1,6 +1,0 @@
-<deploy>
-    <chain name="city" container="test-container">
-        <app module="v0.main"/>
-        <include src="bc-params.xml" root="false"/>
-    </chain>
-</deploy>
