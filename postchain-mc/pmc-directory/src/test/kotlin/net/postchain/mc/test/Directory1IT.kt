@@ -6,6 +6,7 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.removeNodeOperation
@@ -22,6 +23,7 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.readConfigurationFile
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
@@ -243,13 +245,22 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testProposeConfiguration() {
-        doAndBuildBlocks(
-                provConfig, provExecutor.proposeConfigurationAsync(
-                provConfig.blockchainRid.toHex(), bcConfig1xmlFile,
-                20L, "xml", false
-        )
-        )
-        assertNextConfiguration(provConfig, 20L)
+        proposeConfig(1000, 10, false)
+        assertNextConfiguration(provConfig, 10L, 1000)
+
+        proposeConfig(1001, 8, false)
+        assertNextConfiguration(provConfig, 8L, 1001)
+    }
+
+    private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
+        val configFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_$configId.xml")
+        val configData = readConfigurationFile(configFile, "xml")
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .proposeConfigurationAtOperation(
+                        pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force
+                )
+        provExecutor.sendTxUnconfirmed(tx)
+        buildAndAwaitBlocks(1, false)
     }
 
     private fun voteNo(proposalType: ProposalType) {
@@ -289,10 +300,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(2, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
 
         val tx = prov2Executor.getPostchainClient().transactionBuilder()
-                .removeNodeOperation(
-                        prov2Config.signers.first().pubKey.data,
-                        node1Pubkey.hexStringToByteArray()
-                )
+                .removeNodeOperation(pubKeyOf(prov2Config), node1Pubkey.hexStringToByteArray())
         doAndBuildBlocks(prov2Config, tx)
         assertEquals(1, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
     }
@@ -372,7 +380,7 @@ class Directory1IT : ManagedModeTest() {
 
         val tx = provExecutor.getPostchainClient().transactionBuilder()
                 .updateNodeOperation(
-                        provConfig.signers.first().pubKey.data,
+                        pubKeyOf(provConfig),
                         nodes[0].pubKey.hexStringToByteArray(),
                         null, 1234, null
                 )
@@ -441,9 +449,13 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                provClient.config.signers.first().pubKey.data, BlockchainRid(brid), action
+                pubKeyOf(provClient), BlockchainRid(brid), action
         ).also {
             doAndBuildBlocks(provClient.config, it)
         }
     }
+
+    private fun pubKeyOf(client: PostchainClient) = pubKeyOf(client.config)
+
+    private fun pubKeyOf(clientConfig: PostchainClientConfig) = clientConfig.signers.first().pubKey.data
 }
