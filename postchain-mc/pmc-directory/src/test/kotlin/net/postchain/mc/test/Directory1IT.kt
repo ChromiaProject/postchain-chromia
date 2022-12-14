@@ -245,17 +245,11 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testProposeConfiguration() {
-        val h0 = provExecutor.getBlockchainLastHeight(provConfig.blockchainRid.toHex())
-        println(h0)
-
         proposeConfig(1000, 10, false)
         assertNextConfiguration(provConfig, 10L, 1000)
 
         proposeConfig(1001, 8, false)
         assertNextConfiguration(provConfig, 8L, 1001)
-
-        val h1 = provExecutor.getBlockchainLastHeight(provConfig.blockchainRid.toHex())
-        println(h1)
     }
 
     private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
