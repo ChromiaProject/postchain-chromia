@@ -242,12 +242,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <systemPropertyVariables>
-                        <!--suppress UnresolvedMavenProperty -->
-                        <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.log4j2-test.yml</log4j.configurationFile>
-                    </systemPropertyVariables>
-                </configuration>
             </plugin>
 
             <plugin>
@@ -258,10 +252,6 @@
                     <includes>
                         <include>**/*IT.java</include>
                     </includes>
-                    <systemPropertyVariables>
-                        <!--suppress UnresolvedMavenProperty -->
-                        <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.log4j2-test.yml</log4j.configurationFile>
-                    </systemPropertyVariables>
                 </configuration>
                 <executions>
                     <execution>

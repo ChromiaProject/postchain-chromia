@@ -7,7 +7,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.spotify.docker.client.DockerClient
-import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -51,7 +50,6 @@ import kotlin.test.assertEquals
 internal class Directory1DeploymentNightly {
 
     companion object : ManagedModeBase("../chain0-impl/rell/src") {
-        val subnodeLogger = KotlinLogging.logger("SubNode")
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
@@ -85,7 +83,6 @@ internal class Directory1DeploymentNightly {
         @JvmStatic
         @AfterAll
         fun breakdown() {
-            printSubnodeLogs(dockerClient, subnodeLogger)
             stopNodes()
             removeSubnodeContainers()
         }
@@ -189,8 +186,8 @@ internal class Directory1DeploymentNightly {
     @Test
     @Order(5)
     fun `Add node2 as signer to c0`() {
-        consoleLogger.info("Adding node2 to the cluster")
-        consoleLogger.info("Registering provider2")
+        testLogger.info("Adding node2 to the cluster")
+        testLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
@@ -218,8 +215,8 @@ internal class Directory1DeploymentNightly {
     @Test
     @Order(6)
     fun `Add node3 as signer to c0`() {
-        consoleLogger.info("Adding node3 to the cluster")
-        consoleLogger.info("Registering provider3")
+        testLogger.info("Adding node3 to the cluster")
+        testLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
@@ -229,7 +226,7 @@ internal class Directory1DeploymentNightly {
         voteOnAllProposals(node2.provider)
         voteOnAllProposals(node3.provider)
 
-        consoleLogger.info("Adding node3 to [node1, node2] network")
+        testLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
                 .addNodeOperation(
                         node3.providerPubkey,
@@ -275,17 +272,17 @@ internal class Directory1DeploymentNightly {
     }
 
     private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null) {
-        consoleLogger.info("Deploy new dapp $dappName")
+        testLogger.info("Deploy new dapp $dappName")
 
         val rellConfig = compileDapp(dappName, additionalSources)
 
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->
-            consoleLogger.info { "Adding test dapp $dappName" }
+            testLogger.info { "Adding test dapp $dappName" }
             chain.configs.forEach { (height, config) ->
                 blockchainRid = BlockchainRid(chain.brid.toByteArray())
                 dapps[dappName] = blockchainRid!!
-                consoleLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
+                testLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
@@ -309,7 +306,7 @@ internal class Directory1DeploymentNightly {
     @Test
     @Order(8)
     fun `Subnode container has been launched`() {
-        consoleLogger.info("Asserting that subnode container(s) launched")
+        testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
@@ -320,7 +317,7 @@ internal class Directory1DeploymentNightly {
     @Test
     @Order(9)
     fun `Subnode container has resource limits`() {
-        consoleLogger.info("Asserting container resource limits")
+        testLogger.info("Asserting container resource limits")
 
         val expectedResourceLimits = ContainerResourceLimits(
                 Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
@@ -349,7 +346,7 @@ internal class Directory1DeploymentNightly {
     }
 
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
-        consoleLogger.info("Send TX to new dapp ${brid.toShortHex()} and fetch data")
+        testLogger.info("Send TX to new dapp ${brid.toShortHex()} and fetch data")
         node2.tx(brid, txOp, gtv(txArg))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
