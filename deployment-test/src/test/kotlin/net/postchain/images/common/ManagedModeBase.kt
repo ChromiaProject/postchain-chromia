@@ -27,12 +27,10 @@ import java.io.File
 // Base class for managed mode tests
 open class ManagedModeBase(rellFolder: String) {
 
-    val consoleLogger = KotlinLogging.logger("TestLogger")
-    val logger = KotlinLogging.logger {}
-
-    val node1Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node1")
-    val node2Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node2")
-    val node3Logger = Slf4jLogConsumer(logger.underlyingLogger).withMdc("node", "node3")
+    val testLogger = KotlinLogging.logger("TestLogger")
+    val node1Logger = KotlinLogging.logger("Node1Logger")
+    val node2Logger = KotlinLogging.logger("Node2Logger")
+    val node3Logger = KotlinLogging.logger("Node3Logger")
 
     val network: Network = Network.newNetwork()
 
@@ -42,9 +40,9 @@ open class ManagedModeBase(rellFolder: String) {
             .withEnv("POSTGRES_USER", "postchain")
             .withEnv("POSTGRES_DB", "postchain")
 
-    val node1: PostchainContainer = postchainServer("node1", node1Logger, 9871, 7740)
-    val node2: PostchainContainer = postchainServer("node2", node2Logger, 9872, 7741)
-    val node3: PostchainContainer = postchainServer("node3", node3Logger, 9873, 7742)
+    val node1: PostchainContainer = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger), 9871, 7740)
+    val node2: PostchainContainer = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger), 9872, 7741)
+    val node3: PostchainContainer = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger), 9873, 7742)
 
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
@@ -101,7 +99,7 @@ open class ManagedModeBase(rellFolder: String) {
     }
 
     fun startNodesAndChain0() {
-        consoleLogger.info { "Starting nodes..." }
+        testLogger.info { "Starting nodes..." }
         postgres.start()
         startContainers(node1, node2, node3)
 
