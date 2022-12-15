@@ -43,7 +43,7 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <mainModule>devnet</mainModule>
+                            <mainModule>delta</mainModule>
                         </configuration>
                     </execution>
                     <execution>
