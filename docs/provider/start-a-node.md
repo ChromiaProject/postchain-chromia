@@ -38,7 +38,7 @@ container.testmode=false
 # Path to image used by subnode containers
 container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
 # Mount path to a directory on the host that can be used to store configurations. Note that we don't want to use /tmp since this folder will be cleaned when a container is stopped
-container.host-mount-dir=/data/subnode
+container.host-mount-dir=/var/lib/subnode
 # Hostname of the master host as seen by a subnode. If master is on docker, then the subnode will perceive the host as the internal docker host
 # 172.17.0.1 on linux/Windows. Can be localhost if master node is a native java process
 container.master-host=host.docker.internal
@@ -57,7 +57,7 @@ Example:
 ```shell
 docker run -it -d --name postchain \
     --volume /var/run/docker.sock:/var/run/docker.sock \
-    --mount type=bind,source=/data/subnode,target=/data/subnode \
+    --mount type=bind,source=/var/lib/subnode,target=/var/lib/subnode \
     --mount type=bind,source="$(pwd)/config",target=/config,readonly \
     --mount type=bind,source="$(pwd)/build",target=/build,readonly \
     -e POSTCHAIN_DEBUG=true \
