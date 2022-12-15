@@ -12,6 +12,7 @@ import net.postchain.chain0.common.proposal.getClusterProviderProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
+import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
