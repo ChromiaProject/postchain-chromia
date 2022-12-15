@@ -1,0 +1,23 @@
+package net.postchain.mc.cli.node
+
+import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.common.toHex
+import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.util.configOption
+
+class CommandListBlockchainsForNode : CliktCommand(
+    name = "blockchains",
+    help = "List blockchains for node"
+) {
+    private val config by configOption()
+
+    private val key by requiredPubkeyOption()
+
+    override fun run() {
+        val listBlockchains = CliExecution(config).listBlockchainsForNode(key.hex())
+        listBlockchains.forEach { blockchain ->
+            println(blockchain.toHex())
+        }
+    }
+}

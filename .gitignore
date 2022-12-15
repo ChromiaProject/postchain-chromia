@@ -13,6 +13,8 @@ postchain.pid
 examples/out
 _build
 _doc
+logs
 
 postchain-node
 bc-target
+build

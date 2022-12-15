@@ -1,0 +1,24 @@
+
+enum container_resource_limit_type {
+    max_blockchains,
+    cpu,
+    ram,
+    storage
+}
+
+entity container {
+    key name;
+    index cluster;
+    index deployer: voter_set; // who can deploy and update bcs in this container
+    proposed_by: provider;
+}
+ 
+entity container_resource_limit {
+    key container, container_resource_limit_type;
+    mutable value: integer;
+}
+
+//Defines which container a blockchain belongs to
+entity container_blockchain { 
+    key container, blockchain; 
+}

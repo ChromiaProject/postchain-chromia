@@ -11,6 +11,9 @@
         <fileSet>
             <directory>${rell.directory}</directory>
             <outputDirectory>./rell</outputDirectory>
+            <excludes>
+                <exclude>**/test/*</exclude>
+            </excludes>
         </fileSet>
     </fileSets>
 </assembly>

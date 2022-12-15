@@ -1,0 +1,103 @@
+
+
+operation add_node(my_pubkey: pubkey, node_pubkey: pubkey, host: text, port: integer, api_url: text, clusters:list<text> = list<text>()) {
+    print("-------------Add-Node--------------");
+    val provider = require_provider(my_pubkey);
+    require_provider_auth_with_rl(provider);
+    add_node_internal(provider, node_pubkey, host, port, api_url, clusters);
+    print("Added node information for node: " + node_pubkey);
+    print("-----------------------------------");
+}
+
+operation replace_node(my_pubkey: pubkey, old_node_key: pubkey, new_node_key: pubkey, new_host: text?, new_port: integer?, new_api_url: text?) {
+    print("-------------Replace-Node--------------");
+    val provider = provider @ { my_pubkey };
+    require_provider_auth_with_rl(provider);
+    require_is_signer(old_node_key);
+    require_is_signer(new_node_key);
+    val old_node = node @ { old_node_key };
+    require(old_node.provider == provider, "Node must be owned by provider");
+
+    val host = new_host ?: old_node.host;
+    val port = new_port ?: old_node.port;
+    val api_url = new_api_url ?: old_node.api_url;
+
+    val cluster_names = cluster_node @* { old_node }.cluster.name;
+    delete cluster_node @* { old_node };
+    val clusters_replicated_by_node = cluster_replica_node @* { old_node } (.cluster);
+    delete cluster_replica_node @* { old_node };
+
+    delete old_node;
+    add_node_internal(provider, new_node_key, host, port, api_url, cluster_names);
+
+    val new_node = node @ { new_node_key };
+    for (cl in clusters_replicated_by_node) {
+        _add_replica_node_to_cluster_internal(cl, new_node);
+    }
+
+    node_list.last_update = op_context.last_block_time;
+    print("---------------------------------------");
+}
+
+function add_node_internal(provider, node_pubkey: pubkey, host: text, port: integer, api_url: text, clusters: list<text>): node {
+    require(empty(node @? { node_pubkey }), "Node already exists: " + node_pubkey);
+    require_provider_quota(provider, provider_quota_type.max_nodes);
+    val node = create node(provider, node_pubkey, host, port = port, api_url = api_url, last_updated = op_context.last_block_time);
+    for (cluster_name in clusters) {
+        val cluster = require_cluster(cluster_name);
+        if (roles.has_node_access(provider)) {
+            add_node_to_cluster_internal(provider, node, cluster);
+        } else { // provider_tier.COMMUNITY_NODE_PROVIDER
+            _add_replica_node_to_cluster_internal(cluster, node);
+        }
+    }
+    node_list.last_update = op_context.last_block_time;
+    return node;
+}
+
+operation remove_node(my_pubkey: pubkey, node_pubkey: pubkey) {
+    val provider = require_provider(my_pubkey);
+    require_provider_auth_with_rl(provider);
+    val node_to_remove = node @ { node_pubkey };
+
+    if (provider != node_to_remove.provider) {
+        require(roles.has_system_access(provider), "Non system provider is only allowed to remove own nodes");
+        require(
+            node_to_remove.provider.tier == provider_tier.NODE_PROVIDER and not(node_to_remove.provider.system),
+            "System provider is only allowed to remove nodes of non system provider");
+    }
+
+    node_to_remove.active = false;
+    // cluster nodes
+    val clusters = cluster_node @* { .node.pubkey == node_pubkey } .cluster;
+    delete cluster_node @* { .node.pubkey == node_pubkey };
+    for (cl in clusters) {
+        // Removing the last node of a cluster is not allowed:
+        require(not(empty(cluster_node @* { cl })), "Cannot remove the last node of a cluster " + cl.name);
+        update_configuration_signers(cl);
+    }
+    // cluster replica nodes
+    delete cluster_replica_node @* { .node.pubkey == node_pubkey };
+    // blockchain replica nodes
+    delete blockchain_replica_node @* { .node.pubkey == node_pubkey };
+
+    // updating node list timestamp
+    node_list.last_update = op_context.last_block_time;
+}
+
+operation update_node(my_pubkey: pubkey, node_pubkey: pubkey, host: text? = null, port: integer? = null, api_url: text? = null) {
+    val node = require_node_provider(node_pubkey, my_pubkey);
+    if (host != null) node.host = host;
+    if (port != null) node.port = port;
+    if (api_url != null) node.api_url = api_url;
+    if (host != null or port != null or api_url != null) node.last_updated = op_context.last_block_time;
+    if (host != null or port != null) node_list.last_update = op_context.last_block_time;
+}
+
+function require_node_provider(node_pubkey: pubkey, provider_pubkey: pubkey) {
+    val provider = require(provider @? { provider_pubkey }, "Provider %s does not exist".format(provider_pubkey));
+    require_provider_auth_with_rl(provider);
+    val node = require(node @? { node_pubkey }, "Node does not exist: " + node_pubkey);
+    require(node.provider == provider, "Must be provider of node to update its state");
+    return node;
+}

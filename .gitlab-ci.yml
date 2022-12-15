@@ -1,45 +1,50 @@
 image: maven:3.8.4-jdk-11
 
+.setup:
+  before_script:
+    - apt-get -q update && apt-get -q install -y docker.io
+    - mkdir -p $HOME/.docker/cli-plugins/
+    - wget --no-verbose -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
+    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
+    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
+    - mkdir -p $TEST_MOUNT_DIRECTORY
+    - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
+    - docker image pull -q registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT
+  artifacts:
+    when: on_failure
+    paths:
+      - "**/*.log"
+    reports:
+      junit:
+        - "**/target/surefire-reports/TEST-*.xml"
+        - "**/target/failsafe-reports/TEST-*.xml"
+    expire_in: 1 week
+
 .git_template: &git_setup |
   git remote set-url --push origin "https://oauth2:${BUILD_USER_GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   git config user.name "build-user core-dev"
   git config user.email build_user@chromaway.com
 
 stages:
-  - docs
   - build
+  - nightly-tests
   - deploy
   - release
 
-docs:
-  image: python
-  stage: docs
-  artifacts:
-    paths:
-      - '**/_doc'
-  only:
-    - dev
-    - master
-    - /^support\/.*$/
-  before_script:
-    - pip install sphinx sphinx-rtd-theme
-  script:
-    - sphinx-build -c doc/enterprise0 -b html doc/source managed-mode-examples/enterprise0-example/_doc
-    - sphinx-build -c doc/chromia0 -b html doc/source managed-mode-examples/chromia0-example/_doc
-
 deploy:
+  extends: .setup
   stage: deploy
-  dependencies:
-    - docs
   only:
     - dev
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,distro deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly deploy
 
 build:
+  extends: .setup
   stage: build
+  interruptible: true
   except:
     - dev
     - master
@@ -48,22 +53,54 @@ build:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
+nightly-tests:
+  extends: .setup
+  stage: nightly-tests
+  except:
+    - dev
+    - master
+    - tags
+    - /^support\/.*$/
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
+  when: manual
+
 release:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
+    - set -eu
     - *git_setup
+    # Create support branch
     - git fetch --tags
-    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" refs/tags)
+    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" "refs/tags/ver-")
     - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
+    # Checkout development branch
     - git checkout $CI_COMMIT_REF_NAME
-    - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
-    - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+    # Bump rell and postchain versions for release
+    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${POSTCHAIN_VERSION:-$VERSION}
+    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$RELL_VERSION
+    - git commit -am "Updating dependencies before release"
+    # Perform release steps
+    - mvn -B gitflow:release -DskipTestProject=true -DreleaseVersion=$VERSION -DdevelopmentVersion=$NEXT_VERSION
+    # Bump rell and postchain versions for development
+    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${NEXT_POSTCHAIN_VERSION:-$NEXT_VERSION}
+    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$NEXT_RELL_VERSION
+    - git commit -am "Updating dependencies after release"
+    - git push origin HEAD
   only:
     - dev
   when: manual
 
 patch-start:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
@@ -76,6 +113,10 @@ patch-start:
 
 patch-finish:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
@@ -97,9 +138,24 @@ variables:
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+  # Instruct Testcontainers to use the daemon of DinD.
+  DOCKER_HOST: tcp://docker:2375
+  # Instruct Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # Improve performance with overlayfs.
+  DOCKER_DRIVER: overlay2
+  DOCKER_CLI_EXPERIMENTAL: enabled
+  BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
+  TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
+  # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GB free, therefore we remove the check to avoid failing.
+  TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
   - postgres
+  - name: docker:20-dind
+    alias: docker
+    # explicitly disable tls to avoid docker startup interruption
+    command: [ "--tls=false" , "--experimental"]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
