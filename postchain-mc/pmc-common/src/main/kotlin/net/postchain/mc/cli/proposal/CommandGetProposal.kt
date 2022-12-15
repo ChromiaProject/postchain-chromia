@@ -4,9 +4,14 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import de.m3y.kformat.table
-import net.postchain.chain0.common.proposal.*
+import net.postchain.chain0.common.proposal.GetProposalResult
+import net.postchain.chain0.common.proposal.ProposalType
+import net.postchain.chain0.common.proposal.getBlockchainProposal
+import net.postchain.chain0.common.proposal.getClusterProviderProposal
+import net.postchain.chain0.common.proposal.getConfigurationProposal
+import net.postchain.chain0.common.proposal.getProposal
+import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
@@ -19,12 +24,13 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.votingupdates.formatThreshold
 import java.time.Instant
 import java.util.*
 
 class CommandGetProposal : CliktCommand(
-    name = "info",
-    help = "Gets information of a given proposal"
+        name = "info",
+        help = "Gets information of a given proposal"
 ) {
     private val config by configOption()
 
@@ -36,17 +42,23 @@ class CommandGetProposal : CliktCommand(
         val client = ClientUtil.fromConfig(config)
         val proposal = client.getProposal(id) ?: return println("Proposal $id not found")
         val proposedBy = client.getProviderData(PubKey(proposal.proposedBy))
+        val votingResults = client.getProposalVotingResults(proposal.id)
         println("""
-            Proposal: ${proposal.id.id} - ${proposal.type.name}
-            Proposed by ${proposedBy.name} - ${proposedBy.pubkey.hex()}
-            Time: ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
+            Proposal:       ${proposal.id.id} - ${proposal.type.name}
+            Proposed by:    ${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}
+            Time:           ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
+            Positive votes: ${votingResults.positiveVotes}
+            Negative votes: ${votingResults.negativeVotes}
+            Max votes:      ${votingResults.maxVotes}
+            Threshold:      ${formatThreshold(votingResults.threshold)}
+            Status:         ${votingResults.votingResult}
         """.trimIndent())
         if (verbose) println(formatProposal(client, proposal))
     }
-    
+
     private fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
         return when (proposal.type) {
-            ProposalType.bc ->  {
+            ProposalType.bc -> {
                 val p = client.getBlockchainProposal(proposal.id) ?: return ""
                 val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
@@ -101,8 +113,8 @@ class CommandGetProposal : CliktCommand(
                     row("Provider:", cpc.provider)
                     row("Add/Remove:", if (cpc.add) "Add" else "remove")
                 }
-                    .render()
-                    .toString()
+                        .render()
+                        .toString()
             }
             ProposalType.provider_is_system -> {
                 val pis = client.getSystemProviderProposal(proposal.id) ?: return ""

@@ -46,7 +46,6 @@ class CommandProposeContainer : CliktCommand(
                         (deployerOption as VoterSetOrPubkeysOption.VoterSet).data
                     )
                 }
-
             }
             .postAwaitConfirmation()
             .printResult(
