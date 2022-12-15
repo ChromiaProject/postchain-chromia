@@ -67,6 +67,10 @@ nightly-tests:
 
 release:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - set -eu
     - *git_setup
@@ -93,6 +97,10 @@ release:
 
 patch-start:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
@@ -105,6 +113,10 @@ patch-start:
 
 patch-finish:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
