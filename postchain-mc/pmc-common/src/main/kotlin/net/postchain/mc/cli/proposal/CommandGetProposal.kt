@@ -24,6 +24,7 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.votingupdates.formatThreshold
 import java.time.Instant
 import java.util.*
 
@@ -42,12 +43,6 @@ class CommandGetProposal : CliktCommand(
         val proposal = client.getProposal(id) ?: return println("Proposal $id not found")
         val proposedBy = client.getProviderData(PubKey(proposal.proposedBy))
         val votingResults = client.getProposalVotingResults(proposal.id)
-        val threshold = when (votingResults.threshold) {
-            -1L -> "majority"
-            0L -> "super majority"
-            else -> votingResults.threshold
-        }
-
         println("""
             Proposal:       ${proposal.id.id} - ${proposal.type.name}
             Proposed by:    ${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}
@@ -55,7 +50,7 @@ class CommandGetProposal : CliktCommand(
             Positive votes: ${votingResults.positiveVotes}
             Negative votes: ${votingResults.negativeVotes}
             Max votes:      ${votingResults.maxVotes}
-            Threshold:      $threshold
+            Threshold:      ${formatThreshold(votingResults.threshold)}
             Status:         ${votingResults.proposalStatus}
         """.trimIndent())
         if (verbose) println(formatProposal(client, proposal))
