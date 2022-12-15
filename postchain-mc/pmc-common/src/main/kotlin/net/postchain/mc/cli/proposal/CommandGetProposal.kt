@@ -11,9 +11,9 @@ import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterProviderProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
 import net.postchain.chain0.common.proposal.getProposal
+import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
-import net.postchain.chain0.common.voting.getProposalVotingResults
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
@@ -51,7 +51,7 @@ class CommandGetProposal : CliktCommand(
             Negative votes: ${votingResults.negativeVotes}
             Max votes:      ${votingResults.maxVotes}
             Threshold:      ${formatThreshold(votingResults.threshold)}
-            Status:         ${votingResults.proposalStatus}
+            Status:         ${votingResults.votingResult}
         """.trimIndent())
         if (verbose) println(formatProposal(client, proposal))
     }
