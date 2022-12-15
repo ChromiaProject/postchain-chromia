@@ -45,7 +45,7 @@
         </dependency>
         <dependency>
             <groupId>net.postchain.images</groupId>
-            <artifactId>dapp</artifactId>
+            <artifactId>test-dapp</artifactId>
             <classifier>tests</classifier>
             <type>test-jar</type>
             <scope>test</scope>
