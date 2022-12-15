@@ -25,8 +25,8 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.7.0-SNAPSHOT</postchain.version>
-        <rellr.version>0.10.11-SNAPSHOT</rellr.version>
+        <postchain.version>3.7.0</postchain.version>
+        <rellr.version>0.11.0</rellr.version>
         <kotlin.version>1.6.21</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
