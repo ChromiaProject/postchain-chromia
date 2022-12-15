@@ -104,6 +104,13 @@ class CommandGetProposal : CliktCommand(
                     .render()
                     .toString()
             }
+            ProposalType.provider_is_system -> {
+                val pis = client.getSystemProviderProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider:", pis.provider.toHex())
+                    row("Add:", pis.add.toString())
+                }.render().toString()
+            }
 
             else -> ""
         }
