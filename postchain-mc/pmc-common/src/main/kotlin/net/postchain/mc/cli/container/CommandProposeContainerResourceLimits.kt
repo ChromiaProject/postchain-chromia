@@ -30,6 +30,11 @@ class CommandProposeContainerResourceLimits : CliktCommand(
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
     override fun run() {
+        if (_maxBlockchains == null && _cpu == null && _ram == null && _storage == null) {
+            println("No resource limits are specified. At least one value should be specified.")
+            return
+        }
+
         val limits = mutableMapOf<ContainerResourceLimitType, Long>()
                 .apply {
                     setIfNotNull(max_blockchains, _maxBlockchains)
