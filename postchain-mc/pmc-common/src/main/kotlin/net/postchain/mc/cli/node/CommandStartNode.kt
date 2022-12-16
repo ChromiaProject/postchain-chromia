@@ -35,7 +35,7 @@ sealed class RunnerOptions(name: String, help: String) : OptionGroup(name, help)
 class DockerOptions : RunnerOptions("Docker options", "Options for the docker runner") {
     val name by option(help = "Container name").default("postchain")
     val image by option("--image", help = "Image name")
-            .default("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0-SNAPSHOT")
+            .default("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0")
     val volumes by option("-v", "--volume", help = "Volume mounts [<from>:<to>]")
             .convert { it.split(":", limit = 2) }
             .convert { it[0] to it[1] }
