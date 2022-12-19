@@ -7,6 +7,7 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
+import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.removeNodeOperation
@@ -97,7 +98,9 @@ class Directory1IT : ManagedModeTest() {
         addNode(prov2Config, node1Pubkey, node1Host, node1Port, systemClusterName)
 
         //First provider proposes Disable prov2. Prov2 agrees:
-        doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false)
+        doAndBuildBlocks(provConfig, tx)
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
         doAndBuildBlocks(prov2Config, prov2Executor.voteAsync(id, true))
         assertProviderDisabled(prov2Config.pubkey())
@@ -217,7 +220,11 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
         doAndBuildBlocks(provConfig, provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
-        doAndBuildBlocks(provConfig, provExecutor.proposeEnableProviderAsync(prov2Config.pubkey()))
+
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true)
+        doAndBuildBlocks(provConfig, tx)
+
         doAndBuildBlocks(
                 provConfig,
                 provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
@@ -286,7 +293,9 @@ class Directory1IT : ManagedModeTest() {
         // Try to send tnx to api end point after the blockchain was re-configuration with new block signer
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {
-                doAndBuildBlocks(provConfig, provExecutor.proposeDisableProviderAsync(prov2Config.pubkey()))
+                val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                        .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false)
+                doAndBuildBlocks(provConfig, tx)
                 true
             }
         }
