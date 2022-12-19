@@ -6,9 +6,7 @@ import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
-import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
-import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchains
@@ -203,22 +201,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeEnableProvider(key: String) {
-        sendTxSync(
-                proposeEnableProviderAsync(key),
-                "Enabling of provider has been proposed",
-                "Cannot propose enabling of provider"
-        )
-    }
-
-    fun proposeDisableProvider(key: String) {
-        sendTxSync(
-                proposeDisableProviderAsync(key),
-                "Disabling of provider has been proposed",
-                "Cannot propose disabling of provider"
-        )
-    }
-
     fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
         sendTxSync(
                 proposeClusterProviderAsync(clusterName, key, add),
@@ -303,32 +285,9 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeEnableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop()
-                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), true)
-    }
-
     fun revokeProposalAsync(rowid: Long): TransactionBuilder {
         return makeTransactionWithNop().addOperation(
                 "revoke_proposal", gtv(config.signers.first().pubKey.hex()), gtv(rowid)
-        )
-    }
-
-    fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop()
-                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), false)
-    }
-
-    fun proposeConfigurationAsync(
-            blockchainRID: String,
-            blockchainConfigFile: File,
-            height: Long,
-            format: String?,
-            force: Boolean
-    ): TransactionBuilder {
-        val data = readConfigurationFile(blockchainConfigFile, format)
-        return makeTransactionWithNop().proposeConfigurationAtOperation(
-                config.pubkey().data, BlockchainRid.buildFromHex(blockchainRID), data, height, force
         )
     }
 
