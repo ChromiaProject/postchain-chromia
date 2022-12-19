@@ -3,34 +3,22 @@ package net.postchain.mc.cli.common0
 import mu.KLogging
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.addNodeOperation
-import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
-import net.postchain.chain0.common.queries.getBlockchains
-import net.postchain.chain0.common.queries.getClusterProviders
-import net.postchain.chain0.common.queries.getNodesWithProvider
-import net.postchain.chain0.common.queries.getProviderClusters
-import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.createVoterSetOperation
-import net.postchain.chain0.common.voting.getVoterSetGovernor
-import net.postchain.chain0.common.voting.getVoterSetMembers
-import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmComputeBlockchainList
-import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -60,10 +48,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun getProviderInfo(key: String) = getPostchainClient().getProviderData(PubKey(key))
-
-    fun getClusterProviders(name: String) = getPostchainClient().getClusterProviders(name)
-
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
         doInTryBlock {
@@ -87,7 +71,7 @@ open class CliExecution(val config: PostchainClientConfig) {
             // it means current height
             var heightConfiguration = height
             if (height == -1L) {
-                heightConfiguration = getBlockchainLastHeight(blockchainRID)
+                heightConfiguration = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
             }
             val conf = getPostchainClient().query(
                     "nm_get_blockchain_configuration",
@@ -100,20 +84,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
         return returnVal!!
     }
-
-    fun getBlockchainLastHeight(blockchainRID: String) = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
-
-    fun getPeerListVersion() = getPostchainClient().nmGetPeerListVersion()
-
-    fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
-
-
-    fun listClustersForProvider(key: String) = getPostchainClient().getProviderClusters(PubKey(key))
-
-    /**
-     * key - publicKey of node
-     */
-    fun listBlockchainsForNode(key: String) = getPostchainClient().nmComputeBlockchainList(key.hexStringToByteArray())
 
     fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
         val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
@@ -137,32 +107,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
         return listBlockChainContainerPair
     }
-
-    fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
-        return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
-    }
-
-    fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
-
-    fun listVoterSets() = getPostchainClient().getVoterSets()
-
-    fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
-
-    fun listNodesByProvider(key: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().query(
-                    "get_nodes_by_provider",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
-
-    fun listProposalsSince(rowid: Long) = getPostchainClient().getProposalsSince(RowId(rowid))
 
     open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
         return tx.post()
@@ -191,13 +135,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         sendTxSync(
                 voteAsync(rowid, yes),
                 "Vote added successfully", "Cannot add vote"
-        )
-    }
-
-    fun revokeProposal(rowid: Long) {
-        sendTxSync(
-                revokeProposalAsync(rowid),
-                "Proposal revoked successfully", "Cannot revoke proposal"
         )
     }
 
@@ -282,12 +219,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 config.pubkey().data,
                 pubKey.hexStringToByteArray(),
                 isSystem
-        )
-    }
-
-    fun revokeProposalAsync(rowid: Long): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "revoke_proposal", gtv(config.signers.first().pubKey.hex()), gtv(rowid)
         )
     }
 

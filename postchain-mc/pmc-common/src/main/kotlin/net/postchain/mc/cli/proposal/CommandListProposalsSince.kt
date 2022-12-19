@@ -4,26 +4,27 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.option
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
-import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.chain0.common.proposal.getProposalsSince
+import net.postchain.common.types.RowId
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
-import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.nopClientOption
 
 class CommandListProposalsSince : CliktCommand(
-    name = "list",
-    help = "List all active proposals since a given index"
+        name = "list",
+        help = "List all active proposals since a given index"
 ) {
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
     }
 
-    private val config by configOption()
+    private val client by nopClientOption()
     private val id by proposalIndexOption().default(0L)
 
     override fun run() {
-        val proposals = CliExecution(config).listProposalsSince(id)
+        val proposals = client.getProposalsSince(RowId(id))
+
         if (proposals.isEmpty()) return println("There are no proposals waiting for approval.")
         table {
             header("Type", "Id")

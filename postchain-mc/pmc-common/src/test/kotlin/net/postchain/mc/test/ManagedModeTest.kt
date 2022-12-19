@@ -10,6 +10,7 @@ import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
+import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
@@ -18,6 +19,7 @@ import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -83,19 +85,19 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     abstract fun cliExecution(cliConfig: PostchainClientConfig): CliExecution
 
     protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
-        val data = provExecutor.getProviderInfo(provPubkey)
+        val data = provExecutor.getPostchainClient().getProviderData(PubKey(provPubkey))
         assertArrayEquals(data.pubkey.data, provPubkey.hexStringToByteArray())
         assert(data.name).isEqualTo(name)
         assert(data.active).isEqualTo(isActive)
     }
 
     protected fun assertProviderEnabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey)
+        val data = provExecutor.getPostchainClient().getProviderData(PubKey(providerPublicKey))
         assert(data.active).isEqualTo(true)
     }
 
     protected fun assertProviderDisabled(providerPublicKey: String) {
-        val data = provExecutor.getProviderInfo(providerPublicKey)
+        val data = provExecutor.getPostchainClient().getProviderData(PubKey(providerPublicKey))
         assert(data.active).isEqualTo(false)
         val listReplicas = provExecutor.getPostchainClient().getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(0, listReplicas.size)
