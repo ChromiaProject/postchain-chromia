@@ -2,7 +2,6 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
-import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
@@ -13,8 +12,8 @@ import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -22,7 +21,6 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvInteger
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -65,51 +63,17 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnVal!!
     }
 
-    fun getBlockchainConfiguration(blockchainRID: String, height: Long): ByteArray {
+    fun getBlockchainConfiguration(blockchainRID: BlockchainRid, height: Long): ByteArray {
         var returnVal: ByteArray? = null
         doInTryBlock {
             // it means current height
             var heightConfiguration = height
             if (height == -1L) {
-                heightConfiguration = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
+                heightConfiguration = getPostchainClient().getBlockchainLastHeight(blockchainRID)
             }
-            val conf = getPostchainClient().query(
-                    "nm_get_blockchain_configuration",
-                    gtv(
-                            "blockchain_rid" to gtv(blockchainRID.hexStringToByteArray()),
-                            "height" to gtv(heightConfiguration)
-                    )
-            ).asByteArray()
-            returnVal = conf
+            returnVal = getPostchainClient().nmGetBlockchainConfiguration(blockchainRID, heightConfiguration)
         }
         return returnVal!!
-    }
-
-    fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
-        val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
-        doInTryBlock {
-            val blockchain = blockchainGtv(blockchainRID)
-            val list = getPostchainClient().query(
-                    "nm_get_blockchain_dependencies",
-                    gtv(
-                            "blockchain" to gtv(blockchain.asInteger()),
-                            "height" to GtvInteger(height)
-                    )
-            )
-
-                    .asArray()
-            list.forEach {
-                val pair = it.asArray()
-                val rid = pair[0].asByteArray()
-                val container = pair[1].asString()
-                listBlockChainContainerPair.add(rid to container)
-            }
-        }
-        return listBlockChainContainerPair
-    }
-
-    open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
-        return tx.post()
     }
 
     open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
@@ -154,13 +118,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun blockchainGtv(blockchainRID: String): Gtv {
-        return getPostchainClient().query(
-                "get_blockchain",
-                gtv("rid" to gtv(blockchainRID.hexStringToByteArray()))
-        )
-    }
-
     /**
      * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
      * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
@@ -183,18 +140,6 @@ open class CliExecution(val config: PostchainClientConfig) {
     ): TransactionBuilder {
         return makeTransactionWithNop().createVoterSetOperation(
                 config.pubkey().data, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
-        )
-    }
-
-    /** Add new node. Optionally, also add it to a cluster */
-    fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addNodeOperation(
-                config.pubkey().data,
-                key.hexStringToByteArray(),
-                host,
-                port,
-                apiUrl,
-                if (clusterName == "") listOf() else listOf(clusterName)
         )
     }
 

@@ -6,6 +6,7 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
 import net.postchain.chain0.common.addBlockchainReplicaOperation
+import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
@@ -25,6 +26,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.mc.cli.base.ClientUtil
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
@@ -128,9 +130,14 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      */
     fun addNode(configProv: PostchainClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
-        executor.sendTxUnconfirmed(executor.addNodeAsync(key, host, port, "", clusterName))
+        executor.getPostchainClient().transactionBuilder().addNop().addNodeOperation(
+                executor.config.pubkey().data,
+                key.hexStringToByteArray(),
+                host, port, "",
+                if (clusterName == "") listOf() else listOf(clusterName)
+        ).post()
         buildAndAwaitBlocks(1)
-        assertAddedNode(configProv.pubkey(), key, host, port, clusterName)
+        assertAddedNode(configProv.pubkey().hex(), key, host, port, clusterName)
     }
 
     /**
@@ -168,12 +175,12 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         addNode(provConfig, node1Pubkey, node1Host, node1Port, "")
 
         // make node 1 a replica for bc0
-        val tx = provExecutor.getPostchainClient().transactionBuilder()
+        provExecutor.getPostchainClient().transactionBuilder()
                 .addBlockchainReplicaOperation(
                         provConfig.signers.first().pubKey.data,
                         clientConfig.blockchainRid,
-                        node1Pubkey.hexStringToByteArray())
-        provExecutor.sendTxUnconfirmed(tx)
+                        node1Pubkey.hexStringToByteArray()
+                ).post()
         buildAndAwaitBlocks(5)
 
         val replicas = provExecutor.getPostchainClient().getBlockchainReplicas(clientConfig.blockchainRid)
@@ -223,10 +230,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return nodes[0].blockBuildingStrategy(0) as SmartOnDemandBlockBuildingStrategy
     }
 
-    fun doAndBuildBlocks(clientConfig: PostchainClientConfig, txBuilder: TransactionBuilder, nBlocks: Int = 1) {
-        val executor = cliExecution(clientConfig)
-        executor.sendTxUnconfirmed(txBuilder)
+    fun doAndBuildBlocks(txBuilder: TransactionBuilder, nBlocks: Int = 1) {
+        txBuilder.post()
         buildAndAwaitBlocks(nBlocks)
     }
-
 }
