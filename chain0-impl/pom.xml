@@ -24,8 +24,7 @@
         <rell.directory>${project.parent.basedir}/rell</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
-<!--        <rellTestModules>common,roles,container,cluster,nm_api</rellTestModules>-->
-        <rellTestModules>common.test.provider_quotas_test</rellTestModules>
+        <rellTestModules>common,roles,container,cluster,nm_api</rellTestModules>
     </properties>
 
     <build>
