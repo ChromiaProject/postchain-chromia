@@ -13,6 +13,7 @@ class CommonProviderCommand : CliktCommand(
 fun providerCommands() = CommonProviderCommand().subcommands(
         CommandGetProviderInfo(),
         CommandListProviderQuotas(),
+        CommandProposeProviderQuota(),
         CommandListProviderNodes(),
         CommandListProviders(),
         CommandRegisterProvider(),
