@@ -73,7 +73,7 @@ class CommandStartNode : CliktCommand(
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
     }
 
-    private val config by nodeConfigOption()
+    private val config by nodeConfigOption().required()
 
     private val runner by option(help = "How the node should be hosted (default: --docker)")
             .groupSwitch(

@@ -6,7 +6,6 @@ COPY target/lib $postchain_dir/lib
 COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_DEBUG=false
-ENV POSTCHAIN_CONFIG=/config/node-config.properties
 
 EXPOSE 50051
 

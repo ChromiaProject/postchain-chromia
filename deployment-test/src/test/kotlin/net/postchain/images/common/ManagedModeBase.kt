@@ -59,6 +59,7 @@ open class ManagedModeBase(rellFolder: String) {
                 .withFixedExposedPort(apiPort, apiPort) // Must be fixed so subnode can connect
                 .withExposedPorts(50051)
                 .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
     }
