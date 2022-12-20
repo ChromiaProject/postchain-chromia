@@ -16,12 +16,12 @@ ENV POSTGRES_PASSWORD=postchain
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY --from=postchain $postchain_dir $postchain_dir
+COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 # Scripts
 COPY src/main/docker/scripts/* ${postchain_dir}/
 
 ENV POSTCHAIN_DIR=$postchain_dir
-ENV RELL_OUT=$POSTCHAIN_DIR/target
 ENV POSTCHAIN_LOG4J2=$POSTCHAIN_DIR/log/log4j2.yml
 
 WORKDIR $postchain_dir
