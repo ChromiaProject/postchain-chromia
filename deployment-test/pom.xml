@@ -11,11 +11,6 @@
 
     <artifactId>deployment-test</artifactId>
 
-    <properties>
-        <gitlab.distribution.registry>registry.gitlab.com/chromaway/postchain-distribution</gitlab.distribution.registry>
-        <postchain.test-dapp.image>${gitlab.distribution.registry}/chromaway/postchain-test-dapp:${project.version}</postchain.test-dapp.image>
-    </properties>
-
     <dependencies>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain</groupId>
@@ -25,9 +20,37 @@
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain</groupId>
+            <groupId>net.postchain.images</groupId>
+            <artifactId>admin-client</artifactId>
+            <version>3.8.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>chromia-server</artifactId>
+            <version>3.8.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>${project.version}</version>
+            <version>3.8.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>server</artifactId>
+            <version>3.8.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>test-dapp</artifactId>
+            <version>3.8.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
@@ -147,52 +170,8 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>docker-login</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <executable>docker</executable>
-                                    <arguments>
-                                        <argument>login</argument>
-                                        <argument>registry.gitlab.com</argument>
-                                        <argument>-u</argument>
-                                        <argument>${env.CI_REGISTRY_USER}</argument>
-                                        <argument>-p</argument>
-                                        <argument>${env.CI_REGISTRY_PASSWORD}</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>pull-image</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <executable>docker</executable>
-                                    <arguments>
-                                        <argument>pull</argument>
-                                        <argument>${postchain.test-dapp.image}</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <configuration>
-                            <systemPropertyVariables>
-                                <POSTCHAIN_TEST_DAPP_IMAGE>${postchain.test-dapp.image}</POSTCHAIN_TEST_DAPP_IMAGE>
-                            </systemPropertyVariables>
-                        </configuration>
                         <executions>
                             <execution>
                                 <id>integration-test</id>
