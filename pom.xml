@@ -43,7 +43,7 @@
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <!-- Distribution -->
-        <assembly.path>${project.basedir}/src/main/assembly/targz.xml</assembly.path>
+        <assembly.path>${project.basedir}/src/assembly/targz.xml</assembly.path>
     </properties>
 
     <dependencyManagement>
