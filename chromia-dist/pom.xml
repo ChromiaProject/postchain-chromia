@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.postchain.distribution</groupId>
-    <artifactId>postchain-dist</artifactId>
+    <artifactId>chromia-dist</artifactId>
     <packaging>pom</packaging>
 
     <properties>
@@ -25,6 +25,10 @@
         <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-infrastructure</artifactId>
         </dependency>
     </dependencies>
 
