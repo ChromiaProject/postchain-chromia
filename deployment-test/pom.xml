@@ -11,6 +11,11 @@
 
     <artifactId>deployment-test</artifactId>
 
+    <properties>
+        <gitlab.distribution.registry>registry.gitlab.com/chromaway/postchain-distribution</gitlab.distribution.registry>
+        <postchain.test-dapp.image>${gitlab.distribution.registry}/chromaway/postchain-test-dapp:${project.version}</postchain.test-dapp.image>
+    </properties>
+
     <dependencies>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain</groupId>
@@ -42,14 +47,6 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain.images</groupId>
-            <artifactId>test-dapp</artifactId>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <version>${postchain.version}</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -84,6 +81,11 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -145,8 +147,52 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>docker-login</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>docker</executable>
+                                    <arguments>
+                                        <argument>login</argument>
+                                        <argument>registry.gitlab.com</argument>
+                                        <argument>-u</argument>
+                                        <argument>${env.CI_REGISTRY_USER}</argument>
+                                        <argument>-p</argument>
+                                        <argument>${env.CI_REGISTRY_PASSWORD}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>pull-image</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>docker</executable>
+                                    <arguments>
+                                        <argument>pull</argument>
+                                        <argument>${postchain.test-dapp.image}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <POSTCHAIN_TEST_DAPP_IMAGE>${postchain.test-dapp.image}</POSTCHAIN_TEST_DAPP_IMAGE>
+                            </systemPropertyVariables>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>integration-test</id>
