@@ -34,6 +34,7 @@ import java.time.Instant
 sealed class RunnerOptions(name: String, help: String) : OptionGroup(name, help)
 class DockerOptions : RunnerOptions("Docker options", "Options for the docker runner") {
     val name by option(help = "Container name").default("postchain")
+    // TODO replace "postchain-distribution" with "postchain-chromia" when version is bumped beyond 3.7.0
     val image by option("--image", help = "Image name")
             .default("registry.gitlab.com/chromaway/postchain-distribution/chromaway/postchain-server:3.7.0")
     val volumes by option("-v", "--volume", help = "Volume mounts [<from>:<to>]")

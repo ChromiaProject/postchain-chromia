@@ -19,8 +19,8 @@
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
-        <module>chromia-server</module>
-        <module>chromia-subnode</module>
+        <module>docker-images</module>
+        <module>postchain-dist</module>
     </modules>
     <packaging>pom</packaging>
 
