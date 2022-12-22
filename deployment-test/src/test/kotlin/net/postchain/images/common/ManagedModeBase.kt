@@ -52,7 +52,7 @@ open class ManagedModeBase(rellFolder: String) {
                 startupMsg = "Postchain server started, listening on 50051",
                 nodeHost = hostName,
                 nodePort = messagePort,
-                provider = KeyPair.of(appConfig.pubKey, appConfig.privKey)
+                provider = KeyPair.of(appConfig.getString("provider.pubkey"), appConfig.getString("provider.privkey"))
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
