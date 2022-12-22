@@ -90,6 +90,5 @@ fun CliktCommand.providerTierOption() = option(help = "Provider tier (default: -
 
 fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type").switch(
         "-ma" to ProviderQuotaType.max_actions_per_day,
-        "-mn" to ProviderQuotaType.max_nodes,
         "-mc" to ProviderQuotaType.max_containers
 )
