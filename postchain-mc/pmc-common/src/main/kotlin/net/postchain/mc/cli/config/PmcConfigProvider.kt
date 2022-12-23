@@ -30,7 +30,7 @@ object PmcConfigProvider {
     private fun setValuesFromFile(file: File, config: Configuration) {
         if (file.exists()) {
             val c = PropertiesFileLoader.load(file.absolutePath)
-            c.keys.forEach { key -> config.setProperty(key, c.getString(key)) }
+            c.keys.forEach { key -> config.setProperty(key, c.getProperty(key)) }
         }
     }
 
