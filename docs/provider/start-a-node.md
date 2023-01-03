@@ -80,3 +80,23 @@ $ screen -S n0
 
 $ postchain.sh run-node -nc config/node-config.properties --blockchain-config build/bc-config.xml --debug
 ```
+
+### Subnode disk quotas 
+
+In case of postchain process is running natively, ZFS disk quotas can be set for subnodes. To achieve this:
+
+1. Create ZFS pool named `postchain`.
+
+2. Generate container ZFS init script:
+
+```shell
+$ postchain.sh generate-container-zfs-init-script
+```
+
+3. Add the following properties to the node configuration file:
+
+```properties
+container.filesystem=zfs
+container.zfs.pool-name=postchain
+container.zfs.pool-init-script=container-zfs-init-script.sh
+```
