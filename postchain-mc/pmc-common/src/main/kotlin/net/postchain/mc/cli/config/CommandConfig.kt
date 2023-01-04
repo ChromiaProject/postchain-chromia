@@ -4,9 +4,13 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.groups.default
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.associate
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.mc.cli.config.PmcConfigProvider.collectConfiguration
+import net.postchain.mc.cli.util.POSTCHAIN_CLIENT_CONFIG
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
@@ -17,7 +21,7 @@ import java.io.FileWriter
 fun CliktCommand.configFileOption() = mutuallyExclusiveOptions(
         option("--global", help = "use global configuration file").flag().convert { PmcConfigProvider.globalConfigurationFile() },
         option("--local", help = "use project configuration file").flag().convert { PmcConfigProvider.localConfigurationFile() },
-        option("--file", envvar = "POSTCHAIN_CLIENT_CONFIG", help = "use given configuration file (env: POSTCHAIN_CLIENT_CONFIG)")
+        option("--file", envvar = POSTCHAIN_CLIENT_CONFIG, help = "use given configuration file (env: $POSTCHAIN_CLIENT_CONFIG)")
                 .file(mustExist = true, canBeDir = false),
         name = "Config file location",
 ).default(PmcConfigProvider.localConfigurationFile())
@@ -49,7 +53,7 @@ class CommandConfig : CliktCommand(
         }
         if (get != null) {
             if (get == "privkey") throw CliktError("Cannot print private key to stdout")
-            return echo(collectConfiguration().getString(get))
+            return echo(collectConfiguration(configFile).getString(get))
         }
         if (set.isNotEmpty()) {
             val configuration = if (configFile.exists()) {
