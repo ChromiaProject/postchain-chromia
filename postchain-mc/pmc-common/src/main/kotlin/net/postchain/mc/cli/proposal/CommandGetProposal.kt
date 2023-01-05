@@ -10,7 +10,7 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterProviderProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
-import net.postchain.chain0.common.proposal.getPendingConfigurationProposal
+import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
@@ -67,7 +67,7 @@ class CommandGetProposal : CliktCommand(
                 "Container: ${p.container}\nData: $conf"
             }
             ProposalType.configuration -> {
-                val p = client.getPendingConfigurationProposal(proposal.id) ?: return ""
+                val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
                 val (diff, new, removed) = findDiff(newConf, currentConf)
@@ -88,7 +88,7 @@ class CommandGetProposal : CliktCommand(
                 """.trimIndent()
             }
             ProposalType.configuration_at -> {
-                val p = client.getConfigurationProposal(proposal.id) ?: return ""
+                val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
                 val (diff, new, removed) = findDiff(newConf, currentConf)
