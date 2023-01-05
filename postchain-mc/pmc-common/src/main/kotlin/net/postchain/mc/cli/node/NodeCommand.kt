@@ -13,6 +13,7 @@ fun nodeCommands() = NodeCommand().subcommands(
         CommandUpdateNode(),
         CommandReplaceNode(),
         CommandRemoveNode(),
+        CommandEnableNode(),
         CommandGetNodeInfo(),
         CommandGetNodeListVersion(),
         CommandListBlockchainsForNode(),
