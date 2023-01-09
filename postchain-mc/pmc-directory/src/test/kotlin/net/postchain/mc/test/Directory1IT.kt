@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.common.disableNodeOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
@@ -17,7 +18,6 @@ import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.chain0.common.queries.getNodesWithProvider
 import net.postchain.chain0.common.queries.getProviderClusters
-import net.postchain.chain0.common.removeNodeOperation
 import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
@@ -321,7 +321,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(2, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
 
         val tx = prov2Executor.getPostchainClient().transactionBuilder()
-                .removeNodeOperation(pubKeyOf(prov2Config), node1Pubkey.hexStringToByteArray())
+                .disableNodeOperation(pubKeyOf(prov2Config), node1Pubkey.hexStringToByteArray())
         doAndBuildBlocks(tx)
         assertEquals(1, provExecutor.getPostchainClient().getBlockchainSigners(provConfig.blockchainRid).size)
     }
