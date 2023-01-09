@@ -15,7 +15,7 @@
 | transfer_action_points     | any to any                               | actions    |                                                                                                  |
 | add_node                   | node provider (SP, NP)                   | actions    | CNP can add replicas. Limit number of nodes/replicas?                                            |
 | replace_node               | node provider (owner)                    | actions    |                                                                                                  |
-| remove_node                | node provider: (SP, NP, SP > NP)         | actions    | SP can remove NP's node                                                                          |
+| disable_node               | node provider: (SP, NP, SP > NP)         | actions    | SP can disable NP's node                                                                         |
 | update_node                | node provider                            | actions    ||
 | promote_node_provider      | system provider                          | actions    | Only SP can promote CNP                                                                          |
 | add_node_to_cluster        | cluster provider                         | actions    ||

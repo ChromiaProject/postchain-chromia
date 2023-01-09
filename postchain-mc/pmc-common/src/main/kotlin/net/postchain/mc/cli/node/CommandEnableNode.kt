@@ -9,7 +9,7 @@ import net.postchain.mc.cli.util.nopClientOption
 
 class CommandEnableNode : CliktCommand(
         name = "enable",
-        help = "Activate node"
+        help = "Enables node"
 ) {
     private val client by nopClientOption()
 
