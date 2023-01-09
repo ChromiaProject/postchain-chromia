@@ -10,6 +10,7 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterProviderProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
+import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
@@ -65,21 +66,32 @@ class CommandGetProposal : CliktCommand(
                 val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
             }
-            ProposalType.configuration_at -> {
+            ProposalType.configuration -> {
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
-                val new = mutableMapOf<String, Gtv>()
-                newConf.dict.forEach { (t, u) ->
-                    val current = currentConf[t]
-                    if (current == null) {
-                        new[t] = u
-                    } else if (u != current) {
-                        diff[t] = current to u
-                    }
-                }
-                val removed = currentConf.dict.filterKeys { !newConf.dict.containsKey(it) }
+                val (diff, new, removed) = findDiff(newConf, currentConf)
+                """
+                    Proposed configuration:
+                    
+                    New tags
+                    ------------------------------------
+                    ${new.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
+                    
+                    Removed tags
+                    -----------------------------------
+                    ${removed.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
+                    
+                    Changed tags
+                    ----------------------------------
+                    ${diff.entries.joinToString("\n") { (k, v) -> "$k: \nfrom - ${v.first}\nto - ${v.second}" }}
+                """.trimIndent()
+            }
+            ProposalType.configuration_at -> {
+                val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
+                val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
+                val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
+                val (diff, new, removed) = findDiff(newConf, currentConf)
 
                 """
                     Enabled at height: ${p.proposedConf.height}
@@ -136,5 +148,20 @@ class CommandGetProposal : CliktCommand(
 
             else -> ""
         }
+    }
+
+    private fun findDiff(newConf: GtvDictionary, currentConf: GtvDictionary): Triple<MutableMap<String, Pair<Gtv?, Gtv?>>, MutableMap<String, Gtv>, Map<String, Gtv>> {
+        val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
+        val new = mutableMapOf<String, Gtv>()
+        newConf.dict.forEach { (t, u) ->
+            val current = currentConf[t]
+            if (current == null) {
+                new[t] = u
+            } else if (u != current) {
+                diff[t] = current to u
+            }
+        }
+        val removed = currentConf.dict.filterKeys { !newConf.dict.containsKey(it) }
+        return Triple(diff, new, removed)
     }
 }
