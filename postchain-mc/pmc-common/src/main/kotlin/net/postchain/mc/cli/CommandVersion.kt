@@ -1,6 +1,7 @@
 package net.postchain.mc.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.PostchainNode
 import net.postchain.chain0.common.directoryVersion
@@ -16,7 +17,16 @@ class CommandVersion : CliktCommand(
         table {
             row("PMC version", this::class.java.`package`.implementationVersion ?: "(unknown)")
             row("Postchain version", PostchainNode::class.java.`package`.implementationVersion ?: "(unknown)")
-            row("Directory1 version", client.directoryVersion())
+            row("Directory1 version", getDirectoryVersion())
+            hints { defaultAlignment = Table.Hints.Alignment.LEFT }
         }.render().also { println(it) }
+    }
+
+    private fun getDirectoryVersion(): String {
+        return try {
+            client.directoryVersion()
+        } catch (e: Throwable) {
+            "(unknown)"
+        }
     }
 }
