@@ -6,12 +6,12 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
 import net.postchain.chain0.common.addBlockchainReplicaOperation
-import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getProviderData
+import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
@@ -130,7 +130,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
      */
     fun addNode(configProv: PostchainClientConfig, key: String, host: String, port: Long, clusterName: String) {
         val executor = cliExecution(configProv)
-        executor.getPostchainClient().transactionBuilder().addNop().addNodeOperation(
+        executor.getPostchainClient().transactionBuilder().addNop().registerNodeOperation(
                 executor.config.pubkey().data,
                 key.hexStringToByteArray(),
                 host, port, "",
