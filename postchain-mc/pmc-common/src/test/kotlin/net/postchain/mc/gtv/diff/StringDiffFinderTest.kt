@@ -13,10 +13,13 @@ internal class StringDiffFinderTest {
         assertk.assert(StringDiffFinder.diff(first, second)).isEqualTo(expected)
     }
 
-    // This shows a problem with current algorithm. If/when algorithm is improved, this test *should* fail
     @Test
     fun `Switching order of lines are not found`() {
-        assertk.assert(StringDiffFinder.diff("a\nb", "b\na")).isEqualTo(StringDiffElement.equal())
+        assertk.assert(StringDiffFinder.diff("a\nb", "b\na")).isEqualTo(StringDiffElement.diff("""
+            ~a~
+            b
+            **a**
+        """.trimIndent()))
     }
 
     companion object {
@@ -30,8 +33,7 @@ internal class StringDiffFinderTest {
                     b
                 """.trimIndent(),
                         StringDiffElement.diff("""
-                    1 - a
-                    1 + b
+                    ~a~**b**
                 """.trimIndent())),
                 arrayOf("""
                     
@@ -44,10 +46,11 @@ internal class StringDiffFinderTest {
                     45
                 """.trimIndent(),
                         StringDiffElement.diff("""
-                    1 + re
-                    3 - ab
-                    3 + 45
-                """.trimIndent()
+                            **re**
+                            
+                            **45**
+                            ~ab~
+                            """.trimIndent()
                         ))
         )
     }
