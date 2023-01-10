@@ -5,7 +5,6 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import de.m3y.kformat.table
-import jdk.jfr.Enabled
 import net.postchain.chain0.common.proposal.GetProposalResult
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getBlockchainProposal
@@ -22,7 +21,6 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil

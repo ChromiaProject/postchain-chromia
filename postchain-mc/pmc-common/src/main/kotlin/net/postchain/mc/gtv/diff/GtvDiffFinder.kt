@@ -1,16 +1,48 @@
 package net.postchain.mc.gtv.diff
 
+import com.github.difflib.DiffUtils
+import com.github.difflib.patch.DeltaType
+import net.postchain.common.wrap
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvBigInteger
-import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 
 object GtvDiffFinder {
 
-    fun findDictDiff(first: GtvDictionary, second: GtvDictionary, path: String): DiffElement {
+    fun diff(first: Gtv, second: Gtv, prefix: String = ""): DiffElement {
+        if (first.type != second.type) return GtvDiffElement.diff("Type changed from ${first.type} to ${second.type} with value $second")
+        return when (first.type) {
+            GtvType.NULL -> GtvDiffElement.equal()
+            GtvType.BYTEARRAY -> objectDiff(first.asByteArray().wrap(), second.asByteArray().wrap())
+            GtvType.INTEGER -> objectDiff(first.asInteger(), second.asInteger())
+            GtvType.BIGINTEGER -> objectDiff(first.asBigInteger(), second.asBigInteger())
+            GtvType.STRING -> StringDiffFinder.diff(first.asString(), second.asString())
+            GtvType.ARRAY -> arrayDiff(first as GtvArray, second as GtvArray)
+            GtvType.DICT -> findDictDiff(first as GtvDictionary, second as GtvDictionary, prefix)
+        }
+    }
+
+    private fun objectDiff(first: Any, second: Any) = when (first) {
+        second -> GtvDiffElement.equal()
+        else -> GtvDiffElement.diff("Value changed from $first to $second")
+    }
+
+    private fun arrayDiff(first: GtvArray, second: GtvArray): DiffElement {
+        val res = DiffUtils.diff(first.array.toList(), second.array.toList())
+                .deltas
+                .map {
+                    when (it.type) {
+                        DeltaType.CHANGE -> "Index ${it.source.position} was changed from ${it.source.lines} to ${it.target.lines}"
+                        DeltaType.DELETE -> "Element(s) ${it.source.lines} was deleted from index ${it.source.position}"
+                        DeltaType.INSERT -> "Element(s) ${it.target.lines} was added to index ${it.source.position}"
+                        else -> ""
+                    }
+                }
+        return ArrayDiffResult(res.map { StringDiffElement.diff(it) })
+    }
+
+    private fun findDictDiff(first: GtvDictionary, second: GtvDictionary, path: String): DiffElement {
 
         val removedElements = first.dict.filter { !second.dict.containsKey(it.key) }
                 .map { it.key to StringDiffElement.diff("${it.key} was removed") }
@@ -23,51 +55,10 @@ object GtvDiffFinder {
                 .filter { !it.second.equals }
 
         val result = (removedElements + addedElements + changedElements).toMap()
-        if (result.isEmpty()) return GtvDiffElement.equal()
         return DictDiffResult(path, result)
     }
 
-    fun diff(first: Gtv, second: Gtv, prefix: String = ""): DiffElement {
-        if (first.type != second.type) return GtvDiffElement.diff("Type changed from ${first.type} to ${second.type}")
-        return when (first.type) {
-            GtvType.NULL -> GtvDiffElement.equal()
-            GtvType.BYTEARRAY -> byteArrayDiff(first as GtvByteArray, second as GtvByteArray)
-            GtvType.INTEGER -> integerDiff(first as GtvInteger, second as GtvInteger)
-            GtvType.BIGINTEGER -> bigIntegerDiff(first as GtvBigInteger, second as GtvBigInteger)
-            GtvType.STRING -> StringDiffFinder.diff(first.asString(), second.asString())
-            GtvType.ARRAY -> arrayDiff(first as GtvArray, second as GtvArray)
-            GtvType.DICT -> findDictDiff(first as GtvDictionary, second as GtvDictionary, prefix)
-        }
-    }
-
-    private fun integerDiff(first: GtvInteger, second: GtvInteger): GtvDiffElement {
-        return when {
-            first.asInteger() == second.asInteger() -> GtvDiffElement.equal()
-            else -> GtvDiffElement.diff("Value changed from $first to $second")
-        }
-    }
-
-    private fun bigIntegerDiff(first: GtvBigInteger, second: GtvBigInteger): DiffElement {
-        return when {
-            first.asBigInteger() == second.asBigInteger() -> GtvDiffElement.equal()
-            else -> GtvDiffElement.diff("Value changed from $first to $second")
-        }
-    }
-    private fun byteArrayDiff(first: GtvByteArray, second: GtvByteArray): DiffElement {
-        return if (first.bytearray.contentEquals(second.bytearray)) GtvDiffElement.equal() else GtvDiffElement.diff("Value changed from $first to $second")
-    }
-
-    private fun arrayDiff(first: GtvArray, second: GtvArray): DiffElement {
-        val removedElements = first.array.filter { !second.array.contains(it) }
-                .map { StringDiffElement.diff("$it was removed") }
-
-        val addedElements = second.array.filter { !first.array.contains(it) }
-                .map { StringDiffElement.diff("$it was added") }
-
-        return ArrayDiffResult(removedElements + addedElements)
-    }
-
-    data class GtvDiffElement(override val equals: Boolean, override val diff: String): DiffElement {
+    data class GtvDiffElement(override val equals: Boolean, override val diff: String) : DiffElement {
         companion object {
             fun equal() = GtvDiffElement(true, "")
             fun diff(str: String) = GtvDiffElement(false, str)
