@@ -1,6 +1,7 @@
 package net.postchain.mc.gtv.diff
 
 import assertk.assertions.isEqualTo
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -14,11 +15,20 @@ internal class StringDiffFinderTest {
     }
 
     @Test
-    fun `Switching order of lines are not found`() {
+    fun `Switching order of lines are found`() {
         assertk.assert(StringDiffFinder.diff("a\nb", "b\na")).isEqualTo(StringDiffElement.diff("""
-            ~a~
-            b
-            **a**
+            0- a
+            1+ a
+        """.trimIndent()))
+    }
+
+    @Test
+    @Disabled
+    fun `Empty lines give incorrect line numbers`() {
+        assertk.assert(StringDiffFinder.diff("a\n\nb\n\n", "a\nb")).isEqualTo(StringDiffElement.diff("""
+            1- 
+            3- 
+            4- 
         """.trimIndent()))
     }
 
@@ -33,7 +43,8 @@ internal class StringDiffFinderTest {
                     b
                 """.trimIndent(),
                         StringDiffElement.diff("""
-                    ~a~**b**
+                    0- a
+                    0+ b
                 """.trimIndent())),
                 arrayOf("""
                     
@@ -46,10 +57,10 @@ internal class StringDiffFinderTest {
                     45
                 """.trimIndent(),
                         StringDiffElement.diff("""
-                            **re**
-                            
-                            **45**
-                            ~ab~
+                            0+ re
+                            0- 
+                            2+ 45
+                            2- ab
                             """.trimIndent()
                         ))
         )
