@@ -10,7 +10,7 @@ import net.postchain.gtv.GtvType
 
 object GtvDiffFinder {
 
-    fun findDictDiff(first: GtvDictionary, second: GtvDictionary): DiffElement {
+    fun findDictDiff(first: GtvDictionary, second: GtvDictionary, path: String): DiffElement {
 
         val removedElements = first.dict.filter { !second.dict.containsKey(it.key) }
                 .map { it.key to StringDiffElement.diff("${it.key} was removed") }
@@ -19,15 +19,15 @@ object GtvDiffFinder {
                 .map { it.key to StringDiffElement.diff("${it.key} was added: ${it.value}") }
 
         val changedElements = first.dict.filter { second.dict.containsKey(it.key) }
-                .map { it.key to diff(it.value, second.dict[it.key]!!) }
+                .map { it.key to diff(it.value, second.dict[it.key]!!, it.key) }
                 .filter { !it.second.equals }
 
         val result = (removedElements + addedElements + changedElements).toMap()
         if (result.isEmpty()) return GtvDiffElement.equal()
-        return DiffResult(result)
+        return DiffResult(path, result)
     }
 
-    fun diff(first: Gtv, second: Gtv): DiffElement {
+    fun diff(first: Gtv, second: Gtv, prefix: String = ""): DiffElement {
         if (first.type != second.type) return GtvDiffElement.diff("Type changed from ${first.type} to ${second.type}")
         return when (first.type) {
             GtvType.NULL -> GtvDiffElement.equal()
@@ -36,7 +36,7 @@ object GtvDiffFinder {
             GtvType.BIGINTEGER -> bigIntegerDiff(first as GtvBigInteger, second as GtvBigInteger)
             GtvType.STRING -> StringDiffFinder.diff(first.asString(), second.asString())
             GtvType.ARRAY -> arrayDiff(first as GtvArray, second as GtvArray)
-            GtvType.DICT -> findDictDiff(first as GtvDictionary, second as GtvDictionary)
+            GtvType.DICT -> findDictDiff(first as GtvDictionary, second as GtvDictionary, prefix)
         }
     }
 
