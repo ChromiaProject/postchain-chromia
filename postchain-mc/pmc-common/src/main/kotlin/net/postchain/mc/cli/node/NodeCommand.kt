@@ -14,7 +14,7 @@ class NodeCommand : CliktCommand("Node commands") {
 }
 
 fun nodeCommands() = NodeCommand().subcommands(
-        CommandAddNode(),
+        CommandRegisterNode(),
         CommandStartNode(),
         CommandUpdateNode(),
         CommandReplaceNode(),

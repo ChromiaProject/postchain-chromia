@@ -12,7 +12,7 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 
-class CommandAddNode : CliktCommand(
+class CommandRegisterNode : CliktCommand(
         name = "register",
         help = "Registers a node"
 ) {
@@ -33,6 +33,8 @@ class CommandAddNode : CliktCommand(
     ).split(",").required()
 
     override fun run() {
+        print("currentContext.command.commandName: " + currentContext.command.commandName)
+
         client.transactionBuilder()
                 .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
                 .postAwaitConfirmation()
