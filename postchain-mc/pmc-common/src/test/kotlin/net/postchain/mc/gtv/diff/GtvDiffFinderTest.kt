@@ -25,7 +25,9 @@ internal class GtvDiffFinderTest {
     @Test
     fun array() {
         assert(GtvDiffFinder.diff(gtv(gtv(1)), gtv(gtv(1))).equals).isTrue()
-        assert(GtvDiffFinder.diff(gtv(gtv(1)), gtv(gtv(1), gtv(2))).equals).isFalse()
+        val diff = GtvDiffFinder.diff(gtv("a" to gtv(gtv(0))), gtv("a" to gtv(gtv(1), gtv(2))))
+        println(diff.diff)
+        assert(diff.equals).isFalse()
     }
 
     @Test

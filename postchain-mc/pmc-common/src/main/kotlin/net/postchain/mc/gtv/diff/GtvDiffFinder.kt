@@ -24,7 +24,7 @@ object GtvDiffFinder {
 
         val result = (removedElements + addedElements + changedElements).toMap()
         if (result.isEmpty()) return GtvDiffElement.equal()
-        return DiffResult(path, result)
+        return DictDiffResult(path, result)
     }
 
     fun diff(first: Gtv, second: Gtv, prefix: String = ""): DiffElement {
