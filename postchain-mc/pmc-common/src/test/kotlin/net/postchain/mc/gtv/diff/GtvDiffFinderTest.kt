@@ -30,12 +30,11 @@ internal class GtvDiffFinderTest {
     }
 
     @Test
-    @Disabled
+    //@Disabled
     fun dict() {
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b")), gtv("a" to gtv("b"))).equals).isTrue()
-        assert(GtvDiffFinder.diff(gtv("a" to gtv("b")), gtv("a" to gtv("b"))).equals).isFalse()
+        assert(GtvDiffFinder.diff(gtv("a" to gtv("b")), gtv("a" to gtv("a"))).equals).isFalse()
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b" to gtv(1))), gtv("a" to gtv("b" to gtv(2)))).equals).isFalse()
-
     }
 
     companion object {

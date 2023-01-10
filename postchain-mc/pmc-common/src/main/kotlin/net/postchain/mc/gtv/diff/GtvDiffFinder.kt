@@ -10,7 +10,7 @@ import net.postchain.gtv.GtvType
 
 object GtvDiffFinder {
 
-    fun findDictDiff(first: GtvDictionary, second: GtvDictionary): DiffResult {
+    fun findDictDiff(first: GtvDictionary, second: GtvDictionary): DiffElement {
 
         val removedElements = first.dict.filter { !second.dict.containsKey(it.key) }
                 .map { it.key to StringDiffElement.diff("${it.key} was removed") }
@@ -23,6 +23,7 @@ object GtvDiffFinder {
                 .filter { !it.second.equals }
 
         val result = (removedElements + addedElements + changedElements).toMap()
+        if (result.isEmpty()) return GtvDiffElement.equal()
         return DiffResult(result)
     }
 
@@ -35,7 +36,7 @@ object GtvDiffFinder {
             GtvType.BIGINTEGER -> bigIntegerDiff(first as GtvBigInteger, second as GtvBigInteger)
             GtvType.STRING -> StringDiffFinder.diff(first.asString(), second.asString())
             GtvType.ARRAY -> arrayDiff(first as GtvArray, second as GtvArray)
-            GtvType.DICT -> dictDiff(first as GtvDictionary, second as GtvDictionary)
+            GtvType.DICT -> findDictDiff(first as GtvDictionary, second as GtvDictionary)
         }
     }
 
@@ -57,10 +58,6 @@ object GtvDiffFinder {
     }
 
     private fun arrayDiff(first: GtvArray, second: GtvArray): DiffElement {
-        return GtvDiffElement.equal()
-    }
-
-    private fun dictDiff(first: GtvDictionary, second: GtvDictionary): DiffElement {
         return GtvDiffElement.equal()
     }
 
