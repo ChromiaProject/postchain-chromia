@@ -33,14 +33,12 @@ class CommandRegisterNode : CliktCommand(
     ).split(",").required()
 
     override fun run() {
-        print("currentContext.command.commandName: " + currentContext.command.commandName)
-
         client.transactionBuilder()
                 .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
                 .postAwaitConfirmation()
                 .printResult(
-                        "Node added",
-                        "Failed to add node"
+                        "Node registered",
+                        "Failed to register node"
                 )
     }
 }
