@@ -23,14 +23,20 @@ internal class StringDiffFinderTest {
     }
 
     @Test
-    @Disabled
     fun `Empty lines give incorrect line numbers`() {
-        assertk.assert(StringDiffFinder.diff("a\n\nb\n\n", "a\nb")).isEqualTo(StringDiffElement.diff("""
+        assertk.assert(StringDiffFinder.diff("a\n\nb\n\nc", "a\nb\nc")).isEqualTo(StringDiffElement.diff("""
             1- 
             3- 
-            4- 
         """.trimIndent()))
     }
+
+    @Test
+    fun `bad index test`() {
+        assertk.assert(StringDiffFinder.diff("a\nb\na", "a\nb")).isEqualTo(StringDiffElement.diff("""
+        2- a
+    """.trimIndent()))
+    }
+
 
     companion object {
         @JvmStatic
@@ -58,9 +64,9 @@ internal class StringDiffFinderTest {
                 """.trimIndent(),
                         StringDiffElement.diff("""
                             0+ re
-                            0- 
-                            2+ 45
+                            1- 
                             2- ab
+                            2+ 45
                             """.trimIndent()
                         ))
         )
