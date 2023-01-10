@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
-import net.postchain.chain0.common.addNodeOperation
+import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.portOption
 import net.postchain.mc.cli.base.printResult
@@ -13,8 +13,8 @@ import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandAddNode : CliktCommand(
-        name = "add",
-        help = "Add or update node information"
+        name = "register",
+        help = "Registers a node"
 ) {
     private val client by nopClientOption()
 
@@ -34,7 +34,7 @@ class CommandAddNode : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .addNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
+                .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
                 .postAwaitConfirmation()
                 .printResult(
                         "Node added",
