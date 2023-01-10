@@ -33,13 +33,18 @@ internal class GtvDiffFinderTest {
     @Test
     fun dict() {
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b")), gtv("a" to gtv("b"))).equals).isTrue()
+        val first = gtv(
+                "a" to gtv("b"),
+                "b" to gtv("c" to gtv(0)))
+        val second = gtv(
+                "a" to gtv("a"),
+                "b" to gtv("c" to gtv(1)))
         val diff = GtvDiffFinder.diff(
-                gtv(
-                        "a" to gtv("b"),
-                        "b" to gtv("c" to gtv(0))),
-                gtv(
-                        "a" to gtv("a"),
-                        "b" to gtv("c" to gtv(1))))
+                first,
+                second)
+        println(first)
+        println(second)
+        println(diff.diff)
         assert(diff.equals).isFalse()
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b" to gtv(1))), gtv("a" to gtv("b" to gtv(2)))).equals).isFalse()
     }

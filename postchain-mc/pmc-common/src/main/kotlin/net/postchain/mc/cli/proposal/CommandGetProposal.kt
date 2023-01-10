@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import de.m3y.kformat.table
+import jdk.jfr.Enabled
 import net.postchain.chain0.common.proposal.GetProposalResult
 import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getBlockchainProposal
@@ -71,21 +72,13 @@ class CommandGetProposal : CliktCommand(
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                """
-                    Proposed configuration:
-                    
-                    ${GtvDiffFinder.diff(currentConf, newConf).diff}
-                """.trimIndent()
+                "Proposed configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.configuration_at -> {
                 val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                """
-                    Enabled at height: ${p.proposedConf.height}
-                    
-                    ${GtvDiffFinder.diff(currentConf, newConf).diff}
-                """.trimIndent()
+                "Enabled at height: ${p.proposedConf.height}\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.voter_set_update -> {
                 val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
