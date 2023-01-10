@@ -23,9 +23,9 @@ class CommandGetBlockchainConfiguration : CliktCommand(
         val bc = CliExecution(config)
                 .getBlockchainConfiguration(blockchainRID, height)
         if (height == -1L) {
-            println("Blockchain configuration at current:")
+            echo("Blockchain configuration at current:", err = true)
         } else {
-            println("Blockchain configuration at height: $height")
+            echo("Blockchain configuration at height: $height", err = true)
         }
         println(GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(bc)))
     }
