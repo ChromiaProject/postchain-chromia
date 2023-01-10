@@ -58,7 +58,13 @@ object GtvDiffFinder {
     }
 
     private fun arrayDiff(first: GtvArray, second: GtvArray): DiffElement {
-        return GtvDiffElement.equal()
+        val removedElements = first.array.filter { !second.array.contains(it) }
+                .map { StringDiffElement.diff("$it was removed") }
+
+        val addedElements = second.array.filter { !first.array.contains(it) }
+                .map { StringDiffElement.diff("$it was added") }
+
+        return ArrayDiffResult(removedElements + addedElements)
     }
 
     data class GtvDiffElement(override val equals: Boolean, override val diff: String): DiffElement {

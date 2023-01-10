@@ -23,7 +23,6 @@ internal class GtvDiffFinderTest {
     }
 
     @Test
-    @Disabled
     fun array() {
         assert(GtvDiffFinder.diff(gtv(gtv(1)), gtv(gtv(1))).equals).isTrue()
         assert(GtvDiffFinder.diff(gtv(gtv(1)), gtv(gtv(1), gtv(2))).equals).isFalse()
@@ -32,7 +31,13 @@ internal class GtvDiffFinderTest {
     @Test
     fun dict() {
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b")), gtv("a" to gtv("b"))).equals).isTrue()
-        val diff = GtvDiffFinder.diff(gtv("a" to gtv("b"), "b" to gtv("c" to gtv(0))), gtv("a" to gtv("a"), "b" to gtv("c" to gtv(1))))
+        val diff = GtvDiffFinder.diff(
+                gtv(
+                        "a" to gtv("b"),
+                        "b" to gtv("c" to gtv(0))),
+                gtv(
+                        "a" to gtv("a"),
+                        "b" to gtv("c" to gtv(1))))
         assert(diff.equals).isFalse()
         assert(GtvDiffFinder.diff(gtv("a" to gtv("b" to gtv(1))), gtv("a" to gtv("b" to gtv(2)))).equals).isFalse()
     }
