@@ -18,6 +18,7 @@
         <module>admin-client</module>
         <module>chromia-server</module>
         <module>chromia-subnode</module>
+        <module>postchain-mc</module>
     </modules>
 
     <properties>
