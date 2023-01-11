@@ -6,7 +6,7 @@ Before you start a node, postgres must be installed. See official [postgres](htt
 docker run --name postgres -e POSTGRES_PASSWORD=<postgres-user> -e POSTGRES_USER=<postgres-pw> -p 5432:5432 -d postgres
 ```
 
-Using PMC, a node running Chromia can be started as a docker container or as a native process. A node configuration file is needed. See this sample file:
+A node running Chromia can be started as a docker container or as a native process. A node configuration file is needed. See this sample file:
 
 ```properties
 # Node configuration
@@ -55,7 +55,7 @@ container.subnode-database-url=jdbc:postgresql://localhost:5432/postchain
 When starting a node using docker you must expose a few ports and add some mount points. Folders containing node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, the api port and the subnode port must be exposed. 
 Example:
 ```shell
-docker run -it -d --name postchain \
+docker run -d --name postchain \
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --mount type=bind,source=/var/lib/subnode,target=/var/lib/subnode \
     --mount type=bind,source="$(pwd)/config",target=/config,readonly \
@@ -64,7 +64,8 @@ docker run -it -d --name postchain \
     -e POSTCHAIN_CONFIG=/config/node-config.properties \
     -e POSTCHAIN_BLOCKCHAIN_CONFIG=/build/bc-config.xml \
     -p 9870:9870/tcp \
-    -p 7740:7740/tcp -p 9880:9880/tcp \
+    -p 7740:7740/tcp \
+    -p 9880:9880/tcp \
     registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.7.0 \
     run-node
 ```
