@@ -21,13 +21,13 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.votingupdates.formatThreshold
+import net.postchain.mc.gtv.diff.GtvDiffFinder
 import java.time.Instant
 import java.util.*
 
@@ -70,44 +70,13 @@ class CommandGetProposal : CliktCommand(
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                val (diff, new, removed) = findDiff(newConf, currentConf)
-                """
-                    Proposed configuration:
-                    
-                    New tags
-                    ------------------------------------
-                    ${new.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Removed tags
-                    -----------------------------------
-                    ${removed.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Changed tags
-                    ----------------------------------
-                    ${diff.entries.joinToString("\n") { (k, v) -> "$k: \nfrom - ${v.first}\nto - ${v.second}" }}
-                """.trimIndent()
+                "Proposed configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.configuration_at -> {
                 val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                val (diff, new, removed) = findDiff(newConf, currentConf)
-
-                """
-                    Enabled at height: ${p.proposedConf.height}
-                    
-                    New tags
-                    ------------------------------------
-                    ${new.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Removed tags
-                    -----------------------------------
-                    ${removed.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Changed tags
-                    ----------------------------------
-                    ${diff.entries.joinToString("\n") { (k, v) -> "$k: \nfrom - ${v.first}\nto - ${v.second}" }}
-                """.trimIndent()
+                "Enabled at height: ${p.proposedConf.height}\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.voter_set_update -> {
                 val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
@@ -148,20 +117,5 @@ class CommandGetProposal : CliktCommand(
 
             else -> ""
         }
-    }
-
-    private fun findDiff(newConf: GtvDictionary, currentConf: GtvDictionary): Triple<MutableMap<String, Pair<Gtv?, Gtv?>>, MutableMap<String, Gtv>, Map<String, Gtv>> {
-        val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
-        val new = mutableMapOf<String, Gtv>()
-        newConf.dict.forEach { (t, u) ->
-            val current = currentConf[t]
-            if (current == null) {
-                new[t] = u
-            } else if (u != current) {
-                diff[t] = current to u
-            }
-        }
-        val removed = currentConf.dict.filterKeys { !newConf.dict.containsKey(it) }
-        return Triple(diff, new, removed)
     }
 }
