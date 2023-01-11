@@ -31,7 +31,7 @@ val dapp_provider2 = rell.test.keypair(
 val dp2_node_key = x"05";
 
 
-function test_add_node() {
+function test_register_node() {
     setup_module();
 
     rell.test.tx().op(
@@ -44,12 +44,12 @@ function test_add_node() {
 
     // SP's node is added by IP and fails
     rell.test.tx().op(
-        add_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
+        register_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
     ).sign(initial_provider).run_must_fail();
 
     // SP adds a node
     rell.test.tx().op(
-        add_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
+        register_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
     ).sign(system_provider).run();
     val sp_node = node @? { sp_node_key };
     assert_not_null(sp_node);
@@ -57,38 +57,38 @@ function test_add_node() {
 
     // NP's node is added by IP and fails
     rell.test.tx().op(
-        add_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
+        register_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
     ).sign(initial_provider).run_must_fail();
     // NP adds a node
     rell.test.tx().op(
-        add_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
+        register_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
     ).sign(node_provider1).run();
     val np1_node = node @? { np1_node_key };
     assert_not_null(np1_node);
     assert_true(np1_node.active);
     // NP tries to add more nodes and fails
     rell.test.tx().op(
-        add_node(node_provider1.pub, x"000001", "host", 7777, "http://host/api_url")
+        register_node(node_provider1.pub, x"000001", "host", 7777, "http://host/api_url")
     ).sign(node_provider1).run_must_fail();
 
     // DP/CNP's node is added by IP and fails
     rell.test.tx().op(
-        add_node(dapp_provider1.pub, dp1_node_key, "host", 7777, "http://host/api_url")
+        register_node(dapp_provider1.pub, dp1_node_key, "host", 7777, "http://host/api_url")
     ).sign(initial_provider).run_must_fail();
     // DP/CNP adds a node, node will be added as cluster replica mode
     rell.test.tx().op(
-        add_node(dapp_provider1.pub, dp1_node_key, "host", 7777, "http://host/api_url", list([clusters.system]))
+        register_node(dapp_provider1.pub, dp1_node_key, "host", 7777, "http://host/api_url", list([clusters.system]))
     ).sign(dapp_provider1).run();
     assert_true(exists(node @? { dp1_node_key }));
     val system_cluster_replicas = cluster_replica_node @* { .cluster.name == clusters.system } (.node.pubkey);
     assert_true(system_cluster_replicas.contains(dp1_node_key));
     // NP tries to add more nodes and fails
     rell.test.tx().op(
-        add_node(dapp_provider1.pub, x"000002", "host", 7777, "http://host/api_url")
+        register_node(dapp_provider1.pub, x"000002", "host", 7777, "http://host/api_url")
     ).sign(dapp_provider1).run_must_fail();
 }
 
-function test_remove_node() {
+function test_disable_and_enable_node() {
     setup_module();
 
     rell.test.tx().op(
@@ -103,13 +103,13 @@ function test_remove_node() {
     ).sign(initial_provider).run();
 
     rell.test.tx().op(
-        add_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
+        register_node(system_provider.pub, sp_node_key, "host", 7777, "http://host/api_url")
     ).sign(system_provider).run();
     rell.test.tx().op(
-        add_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
+        register_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
     ).sign(node_provider1).run();
     rell.test.tx().op(
-        add_node(node_provider2.pub, np2_node_key, "host", 7777, "http://host/api_url")
+        register_node(node_provider2.pub, np2_node_key, "host", 7777, "http://host/api_url")
     ).sign(node_provider2).run();
 
     // Asserting initial state
@@ -129,17 +129,17 @@ function test_remove_node() {
 
     // NP1 signs NP2's tx and fails
     rell.test.tx().op(
-        remove_node(node_provider2.pub, np2_node_key)
+        disable_node(node_provider2.pub, np2_node_key)
     ).sign(node_provider1).run_must_fail();
 
     // NP1 tries to remove NP2's node and fails
     rell.test.tx().op(
-        remove_node(node_provider1.pub, np2_node_key)
+        disable_node(node_provider1.pub, np2_node_key)
     ).sign(node_provider1).run_must_fail();
 
     // NP1 removes its node
     rell.test.tx().op(
-        remove_node(node_provider1.pub, np1_node_key)
+        disable_node(node_provider1.pub, np1_node_key)
     ).sign(node_provider1).run();
     val np1_removed = node @? { np1_node_key };
     assert_not_null(np1_removed);
@@ -147,7 +147,7 @@ function test_remove_node() {
 
     // SP removes NP2's node
     rell.test.tx().op(
-        remove_node(system_provider.pub, np2_node_key)
+        disable_node(system_provider.pub, np2_node_key)
     ).sign(system_provider).run();
     val np2_removed = node @? { np2_node_key };
     assert_not_null(np2_removed);
@@ -155,16 +155,41 @@ function test_remove_node() {
 
     // IP tries to remove SP's node and fails
     rell.test.tx().op(
-        remove_node(initial_provider.pub, sp_node_key)
+        disable_node(initial_provider.pub, sp_node_key)
     ).sign(initial_provider).run_must_fail();
 
     // SP removes its own node
     rell.test.tx().op(
-        remove_node(system_provider.pub, sp_node_key)
+        disable_node(system_provider.pub, sp_node_key)
     ).sign(system_provider).run();
     val sp_removed = node @? { np2_node_key };
     assert_not_null(sp_removed);
     assert_false(sp_removed.active);
+
+    //
+    // enable_node() op
+    //
+
+    // SP enables unknown node and fails
+    rell.test.tx().op(
+        enable_node(system_provider.pub, x"ff")
+    ).sign(system_provider).run_must_fail();
+
+    // SP enables NP1's node and fails
+    rell.test.tx().op(
+        enable_node(system_provider.pub, np1_node_key)
+    ).sign(system_provider).run_must_fail();
+
+    // SP enables its node
+    rell.test.tx().op(
+        enable_node(system_provider.pub, sp_node_key)
+    ).sign(system_provider).run();
+    assert_true(node @ { sp_node_key } (.active));
+
+    // SP enables its active node and fails
+    rell.test.tx().op(
+        enable_node(system_provider.pub, sp_node_key)
+    ).sign(system_provider).run_must_fail();
 }
 
 function test_replace_node() {
@@ -223,6 +248,38 @@ function test_update_node() {
         _get_node_data(prov),
         ("new_host", 777, "http://localhost/api", _prev_block_time(), prev_node_list)
     );
+}
+
+function test_remove_node() {
+    setup_module();
+
+    // setup
+    rell.test.tx().op(
+        register_provider(initial_provider.pub, node_provider1.pub, provider_tier.NODE_PROVIDER),
+        propose_provider_state(initial_provider.pub, node_provider1.pub, true)
+    ).sign(initial_provider).run();
+
+    rell.test.tx().op(
+        register_node(node_provider1.pub, np1_node_key, "host", 7777, "http://host/api_url")
+    ).sign(node_provider1).run();
+
+    // asserts
+    // IP tries to remove NP1's node and fails
+    rell.test.tx().op(
+        remove_node(initial_provider.pub, np1_node_key)
+    ).sign(initial_provider).run_must_fail();
+
+    // NP1 tries to remove active node and fails
+    rell.test.tx().op(
+        remove_node(node_provider1.pub, np1_node_key)
+    ).sign(node_provider1).run_must_fail();
+
+    // NP1 disables the node and manages to remove it
+    rell.test.tx().op(
+        disable_node(node_provider1.pub, np1_node_key),
+        remove_node(node_provider1.pub, np1_node_key)
+    ).sign(node_provider1).run();
+    assert_true(empty(node @? { np1_node_key }));
 }
 
 function _get_node_data(provider)

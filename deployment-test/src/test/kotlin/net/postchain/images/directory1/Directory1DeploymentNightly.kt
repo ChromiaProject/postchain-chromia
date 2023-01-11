@@ -10,10 +10,10 @@ import com.spotify.docker.client.DockerClient
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
-import net.postchain.chain0.common.addNodeOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
@@ -196,7 +196,7 @@ internal class Directory1DeploymentNightly {
         voteOnAllProposals(node2.provider)
 
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
-                .addNodeOperation(
+                .registerNodeOperation(
                         node2.providerPubkey,
                         node2.nodeKeyPair.pubKey.data,
                         node2.nodeHost,
@@ -228,7 +228,7 @@ internal class Directory1DeploymentNightly {
 
         testLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
-                .addNodeOperation(
+                .registerNodeOperation(
                         node3.providerPubkey,
                         node3.pubkey.data,
                         node3.nodeHost,

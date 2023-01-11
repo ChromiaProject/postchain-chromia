@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.option
+import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.crypto.PubKey
@@ -24,6 +25,8 @@ class CommandListProviderNodes : CliktCommand(
     override fun run() {
         println("Nodes for provider $key")
         table {
+            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+
             header("Pubkey", "Host", "Port", "Api port", "Active", "Last updated")
 
             ClientUtil.fromConfig(config).getNodesByProvider(key).forEach {

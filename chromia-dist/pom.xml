@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>postchain-chromia</artifactId>
+        <groupId>net.postchain</groupId>
+        <version>3.7.1</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>net.postchain.distribution</groupId>
+    <artifactId>chromia-dist</artifactId>
+    <packaging>pom</packaging>
+
+    <properties>
+        <project.build.scriptSourceDirectory>src/scripts</project.build.scriptSourceDirectory>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rell</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>chromia-infrastructure</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <basedir>src/assembly</basedir>
+                    <descriptors>
+                        <descriptor>targz.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-archive</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

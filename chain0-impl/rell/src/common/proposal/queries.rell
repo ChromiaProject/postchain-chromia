@@ -22,16 +22,35 @@ query get_blockchain_proposal(rowid): (data:byte_array, container:text)? {
 
 function require_proposal(rowid) = require(proposal @? { rowid }, "Proposal " + rowid + " not found");
 
-query get_configuration_proposal(rowid?): (
+query get_configuration_proposal_at(rowid?): (
     current_conf:struct<blockchain_configuration>,
     proposed_conf:struct<pending_configuration_at>
 )? {
 
-    val proposal = if (rowid == null) proposal @ { proposal_type.configuration_at } ( @max proposal ) else proposal @ { rowid };
+    val proposal = get_latest_proposal(rowid, proposal_type.configuration_at);
     if (proposal == null) return null;
     val config = pending_configuration_at @? { require_proposal(proposal.rowid) };
     if (config == null) return null;
-    val current = (blockchain_configuration @ { config.blockchain }
+    val current = (blockchain_configuration @ { config.blockchain, .height < config.height }
+     (@omit @sort_desc .height, $) limit 1);
+
+    return (
+        current_conf = current.to_struct(),
+        proposed_conf = config.to_struct()
+    );
+}
+
+query get_configuration_proposal(rowid?): (
+    current_conf:struct<blockchain_configuration>,
+    proposed_conf:struct<pending_configuration>
+)? {
+
+    val proposal = get_latest_proposal(rowid, proposal_type.configuration);
+    if (proposal == null) return null;
+    val config = pending_configuration @? { require_proposal(proposal.rowid) };
+    if (config == null) return null;
+
+    val current = (blockchain_configuration @ { config.blockchain, .height < get_blockchain_last_height(config.blockchain.rid) }
      (@omit @sort_desc .height, $) limit 1);
 
     return (
@@ -58,6 +77,17 @@ query get_system_provider_proposal(rowid) {
     return (
         provider = pis.provider.pubkey,
         add = pis.system
+    );
+}
+
+query get_provider_quota_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_quota);
+    if (proposal == null) return null;
+    val ppq = pending_provider_quota @ { proposal };
+    return (
+        tier = ppq.provider_tier,
+        quota_type = ppq.provider_quota_type,
+        value = ppq.value
     );
 }
 

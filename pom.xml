@@ -6,7 +6,7 @@
 
     <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.7.0</version>
+    <version>3.7.1</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
     <url>https://docs.chromia.com/</url>
@@ -19,18 +19,19 @@
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
-        <module>chromia-server</module>
-        <module>chromia-subnode</module>
+        <module>docker-images</module>
+        <module>postchain-dist</module>
+        <module>chromia-dist</module>
     </modules>
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.7.0</postchain.version>
+        <postchain.version>3.7.1</postchain.version>
         <rellr.version>0.11.0</rellr.version>
         <kotlin.version>1.6.21</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1671124624</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1673429956</project.build.outputTimestamp>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
@@ -42,7 +43,7 @@
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <!-- Distribution -->
-        <assembly.path>${project.basedir}/src/main/assembly/targz.xml</assembly.path>
+        <assembly.path>${project.basedir}/src/assembly/targz.xml</assembly.path>
     </properties>
 
     <dependencyManagement>
@@ -129,6 +130,11 @@
                 <groupId>org.junit-pioneer</groupId>
                 <artifactId>junit-pioneer</artifactId>
                 <version>1.7.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.java-diff-utils</groupId>
+                <artifactId>java-diff-utils</artifactId>
+                <version>4.12</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -227,7 +233,7 @@
                 <plugin>
                     <groupId>net.postchain.rell</groupId>
                     <artifactId>rell-maven-plugin</artifactId>
-                    <version>0.7.0</version>
+                    <version>0.7.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>

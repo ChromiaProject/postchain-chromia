@@ -10,8 +10,10 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterProviderProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
+import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
+import net.postchain.chain0.common.proposal.getProviderQuotaProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
@@ -19,13 +21,13 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.votingupdates.formatThreshold
+import net.postchain.mc.gtv.diff.GtvDiffFinder
 import java.time.Instant
 import java.util.*
 
@@ -64,37 +66,17 @@ class CommandGetProposal : CliktCommand(
                 val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
             }
-            ProposalType.configuration_at -> {
+            ProposalType.configuration -> {
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
-                val diff = mutableMapOf<String, Pair<Gtv?, Gtv?>>()
-                val new = mutableMapOf<String, Gtv>()
-                newConf.dict.forEach { (t, u) ->
-                    val current = currentConf[t]
-                    if (current == null) {
-                        new[t] = u
-                    } else if (u != current) {
-                        diff[t] = current to u
-                    }
-                }
-                val removed = currentConf.dict.filterKeys { !newConf.dict.containsKey(it) }
-
-                """
-                    Enabled at height: ${p.proposedConf.height}
-                    
-                    New tags
-                    ------------------------------------
-                    ${new.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Removed tags
-                    -----------------------------------
-                    ${removed.entries.joinToString("\n") { (k, v) -> "$k: $v" }}
-                    
-                    Changed tags
-                    ----------------------------------
-                    ${diff.entries.joinToString("\n") { (k, v) -> "$k: \nfrom - ${v.first}\nto - ${v.second}" }}
-                """.trimIndent()
+                "Proposed configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
+            }
+            ProposalType.configuration_at -> {
+                val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
+                val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
+                val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
+                "Enabled at height: ${p.proposedConf.height}\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.voter_set_update -> {
                 val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
@@ -122,6 +104,14 @@ class CommandGetProposal : CliktCommand(
                 return table {
                     row("Provider:", pis.provider.toHex())
                     row("Add:", pis.add.toString())
+                }.render().toString()
+            }
+            ProposalType.provider_quota -> {
+                val ppq = client.getProviderQuotaProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider tier:", ppq.tier)
+                    row("Quota type:", ppq.quotaType)
+                    row("Value:", ppq.value)
                 }.render().toString()
             }
 

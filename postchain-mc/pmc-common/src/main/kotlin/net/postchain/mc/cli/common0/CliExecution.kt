@@ -2,41 +2,25 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
-import net.postchain.chain0.common.addNodeOperation
-import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
-import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
-import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
-import net.postchain.chain0.common.queries.getBlockchains
-import net.postchain.chain0.common.queries.getClusterProviders
-import net.postchain.chain0.common.queries.getNodesWithProvider
-import net.postchain.chain0.common.queries.getProviderClusters
-import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.createVoterSetOperation
-import net.postchain.chain0.common.voting.getVoterSetGovernor
-import net.postchain.chain0.common.voting.getVoterSetMembers
-import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmComputeBlockchainList
-import net.postchain.chain0.nm_api.nmGetPeerListVersion
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvInteger
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.readConfigurationFile
@@ -62,10 +46,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun getProviderInfo(key: String) = getPostchainClient().getProviderData(PubKey(key))
-
-    fun getClusterProviders(name: String) = getPostchainClient().getClusterProviders(name)
-
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
         doInTryBlock {
@@ -83,91 +63,17 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnVal!!
     }
 
-    fun getBlockchainConfiguration(blockchainRID: String, height: Long): ByteArray {
+    fun getBlockchainConfiguration(blockchainRID: BlockchainRid, height: Long): ByteArray {
         var returnVal: ByteArray? = null
         doInTryBlock {
             // it means current height
             var heightConfiguration = height
             if (height == -1L) {
-                heightConfiguration = getBlockchainLastHeight(blockchainRID)
+                heightConfiguration = getPostchainClient().getBlockchainLastHeight(blockchainRID)
             }
-            val conf = getPostchainClient().query(
-                    "nm_get_blockchain_configuration",
-                    gtv(
-                            "blockchain_rid" to gtv(blockchainRID.hexStringToByteArray()),
-                            "height" to gtv(heightConfiguration)
-                    )
-            ).asByteArray()
-            returnVal = conf
+            returnVal = getPostchainClient().nmGetBlockchainConfiguration(blockchainRID, heightConfiguration)
         }
         return returnVal!!
-    }
-
-    fun getBlockchainLastHeight(blockchainRID: String) = getPostchainClient().getBlockchainLastHeight(BlockchainRid.buildFromHex(blockchainRID))
-
-    fun getPeerListVersion() = getPostchainClient().nmGetPeerListVersion()
-
-    fun listNodesWithProvider() = getPostchainClient().getNodesWithProvider()
-
-
-    fun listClustersForProvider(key: String) = getPostchainClient().getProviderClusters(PubKey(key))
-
-    /**
-     * key - publicKey of node
-     */
-    fun listBlockchainsForNode(key: String) = getPostchainClient().nmComputeBlockchainList(key.hexStringToByteArray())
-
-    fun listBlockchainDependencies(blockchainRID: String, height: Long): List<Pair<ByteArray, String>> {
-        val listBlockChainContainerPair = arrayListOf<Pair<ByteArray, String>>()
-        doInTryBlock {
-            val blockchain = blockchainGtv(blockchainRID)
-            val list = getPostchainClient().query(
-                    "nm_get_blockchain_dependencies",
-                    gtv(
-                            "blockchain" to gtv(blockchain.asInteger()),
-                            "height" to GtvInteger(height)
-                    )
-            )
-
-                    .asArray()
-            list.forEach {
-                val pair = it.asArray()
-                val rid = pair[0].asByteArray()
-                val container = pair[1].asString()
-                listBlockChainContainerPair.add(rid to container)
-            }
-        }
-        return listBlockChainContainerPair
-    }
-
-    fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
-        return getPostchainClient().getBlockchains(includeInactive).map { it.rid.data }
-    }
-
-    fun listVoterSetMembers(name: String) = getPostchainClient().getVoterSetMembers(name)
-
-    fun listVoterSets() = getPostchainClient().getVoterSets()
-
-    fun getVoterSetGovernor(name: String) = getPostchainClient().getVoterSetGovernor(name)
-
-    fun listNodesByProvider(key: String): List<Gtv> {
-        val returnList = arrayListOf<Gtv>()
-        doInTryBlock {
-            val list = getPostchainClient().query(
-                    "get_nodes_by_provider",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            )
-
-                    .asArray()
-            returnList.addAll(list.map { it })
-        }
-        return returnList
-    }
-
-    fun listProposalsSince(rowid: Long) = getPostchainClient().getProposalsSince(RowId(rowid))
-
-    open fun sendTxUnconfirmed(tx: TransactionBuilder): TransactionResult {
-        return tx.post()
     }
 
     open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
@@ -196,29 +102,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun revokeProposal(rowid: Long) {
-        sendTxSync(
-                revokeProposalAsync(rowid),
-                "Proposal revoked successfully", "Cannot revoke proposal"
-        )
-    }
-
-    fun proposeEnableProvider(key: String) {
-        sendTxSync(
-                proposeEnableProviderAsync(key),
-                "Enabling of provider has been proposed",
-                "Cannot propose enabling of provider"
-        )
-    }
-
-    fun proposeDisableProvider(key: String) {
-        sendTxSync(
-                proposeDisableProviderAsync(key),
-                "Disabling of provider has been proposed",
-                "Cannot propose disabling of provider"
-        )
-    }
-
     fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
         sendTxSync(
                 proposeClusterProviderAsync(clusterName, key, add),
@@ -232,13 +115,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 proposeBlockchainAsync(blockchainConfigFile, format, container, name),
                 "Blockchain $name has been proposed",
                 "Cannot add bc proposal"
-        )
-    }
-
-    fun blockchainGtv(blockchainRID: String): Gtv {
-        return getPostchainClient().query(
-                "get_blockchain",
-                gtv("rid" to gtv(blockchainRID.hexStringToByteArray()))
         )
     }
 
@@ -267,18 +143,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    /** Add new node. Optionally, also add it to a cluster */
-    fun addNodeAsync(key: String, host: String, port: Long, apiUrl: String, clusterName: String): TransactionBuilder {
-        return makeTransactionWithNop().addNodeOperation(
-                config.pubkey().data,
-                key.hexStringToByteArray(),
-                host,
-                port,
-                apiUrl,
-                if (clusterName == "") listOf() else listOf(clusterName)
-        )
-    }
-
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
@@ -300,35 +164,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 config.pubkey().data,
                 pubKey.hexStringToByteArray(),
                 isSystem
-        )
-    }
-
-    fun proposeEnableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop()
-                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), true)
-    }
-
-    fun revokeProposalAsync(rowid: Long): TransactionBuilder {
-        return makeTransactionWithNop().addOperation(
-                "revoke_proposal", gtv(config.signers.first().pubKey.hex()), gtv(rowid)
-        )
-    }
-
-    fun proposeDisableProviderAsync(key: String): TransactionBuilder {
-        return makeTransactionWithNop()
-                .proposeProviderStateOperation(config.pubkey().data, key.hexStringToByteArray(), false)
-    }
-
-    fun proposeConfigurationAsync(
-            blockchainRID: String,
-            blockchainConfigFile: File,
-            height: Long,
-            format: String?,
-            force: Boolean
-    ): TransactionBuilder {
-        val data = readConfigurationFile(blockchainConfigFile, format)
-        return makeTransactionWithNop().proposeConfigurationAtOperation(
-                config.pubkey().data, BlockchainRid.buildFromHex(blockchainRID), data, height, force
         )
     }
 

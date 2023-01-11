@@ -14,23 +14,24 @@ import java.awt.Desktop
 import java.io.File
 import java.util.*
 
-const val configFileName = ".pmc/config"
+const val DEFAULT_CONFIG_FILENAME = ".pmc/config"
 
 object PmcConfigProvider {
 
-    fun fromSystemConfig() = PostchainClientConfig.fromConfiguration(collectConfiguration())
+    fun fromSystemConfig() = PostchainClientConfig.fromConfiguration(collectConfiguration(envConfigurationFile()))
 
-    fun collectConfiguration(): Configuration {
-        val config = globalConfigurationFile().let { if (it.exists()) PropertiesFileLoader.load(it.absolutePath) else PropertiesConfiguration() }
-        localConfigurationFile().let { if (it.exists()) setValuesFromFile(it, config) }
-        envConfigurationFile().let { if (it.exists()) setValuesFromFile(it, config) }
+    fun collectConfiguration(extraFile: File): Configuration {
+        val config = PropertiesConfiguration()
+        loadFromFileIfExists(globalConfigurationFile(), config)
+        loadFromFileIfExists(localConfigurationFile(), config)
+        loadFromFileIfExists(extraFile, config)
         return config
     }
 
-    private fun setValuesFromFile(file: File, config: Configuration) {
+    private fun loadFromFileIfExists(file: File, config: Configuration) {
         if (file.exists()) {
             val c = PropertiesFileLoader.load(file.absolutePath)
-            c.keys.forEach { key -> config.setProperty(key, c.getString(key)) }
+            c.keys.forEach { key -> config.setProperty(key, c.getProperty(key)) }
         }
     }
 
@@ -61,7 +62,7 @@ object PmcConfigProvider {
         }
     }
 
-    fun globalConfigurationFile() = File("${System.getProperty("user.home")}/$configFileName")
-    fun localConfigurationFile() = File(configFileName)
-    fun envConfigurationFile() = System.getenv()[POSTCHAIN_CLIENT_CONFIG]?.let { File(it) } ?: File("")
+    fun globalConfigurationFile() = File("${System.getProperty("user.home")}/$DEFAULT_CONFIG_FILENAME")
+    fun localConfigurationFile() = File(DEFAULT_CONFIG_FILENAME)
+    private fun envConfigurationFile() = File(System.getenv()[POSTCHAIN_CLIENT_CONFIG] ?: "")
 }

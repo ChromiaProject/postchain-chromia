@@ -1,0 +1,31 @@
+# Copyright (c) 2022 ChromaWay Inc. See README for license information.
+version: '3.1'
+
+services:
+
+  postgres:
+    image: postgres:14.1-alpine
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: postchain
+      POSTGRES_USER: postchain
+      POSTGRES_PASSWORD: postchain
+
+  postchain:
+    image: ${IMAGE}
+    command: ${COMMAND} # Can be omitted when running node normally
+    ports:
+      - "7740:7740"
+    depends_on:
+      - postgres
+    volumes:
+      - ${DAPP_PATH}:/opt/chromaway/rell
+    environment:
+      POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+      GENERATE_BLOCKCHAIN: ${CODEGEN}
+
+volumes:
+  pgdata:
+  postchain_config:

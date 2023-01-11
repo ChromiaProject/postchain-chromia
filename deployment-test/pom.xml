@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.0</version>
+        <version>3.7.1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,9 +20,37 @@
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain</groupId>
+            <groupId>net.postchain.images</groupId>
+            <artifactId>admin-client</artifactId>
+            <version>3.7.1</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>chromia-server</artifactId>
+            <version>3.7.1</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>${project.version}</version>
+            <version>3.7.1</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>server</artifactId>
+            <version>3.7.1</version>
+            <type>pom</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Ensure build order -->
+            <groupId>net.postchain.images</groupId>
+            <artifactId>test-dapp</artifactId>
+            <version>3.7.1</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
@@ -42,14 +70,6 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain.images</groupId>
-            <artifactId>test-dapp</artifactId>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <version>${postchain.version}</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -84,6 +104,11 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
