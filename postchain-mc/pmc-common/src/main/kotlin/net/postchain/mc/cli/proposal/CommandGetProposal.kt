@@ -2,18 +2,22 @@ package net.postchain.mc.cli.proposal
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
+import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.proposal.GetProposalResult
 import net.postchain.chain0.common.proposal.ProposalType
+import net.postchain.chain0.common.proposal.getBlockchainActionProposal
 import net.postchain.chain0.common.proposal.getBlockchainProposal
+import net.postchain.chain0.common.proposal.getClusterLimitsProposal
 import net.postchain.chain0.common.proposal.getClusterProviderProposal
+import net.postchain.chain0.common.proposal.getClusterRemoveProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposal
 import net.postchain.chain0.common.proposal.getConfigurationProposalAt
+import net.postchain.chain0.common.proposal.getContainerLimitsProposal
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
+import net.postchain.chain0.common.proposal.getProviderStateProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
@@ -39,8 +43,6 @@ class CommandGetProposal : CliktCommand(
 
     private val id by proposalIndexOption().convert { RowId(it) }
 
-    private val verbose by option("-v", "--verbose", help = "Show proposal content").flag()
-
     override fun run() {
         val client = ClientUtil.fromConfig(config)
         val proposal = client.getProposal(id) ?: return println("Proposal $id not found")
@@ -56,7 +58,10 @@ class CommandGetProposal : CliktCommand(
             Threshold:      ${formatThreshold(votingResults.threshold)}
             Status:         ${votingResults.votingResult}
         """.trimIndent())
-        if (verbose) println(formatProposal(client, proposal))
+
+        println("\nProposal details")
+        println("------------------------------")
+        println(formatProposal(client, proposal))
     }
 
     private fun formatProposal(client: PostchainClient, proposal: GetProposalResult): String {
@@ -86,6 +91,7 @@ class CommandGetProposal : CliktCommand(
                     row("Majority threshold update", vsu.threshold ?: "")
                     row("New member", vsu.addMember.joinToString(", ") { it.toHex() })
                     row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render()
                 return t.toString()
             }
@@ -93,8 +99,9 @@ class CommandGetProposal : CliktCommand(
                 val cpc = client.getClusterProviderProposal(proposal.id) ?: return ""
                 return table {
                     row("Cluster:", cpc.cluster)
-                    row("Provider:", cpc.provider)
+                    row("Provider:", cpc.provider.toHex())
                     row("Add/Remove:", if (cpc.add) "Add" else "remove")
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }
                         .render()
                         .toString()
@@ -103,19 +110,65 @@ class CommandGetProposal : CliktCommand(
                 val pis = client.getSystemProviderProposal(proposal.id) ?: return ""
                 return table {
                     row("Provider:", pis.provider.toHex())
-                    row("Add:", pis.add.toString())
+                    row("Add/Remove:", if (pis.add) "Add" else "remove")
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
             ProposalType.provider_quota -> {
                 val ppq = client.getProviderQuotaProposal(proposal.id) ?: return ""
                 return table {
-                    row("Provider tier:", ppq.tier)
-                    row("Quota type:", ppq.quotaType)
-                    row("Value:", ppq.value)
+                    row("Provider tier:", ppq.tier.name)
+                    row("Quota type:", ppq.quotaType.name)
+                    row("Value:", ppq.value.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
-
-            else -> ""
+            ProposalType.container_limits -> {
+                val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
+                return table {
+                    row("Container:", pcl.container)
+                    row("Max blockchains:", pcl.maxBlockchains.toString())
+                    row("CPU:", pcl.cpu.toString())
+                    row("RAM (MB):", pcl.ram.toString())
+                    row("Storage (MB):", pcl.storage.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
+            ProposalType.cluster_limits -> {
+                val pcl = client.getClusterLimitsProposal(proposal.id) ?: return ""
+                return table {
+                    row("Cluster:", pcl.cluster)
+                    row("Max containers:", pcl.maxContainers.toString())
+                    row("Default container max blockchains:", pcl.defaultContainerMaxBlockchains.toString())
+                    row("Default container CPU:", pcl.defaultContainerCpu.toString())
+                    row("Default container RAM (MB):", pcl.defaultContainerRam.toString())
+                    row("Default container storage (MB):", pcl.defaultContainerStorage.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
+            ProposalType.cluster_remove -> {
+                val cluster = client.getClusterRemoveProposal(proposal.id) ?: return ""
+                return "Cluster to remove: $cluster"
+            }
+            ProposalType.provider_state -> {
+                val pps = client.getProviderStateProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider:", pps.provider.toHex())
+                    row("Provider name:", pps.providerName)
+                    row("Enable/Disable:", if (pps.active) "Enable" else "Disable")
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
+            ProposalType.blockchain_action -> {
+                val pba = client.getBlockchainActionProposal(proposal.id) ?: return ""
+                return table {
+                    row("Blockchain:", pba.blockchain.toHex())
+                    row("Blockchain name:", pba.blockchainName)
+                    row("Action:", pba.action.name)
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
+            ProposalType.other -> "No details"
         }
     }
 }
