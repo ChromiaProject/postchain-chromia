@@ -14,6 +14,7 @@ import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
+import net.postchain.chain0.common.proposal.getProvidersBatchProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
@@ -112,6 +113,15 @@ class CommandGetProposal : CliktCommand(
                     row("Provider tier:", ppq.tier)
                     row("Quota type:", ppq.quotaType)
                     row("Value:", ppq.value)
+                }.render().toString()
+            }
+            ProposalType.providers_batch -> {
+                val ppb = client.getProvidersBatchProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider keys:", ppb.keys.joinToString(", ") { PubKey(it).hex() })
+                    row("Provider tier:", ppb.tier.toString())
+                    row("System:", ppb.system.toString())
+                    row("Active:", ppb.active.toString())
                 }.render().toString()
             }
 
