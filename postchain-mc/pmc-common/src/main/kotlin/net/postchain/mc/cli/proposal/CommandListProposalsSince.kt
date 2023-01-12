@@ -12,7 +12,7 @@ import net.postchain.mc.cli.proposal.util.proposalIndexOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandListProposalsSince : CliktCommand(
-        name = "list",
+        name = "list-all",
         help = "List all active proposals since a given index"
 ) {
     init {
