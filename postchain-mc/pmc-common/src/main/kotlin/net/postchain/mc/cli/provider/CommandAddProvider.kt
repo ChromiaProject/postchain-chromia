@@ -15,7 +15,7 @@ import net.postchain.mc.cli.util.providerTierOption
 import net.postchain.mc.cli.util.pubkeyOption
 
 
-class CommandRegisterProvider : CliktCommand(
+class CommandAddProvider : CliktCommand(
         name = "add",
         help = """Register new provider with given pubkey. There are three tiers of providers:
         ```
