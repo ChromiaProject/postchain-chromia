@@ -127,10 +127,11 @@ class CommandGetProposal : CliktCommand(
             ProposalType.providers_batch -> {
                 val ppb = client.getProvidersBatchProposal(proposal.id) ?: return ""
                 return table {
-                    row("Provider keys:", ppb.keys.joinToString(", ") { PubKey(it).hex() })
+                    line(ppb.keys.joinToString(prefix = "Provider keys: ", separator = ", ") { PubKey(it).hex() })
                     row("Provider tier:", ppb.tier.toString())
                     row("System:", ppb.system.toString())
                     row("Active:", ppb.active.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
             ProposalType.container_limits -> {
