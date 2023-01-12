@@ -45,7 +45,7 @@ class CommandAddBatchProvider : CliktCommand(
     override fun run() {
         client.transactionBuilder()
                 .proposeProvidersBatchOperation(client.pubkey,
-                        pubkeys.joinToString(",") { it.hex() }, providerTier.toTier(), providerTier.isSystem(), enable
+                        pubkeys.map { it.data }, providerTier.toTier(), providerTier.isSystem(), enable
                 )
                 .postAwaitConfirmation()
                 .printResult(
