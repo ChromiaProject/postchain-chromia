@@ -16,7 +16,7 @@ class CommandProposeProviderQuota : CliktCommand(
         help = "Propose provider quota"
 ) {
     private val client by nopClientOption()
-    private val providerTier by providerTierOption()
+    private val providerTier by providerTierOption().required()
     private val providerQuotaType by providerQuotaTypeOption().required()
     private val value by option("-v", "--value", help = "quota value").long().required()
 

@@ -29,7 +29,7 @@ class CommandRegisterProvider : CliktCommand(
 
     private val pubkey by pubkeyOption("Public key to register as provider").required()
 
-    private val providerTier by providerTierOption()
+    private val providerTier by providerTierOption().required()
 
     private val enable by option(help = "Adds a proposal to enable this provider (only needed for node providers)").flag()
 

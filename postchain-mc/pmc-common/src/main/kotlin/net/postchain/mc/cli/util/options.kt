@@ -6,7 +6,6 @@ import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.OptionTransformContext
 import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -26,6 +25,9 @@ import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
 const val POSTCHAIN_CLIENT_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
 fun CliktCommand.pubkeyOption(helpMsg: String = "Public key") = option("-pk", "--pubkey", help = helpMsg, envvar = "POSTCHAIN_PUBKEY")
         .convert { PubKey(it) }
+
+fun CliktCommand.pubkeysOption(helpMsg: String = "Comma delimited list of public keys") = option("--pubkeys", help = helpMsg)
+        .convert { it.split(",").map(::PubKey) }
 
 fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
@@ -82,11 +84,11 @@ const val cpuOptionHelp = "CPU limit (percent of cpus, 10 == 0.1 cpu(s), 150 == 
 const val ramOptionHelp = "RAM limit (Mb)"
 const val storageOptionHelp = "Storage limit (Mb)"
 
-fun CliktCommand.providerTierOption() = option(help = "Provider tier (default: -cnp)").switch(
+fun CliktCommand.providerTierOption() = option(help = "Provider tier").switch(
         "-cnp" to ProviderType.COMMUNITY_NODE_PROVIDER,
         "-np" to ProviderType.NODE_PROVIDER,
         "-sp" to ProviderType.SYSTEM_PROVIDER
-).default(ProviderType.COMMUNITY_NODE_PROVIDER)
+)
 
 fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type").switch(
         "-ma" to ProviderQuotaType.max_actions_per_day,
