@@ -88,7 +88,7 @@ class CommandGetProposal : CliktCommand(
                 val t = table {
                     row("Voter set:", vsu.voterSet)
                     row("Governor update", vsu.governor ?: "")
-                    row("Majority threshold update", vsu.threshold ?: "")
+                    row("Majority threshold update", vsu.threshold?.toString() ?: "")
                     row("New member", vsu.addMember.joinToString(", ") { it.toHex() })
                     row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
