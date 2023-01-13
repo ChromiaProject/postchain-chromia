@@ -15,12 +15,11 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.ProviderType
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.providerTierOption
 import net.postchain.mc.cli.util.pubkeysOption
 
 
-class CommandAddProvider : CliktCommand(
-        name = "add",
+class CommandRegisterProvider : CliktCommand(
+        name = "register",
         help = """Register new provider with given pubkey. There are three tiers of providers:
         ```
         - Community Node Provider: Basic provider, can deploy dapps and add nodes that replicates blockchains (replica) (default)

@@ -8,6 +8,12 @@ class CommonProviderCommand : CliktCommand(
         help = "Provider commands"
 ) {
     override fun run() = Unit
+
+    override fun aliases(): Map<String, List<String>> {
+        return mapOf(
+                "add" to listOf("register")
+        )
+    }
 }
 
 fun providerCommands() = CommonProviderCommand().subcommands(
@@ -16,7 +22,7 @@ fun providerCommands() = CommonProviderCommand().subcommands(
         CommandProposeProviderQuota(),
         CommandListProviderNodes(),
         CommandListProviders(),
-        CommandAddProvider(),
+        CommandRegisterProvider(),
         CommandProposeEnableProvider(),
         CommandPromoteProvider(),
         CommandProposeDisableProvider(),
