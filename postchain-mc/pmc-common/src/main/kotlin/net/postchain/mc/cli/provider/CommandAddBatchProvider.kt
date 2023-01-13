@@ -7,7 +7,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.proposal.proposeProvidersBatchOperation
+import net.postchain.chain0.common.proposal.proposeProvidersOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.ProviderType
@@ -44,7 +44,7 @@ class CommandAddBatchProvider : CliktCommand(
 
     override fun run() {
         client.transactionBuilder()
-                .proposeProvidersBatchOperation(client.pubkey,
+                .proposeProvidersOperation(client.pubkey,
                         pubkeys.map { it.data }, providerTier.toTier(), providerTier.isSystem(), enable
                 )
                 .postAwaitConfirmation()
