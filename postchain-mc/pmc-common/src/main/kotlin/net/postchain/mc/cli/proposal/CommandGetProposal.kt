@@ -16,9 +16,9 @@ import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getContainerLimitsProposal
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
+import net.postchain.chain0.common.proposal.getProviderBatchProposal
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
 import net.postchain.chain0.common.proposal.getProviderStateProposal
-import net.postchain.chain0.common.proposal.getProvidersBatchProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
@@ -124,8 +124,8 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
-            ProposalType.providers_batch -> {
-                val ppb = client.getProvidersBatchProposal(proposal.id) ?: return ""
+            ProposalType.provider_batch -> {
+                val ppb = client.getProviderBatchProposal(proposal.id) ?: return ""
                 return table {
                     line(ppb.keys.joinToString(prefix = "Provider keys: ", separator = ", ") { PubKey(it).hex() })
                     row("Provider tier:", ppb.tier.toString())
