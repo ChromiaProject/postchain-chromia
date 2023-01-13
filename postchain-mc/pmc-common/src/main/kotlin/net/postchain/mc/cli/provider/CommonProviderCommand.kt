@@ -17,7 +17,6 @@ fun providerCommands() = CommonProviderCommand().subcommands(
         CommandListProviderNodes(),
         CommandListProviders(),
         CommandAddProvider(),
-        CommandAddBatchProvider(),
         CommandProposeEnableProvider(),
         CommandPromoteProvider(),
         CommandProposeDisableProvider(),
