@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.options.convert
@@ -17,6 +18,7 @@ import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.parse.GtvParser
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.PropertiesConfigurationValueSource
 import net.postchain.mc.cli.util.ProviderType
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeysOption
@@ -30,17 +32,35 @@ class CommandRegisterProvider : CliktCommand(
         - Node Provider:           Can add block builder nodes
         - System Provider:         System level permissions and can add node to the system cluster
         ```
+        
+        Examples:
+        ```
+        (1): pmc provider add --batch -cnp --enable --provider '{pubkey=x"aa...",name="foo",url="http://foo/api"}' --provider '{pubkey=x"bb...",name="bar",url="http://bar/api"}'
+        ```
+        ```
+        (2): pmc provider add --batch -cnp --enable, where providers will be load from `providers.properties` file:
+                provider={pubkey=x"aa...",name="foo",url="http://foo/api"};{pubkey=x"bb...",name="bar",url="http://bar/api"}
+                provider={pubkey=x"cc...",name="foobar",url="http://foobar/api"}
+        ```
     """
 ) {
+    init {
+        context {
+            valueSource = PropertiesConfigurationValueSource.from("providers.properties")
+        }
+    }
+
     private val client by nopClientOption()
 
     private val pubkeys by pubkeysOption("Comma delimited list of public keys to register as providers")
             .deprecated("Use --provider option instead")
 
-    private val provider by option(help = "Multiple objects to register as providers: --provider '{pubkey=x\"AB\", name=\"my_name\", api-url=\"http://host/api\"}'")
-            .convert {
-                GtvObjectMapper.fromGtv(GtvParser.parse(it), ProviderInfo::class)
-            }.multiple(required = true)
+    private val provider by option(
+            help = "Multiple objects to register as providers (see examples)",
+            valueSourceKey = "provider"
+    ).convert {
+        GtvObjectMapper.fromGtv(GtvParser.parse(it), ProviderInfo::class)
+    }.multiple(required = true)
 
     private val providerTier by mutuallyExclusiveOptions(
             option("-cnp", help = "community node provider").flag().convert { ProviderType.COMMUNITY_NODE_PROVIDER },
