@@ -10,7 +10,7 @@ data class PostchainContainerConfig(
     val imageName: String,
     val containerName: String?,
     val configFile: File,
-    val command: List<String> = listOf("run-server"),
+    val command: List<String>,
     val serverConfig: PostchainServerConfig = PostchainServerConfig(),
     val volumes: Map<String, String> = mapOf(),
     val env: Map<String, Any> = mapOf(),
