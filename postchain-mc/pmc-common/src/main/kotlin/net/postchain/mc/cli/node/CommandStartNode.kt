@@ -125,6 +125,7 @@ class CommandStartNode : CliktCommand(
                     imageName = image,
                     containerName = name,
                     configFile = config,
+                    command = listOf("run-server"),
                     serverConfig = tlsOptions?.let {
                         PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
                     } ?: PostchainServerConfig(port),

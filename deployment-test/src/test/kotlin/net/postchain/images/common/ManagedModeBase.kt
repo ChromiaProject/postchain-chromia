@@ -41,11 +41,11 @@ open class ManagedModeBase(rellFolder: String) {
             .withEnv("POSTGRES_DB", "postchain")
 
     val node1: PostchainContainer = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger), 9871, 7740,
-    KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"))
+            KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"))
     val node2: PostchainContainer = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger), 9872, 7741,
-    KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"))
+            KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"))
     val node3: PostchainContainer = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger), 9873, 7742,
-    KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"))
+            KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"))
 
     private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int, provider: KeyPair): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
@@ -65,6 +65,7 @@ open class ManagedModeBase(rellFolder: String) {
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
+                .withCommand("run-server")
     }
 
 
