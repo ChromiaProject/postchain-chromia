@@ -4,15 +4,17 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.deprecated
 import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.proposal.ProviderInfo
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.proposeProvidersOperation
 import net.postchain.chain0.common.registerProviderOperation
-import net.postchain.crypto.PubKey
+import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.parse.GtvParser
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.ProviderType
@@ -32,7 +34,13 @@ class CommandRegisterProvider : CliktCommand(
 ) {
     private val client by nopClientOption()
 
-    private val pubkeys by pubkeysOption("Comma delimited list of public keys to register as providers").required()
+    private val pubkeys by pubkeysOption("Comma delimited list of public keys to register as providers")
+            .deprecated("Use --provider option instead")
+
+    private val provider by option(help = "Multiple objects to register as providers: --provider '{pubkey=x\"AB\", name=\"my_name\", api-url=\"http://host/api\"}'")
+            .convert {
+                GtvObjectMapper.fromGtv(GtvParser.parse(it), ProviderInfo::class)
+            }.multiple(required = true)
 
     private val providerTier by mutuallyExclusiveOptions(
             option("-cnp", help = "community node provider").flag().convert { ProviderType.COMMUNITY_NODE_PROVIDER },
@@ -51,17 +59,9 @@ class CommandRegisterProvider : CliktCommand(
 
     override fun run() {
         if (batch) {
-            val providerInfos = pubkeys.map {
-                ProviderInfo(
-                        PubKey(it.data),
-                        "",
-                        ""
-                )
-            }
-
             client.transactionBuilder()
                     .proposeProvidersOperation(client.pubkey,
-                            providerInfos, providerTier.toTier(), providerTier.isSystem(), enable
+                            provider, providerTier.toTier(), providerTier.isSystem(), enable
                     )
                     .postAwaitConfirmation()
                     .printResult(
@@ -69,16 +69,21 @@ class CommandRegisterProvider : CliktCommand(
                             "Failed to propose provider batch"
                     )
         } else {
-            if (pubkeys.size != 1) {
+            if (pubkeys == null) {
+                println("--pubkeys must be provided")
+                return
+            }
+            val pubkeys0 = pubkeys!!
+            if (pubkeys0.size != 1) {
                 println("Use --batch mode to add multiple providers")
                 return
             }
 
             client.transactionBuilder()
-                    .registerProviderOperation(client.pubkey, pubkeys.first(), providerTier.toTier())
+                    .registerProviderOperation(client.pubkey, pubkeys0.first(), providerTier.toTier())
                     .apply {
-                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys.first().data, enable)
-                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys.first().data, true)
+                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys0.first().data, enable)
+                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys0.first().data, true)
                     }
                     .postAwaitConfirmation()
                     .printResult(

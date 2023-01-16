@@ -126,13 +126,6 @@ class CommandGetProposal : CliktCommand(
             }
             ProposalType.provider_batch -> {
                 val ppb = client.getProviderBatchProposal(proposal.id) ?: return ""
-                val providers = table {
-                    header("Pubkey", "Name", "Url")
-                    ppb.providerInfos.forEach {
-                        row(it.pubkey, it.name, it.url)
-                    }
-                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
-                }.render().toString()
 
                 val info = table {
                     row("Provider tier:", ppb.tier.toString())
@@ -141,7 +134,15 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
 
-                return providers + "\n" + info
+                val providers = table {
+                    header("Pubkey", "Name", "Url")
+                    ppb.providerInfos.forEach {
+                        row(it.pubkey.toString(), it.name, it.url)
+                    }
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+
+                return info + providers
             }
             ProposalType.container_limits -> {
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
