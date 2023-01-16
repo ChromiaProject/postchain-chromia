@@ -7,10 +7,12 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.chain0.common.proposal.ProviderInfo
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.proposeProvidersOperation
 import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.ProviderType
@@ -49,9 +51,17 @@ class CommandRegisterProvider : CliktCommand(
 
     override fun run() {
         if (batch) {
+            val providerInfos = pubkeys.map {
+                ProviderInfo(
+                        PubKey(it.data),
+                        "",
+                        ""
+                )
+            }
+
             client.transactionBuilder()
                     .proposeProvidersOperation(client.pubkey,
-                            pubkeys.map { it.data }, providerTier.toTier(), providerTier.isSystem(), enable
+                            providerInfos, providerTier.toTier(), providerTier.isSystem(), enable
                     )
                     .postAwaitConfirmation()
                     .printResult(
