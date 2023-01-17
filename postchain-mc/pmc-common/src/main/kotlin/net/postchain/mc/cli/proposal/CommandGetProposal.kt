@@ -52,6 +52,7 @@ class CommandGetProposal : CliktCommand(
             Proposal:       ${proposal.id.id} - ${proposal.type.name}
             Proposed by:    ${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}
             Time:           ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
+            Message:        ${proposal.message}
             Positive votes: ${votingResults.positiveVotes}
             Negative votes: ${votingResults.negativeVotes}
             Max votes:      ${votingResults.maxVotes}
