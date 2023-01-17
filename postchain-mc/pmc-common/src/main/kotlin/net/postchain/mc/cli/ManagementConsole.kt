@@ -4,11 +4,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
-import net.postchain.cli.CommandKeygen
 import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.clusterCommands
 import net.postchain.mc.cli.config.CommandConfig
 import net.postchain.mc.cli.container.containerCommands
+import net.postchain.mc.cli.keys.CommandKeygen
 import net.postchain.mc.cli.node.nodeCommands
 import net.postchain.mc.cli.proposal.proposalCommands
 import net.postchain.mc.cli.provider.providerCommands
