@@ -163,7 +163,8 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().proposeProviderIsSystemOperation(
                 config.pubkey().data,
                 pubKey.hexStringToByteArray(),
-                isSystem
+                isSystem,
+                ""
         )
     }
 
@@ -185,7 +186,7 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().proposeBlockchainOperation(
-                config.pubkey().data, data, name, containerName
+                config.pubkey().data, data, name, containerName, ""
         )
     }
 
@@ -196,7 +197,7 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeClusterProviderOperation(
-                config.pubkey().data, clusterName, provider.hexStringToByteArray(), add
+                config.pubkey().data, clusterName, provider.hexStringToByteArray(), add, ""
         )
     }
 
@@ -214,13 +215,14 @@ open class CliExecution(val config: PostchainClientConfig) {
                 null,
                 null,
                 newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
-                removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf()
+                removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
+                ""
         )
     }
 
     fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
         return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-                config.pubkey().data, voterSetName, null, newGovernor, listOf(), listOf()
+                config.pubkey().data, voterSetName, null, newGovernor, listOf(), listOf(), ""
         )
     }
 }

@@ -174,7 +174,8 @@ internal class Directory1DeploymentNightly {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                     node1.providerPubkey,
                     foobarContainer,
-                    mapOf(cpu to first, ram to second, storage to third)
+                    mapOf(cpu to first, ram to second, storage to third),
+                    ""
             ).postTransactionUntilConfirmed("container limits")
         }
 
@@ -190,7 +191,7 @@ internal class Directory1DeploymentNightly {
         testLogger.info("Registering provider2")
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true, "")
                 .postTransactionUntilConfirmed("Register p2 as system")
 
         voteOnAllProposals(node2.provider)
@@ -220,7 +221,7 @@ internal class Directory1DeploymentNightly {
         node1Db.awaitNewBlock()
         node1.client(brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true)
+                .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true, "")
                 .postTransactionUntilConfirmed("Register p3 as system")
 
         voteOnAllProposals(node2.provider)
@@ -287,7 +288,7 @@ internal class Directory1DeploymentNightly {
                 node3Db.awaitNewBlock()
                 val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
                 node1.c0.transactionBuilder()
-                        .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName)
+                        .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName, "")
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 voteOnAllProposals(node2.provider)

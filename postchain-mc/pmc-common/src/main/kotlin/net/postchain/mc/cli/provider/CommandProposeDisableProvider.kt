@@ -6,6 +6,7 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 
 class CommandProposeDisableProvider : CliktCommand(
         name = "disable",
@@ -15,9 +16,11 @@ class CommandProposeDisableProvider : CliktCommand(
 
     private val key by requiredPubkeyOption()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         client.transactionBuilder()
-                .proposeProviderStateOperation(client.config.pubkey().data, key.data, false)
+                .proposeProviderStateOperation(client.config.pubkey().data, key.data, false, message)
                 .postAwaitConfirmation()
                 .printResult(
                         "Disabling of provider has been proposed",

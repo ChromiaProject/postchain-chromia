@@ -8,6 +8,7 @@ import net.postchain.chain0.common.proposal.proposeProviderQuotaOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 import net.postchain.mc.cli.util.providerQuotaTypeOption
 import net.postchain.mc.cli.util.providerTierOption
 
@@ -19,10 +20,11 @@ class CommandProposeProviderQuota : CliktCommand(
     private val providerTier by providerTierOption()
     private val providerQuotaType by providerQuotaTypeOption().required()
     private val value by option("-v", "--value", help = "quota value").long().required()
+    private val message by proposalMessageOption()
 
     override fun run() {
         client.transactionBuilder()
-                .proposeProviderQuotaOperation(client.config.pubkey().data, providerTier.toTier(), providerQuotaType, value)
+                .proposeProviderQuotaOperation(client.config.pubkey().data, providerTier.toTier(), providerQuotaType, value, message)
                 .postAwaitConfirmation()
                 .printResult(
                         "Provider quota value has been proposed",

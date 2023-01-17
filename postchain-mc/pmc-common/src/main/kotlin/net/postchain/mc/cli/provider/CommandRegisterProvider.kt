@@ -11,6 +11,7 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.ProviderType
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 import net.postchain.mc.cli.util.providerTierOption
 import net.postchain.mc.cli.util.pubkeyOption
 
@@ -33,12 +34,14 @@ class CommandRegisterProvider : CliktCommand(
 
     private val enable by option(help = "Adds a proposal to enable this provider (only needed for node providers)").flag()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         client.transactionBuilder()
                 .registerProviderOperation(client.pubkey, pubkey, providerTier.toTier())
                 .apply {
-                    if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkey.data, enable)
-                    if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkey.data, true)
+                    if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkey.data, enable, message)
+                    if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkey.data, true, message)
                 }
                 .postAwaitConfirmation()
                 .printResult(

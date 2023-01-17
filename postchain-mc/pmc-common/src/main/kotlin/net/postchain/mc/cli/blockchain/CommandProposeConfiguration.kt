@@ -10,10 +10,10 @@ import net.postchain.cli.AlreadyExistMode
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.heightOption
-import net.postchain.common.wrap
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeConfiguration : CliktCommand(
@@ -37,14 +37,16 @@ class CommandProposeConfiguration : CliktCommand(
 
     private val force by forceOption()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         client.transactionBuilder()
                 .apply {
                     val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
+                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData, message)
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
+                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, message)
                     }
                 }
                 .postAwaitConfirmation()

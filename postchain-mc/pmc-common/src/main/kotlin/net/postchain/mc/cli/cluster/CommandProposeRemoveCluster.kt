@@ -7,6 +7,7 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 
 class CommandProposeRemoveCluster : CliktCommand(
         name = "remove",
@@ -16,9 +17,11 @@ class CommandProposeRemoveCluster : CliktCommand(
 
     private val name by nameOption("Cluster name to remove").required()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         client.transactionBuilder()
-                .proposeRemoveClusterOperation(client.config.pubkey().data, name)
+                .proposeRemoveClusterOperation(client.config.pubkey().data, name, message)
                 .postAwaitConfirmation()
                 .printResult(
                         "Cluster removal proposed",

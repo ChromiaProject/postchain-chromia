@@ -10,7 +10,13 @@ import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.cluster.CommandProposeClusterResourceLimits.Companion.setIfNotNull
-import net.postchain.mc.cli.util.*
+import net.postchain.mc.cli.util.cpuOptionHelp
+import net.postchain.mc.cli.util.maxBlockchainsOption
+import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.ramOptionHelp
+import net.postchain.mc.cli.util.storageOptionHelp
 
 class CommandProposeContainerResourceLimits : CliktCommand(
         name = "limits",
@@ -29,6 +35,8 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         if (_maxBlockchains == null && _cpu == null && _ram == null && _storage == null) {
             println("No resource limits are specified. At least one value should be specified.")
@@ -44,7 +52,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
                 }
 
         client.transactionBuilder()
-                .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits)
+                .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits, message)
                 .postAwaitConfirmation()
                 .printResult(
                         "Container limits proposed",

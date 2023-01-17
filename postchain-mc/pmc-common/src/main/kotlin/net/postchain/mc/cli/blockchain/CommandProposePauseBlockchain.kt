@@ -7,6 +7,7 @@ import net.postchain.cli.util.blockchainRidOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalMessageOption
 
 class CommandProposePauseBlockchain : CliktCommand(
         name = "stop",
@@ -16,12 +17,15 @@ class CommandProposePauseBlockchain : CliktCommand(
 
     private val blockchainRID by blockchainRidOption()
 
+    private val message by proposalMessageOption()
+
     override fun run() {
         client.transactionBuilder()
                 .proposeBlockchainActionOperation(
                         client.config.pubkey().data,
                         blockchainRID,
-                        BlockchainAction.pause
+                        BlockchainAction.pause,
+                        message
                 )
                 .postAwaitConfirmation()
                 .printResult(
