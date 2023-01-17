@@ -20,6 +20,9 @@ import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
+import java.net.MalformedURLException
+import java.net.URISyntaxException
+import java.net.URL
 
 
 const val POSTCHAIN_CLIENT_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
@@ -58,11 +61,26 @@ fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOp
         }
 ).single().required()
 
-fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
-        {
-            require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
-            require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
-        }
+fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit = {
+    require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
+    require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
+}
+
+fun CliktCommand.urlOption(helpMessage: String) = option("--url", help = helpMessage)
+        .validate(validateUrl())
+
+fun validateUrl(): OptionTransformContext.(String) -> Unit = {
+    val valid = try {
+        URL(it).toURI()
+        true
+    } catch (e: MalformedURLException) {
+        false
+    } catch (e: URISyntaxException) {
+        false
+    }
+    require(valid) { "Invalid URL provided: $it" }
+}
+
 
 sealed class VoterSetOrPubkeysOption(val data: String) {
     class Pubkeys(data: String) : VoterSetOrPubkeysOption(data) {
