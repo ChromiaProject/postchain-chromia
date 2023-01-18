@@ -32,21 +32,31 @@ class CommandGetClusterInfo : CliktCommand(
             row()
         }.render().also { println(it) }
 
-        table {
-            header("Provider", "Alias")
-            client.getClusterProviders(name).forEach { provider ->
-                row(provider.pubkey.toString(), provider.name)
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val clusterProviders = client.getClusterProviders(name)
+        if (clusterProviders.isNotEmpty()) {
+            table {
+                header("Provider", "Alias")
+                clusterProviders.forEach { provider ->
+                    row(provider.pubkey.toString(), provider.name)
+                }
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            }.render().also { println(it) }
+        } else {
+            println("No providers")
+        }
 
-        table {
-            header("Node", "Address")
-            client.getClusterNodes(name).forEach { node ->
-                row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val clusterNodes = client.getClusterNodes(name)
+        if (clusterNodes.isNotEmpty()) {
+            table {
+                header("Node", "Address")
+                clusterNodes.forEach { node ->
+                    row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
+                }
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            }.render().also { println(it) }
+        } else {
+            println("No nodes")
+        }
 
         table {
             header("Resource type", "Value")
