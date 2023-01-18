@@ -1,10 +1,12 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.deprecated
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
@@ -53,6 +55,7 @@ class CommandRegisterProvider : CliktCommand(
     private val client by nopClientOption()
 
     private val pubkeys by pubkeysOption("Comma delimited list of public keys to register as providers")
+            .default(emptyList())
             .deprecated("Use --provider option instead")
 
     private val provider by option(
@@ -89,21 +92,15 @@ class CommandRegisterProvider : CliktCommand(
                             "Failed to propose provider batch"
                     )
         } else {
-            if (pubkeys == null) {
-                println("--pubkeys must be provided")
-                return
+            when {
+                pubkeys.isEmpty() -> throw CliktError("--pubkeys must be provided")
+                pubkeys.size != 1 -> throw CliktError("Use --batch mode to add multiple providers")
             }
-            val pubkeys0 = pubkeys!!
-            if (pubkeys0.size != 1) {
-                println("Use --batch mode to add multiple providers")
-                return
-            }
-
             client.transactionBuilder()
-                    .registerProviderOperation(client.pubkey, pubkeys0.first(), providerTier.toTier())
+                    .registerProviderOperation(client.pubkey, pubkeys.first(), providerTier.toTier())
                     .apply {
-                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys0.first().data, enable)
-                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys0.first().data, true)
+                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys.first().data, enable)
+                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys.first().data, true)
                     }
                     .postAwaitConfirmation()
                     .printResult(

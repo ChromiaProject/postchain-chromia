@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.options.switch
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
@@ -30,7 +31,7 @@ fun CliktCommand.pubkeyOption(helpMsg: String = "Public key") = option("-pk", "-
         .convert { PubKey(it) }
 
 fun CliktCommand.pubkeysOption(helpMsg: String = "Comma delimited list of public keys") = option("--pubkeys", help = helpMsg)
-        .convert { it.split(",").map(::PubKey) }
+        .convert { PubKey(it) }.split(",")
 
 fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
