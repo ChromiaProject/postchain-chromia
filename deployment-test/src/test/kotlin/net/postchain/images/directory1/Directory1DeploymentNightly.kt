@@ -28,7 +28,7 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
-import net.postchain.d1.rell.anchoring.getLastAnchoredBlock
+import net.postchain.d1.rell.cluster_anchoring.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -107,8 +107,8 @@ internal class Directory1DeploymentNightly {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val moduleRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/module.rell").readText()
-            val icmfRellCode = File("../chromia-infrastructure/src/main/rell/anchoring/icmf.rell").readText()
+            val moduleRellCode = File("../chain0-impl/rell/src/cluster_anchoring/module.rell").readText()
+            val icmfRellCode = File("../chain0-impl/rell/src/cluster_anchoring/icmf.rell").readText()
             val anchorGtvConfig = GtvMLParser.parseGtvML(
                     javaClass.getResource("/anchoring/blockchain_config_anchor.xml")!!.readText(),
                     mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
@@ -261,7 +261,7 @@ internal class Directory1DeploymentNightly {
             assert(node.c0.getBlockchains(true).size).isEqualTo(2)
         }
 
-        File("../chromia-infrastructure/src/main/rell/icmf").copyRecursively(tmpSources.resolve("icmf"))
+        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpSources.resolve("icmf"))
         deployDapp("test-dapp", systemContainer, tmpSources)
         deployDapp("test-dapp2", foobarContainer)
 

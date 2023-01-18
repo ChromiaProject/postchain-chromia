@@ -125,9 +125,10 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
-                                <mainModule>anchoring</mainModule>
+                                <mainModule>cluster_anchoring</mainModule>
                                 <mainModule>icmf</mainModule>
                             </mainModules>
                         </configuration>
