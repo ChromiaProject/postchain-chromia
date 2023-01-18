@@ -12,8 +12,6 @@ import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.google.protobuf.ByteString
 import io.grpc.*
-import net.postchain.cli.util.TlsOptions
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.hexStringToByteArray
 import net.postchain.container.PostchainContainerConfig
 import net.postchain.container.docker.DockerPostchainContainerClient
@@ -64,6 +62,30 @@ class GenesisPeerOptions :
             .convert { it[0] to it[1] }
             .required()
 }
+
+class TlsOptions : OptionGroup(help = "SSL/TLS configuration options") {
+    val certChainFile by option(
+        "-ccf",
+        "--cert-chain-file",
+        help = "Certificate chain file",
+        envvar = "POSTCHAIN_SERVER_CERTIFICATE"
+    )
+        .file(mustExist = true, canBeDir = false, mustBeReadable = true)
+        .required()
+
+    val privateKeyFile by option(
+        "-pkf",
+        "--privkey-file",
+        help = "Private key file",
+        envvar = "POSTCHAIN_SERVER_PRIVKEY"
+    )
+        .file(mustExist = true, canBeDir = false, mustBeReadable = true)
+        .required()
+}
+
+fun CliktCommand.nodeConfigOption() =
+        option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG")
+                .file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true)
 
 class CommandStartNode : CliktCommand(
         name = "start",

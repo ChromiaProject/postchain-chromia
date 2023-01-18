@@ -48,16 +48,6 @@
 
         <!-- Cli -->
         <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.postchain</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>com.github.ajalt.clikt</groupId>
             <artifactId>clikt-jvm</artifactId>
         </dependency>

@@ -1,10 +1,10 @@
 package net.postchain.mc.test
 
 import assertk.assertions.isEqualTo
-import net.postchain.cli.CommandKeygen
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.mc.cli.keys.CommandKeygen
 import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
 import org.junit.jupiter.api.Test
