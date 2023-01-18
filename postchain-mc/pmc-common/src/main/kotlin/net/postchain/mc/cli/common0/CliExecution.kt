@@ -93,22 +93,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
-        sendTxSync(
-                proposeClusterProviderAsync(clusterName, key, add),
-                "Cluster $clusterName providers update proposed",
-                "Failed proposing cluster $clusterName providers update"
-        )
-    }
-
-    fun proposeBlockchain(blockchainConfigFile: File, format: String?, container: String, name: String) {
-        sendTxSync(
-                proposeBlockchainAsync(blockchainConfigFile, format, container, name),
-                "Blockchain $name has been proposed",
-                "Cannot add bc proposal"
-        )
-    }
-
     /**
      * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
      * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
@@ -163,12 +147,8 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(data, container, name)
-    }
-
-    private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().proposeBlockchainOperation(
-                config.pubkey().data, data, name, containerName, ""
+                config.pubkey().data, data, name, container, ""
         )
     }
 
