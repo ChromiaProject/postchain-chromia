@@ -16,6 +16,7 @@ import net.postchain.chain0.common.proposal.getConfigurationProposalAt
 import net.postchain.chain0.common.proposal.getContainerLimitsProposal
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
+import net.postchain.chain0.common.proposal.getProviderBatchProposal
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
 import net.postchain.chain0.common.proposal.getProviderStateProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
@@ -123,6 +124,26 @@ class CommandGetProposal : CliktCommand(
                     row("Value:", ppq.value.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
+            }
+            ProposalType.provider_batch -> {
+                val ppb = client.getProviderBatchProposal(proposal.id) ?: return ""
+
+                val info = table {
+                    row("Provider tier:", ppb.tier.toString())
+                    row("System:", ppb.system.toString())
+                    row("Active:", ppb.active.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+
+                val providers = table {
+                    header("Pubkey", "Name", "Url")
+                    ppb.providerInfos.forEach {
+                        row(it.pubkey.toString(), it.name, it.url)
+                    }
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+
+                return info + providers
             }
             ProposalType.container_limits -> {
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
