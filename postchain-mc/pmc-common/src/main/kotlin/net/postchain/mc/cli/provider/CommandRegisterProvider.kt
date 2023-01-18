@@ -75,7 +75,7 @@ class CommandRegisterProvider : CliktCommand(
             name = "Provider state",
     ).required()
 
-    private val batch by option(help = "Allows to add a batch of providers (comma delimited list of public keys)").flag()
+    private val batch by option(help = "Allows to add a batch of providers (comma delimited list of objects, see examples)").flag()
 
     override fun run() {
         if (batch) {
