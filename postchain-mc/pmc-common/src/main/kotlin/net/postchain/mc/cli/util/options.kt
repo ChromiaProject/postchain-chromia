@@ -6,10 +6,10 @@ import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.OptionTransformContext
 import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.options.switch
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
@@ -21,11 +21,17 @@ import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.CommandBase
 import net.postchain.mc.cli.base.NAME_LENGTH_MAX
 import net.postchain.mc.cli.config.PmcConfigProvider.fromSystemConfig
+import java.net.MalformedURLException
+import java.net.URISyntaxException
+import java.net.URL
 
 
 const val POSTCHAIN_CLIENT_CONFIG = "POSTCHAIN_CLIENT_CONFIG"
 fun CliktCommand.pubkeyOption(helpMsg: String = "Public key") = option("-pk", "--pubkey", help = helpMsg, envvar = "POSTCHAIN_PUBKEY")
         .convert { PubKey(it) }
+
+fun CliktCommand.pubkeysOption(helpMsg: String = "Comma delimited list of public keys") = option("--pubkeys", help = helpMsg)
+        .convert { PubKey(it) }.split(",")
 
 fun CliktCommand.configOption() = configOptionBase().defaultLazy { fromSystemConfig() }
 fun CliktCommand.clientOption() = clientOptionBase()
@@ -56,11 +62,26 @@ fun CliktCommand.nameOrGenerateOption(helpMessage: String) = mutuallyExclusiveOp
         }
 ).single().required()
 
-fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit =
-        {
-            require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
-            require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
-        }
+fun validateAlphaNumeric(): OptionTransformContext.(String) -> Unit = {
+    require(CommandBase.isAlphanumeric(it)) { "Name must be alphanumeric" }
+    require(it.length <= NAME_LENGTH_MAX) { "Name is too long, maximum allowed length is $NAME_LENGTH_MAX" }
+}
+
+fun CliktCommand.urlOption(helpMessage: String) = option("--url", help = helpMessage)
+        .validate(validateUrl())
+
+fun validateUrl(): OptionTransformContext.(String) -> Unit = {
+    val valid = try {
+        URL(it).toURI()
+        true
+    } catch (e: MalformedURLException) {
+        false
+    } catch (e: URISyntaxException) {
+        false
+    }
+    require(valid) { "Invalid URL provided: $it" }
+}
+
 
 sealed class VoterSetOrPubkeysOption(val data: String) {
     class Pubkeys(data: String) : VoterSetOrPubkeysOption(data) {
@@ -82,11 +103,11 @@ const val cpuOptionHelp = "CPU limit (percent of cpus, 10 == 0.1 cpu(s), 150 == 
 const val ramOptionHelp = "RAM limit (Mb)"
 const val storageOptionHelp = "Storage limit (Mb)"
 
-fun CliktCommand.providerTierOption() = option(help = "Provider tier (default: -cnp)").switch(
+fun CliktCommand.providerTierOption() = option(help = "Provider tier").switch(
         "-cnp" to ProviderType.COMMUNITY_NODE_PROVIDER,
         "-np" to ProviderType.NODE_PROVIDER,
         "-sp" to ProviderType.SYSTEM_PROVIDER
-).default(ProviderType.COMMUNITY_NODE_PROVIDER)
+)
 
 fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type").switch(
         "-ma" to ProviderQuotaType.max_actions_per_day,

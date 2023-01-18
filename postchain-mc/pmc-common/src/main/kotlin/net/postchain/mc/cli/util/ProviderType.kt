@@ -12,5 +12,7 @@ enum class ProviderType {
         else -> ProviderTier.NODE_PROVIDER
     }
 
+    fun isSystem() = this == SYSTEM_PROVIDER
+
     fun shouldEnable(enable: Boolean) = enable && this == NODE_PROVIDER
 }
