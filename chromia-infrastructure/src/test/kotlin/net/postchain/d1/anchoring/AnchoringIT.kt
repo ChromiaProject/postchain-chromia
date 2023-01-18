@@ -6,6 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
+import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
@@ -59,8 +60,8 @@ class AnchoringIT : ManagedModeTest() {
 
         val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
-        val moduleRellCode = File("src/main/rell/anchoring/module.rell").readText()
-        val icmfRellCode = File("src/main/rell/anchoring/icmf.rell").readText()
+        val moduleRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/module.rell").readText()
+        val icmfRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/icmf.rell").readText()
         val anchorGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_anchor.xml")!!.readText(),
                 mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))

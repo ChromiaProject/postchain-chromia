@@ -44,12 +44,12 @@ This is a Anchor Chain configuration specifically for testing.
                 <dict>
                     <entry key="modules">
                         <array>
-                            <string>anchoring</string>
+                            <string>cluster_anchoring</string>
                         </array>
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="anchoring/module.rell">
+                            <entry key="cluster_anchoring/module.rell">
                                 <param key="rell" type="string"/>
                             </entry>
                         </dict>

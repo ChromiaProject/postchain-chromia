@@ -6,6 +6,7 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
+import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
@@ -35,7 +36,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
-        val rellCode = File("src/main/rell/icmf/module.rell").readText() +
+        val rellCode = File(RELL_SOURCE_PATH, "icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());
@@ -77,7 +78,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
 
-        val rellCode = File("src/main/rell/icmf/module.rell").readText() +
+        val rellCode = File(RELL_SOURCE_PATH, "icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());
