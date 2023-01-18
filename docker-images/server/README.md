@@ -46,7 +46,7 @@ If you are using docker compose, the environment variable to set on the postchai
 
 ## Example usage
 
-Put the files [private.properties](../dapp/README.md#configprivateproperties) and [node-config.properties](../dapp/README.md#confignode-configproperties) in a folder called `config`.
+Put the files [private.properties](../test-dapp/README.md#configprivateproperties) and [node-config.properties](../test-dapp/README.md#confignode-configproperties) in a folder called `config`.
 
 Start the server using
 ```commandline
@@ -57,5 +57,6 @@ docker run -it --rm \
     -p 9870:9870   \
     -p 7740:7740   \
     -v $(pwd)/config:/config/ \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/postchain-server:3.8.0-SNAPSHOT
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/postchain-server:3.8.0-SNAPSHOT \
+    run-server
 ```

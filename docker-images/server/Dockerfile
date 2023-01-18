@@ -7,10 +7,7 @@ COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_DEBUG=false
 
-EXPOSE 50051
-
 WORKDIR $postchain_dir
 ENTRYPOINT ["/usr/bin/java", "-Dlog4j.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.AppKt" ]
-CMD [ "run-server" ]

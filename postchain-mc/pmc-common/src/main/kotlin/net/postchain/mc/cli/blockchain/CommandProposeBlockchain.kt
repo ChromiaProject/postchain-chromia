@@ -3,7 +3,7 @@ package net.postchain.mc.cli.blockchain
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.blockchainConfigOption
+import net.postchain.mc.cli.blockchainConfigOption
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.configOption
 import net.postchain.mc.cli.util.nameOption
