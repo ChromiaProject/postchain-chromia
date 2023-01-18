@@ -33,6 +33,7 @@ class CommandGetBlockchainConfiguration : CliktCommand(
         }
         val xmlGtv = GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(bc))
         if (save != null) {
+            save!!.parentFile.mkdirs()
             save!!.writeText(xmlGtv)
         } else {
             println(xmlGtv)
