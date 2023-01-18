@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.disableNodeOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
@@ -221,14 +222,14 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testCluster() {
         val newClusterName = "Vera"
-        val providersList = provConfig.pubkey()
-        //create cluster, initial providers added
-        doAndBuildBlocks(
-                provExecutor.createClusterAsync(
-                        newClusterName, providersList,
-                        voterSetSystemP
+
+        provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .createClusterOperation(
+                        pubKeyOf(provExecutor.config),
+                        newClusterName,
+                        voterSetSystemP,
+                        listOf(pubKeyOf(provConfig))
                 )
-        )
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
         var clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(provConfig.pubkey()))

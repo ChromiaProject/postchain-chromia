@@ -1,7 +1,6 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
@@ -148,15 +147,6 @@ open class CliExecution(val config: PostchainClientConfig) {
      * */
     fun createContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
         return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
-    }
-
-    fun createClusterAsync(
-            newClusterName: String,
-            providerKeys: String,
-            governorSet: String
-    ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
-
     }
 
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
