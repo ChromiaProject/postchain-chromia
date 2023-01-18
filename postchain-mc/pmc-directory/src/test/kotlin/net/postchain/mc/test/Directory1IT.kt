@@ -11,6 +11,7 @@ import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchain
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainSigners
@@ -178,7 +179,10 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
         //Make Ellen her own governor.
-        doAndBuildBlocks(provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeUpdateVoterSetOperation(
+                pubKeyOf(provExecutor.config), voterSetName, null, voterSetName, listOf(), listOf(), ""
+        )
+        doAndBuildBlocks(tx)
         id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Executor.voteAsync(id, true))
 

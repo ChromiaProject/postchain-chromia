@@ -201,10 +201,4 @@ open class CliExecution(val config: PostchainClientConfig) {
                 ""
         )
     }
-
-    fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-                config.pubkey().data, voterSetName, null, newGovernor, listOf(), listOf(), ""
-        )
-    }
 }
