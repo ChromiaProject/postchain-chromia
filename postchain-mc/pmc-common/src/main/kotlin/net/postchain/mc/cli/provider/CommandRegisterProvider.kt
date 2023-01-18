@@ -23,6 +23,7 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.PropertiesConfigurationValueSource
 import net.postchain.mc.cli.util.ProviderType
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.pubkeysOption
 
 
@@ -80,11 +81,13 @@ class CommandRegisterProvider : CliktCommand(
 
     private val batch by option(help = "Allows to add a batch of providers (comma delimited list of objects, see examples)").flag()
 
+    private val description by proposalDescriptionOption()
+
     override fun run() {
         if (batch) {
             client.transactionBuilder()
-                    .proposeProvidersOperation(client.pubkey,
-                            provider, providerTier.toTier(), providerTier.isSystem(), enable
+                    .proposeProvidersOperation(
+                            client.pubkey, provider, providerTier.toTier(), providerTier.isSystem(), enable, description
                     )
                     .postAwaitConfirmation()
                     .printResult(
@@ -99,8 +102,8 @@ class CommandRegisterProvider : CliktCommand(
             client.transactionBuilder()
                     .registerProviderOperation(client.pubkey, pubkeys.first(), providerTier.toTier())
                     .apply {
-                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys.first().data, enable)
-                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys.first().data, true)
+                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys.first().data, enable, description)
+                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys.first().data, true, description)
                     }
                     .postAwaitConfirmation()
                     .printResult(

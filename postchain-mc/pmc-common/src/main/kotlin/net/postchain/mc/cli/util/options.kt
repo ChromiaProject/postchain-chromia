@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.OptionTransformContext
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -113,3 +114,6 @@ fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type"
         "-ma" to ProviderQuotaType.max_actions_per_day,
         "-mc" to ProviderQuotaType.max_containers
 )
+
+fun CliktCommand.proposalDescriptionOption(helpMessage: String = "Proposal description") = option("--description", help = helpMessage)
+        .default("")

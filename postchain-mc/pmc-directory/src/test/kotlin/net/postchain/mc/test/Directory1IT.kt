@@ -114,7 +114,7 @@ class Directory1IT : ManagedModeTest() {
 
         //First provider proposes Disable prov2. Prov2 agrees:
         val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
-                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false)
+                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
         doAndBuildBlocks(tx)
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
         doAndBuildBlocks(prov2Executor.voteAsync(id, true))
@@ -237,7 +237,7 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
 
         val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
-                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true)
+                .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
         doAndBuildBlocks(tx)
 
         doAndBuildBlocks(
@@ -277,7 +277,7 @@ class Directory1IT : ManagedModeTest() {
         val configData = readConfigurationFile(configFile, "xml")
         provExecutor.getPostchainClient().transactionBuilder().addNop()
                 .proposeConfigurationAtOperation(
-                        pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force
+                        pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force, ""
                 ).post()
         buildAndAwaitBlocks(1, false)
     }
@@ -306,7 +306,7 @@ class Directory1IT : ManagedModeTest() {
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {
                 val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
-                        .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false)
+                        .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
                 doAndBuildBlocks(tx)
                 true
             }
@@ -463,7 +463,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                pubKeyOf(provClient), BlockchainRid(brid), action
+                pubKeyOf(provClient), BlockchainRid(brid), action, ""
         ).also {
             doAndBuildBlocks(it)
         }
