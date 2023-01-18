@@ -49,19 +49,23 @@ class CommandGetProposal : CliktCommand(
         val proposal = client.getProposal(id) ?: return println("Proposal $id not found")
         val proposedBy = client.getProviderData(PubKey(proposal.proposedBy))
         val votingResults = client.getProposalVotingResults(proposal.id)
-        println("""
-            Proposal:       ${proposal.id.id} - ${proposal.type.name}
-            Proposed by:    ${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}
-            Time:           ${Date.from(Instant.ofEpochMilli(proposal.timestamp))}
-            Description:    ${proposal.description}
-            Positive votes: ${votingResults.positiveVotes}
-            Negative votes: ${votingResults.negativeVotes}
-            Max votes:      ${votingResults.maxVotes}
-            Threshold:      ${formatThreshold(votingResults.threshold)}
-            Status:         ${votingResults.votingResult}
-        """.trimIndent())
 
-        println("\nProposal details")
+        table {
+            row("Proposal:", "${proposal.id.id} - ${proposal.type.name}")
+            row("Proposed by:", "${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
+            row("Time:", "${Date.from(Instant.ofEpochMilli(proposal.timestamp))}")
+            row("Description:", proposal.description)
+            row("Positive votes:", votingResults.positiveVotes.toString())
+            row("Negative votes:", votingResults.negativeVotes.toString())
+            row("Max votes:", votingResults.maxVotes.toString())
+            row("Threshold:", formatThreshold(votingResults.threshold))
+            row("Status:", votingResults.votingResult.toString())
+            hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+        }.render().also {
+            println(it.toString())
+        }
+
+        println("Proposal details")
         println("------------------------------")
         println(formatProposal(client, proposal))
     }
@@ -89,10 +93,10 @@ class CommandGetProposal : CliktCommand(
                 val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
                 val t = table {
                     row("Voter set:", vsu.voterSet)
-                    row("Governor update", vsu.governor ?: "")
-                    row("Majority threshold update", vsu.threshold?.toString() ?: "")
-                    row("New member", vsu.addMember.joinToString(", ") { it.toHex() })
-                    row("Remove member", vsu.removeMember.joinToString(", ") { it.toHex() })
+                    row("Governor update:", vsu.governor ?: "")
+                    row("Majority threshold update:", vsu.threshold?.toString() ?: "")
+                    row("New member:", vsu.addMember.joinToString(", ") { it.toHex() })
+                    row("Remove member:", vsu.removeMember.joinToString(", ") { it.toHex() })
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render()
                 return t.toString()
