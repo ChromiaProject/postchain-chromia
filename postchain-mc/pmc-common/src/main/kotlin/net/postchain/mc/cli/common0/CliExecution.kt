@@ -75,24 +75,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnVal!!
     }
 
-    open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
-        doInTryBlock(false) {
-            val txResult = tx.postAwaitConfirmation()
-            when (txResult.status) {
-                TransactionStatus.CONFIRMED -> println(onSuccess)
-                TransactionStatus.REJECTED -> println(onFail + ": " + txResult.rejectReason)
-                else -> println(onFail)
-            }
-        }
-    }
-
-    fun vote(rowid: Long, yes: Boolean) {
-        sendTxSync(
-                voteAsync(rowid, yes),
-                "Vote added successfully", "Cannot add vote"
-        )
-    }
-
     /**
      * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
      * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
