@@ -6,13 +6,12 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
-import net.postchain.cli.AlreadyExistMode
-import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.forceOption
-import net.postchain.cli.util.heightOption
-import net.postchain.common.wrap
+import net.postchain.mc.cli.AlreadyExistMode
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.blockchainRidOption
+import net.postchain.mc.cli.forceOption
+import net.postchain.mc.cli.heightOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.readConfigurationFile
 

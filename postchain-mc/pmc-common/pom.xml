@@ -48,16 +48,6 @@
 
         <!-- Cli -->
         <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.postchain</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>com.github.ajalt.clikt</groupId>
             <artifactId>clikt-jvm</artifactId>
         </dependency>
@@ -95,6 +85,14 @@
                 <exclusion>
                     <groupId>org.bouncycastle</groupId>
                     <artifactId>bcprov-jdk15to18</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-javalite</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.squareup.okhttp3</groupId>
+                    <artifactId>okhttp</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

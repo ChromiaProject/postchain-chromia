@@ -4,11 +4,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
-import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.heightOption
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLEncoder
+import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.heightOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetBlockchainConfiguration : CliktCommand(
