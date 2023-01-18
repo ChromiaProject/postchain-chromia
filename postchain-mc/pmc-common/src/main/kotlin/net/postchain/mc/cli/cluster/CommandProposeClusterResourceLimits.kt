@@ -13,7 +13,7 @@ import net.postchain.mc.cli.util.cpuOptionHelp
 import net.postchain.mc.cli.util.maxBlockchainsOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.ramOptionHelp
 import net.postchain.mc.cli.util.storageOptionHelp
 
@@ -42,7 +42,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
-    private val message by proposalMessageOption()
+    private val description by proposalDescriptionOption()
 
     override fun run() {
         val limits = mutableMapOf<ClusterResourceLimitType, Long>()
@@ -55,7 +55,7 @@ class CommandProposeClusterResourceLimits : CliktCommand(
                 }
 
         client.transactionBuilder()
-                .proposeClusterLimitsOperation(client.config.pubkey().data, clusterName, limits, message)
+                .proposeClusterLimitsOperation(client.config.pubkey().data, clusterName, limits, description)
                 .postAwaitConfirmation()
                 .printResult(
                         "Cluster limits proposed",

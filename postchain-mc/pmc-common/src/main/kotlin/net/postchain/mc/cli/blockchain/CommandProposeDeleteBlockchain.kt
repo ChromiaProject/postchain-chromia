@@ -7,7 +7,7 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 
 class CommandProposeDeleteBlockchain : CliktCommand(
         name = "remove",
@@ -17,7 +17,7 @@ class CommandProposeDeleteBlockchain : CliktCommand(
 
     private val blockchainRID by blockchainRidOption()
 
-    private val message by proposalMessageOption()
+    private val description by proposalDescriptionOption()
 
     override fun run() {
         client.transactionBuilder()
@@ -25,7 +25,7 @@ class CommandProposeDeleteBlockchain : CliktCommand(
                         client.config.pubkey().data,
                         blockchainRID,
                         BlockchainAction.remove,
-                        message
+                        description
                 )
                 .postAwaitConfirmation()
                 .printResult(

@@ -14,7 +14,7 @@ import net.postchain.mc.cli.util.cpuOptionHelp
 import net.postchain.mc.cli.util.maxBlockchainsOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.ramOptionHelp
 import net.postchain.mc.cli.util.storageOptionHelp
 
@@ -35,7 +35,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
-    private val message by proposalMessageOption()
+    private val description by proposalDescriptionOption()
 
     override fun run() {
         if (_maxBlockchains == null && _cpu == null && _ram == null && _storage == null) {
@@ -52,7 +52,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
                 }
 
         client.transactionBuilder()
-                .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits, message)
+                .proposeContainerLimitsOperation(client.config.pubkey().data, containerName, limits, description)
                 .postAwaitConfirmation()
                 .printResult(
                         "Container limits proposed",

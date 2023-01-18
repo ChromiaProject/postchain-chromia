@@ -9,7 +9,7 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.pubkeyOption
 
 class CommandPromoteProvider : CliktCommand(
@@ -21,12 +21,12 @@ class CommandPromoteProvider : CliktCommand(
 
     private val system by option(help = "Proposes this provider as a system provider").flag()
 
-    private val message by proposalMessageOption()
+    private val description by proposalDescriptionOption()
 
     override fun run() {
         client.transactionBuilder()
                 .run {
-                    if (system) proposeProviderIsSystemOperation(client.pubkey, key.data, true, message)
+                    if (system) proposeProviderIsSystemOperation(client.pubkey, key.data, true, description)
                     else promoteNodeProviderOperation(client.pubkey, key.data)
                 }
                 .postAwaitConfirmation()

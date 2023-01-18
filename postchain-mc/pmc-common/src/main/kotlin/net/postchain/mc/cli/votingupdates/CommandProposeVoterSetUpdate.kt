@@ -12,7 +12,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.proposalMessageOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 
 class CommandProposeVoterSetUpdate : CliktCommand(
         name = "update",
@@ -36,13 +36,13 @@ class CommandProposeVoterSetUpdate : CliktCommand(
             .split(",")
             .default(listOf())
 
-    private val message by proposalMessageOption()
+    private val description by proposalDescriptionOption()
 
     override fun run() {
         client.transactionBuilder()
                 .proposeUpdateVoterSetOperation(
                         client.config.pubkey().data,
-                        voterSet, threshold, governor, newMember, removeMember, message
+                        voterSet, threshold, governor, newMember, removeMember, description
                 )
                 .postAwaitConfirmation()
                 .printResult(

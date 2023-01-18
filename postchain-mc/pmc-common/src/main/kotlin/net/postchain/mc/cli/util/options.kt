@@ -115,5 +115,5 @@ fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type"
         "-mc" to ProviderQuotaType.max_containers
 )
 
-fun CliktCommand.proposalMessageOption(helpMessage: String = "Proposal message") = option("-m", "--message", help = helpMessage)
+fun CliktCommand.proposalDescriptionOption(helpMessage: String = "Proposal description") = option("--description", help = helpMessage)
         .default("")
