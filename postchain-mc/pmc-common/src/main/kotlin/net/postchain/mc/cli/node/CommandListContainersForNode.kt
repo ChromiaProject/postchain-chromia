@@ -4,8 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getNodeContainers
-import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.crypto.PubKey
+import net.postchain.mc.cli.requiredPubkeyOption
 import net.postchain.mc.cli.util.clientOption
 
 class CommandListContainersForNode : CliktCommand(

@@ -4,8 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.common0.CliExecution
+import net.postchain.mc.cli.requiredPubkeyOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandProposeClusterProvider : CliktCommand(
@@ -15,7 +15,6 @@ class CommandProposeClusterProvider : CliktCommand(
     private val config by configOption()
 
     private val provider by requiredPubkeyOption()
-
 
     private val clusterName by option(
             "-c", "--cluster",

@@ -3,9 +3,9 @@ package net.postchain.mc.cli.replica
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.addBlockchainReplicaOperation
-import net.postchain.cli.util.blockchainRidOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 

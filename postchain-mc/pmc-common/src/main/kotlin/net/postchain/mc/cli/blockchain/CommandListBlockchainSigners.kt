@@ -2,7 +2,7 @@ package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.chain0.common.queries.getBlockchainSigners
-import net.postchain.cli.util.blockchainRidOption
+import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.includeInactiveOption
 import net.postchain.mc.cli.util.NodeListFormatter
 import net.postchain.mc.cli.util.clientOption

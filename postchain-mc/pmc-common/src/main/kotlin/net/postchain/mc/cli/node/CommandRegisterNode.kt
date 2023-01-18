@@ -5,10 +5,10 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
 import net.postchain.chain0.common.registerNodeOperation
-import net.postchain.cli.util.hostOption
-import net.postchain.cli.util.portOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.hostOption
+import net.postchain.mc.cli.portOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 
