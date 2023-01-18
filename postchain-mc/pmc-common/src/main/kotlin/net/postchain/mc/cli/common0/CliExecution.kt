@@ -86,14 +86,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         }
     }
 
-    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
-        sendTxSync(
-                createVoterSetAsync(name, providers, threshold, governorName),
-                "voter set created",
-                "Cannot create voter set"
-        )
-    }
-
     fun vote(rowid: Long, yes: Boolean) {
         sendTxSync(
                 voteAsync(rowid, yes),

@@ -6,22 +6,23 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.mc.cli.common0.CliExecution
-import net.postchain.mc.cli.util.configOption
+import net.postchain.chain0.common.voting.createVoterSetOperation
+import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.clientOption
 import net.postchain.mc.cli.util.nameOption
+import net.postchain.mc.cli.util.pubkeysOption
 
 class CommandCreateVoterSet : CliktCommand(
         name = "create",
         help = "Create a new voter set with a list of providers."
 ) {
-    private val config by configOption()
+    private val client by clientOption()
 
     private val name by nameOption("Name of new voter set").required()
 
-    private val providers by option(
-            "-p", "--providers",
-            help = "Comma separated list of pubkeys for this voter set"
-    ).required()
+    private val pubkeys by pubkeysOption("Comma separated list of provider pubkeys for this voter set")
+            .required()
 
     private val threshold by option(
             "-t", "--threshold",
@@ -40,7 +41,18 @@ class CommandCreateVoterSet : CliktCommand(
     )
 
     override fun run() {
-        CliExecution(config)
-                .createVoterSet(name, providers, threshold, governorName)
+        client.transactionBuilder()
+                .createVoterSetOperation(
+                        client.config.pubkey().data,
+                        name,
+                        threshold,
+                        pubkeys.map { it.data },
+                        governorName
+                )
+                .postAwaitConfirmation()
+                .printResult(
+                        "Voter set created",
+                        "Cannot create voter set"
+                )
     }
 }
