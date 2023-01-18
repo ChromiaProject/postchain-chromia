@@ -54,12 +54,12 @@ class CommandGetProposal : CliktCommand(
             row("Proposal:", "${proposal.id.id} - ${proposal.type.name}")
             row("Proposed by:", "${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
             row("Time:", "${Date.from(Instant.ofEpochMilli(proposal.timestamp))}")
-            row("Description:", proposal.description)
             row("Positive votes:", votingResults.positiveVotes.toString())
             row("Negative votes:", votingResults.negativeVotes.toString())
             row("Max votes:", votingResults.maxVotes.toString())
             row("Threshold:", formatThreshold(votingResults.threshold))
             row("Status:", votingResults.votingResult.toString())
+            row("Description:", proposal.description)
             hints { defaultAlignment = Table.Hints.Alignment.LEFT }
         }.render().also {
             println(it.toString())
