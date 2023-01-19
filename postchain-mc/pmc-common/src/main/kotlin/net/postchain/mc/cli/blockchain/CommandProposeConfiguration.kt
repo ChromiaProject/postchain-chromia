@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.AlreadyExistMode
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
@@ -54,14 +55,23 @@ class CommandProposeConfiguration : CliktCommand(
                         }
                         // TODO: [POS-595]: Add compat client to avoid version arg here (?)
                         delta(version) {
-                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
+                            addOperation("propose_configuration",
+                                    gtv(client.config.pubkey().data),
+                                    gtv(blockchainRID),
+                                    gtv(configData)
+                            )
                         }
                     } else {
                         sigma(version) {
                             proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, description)
                         }
                         delta(version) {
-                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
+                            addOperation("propose_configuration_at",
+                                    gtv(client.config.pubkey().data),
+                                    gtv(blockchainRID),
+                                    gtv(configData),
+                                    gtv(height!!),
+                                    gtv(force == AlreadyExistMode.FORCE))
                         }
                     }
                 }
