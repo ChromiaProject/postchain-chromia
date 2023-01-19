@@ -1,7 +1,6 @@
 package net.postchain.mc.cli.common0
 
 import mu.KLogging
-import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
@@ -17,7 +16,6 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.tx.TransactionStatus
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -76,48 +74,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return returnVal!!
     }
 
-    open fun sendTxSync(tx: TransactionBuilder, onSuccess: String, onFail: String) {
-        doInTryBlock(false) {
-            val txResult = tx.postAwaitConfirmation()
-            when (txResult.status) {
-                TransactionStatus.CONFIRMED -> println(onSuccess)
-                TransactionStatus.REJECTED -> println(onFail + ": " + txResult.rejectReason)
-                else -> println(onFail)
-            }
-        }
-    }
-
-    fun createVoterSet(name: String, providers: String, threshold: Long, governorName: String?) {
-        sendTxSync(
-                createVoterSetAsync(name, providers, threshold, governorName),
-                "voter set created",
-                "Cannot create voter set"
-        )
-    }
-
-    fun vote(rowid: Long, yes: Boolean) {
-        sendTxSync(
-                voteAsync(rowid, yes),
-                "Vote added successfully", "Cannot add vote"
-        )
-    }
-
-    fun proposeClusterProvider(clusterName: String, key: String, add: Boolean) {
-        sendTxSync(
-                proposeClusterProviderAsync(clusterName, key, add),
-                "Cluster $clusterName providers update proposed",
-                "Failed proposing cluster $clusterName providers update"
-        )
-    }
-
-    fun proposeBlockchain(blockchainConfigFile: File, format: String?, container: String, name: String) {
-        sendTxSync(
-                proposeBlockchainAsync(blockchainConfigFile, format, container, name),
-                "Blockchain $name has been proposed",
-                "Cannot add bc proposal"
-        )
-    }
-
     /**
      * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
      * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
@@ -150,15 +106,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
     }
 
-    fun createClusterAsync(
-            newClusterName: String,
-            providerKeys: String,
-            governorSet: String
-    ): TransactionBuilder {
-        return makeTransactionWithNop().createClusterOperation(config.pubkey().data, newClusterName, governorSet, providerKeys.split(",").map { it.hexStringToByteArray() })
-
-    }
-
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeProviderIsSystemOperation(
                 config.pubkey().data,
@@ -181,12 +128,8 @@ open class CliExecution(val config: PostchainClientConfig) {
      */
     fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
-        return proposeBc(data, container, name)
-    }
-
-    private fun proposeBc(data: ByteArray, containerName: String, name: String): TransactionBuilder {
         return makeTransactionWithNop().proposeBlockchainOperation(
-                config.pubkey().data, data, name, containerName, ""
+                config.pubkey().data, data, name, container, ""
         )
     }
 
@@ -217,12 +160,6 @@ open class CliExecution(val config: PostchainClientConfig) {
                 newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
                 removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
                 ""
-        )
-    }
-
-    fun proposeVoterSetGovernorAsync(voterSetName: String, newGovernor: String): TransactionBuilder {
-        return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-                config.pubkey().data, voterSetName, null, newGovernor, listOf(), listOf(), ""
         )
     }
 }

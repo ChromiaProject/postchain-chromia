@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.disableNodeOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.ProposalType
@@ -10,6 +11,7 @@ import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
+import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchain
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainSigners
@@ -177,7 +179,10 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
         //Make Ellen her own governor.
-        doAndBuildBlocks(provExecutor.proposeVoterSetGovernorAsync(voterSetName, voterSetName))
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeUpdateVoterSetOperation(
+                pubKeyOf(provExecutor.config), voterSetName, null, voterSetName, listOf(), listOf(), ""
+        )
+        doAndBuildBlocks(tx)
         id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Executor.voteAsync(id, true))
 
@@ -221,14 +226,15 @@ class Directory1IT : ManagedModeTest() {
     @Test
     fun testCluster() {
         val newClusterName = "Vera"
-        val providersList = provConfig.pubkey()
-        //create cluster, initial providers added
-        doAndBuildBlocks(
-                provExecutor.createClusterAsync(
-                        newClusterName, providersList,
-                        voterSetSystemP
+
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .createClusterOperation(
+                        pubKeyOf(provExecutor.config),
+                        newClusterName,
+                        voterSetSystemP,
+                        listOf(pubKeyOf(provConfig))
                 )
-        )
+        doAndBuildBlocks(tx)
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
         var clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(provConfig.pubkey()))
@@ -236,9 +242,9 @@ class Directory1IT : ManagedModeTest() {
 
         doAndBuildBlocks(provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
 
-        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+        val tx2 = provExecutor.getPostchainClient().transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
-        doAndBuildBlocks(tx)
+        doAndBuildBlocks(tx2)
 
         doAndBuildBlocks(
                 provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
