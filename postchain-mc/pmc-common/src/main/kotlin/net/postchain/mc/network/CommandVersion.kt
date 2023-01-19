@@ -1,8 +1,6 @@
 package net.postchain.mc.network
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.PrintMessage
-import net.postchain.chain0.common.directoryVersion
 import net.postchain.mc.cli.util.clientOption
 
 class CommandVersion : CliktCommand(
@@ -12,10 +10,7 @@ class CommandVersion : CliktCommand(
     private val client by clientOption()
 
     override fun run() {
-        try {
-            println("Directory1 version: ${client.directoryVersion()}")
-        } catch (e: Throwable) {
-            throw PrintMessage(e.message ?: "Can't get network version", true)
-        }
+        val version = Version(client).version
+        println("Directory1 version: ${version.codename} v${version.semver}")
     }
 }
