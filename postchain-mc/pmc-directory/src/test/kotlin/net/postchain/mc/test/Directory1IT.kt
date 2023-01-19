@@ -172,22 +172,42 @@ class Directory1IT : ManagedModeTest() {
 
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
-        doAndBuildBlocks(provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), false))
+        val tx1 = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .proposeUpdateVoterSetOperation(
+                        pubKeyOf(provExecutor.config),
+                        voterSetName,
+                        null,
+                        null,
+                        listOf(),
+                        listOf(pubKeyOf(prov2Config)),
+                        ""
+                )
+        doAndBuildBlocks(tx1)
         var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Executor.voteAsync(id, true))
         members = provExecutor.getPostchainClient().getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
         //Make Ellen her own governor.
-        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeUpdateVoterSetOperation(
+        val tx2 = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeUpdateVoterSetOperation(
                 pubKeyOf(provExecutor.config), voterSetName, null, voterSetName, listOf(), listOf(), ""
         )
-        doAndBuildBlocks(tx)
+        doAndBuildBlocks(tx2)
         id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
         doAndBuildBlocks(prov2Executor.voteAsync(id, true))
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
-        doAndBuildBlocks(provExecutor.proposeVoterSetMemberAsync(voterSetName, prov2Config.pubkey(), true))
+        val tx3 = provExecutor.getPostchainClient().transactionBuilder().addNop()
+                .proposeUpdateVoterSetOperation(
+                        pubKeyOf(provExecutor.config),
+                        voterSetName,
+                        null,
+                        null,
+                        listOf(pubKeyOf(prov2Config)),
+                        listOf(),
+                        ""
+                )
+        doAndBuildBlocks(tx3)
         members = provExecutor.getPostchainClient().getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
     }

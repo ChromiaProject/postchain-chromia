@@ -143,23 +143,4 @@ open class CliExecution(val config: PostchainClientConfig) {
                 config.pubkey().data, clusterName, provider.hexStringToByteArray(), add, ""
         )
     }
-
-    /**
-     * Propose update a voter set's members
-     * add = true => Add this provider as member to voter set
-     * add = false => Remove this member from voter set
-     */
-    fun proposeVoterSetMemberAsync(voterSet: String, member: String, add: Boolean): TransactionBuilder {
-        val newMember = if (add) member else null
-        val removeMember = if (!add) member else null
-        return makeTransactionWithNop().proposeUpdateVoterSetOperation(
-                config.pubkey().data,
-                voterSet,
-                null,
-                null,
-                newMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
-                removeMember?.let { listOf(it.hexStringToByteArray()) } ?: listOf(),
-                ""
-        )
-    }
 }
