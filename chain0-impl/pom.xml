@@ -12,7 +12,6 @@
 
     <modules>
         <module>directory1</module>
-        <module>chromia1</module>
     </modules>
 
     <groupId>net.postchain.chain0</groupId>
@@ -38,7 +37,7 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>devnet-compile</id>
+                        <id>rell-compile</id>
                         <goals>
                             <goal>rell-compile</goal>
                         </goals>
