@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
-import net.postchain.chain0.common.Codename
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
 import net.postchain.mc.cli.AlreadyExistMode
@@ -16,6 +15,8 @@ import net.postchain.mc.cli.heightOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.readConfigurationFile
+import net.postchain.mc.compat.delta
+import net.postchain.mc.compat.sigma
 import net.postchain.mc.network.Version
 
 class CommandProposeConfiguration : CliktCommand(
@@ -48,16 +49,19 @@ class CommandProposeConfiguration : CliktCommand(
                 .apply {
                     val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        if (version.version.codename == Codename.Delta) {
-                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
-                        } else {
+                        sigma(version) {
                             proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData, description)
                         }
+                        // TODO: [POS-595]: Add compat client to avoid version arg here (?)
+                        delta(version) {
+                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
+                        }
                     } else {
-                        if (version.version.codename == Codename.Delta) {
-                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
-                        } else {
+                        sigma(version) {
                             proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, description)
+                        }
+                        delta(version) {
+                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
                         }
                     }
                 }
