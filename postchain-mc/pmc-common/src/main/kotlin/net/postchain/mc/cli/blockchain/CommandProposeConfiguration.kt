@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
+import net.postchain.chain0.common.Codename
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
 import net.postchain.mc.cli.AlreadyExistMode
@@ -15,6 +16,7 @@ import net.postchain.mc.cli.heightOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.readConfigurationFile
+import net.postchain.mc.network.Version
 
 class CommandProposeConfiguration : CliktCommand(
         name = "update",
@@ -40,17 +42,29 @@ class CommandProposeConfiguration : CliktCommand(
     private val description by proposalDescriptionOption()
 
     override fun run() {
+        val version = Version(client)
+
         client.transactionBuilder()
                 .apply {
                     val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData, description)
+                        if (version.version.codename == Codename.Delta) {
+                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
+                        } else {
+                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData, description)
+                        }
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, description)
+                        if (version.version.codename == Codename.Delta) {
+                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
+                        } else {
+                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, description)
+                        }
                     }
                 }
                 .postAwaitConfirmation()
-                .printResult("Configuration was proposed",
-                        "Failed to propose configuration")
+                .printResult(
+                        "Configuration was proposed",
+                        "Failed to propose configuration"
+                )
     }
 }
