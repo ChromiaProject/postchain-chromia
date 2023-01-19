@@ -39,11 +39,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
