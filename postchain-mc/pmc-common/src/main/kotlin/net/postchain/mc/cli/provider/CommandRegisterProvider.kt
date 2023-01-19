@@ -6,8 +6,6 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.deprecated
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
@@ -16,6 +14,7 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.proposeProvidersOperation
 import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.parse.GtvParser
 import net.postchain.mc.cli.base.printResult
@@ -24,7 +23,7 @@ import net.postchain.mc.cli.util.PropertiesConfigurationValueSource
 import net.postchain.mc.cli.util.ProviderType
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
-import net.postchain.mc.cli.util.pubkeysOption
+import net.postchain.mc.cli.util.pubkeyOption
 
 
 class CommandRegisterProvider : CliktCommand(
@@ -38,12 +37,15 @@ class CommandRegisterProvider : CliktCommand(
         
         Examples:
         ```
-        (1): pmc provider add --batch -cnp --enable --provider '{pubkey=x"aa...",name="foo",url="http://foo/api"}' --provider '{pubkey=x"bb...",name="bar",url="http://bar/api"}'
+        (1): pmc provider add -cnp --enable --pubkey aa...
         ```
         ```
-        (2): pmc provider add --batch -cnp --enable, where providers will be load from `providers.properties` file:
+        (2): pmc provider add --batch -cnp --enable --provider '{pubkey=x"aa...",name="foo",url="http://foo/api"}' --provider '{pubkey=x"bb...",name="bar"}'
+        ```
+        ```
+        (3): pmc provider add --batch -cnp --enable, where providers will be load from `providers.properties` file:
                 provider={pubkey=x"aa...",name="foo",url="http://foo/api"};{pubkey=x"bb...",name="bar",url="http://bar/api"}
-                provider={pubkey=x"cc...",name="foobar",url="http://foobar/api"}
+                provider={pubkey=x"cc...",url="http://foobar/api"}
         ```
     """
 ) {
@@ -55,15 +57,16 @@ class CommandRegisterProvider : CliktCommand(
 
     private val client by nopClientOption()
 
-    private val pubkeys by pubkeysOption("Comma delimited list of public keys to register as providers")
-            .default(emptyList())
-            .deprecated("Use --provider option instead")
+    private val pubkey by pubkeyOption("Public key to register as provider")
 
     private val provider by option(
             help = "Multiple objects to register as providers (see examples)",
             valueSourceKey = "provider"
     ).convert {
-        GtvObjectMapper.fromGtv(GtvParser.parse(it), ProviderInfo::class)
+        val pi = GtvParser.parse(it).asDict().toMutableMap()
+        pi.putIfAbsent("name", gtv(""))
+        pi.putIfAbsent("url", gtv(""))
+        GtvObjectMapper.fromGtv(gtv(pi), ProviderInfo::class)
     }.multiple(required = true)
 
     private val providerTier by mutuallyExclusiveOptions(
@@ -85,6 +88,7 @@ class CommandRegisterProvider : CliktCommand(
 
     override fun run() {
         if (batch) {
+            if (pubkey != null) throw CliktError("use --provider instead of --pubkey in a batch mode")
             client.transactionBuilder()
                     .proposeProvidersOperation(
                             client.pubkey, provider, providerTier.toTier(), providerTier.isSystem(), enable, description
@@ -95,15 +99,12 @@ class CommandRegisterProvider : CliktCommand(
                             "Failed to propose provider batch"
                     )
         } else {
-            when {
-                pubkeys.isEmpty() -> throw CliktError("--pubkeys must be provided")
-                pubkeys.size != 1 -> throw CliktError("Use --batch mode to add multiple providers")
-            }
+            if (pubkey == null) throw CliktError("--pubkey must be provided")
             client.transactionBuilder()
-                    .registerProviderOperation(client.pubkey, pubkeys.first(), providerTier.toTier())
+                    .registerProviderOperation(client.pubkey, pubkey!!, providerTier.toTier())
                     .apply {
-                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkeys.first().data, enable, description)
-                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkeys.first().data, true, description)
+                        if (providerTier.shouldEnable(enable)) proposeProviderStateOperation(client.pubkey, pubkey!!.data, enable, description)
+                        if (providerTier == ProviderType.SYSTEM_PROVIDER) proposeProviderIsSystemOperation(client.pubkey, pubkey!!.data, true, description)
                     }
                     .postAwaitConfirmation()
                     .printResult(
