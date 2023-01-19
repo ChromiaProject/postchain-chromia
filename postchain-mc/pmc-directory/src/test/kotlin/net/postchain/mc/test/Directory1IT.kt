@@ -227,13 +227,14 @@ class Directory1IT : ManagedModeTest() {
     fun testCluster() {
         val newClusterName = "Vera"
 
-        provExecutor.getPostchainClient().transactionBuilder().addNop()
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
                 .createClusterOperation(
                         pubKeyOf(provExecutor.config),
                         newClusterName,
                         voterSetSystemP,
                         listOf(pubKeyOf(provConfig))
                 )
+        doAndBuildBlocks(tx)
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
         var clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(provConfig.pubkey()))
@@ -241,9 +242,9 @@ class Directory1IT : ManagedModeTest() {
 
         doAndBuildBlocks(provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
 
-        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop()
+        val tx2 = provExecutor.getPostchainClient().transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
-        doAndBuildBlocks(tx)
+        doAndBuildBlocks(tx2)
 
         doAndBuildBlocks(
                 provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
