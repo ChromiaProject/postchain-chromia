@@ -29,9 +29,9 @@ import net.postchain.mc.cli.util.pubkeyOption
 
 class BatchOptions : OptionGroup() {
 
-    val batch by option(help = "Allows to add a batch of providers (comma delimited list of objects, see examples)").flag()
+    val batch by option(help = "Allows to add a batch of providers with --provider (see examples)").flag()
     val provider by option(
-            help = "Multiple objects to register as providers (see examples)",
+            help = "Multiple objects to register as providers in --batch mode (comma delimited list of objects, see examples)",
             valueSourceKey = "provider"
     ).convert {
         val pi = GtvParser.parse(it).asDict().toMutableMap()
@@ -52,13 +52,13 @@ class CommandRegisterProvider : CliktCommand(
         
         Examples:
         ```
-        (1): pmc provider add -cnp --enable --pubkey aa...
+        (1): pmc provider register -cnp --enable --pubkey aa...
         ```
         ```
-        (2): pmc provider add --batch -cnp --enable --provider '{pubkey=x"aa...",name="foo",url="http://foo/api"}' --provider '{pubkey=x"bb...",name="bar"}'
+        (2): pmc provider register --batch -cnp --enable --provider '{pubkey=x"aa...",name="foo",url="http://foo/api"}' --provider '{pubkey=x"bb...",name="bar"}'
         ```
         ```
-        (3): pmc provider add --batch -cnp --enable, where providers will be load from `providers.properties` file:
+        (3): pmc provider register --batch -cnp --enable, where providers will be load from `providers.properties` file:
                 provider={pubkey=x"aa...",name="foo",url="http://foo/api"};{pubkey=x"bb...",name="bar",url="http://bar/api"}
                 provider={pubkey=x"cc...",url="http://foobar/api"}
         ```
