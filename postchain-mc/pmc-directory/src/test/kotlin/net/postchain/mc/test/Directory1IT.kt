@@ -9,6 +9,7 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
@@ -266,15 +267,17 @@ class Directory1IT : ManagedModeTest() {
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
         doAndBuildBlocks(tx2)
 
-        doAndBuildBlocks(
-                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = true)
+        val tx3 = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeClusterProviderOperation(
+                pubKeyOf(provExecutor.config), newClusterName, prov2Config.pubkey().hexStringToByteArray(), true, ""
         )
+        doAndBuildBlocks(tx3)
         clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(prov2Config.pubkey()))
         assertEquals(listOf(newClusterName), clusters)
 
-        doAndBuildBlocks(
-                provExecutor.proposeClusterProviderAsync(newClusterName, prov2Config.pubkey(), add = false)
+        val tx4 = provExecutor.getPostchainClient().transactionBuilder().addNop().proposeClusterProviderOperation(
+                pubKeyOf(provExecutor.config), newClusterName, prov2Config.pubkey().hexStringToByteArray(), false, ""
         )
+        doAndBuildBlocks(tx4)
         clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(prov2Config.pubkey()))
         assertEquals(listOf(), clusters)
 

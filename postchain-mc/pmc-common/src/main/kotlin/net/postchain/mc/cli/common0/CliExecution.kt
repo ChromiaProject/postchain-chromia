@@ -2,9 +2,7 @@ package net.postchain.mc.cli.common0
 
 import mu.KLogging
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
-import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.createVoterSetOperation
@@ -133,14 +131,4 @@ open class CliExecution(val config: PostchainClientConfig) {
         )
     }
 
-    /**
-     * Propose update of cluster providers
-     * add = true => Add this provider
-     * add = false => Remove this provider from cluster
-     */
-    fun proposeClusterProviderAsync(clusterName: String, provider: String, add: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().proposeClusterProviderOperation(
-                config.pubkey().data, clusterName, provider.hexStringToByteArray(), add, ""
-        )
-    }
 }
