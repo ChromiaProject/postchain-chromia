@@ -112,7 +112,8 @@ fun CliktCommand.providerTierOption() = option(help = "Provider tier").switch(
 
 fun CliktCommand.providerQuotaTypeOption() = option(help = "Provider quota type").switch(
         "-ma" to ProviderQuotaType.max_actions_per_day,
-        "-mc" to ProviderQuotaType.max_containers
+        "-mc" to ProviderQuotaType.max_containers,
+        "-mn" to ProviderQuotaType.max_nodes
 )
 
 fun CliktCommand.proposalDescriptionOption(helpMessage: String = "Proposal description") = option("--description", help = helpMessage)
