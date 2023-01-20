@@ -21,17 +21,21 @@ import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.chain0.common.queries.getNodesWithProvider
 import net.postchain.chain0.common.queries.getProviderClusters
+import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.updateNodeOperation
+import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.model.BlockchainAction
+import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -130,7 +134,7 @@ class Directory1IT : ManagedModeTest() {
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
-        doAndBuildBlocks(provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
+        doAndBuildBlocks(registerProviderAsync(provExecutor, prov2Config.pubkey(), true))
         doAndBuildBlocks(provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), true))
         assertProviderData(prov2Config.pubkey(), "", true)
     }
@@ -158,13 +162,10 @@ class Directory1IT : ManagedModeTest() {
         addSystemProv2()
 
         val voterSetName = "Ellen"
-        val providersList = "${provConfig.pubkey()},${prov2Config.pubkey()}"
-        doAndBuildBlocks(
-                provExecutor.createVoterSetAsync(
-                        voterSetName, providersList, 0,
-                        voterSetSystemP
-                )
+        val tx = provExecutor.getPostchainClient().transactionBuilder().addNop().createVoterSetOperation(
+                pubKeyOf(provExecutor.config), voterSetName, 0, listOf(pubKeyOf(provConfig), pubKeyOf(prov2Config)), voterSetSystemP
         )
+        doAndBuildBlocks(tx)
         assertAdded("get_voter_set", "name", GtvString(voterSetName))
         val listVotersets = provExecutor.getPostchainClient().getVoterSets()
         assertEquals(voterSetName, listVotersets[2].name)
@@ -263,7 +264,7 @@ class Directory1IT : ManagedModeTest() {
         var clusters = provExecutor.getPostchainClient().getProviderClusters(PubKey(provConfig.pubkey()))
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
-        doAndBuildBlocks(provExecutor.registerProviderAsync(prov2Config.pubkey(), true))
+        doAndBuildBlocks(registerProviderAsync(provExecutor, prov2Config.pubkey(), true))
 
         val tx2 = provExecutor.getPostchainClient().transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
@@ -523,5 +524,13 @@ class Directory1IT : ManagedModeTest() {
             logger.error { e.message }
         }
         return listBlockChainContainerPair
+    }
+
+    private fun registerProviderAsync(executor: CliExecution, key: String, nodeProvider: Boolean): TransactionBuilder {
+        return executor.getPostchainClient().transactionBuilder().addNop().registerProviderOperation(
+                pubKeyOf(executor.config),
+                PubKey(key),
+                if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
+        )
     }
 }

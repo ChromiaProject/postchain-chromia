@@ -32,31 +32,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().transactionBuilder().addNop()
     }
 
-    /**
-     * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
-     * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
-     * AddNodeAsync().
-     */
-
-    fun registerProviderAsync(key: String, nodeProvider: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().registerProviderOperation(
-                config.pubkey().data,
-                PubKey(key),
-                if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
-        )
-    }
-
-    fun createVoterSetAsync(
-            name: String,
-            providerKeys: String,
-            threshold: Long,
-            governorName: String?
-    ): TransactionBuilder {
-        return makeTransactionWithNop().createVoterSetOperation(
-                config.pubkey().data, name, threshold, providerKeys.split(",").map { it.hexStringToByteArray() }, governorName
-        )
-    }
-
     /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
      * Who can create a container and update resource limits? Cluster's deployer voter set.
      * */
