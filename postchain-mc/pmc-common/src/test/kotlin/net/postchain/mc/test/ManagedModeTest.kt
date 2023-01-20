@@ -10,7 +10,9 @@ import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
+import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getProviderData
+import net.postchain.chain0.common.queries.listClustersOfNode
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
@@ -19,6 +21,7 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.toHex
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -153,16 +156,18 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assert(vs.asInteger()).isGreaterThan(0L)
     }
 
-    fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
+    private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
         awaitUntilAsserted {
-            var nodeInfo = provExecutor.getNodeInfo(nodePubkey).asDict()
-            assert(nodeInfo["active"]?.asBoolean()).isEqualTo(true)
-            assert(nodeInfo["host"]?.asString()).isEqualTo(host)
-            assert(nodeInfo["port"]?.asInteger()).isEqualTo(port)
-            assertArrayEquals(nodeInfo["provider"]?.asByteArray(), providerPublicKey.hexStringToByteArray())
-            assertArrayEquals(nodeInfo["pubkey"]?.asByteArray(), nodePubkey.hexStringToByteArray())
+            val nodePK = PubKey(nodePubkey)
+            val nodeData = provExecutor.getPostchainClient().getNodeData(nodePK)
+            assert(nodeData.active).isEqualTo(true)
+            assert(nodeData.host).isEqualTo(host)
+            assert(nodeData.port).isEqualTo(port)
+            assertEquals(nodeData.provider, providerPublicKey.hexStringToWrappedByteArray())
+            assertEquals(nodeData.pubkey, nodePK)
             if (cluster != "") {
-                assertEquals(nodeInfo["cluster"]?.asArray()?.map { it.asString() }, listOf(cluster))
+                val clusters = provExecutor.getPostchainClient().listClustersOfNode(nodePK)
+                assertEquals(clusters, listOf(cluster))
             }
         }
     }

@@ -32,27 +32,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().transactionBuilder().addNop()
     }
 
-    fun getNodeInfo(key: String): Gtv {
-        var returnVal: Gtv? = null
-
-        try {
-            val info = getPostchainClient().query(
-                    "get_node_data",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            ).asDict().toMutableMap()
-            val clusterInfo = getPostchainClient().query(
-                    "list_clusters_of_node",
-                    gtv("pubkey" to gtv(key.hexStringToByteArray()))
-            )
-            info["cluster"] = clusterInfo
-            returnVal = gtv(info)
-        } catch (e: Exception) {
-            logger.error { e.message }
-        }
-
-        return returnVal!!
-    }
-
     /**
      * Below: Asynchronous versions of operation commands. These are the ones tested in DirectoryTest.kt. They are given
      * a synchronizing skin so that they can be called by the client. Example: CommandAddNode calls addNode() that calls
