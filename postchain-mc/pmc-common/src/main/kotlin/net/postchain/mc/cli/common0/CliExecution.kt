@@ -32,19 +32,10 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().transactionBuilder().addNop()
     }
 
-    private fun doInTryBlock(logError: Boolean = true, todo: () -> Unit) {
-        try {
-            todo()
-        } catch (e: Exception) {
-            if (logError) {
-                logger.error { e.message }
-            }
-        }
-    }
-
     fun getNodeInfo(key: String): Gtv {
         var returnVal: Gtv? = null
-        doInTryBlock {
+
+        try {
             val info = getPostchainClient().query(
                     "get_node_data",
                     gtv("pubkey" to gtv(key.hexStringToByteArray()))
@@ -55,20 +46,10 @@ open class CliExecution(val config: PostchainClientConfig) {
             )
             info["cluster"] = clusterInfo
             returnVal = gtv(info)
+        } catch (e: Exception) {
+            logger.error { e.message }
         }
-        return returnVal!!
-    }
 
-    fun getBlockchainConfiguration(blockchainRID: BlockchainRid, height: Long): ByteArray {
-        var returnVal: ByteArray? = null
-        doInTryBlock {
-            // it means current height
-            var heightConfiguration = height
-            if (height == -1L) {
-                heightConfiguration = getPostchainClient().getBlockchainLastHeight(blockchainRID)
-            }
-            returnVal = getPostchainClient().nmGetBlockchainConfiguration(blockchainRID, heightConfiguration)
-        }
         return returnVal!!
     }
 

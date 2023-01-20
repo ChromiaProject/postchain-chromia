@@ -27,6 +27,7 @@ import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.client.config.PostchainClientConfig
@@ -52,6 +53,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class Directory1IT : ManagedModeTest() {
@@ -412,7 +414,8 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainConfiguration() {
-        val blockchain = provExecutor.getBlockchainConfiguration(provConfig.blockchainRid, 0L)
+        val blockchain = provExecutor.getPostchainClient().nmGetBlockchainConfiguration(provConfig.blockchainRid, 0L)
+        assertNotNull(blockchain)
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
         assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
