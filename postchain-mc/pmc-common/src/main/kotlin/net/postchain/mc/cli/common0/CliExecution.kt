@@ -32,13 +32,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().transactionBuilder().addNop()
     }
 
-    /** Propose a new (isolated) container with default resource limits and a deployer voter set in an existing cluster.
-     * Who can create a container and update resource limits? Cluster's deployer voter set.
-     * */
-    fun createContainerAsync(containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
-        return makeTransactionWithNop().createContainerFromOperation(config.pubkey().data, containerName, clusterName, 1, deployerName)
-    }
-
     fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
         return makeTransactionWithNop().proposeProviderIsSystemOperation(
                 config.pubkey().data,

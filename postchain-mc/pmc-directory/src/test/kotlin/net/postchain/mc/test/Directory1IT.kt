@@ -27,6 +27,7 @@ import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
+import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
@@ -46,6 +47,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
+import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.readConfigurationFile
 import org.awaitility.Awaitility
@@ -220,7 +222,7 @@ class Directory1IT : ManagedModeTest() {
     fun testProposeAddBlockchainXmlWithDependency() {
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
         assertEquals(2, listBlockchains(false).size)
@@ -362,7 +364,7 @@ class Directory1IT : ManagedModeTest() {
     fun testPauseBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
@@ -383,7 +385,7 @@ class Directory1IT : ManagedModeTest() {
     fun testDeleteBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(provExecutor.createContainerAsync(container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
         doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
 
         val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
@@ -533,4 +535,10 @@ class Directory1IT : ManagedModeTest() {
                 if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
         )
     }
+
+    private fun createContainerAsync(executor: CliExecution, containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
+        return executor.getPostchainClient().transactionBuilder().addNop().createContainerFromOperation(
+                pubKeyOf(executor.config), containerName, clusterName, 1, deployerName)
+    }
+
 }
