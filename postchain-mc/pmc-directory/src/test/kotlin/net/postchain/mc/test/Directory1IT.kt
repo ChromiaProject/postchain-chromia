@@ -9,6 +9,7 @@ import net.postchain.chain0.common.proposal.ProposalType
 import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
@@ -224,14 +225,14 @@ class Directory1IT : ManagedModeTest() {
         val container1 = "container1"
         doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
-        doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(proposeBlockchainAsync(provExecutor, bcConfig1xmlFile, "xml", container1, "1"))
         assertEquals(2, listBlockchains(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
 
         //add yet another bc, dependent on previous one
-        doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlDependencyFile, "xml", container1, "2"))
+        doAndBuildBlocks(proposeBlockchainAsync(provExecutor, bcConfig1xmlDependencyFile, "xml", container1, "2"))
         val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
         val bc1 = listOfBcs.find { it.name == "1" }!!
         val bc2 = listOfBcs.find { it.name == "2" }!!
@@ -365,7 +366,7 @@ class Directory1IT : ManagedModeTest() {
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(proposeBlockchainAsync(provExecutor, bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
         val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
@@ -386,7 +387,7 @@ class Directory1IT : ManagedModeTest() {
         //add new bc in new container in system cluster
         val container1 = "container1"
         doAndBuildBlocks(createContainerAsync(provExecutor, container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(provExecutor.proposeBlockchainAsync(bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(proposeBlockchainAsync(provExecutor, bcConfig1xmlFile, "xml", container1, "1"))
 
         val listOfBcs = provExecutor.getPostchainClient().getBlockchains(false)
         val bc1 = listOfBcs.find { it.name == "1" }!!.rid.data
@@ -546,4 +547,12 @@ class Directory1IT : ManagedModeTest() {
                 pubKeyOf(executor.config), pubKey.hexStringToByteArray(), isSystem, ""
         )
     }
+
+    private fun proposeBlockchainAsync(executor: CliExecution, blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
+        val data = readConfigurationFile(blockchainConfigFile, format)
+        return executor.getPostchainClient().transactionBuilder().addNop().proposeBlockchainOperation(
+                pubKeyOf(executor.config), data, name, container, ""
+        )
+    }
+
 }

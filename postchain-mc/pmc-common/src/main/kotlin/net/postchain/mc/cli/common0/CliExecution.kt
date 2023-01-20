@@ -40,14 +40,4 @@ open class CliExecution(val config: PostchainClientConfig) {
         return makeTransactionWithNop().makeVoteOperation(config.pubkey().data, rowid, yes)
     }
 
-    /**
-     * Propose add Blockchain to an existing container
-     */
-    fun proposeBlockchainAsync(blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
-        val data = readConfigurationFile(blockchainConfigFile, format)
-        return makeTransactionWithNop().proposeBlockchainOperation(
-                config.pubkey().data, data, name, container, ""
-        )
-    }
-
 }
