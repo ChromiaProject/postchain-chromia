@@ -3,6 +3,8 @@ package net.postchain.mc.cli.provider
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.parameters.groups.OptionGroup
+import com.github.ajalt.clikt.parameters.groups.cooccurring
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.options.convert
@@ -25,6 +27,19 @@ import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
 import net.postchain.mc.cli.util.pubkeyOption
 
+class BatchOptions : OptionGroup() {
+
+    val batch by option(help = "Allows to add a batch of providers (comma delimited list of objects, see examples)").flag()
+    val provider by option(
+            help = "Multiple objects to register as providers (see examples)",
+            valueSourceKey = "provider"
+    ).convert {
+        val pi = GtvParser.parse(it).asDict().toMutableMap()
+        pi.putIfAbsent("name", gtv(""))
+        pi.putIfAbsent("url", gtv(""))
+        GtvObjectMapper.fromGtv(gtv(pi), ProviderInfo::class)
+    }.multiple(required = true)
+}
 
 class CommandRegisterProvider : CliktCommand(
         name = "register",
@@ -59,15 +74,7 @@ class CommandRegisterProvider : CliktCommand(
 
     private val pubkey by pubkeyOption("Public key to register as provider")
 
-    private val provider by option(
-            help = "Multiple objects to register as providers (see examples)",
-            valueSourceKey = "provider"
-    ).convert {
-        val pi = GtvParser.parse(it).asDict().toMutableMap()
-        pi.putIfAbsent("name", gtv(""))
-        pi.putIfAbsent("url", gtv(""))
-        GtvObjectMapper.fromGtv(gtv(pi), ProviderInfo::class)
-    }.multiple()
+    private val batchOptions by BatchOptions().cooccurring()
 
     private val providerTier by mutuallyExclusiveOptions(
             option("-cnp", help = "community node provider").flag().convert { ProviderType.COMMUNITY_NODE_PROVIDER },
@@ -82,17 +89,15 @@ class CommandRegisterProvider : CliktCommand(
             name = "Provider state",
     ).required()
 
-    private val batch by option(help = "Allows to add a batch of providers (comma delimited list of objects, see examples)").flag()
 
     private val description by proposalDescriptionOption()
 
     override fun run() {
-        if (batch) {
+        if (batchOptions != null) {
             if (pubkey != null) throw CliktError("use --provider instead of --pubkey in a batch mode")
-            if (provider.isEmpty()) throw CliktError("at least one provider must be proposed")
             client.transactionBuilder()
                     .proposeProvidersOperation(
-                            client.pubkey, provider, providerTier.toTier(), providerTier.isSystem(), enable, description
+                            client.pubkey, batchOptions!!.provider, providerTier.toTier(), providerTier.isSystem(), enable, description
                     )
                     .postAwaitConfirmation()
                     .printResult(
