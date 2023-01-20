@@ -122,7 +122,8 @@ class Directory1IT : ManagedModeTest() {
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
         doAndBuildBlocks(tx)
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
-        doAndBuildBlocks(voteAsync(prov2Client, id, true))
+        val tx2 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
+        doAndBuildBlocks(tx2)
         assertProviderDisabled(prov2Config.pubkey())
     }
 
@@ -130,8 +131,8 @@ class Directory1IT : ManagedModeTest() {
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
-        doAndBuildBlocks(registerProviderAsync(provClient, prov2Config.pubkey(), true))
-        doAndBuildBlocks(proposeProviderIsSystemAsync(provClient, prov2Config.pubkey(), true))
+        doAndBuildBlocks(registerProvider(provClient, prov2Config.pubkey(), true))
+        doAndBuildBlocks(proposeProviderIsSystem(provClient, prov2Config.pubkey(), true))
         assertProviderData(prov2Config.pubkey(), "", true)
     }
 
@@ -142,11 +143,12 @@ class Directory1IT : ManagedModeTest() {
     fun testProposeDegradeProviderVoteNo() {
         addSystemProv2()
         // Prov2 proposes degradation/demotion of prov1.
-        doAndBuildBlocks(proposeProviderIsSystemAsync(prov2Client, provConfig.pubkey(), false))
+        doAndBuildBlocks(proposeProviderIsSystem(prov2Client, provConfig.pubkey(), false))
 
         // Prov votes no
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_is_system).id
-        doAndBuildBlocks(voteAsync(provClient, id, false))
+        val tx = provClient.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(provClient.config), id, false)
+        doAndBuildBlocks(tx)
 
         val listVoterSet = provClient.getVoterSetMembers(voterSetSystemP)
         assertEquals(2, listVoterSet.size)
@@ -185,7 +187,8 @@ class Directory1IT : ManagedModeTest() {
                 )
         doAndBuildBlocks(tx1)
         var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
-        doAndBuildBlocks(voteAsync(prov2Client, id, true))
+        val tx0 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
+        doAndBuildBlocks(tx0)
         members = provClient.getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
@@ -195,10 +198,11 @@ class Directory1IT : ManagedModeTest() {
         )
         doAndBuildBlocks(tx2)
         id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
-        doAndBuildBlocks(voteAsync(prov2Client, id, true))
+        val tx3 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
+        doAndBuildBlocks(tx3)
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
-        val tx3 = provClient.transactionBuilder().addNop()
+        val tx4 = provClient.transactionBuilder().addNop()
                 .proposeUpdateVoterSetOperation(
                         pubKeyOf(provClient.config),
                         voterSetName,
@@ -208,7 +212,7 @@ class Directory1IT : ManagedModeTest() {
                         listOf(),
                         ""
                 )
-        doAndBuildBlocks(tx3)
+        doAndBuildBlocks(tx4)
         members = provClient.getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
     }
@@ -217,16 +221,16 @@ class Directory1IT : ManagedModeTest() {
     fun testProposeAddBlockchainXmlWithDependency() {
         //add new container to system cluster
         val container1 = "container1"
-        doAndBuildBlocks(createContainerAsync(provClient, container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(createContainer(provClient, container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
-        doAndBuildBlocks(proposeBlockchainAsync(provClient, bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(proposeBlockchain(provClient, bcConfig1xmlFile, "xml", container1, "1"))
         assertEquals(2, listBlockchains(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
 
         //add yet another bc, dependent on previous one
-        doAndBuildBlocks(proposeBlockchainAsync(provClient, bcConfig1xmlDependencyFile, "xml", container1, "2"))
+        doAndBuildBlocks(proposeBlockchain(provClient, bcConfig1xmlDependencyFile, "xml", container1, "2"))
         val listOfBcs = provClient.getBlockchains(false)
         val bc1 = listOfBcs.find { it.name == "1" }!!
         val bc2 = listOfBcs.find { it.name == "2" }!!
@@ -261,7 +265,7 @@ class Directory1IT : ManagedModeTest() {
         var clusters = provClient.getProviderClusters(PubKey(provConfig.pubkey()))
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
-        doAndBuildBlocks(registerProviderAsync(provClient, prov2Config.pubkey(), true))
+        doAndBuildBlocks(registerProvider(provClient, prov2Config.pubkey(), true))
 
         val tx2 = provClient.transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), true, "")
@@ -354,8 +358,8 @@ class Directory1IT : ManagedModeTest() {
     fun testPauseBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(createContainerAsync(provClient, container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(proposeBlockchainAsync(provClient, bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(createContainer(provClient, container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(proposeBlockchain(provClient, bcConfig1xmlFile, "xml", container1, "1"))
 
         //pause new bc
         val listOfBcs = provClient.getBlockchains(false)
@@ -375,8 +379,8 @@ class Directory1IT : ManagedModeTest() {
     fun testDeleteBlockchain() {
         //add new bc in new container in system cluster
         val container1 = "container1"
-        doAndBuildBlocks(createContainerAsync(provClient, container1, systemClusterName, voterSetSystemP))
-        doAndBuildBlocks(proposeBlockchainAsync(provClient, bcConfig1xmlFile, "xml", container1, "1"))
+        doAndBuildBlocks(createContainer(provClient, container1, systemClusterName, voterSetSystemP))
+        doAndBuildBlocks(proposeBlockchain(provClient, bcConfig1xmlFile, "xml", container1, "1"))
 
         val listOfBcs = provClient.getBlockchains(false)
         val bc1 = listOfBcs.find { it.name == "1" }!!.rid.data
@@ -461,7 +465,7 @@ class Directory1IT : ManagedModeTest() {
     fun testGetProposal() {
         addSystemProv2()
         //Propose degradation of prov2 again
-        doAndBuildBlocks(proposeProviderIsSystemAsync(provClient, prov2Config.pubkey(), false))
+        doAndBuildBlocks(proposeProviderIsSystem(provClient, prov2Config.pubkey(), false))
 
         val type = ProposalType.provider_is_system
         val id = assertProposalTypeAndGetRowid(type)
@@ -515,7 +519,7 @@ class Directory1IT : ManagedModeTest() {
         return listBlockChainContainerPair
     }
 
-    private fun registerProviderAsync(client: PostchainClient, key: String, nodeProvider: Boolean): TransactionBuilder {
+    private fun registerProvider(client: PostchainClient, key: String, nodeProvider: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().registerProviderOperation(
                 pubKeyOf(client.config),
                 PubKey(key),
@@ -523,27 +527,21 @@ class Directory1IT : ManagedModeTest() {
         )
     }
 
-    private fun createContainerAsync(client: PostchainClient, containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
+    private fun createContainer(client: PostchainClient, containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
         return client.transactionBuilder().addNop().createContainerFromOperation(
                 pubKeyOf(client.config), containerName, clusterName, 1, deployerName)
     }
 
-    private fun proposeProviderIsSystemAsync(client: PostchainClient, pubKey: String, isSystem: Boolean): TransactionBuilder {
+    private fun proposeProviderIsSystem(client: PostchainClient, pubKey: String, isSystem: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().proposeProviderIsSystemOperation(
                 pubKeyOf(client.config), pubKey.hexStringToByteArray(), isSystem, ""
         )
     }
 
-    private fun proposeBlockchainAsync(client: PostchainClient, blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
+    private fun proposeBlockchain(client: PostchainClient, blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return client.transactionBuilder().addNop().proposeBlockchainOperation(
                 pubKeyOf(client.config), data, name, container, ""
         )
     }
-
-    private fun voteAsync(client: PostchainClient, rowid: Long, yes: Boolean): TransactionBuilder {
-        return client.transactionBuilder().addNop().makeVoteOperation(
-                pubKeyOf(client.config), rowid, yes)
-    }
-
 }
