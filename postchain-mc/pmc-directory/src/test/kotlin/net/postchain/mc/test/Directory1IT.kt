@@ -11,6 +11,7 @@ import net.postchain.chain0.common.proposal.getProposalsSince
 import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
 import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
+import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchain
@@ -47,7 +48,6 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.common0.CliExecution
 import net.postchain.mc.cli.util.readConfigurationFile
 import org.awaitility.Awaitility
@@ -137,7 +137,7 @@ class Directory1IT : ManagedModeTest() {
      */
     private fun addSystemProv2() {
         doAndBuildBlocks(registerProviderAsync(provExecutor, prov2Config.pubkey(), true))
-        doAndBuildBlocks(provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), true))
+        doAndBuildBlocks(proposeProviderIsSystemAsync(provExecutor, prov2Config.pubkey(), true))
         assertProviderData(prov2Config.pubkey(), "", true)
     }
 
@@ -148,7 +148,7 @@ class Directory1IT : ManagedModeTest() {
     fun testProposeDegradeProviderVoteNo() {
         addSystemProv2()
         // Prov2 proposes degradation/demotion of prov1.
-        doAndBuildBlocks(prov2Executor.proposeProviderIsSystemAsync(provConfig.pubkey(), false))
+        doAndBuildBlocks(proposeProviderIsSystemAsync(prov2Executor, provConfig.pubkey(), false))
 
         // Prov votes no
         voteNo(ProposalType.provider_is_system)
@@ -472,7 +472,7 @@ class Directory1IT : ManagedModeTest() {
     fun testGetProposal() {
         addSystemProv2()
         //Propose degradation of prov2 again
-        doAndBuildBlocks(provExecutor.proposeProviderIsSystemAsync(prov2Config.pubkey(), false))
+        doAndBuildBlocks(proposeProviderIsSystemAsync(provExecutor, prov2Config.pubkey(), false))
 
         val type = ProposalType.provider_is_system
         val id = assertProposalTypeAndGetRowid(type)
@@ -541,4 +541,9 @@ class Directory1IT : ManagedModeTest() {
                 pubKeyOf(executor.config), containerName, clusterName, 1, deployerName)
     }
 
+    private fun proposeProviderIsSystemAsync(executor: CliExecution, pubKey: String, isSystem: Boolean): TransactionBuilder {
+        return executor.getPostchainClient().transactionBuilder().addNop().proposeProviderIsSystemOperation(
+                pubKeyOf(executor.config), pubKey.hexStringToByteArray(), isSystem, ""
+        )
+    }
 }

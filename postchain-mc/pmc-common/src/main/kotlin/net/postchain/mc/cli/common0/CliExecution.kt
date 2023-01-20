@@ -32,15 +32,6 @@ open class CliExecution(val config: PostchainClientConfig) {
         return getPostchainClient().transactionBuilder().addNop()
     }
 
-    fun proposeProviderIsSystemAsync(pubKey: String, isSystem: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().proposeProviderIsSystemOperation(
-                config.pubkey().data,
-                pubKey.hexStringToByteArray(),
-                isSystem,
-                ""
-        )
-    }
-
     /**
      * Instead of an admin node, configuration changes are made via propositions and voting. This is how a provider
      * can vote for a pending configuration.
