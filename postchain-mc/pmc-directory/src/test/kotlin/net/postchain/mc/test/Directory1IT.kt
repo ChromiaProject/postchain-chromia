@@ -172,7 +172,6 @@ class Directory1IT : ManagedModeTest() {
         var members = provClient.getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
 
-
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
         val tx1 = provClient.transactionBuilder().addNop()
                 .proposeUpdateVoterSetOperation(
@@ -488,13 +487,11 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeBlockchainAction(provClient: PostchainClient, brid: ByteArray, action: BlockchainAction) {
         provClient.transactionBuilder().proposeBlockchainActionOperation(
-                pubKeyOf(provClient), BlockchainRid(brid), action, ""
+                pubKeyOf(provClient.config), BlockchainRid(brid), action, ""
         ).also {
             doAndBuildBlocks(it)
         }
     }
-
-    private fun pubKeyOf(client: PostchainClient) = pubKeyOf(client.config)
 
     private fun pubKeyOf(clientConfig: PostchainClientConfig) = clientConfig.signers.first().pubKey.data
 
@@ -520,7 +517,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun registerProviderAsync(client: PostchainClient, key: String, nodeProvider: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().registerProviderOperation(
-                pubKeyOf(client),
+                pubKeyOf(client.config),
                 PubKey(key),
                 if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
         )
@@ -528,25 +525,25 @@ class Directory1IT : ManagedModeTest() {
 
     private fun createContainerAsync(client: PostchainClient, containerName: String, clusterName: String, deployerName: String): TransactionBuilder {
         return client.transactionBuilder().addNop().createContainerFromOperation(
-                pubKeyOf(client), containerName, clusterName, 1, deployerName)
+                pubKeyOf(client.config), containerName, clusterName, 1, deployerName)
     }
 
     private fun proposeProviderIsSystemAsync(client: PostchainClient, pubKey: String, isSystem: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().proposeProviderIsSystemOperation(
-                pubKeyOf(client), pubKey.hexStringToByteArray(), isSystem, ""
+                pubKeyOf(client.config), pubKey.hexStringToByteArray(), isSystem, ""
         )
     }
 
     private fun proposeBlockchainAsync(client: PostchainClient, blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
         val data = readConfigurationFile(blockchainConfigFile, format)
         return client.transactionBuilder().addNop().proposeBlockchainOperation(
-                pubKeyOf(client), data, name, container, ""
+                pubKeyOf(client.config), data, name, container, ""
         )
     }
 
     private fun voteAsync(client: PostchainClient, rowid: Long, yes: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().makeVoteOperation(
-                pubKeyOf(client), rowid, yes)
+                pubKeyOf(client.config), rowid, yes)
     }
 
 }

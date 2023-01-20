@@ -5,7 +5,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
-import net.postchain.chain0.common.addBlockchainReplicaOperation
 import net.postchain.chain0.common.queries.GetNodesWithProviderResult
 import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
@@ -156,26 +155,6 @@ abstract class ManagedModeTest : RellIntegrationTest() {
                 assertEquals(clusters, listOf(cluster))
             }
         }
-    }
-
-    /** Initialization function that adds node0 with configuration from  config.properties. It also adds blockchain (This is
-     * function addNode0AndBlockchain). Finally, node1 is added as replica for bc0.
-     * */
-    protected fun initAndNode1ReplicaOfBc0() {
-        //add node1 (no specified cluster)
-        addNode(provClient, node1Pubkey, node1Host, node1Port, "")
-
-        // make node 1 a replica for bc0
-        provClient.transactionBuilder()
-                .addBlockchainReplicaOperation(
-                        provConfig.signers.first().pubKey.data,
-                        clientConfig.blockchainRid,
-                        node1Pubkey.hexStringToByteArray()
-                ).post()
-        buildAndAwaitBlocks(5)
-
-        val replicas = provClient.getBlockchainReplicas(clientConfig.blockchainRid)
-        assertEquals(1, replicas.size)
     }
 
     protected fun assertNodeInfo(
