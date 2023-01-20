@@ -12,7 +12,6 @@
 
     <modules>
         <module>directory1</module>
-        <module>chromia1</module>
     </modules>
 
     <groupId>net.postchain.chain0</groupId>
@@ -24,6 +23,7 @@
         <rell.directory>${project.parent.basedir}/rell</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
+        <rellCompileModules>delta,cluster_anchoring,icmf</rellCompileModules>
         <rellTestModules>common,roles,container,cluster,nm_api</rellTestModules>
     </properties>
 
@@ -38,12 +38,12 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>devnet-compile</id>
+                        <id>rell-compile</id>
                         <goals>
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <mainModule>delta</mainModule>
+                            <mainModule>${rellCompileModules}</mainModule>
                         </configuration>
                     </execution>
                     <execution>

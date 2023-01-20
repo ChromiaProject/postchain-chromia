@@ -40,11 +40,6 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- Cli -->
         <dependency>
@@ -141,6 +136,23 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>rell-client-gen</id>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
+                            <packageName>net.postchain.chain0</packageName>
+                            <mainModule>directory1</mainModule>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
