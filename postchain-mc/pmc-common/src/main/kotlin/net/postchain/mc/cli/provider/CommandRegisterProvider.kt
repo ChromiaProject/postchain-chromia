@@ -67,7 +67,7 @@ class CommandRegisterProvider : CliktCommand(
         pi.putIfAbsent("name", gtv(""))
         pi.putIfAbsent("url", gtv(""))
         GtvObjectMapper.fromGtv(gtv(pi), ProviderInfo::class)
-    }.multiple(required = true)
+    }.multiple()
 
     private val providerTier by mutuallyExclusiveOptions(
             option("-cnp", help = "community node provider").flag().convert { ProviderType.COMMUNITY_NODE_PROVIDER },
@@ -89,6 +89,7 @@ class CommandRegisterProvider : CliktCommand(
     override fun run() {
         if (batch) {
             if (pubkey != null) throw CliktError("use --provider instead of --pubkey in a batch mode")
+            if (provider.isEmpty()) throw CliktError("at least one provider must be proposed")
             client.transactionBuilder()
                     .proposeProvidersOperation(
                             client.pubkey, provider, providerTier.toTier(), providerTier.isSystem(), enable, description
