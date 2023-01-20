@@ -28,16 +28,4 @@ open class CliExecution(val config: PostchainClientConfig) {
 
     open fun getPostchainClient() = ClientUtil.fromConfig(config)
 
-    protected fun makeTransactionWithNop(): TransactionBuilder {
-        return getPostchainClient().transactionBuilder().addNop()
-    }
-
-    /**
-     * Instead of an admin node, configuration changes are made via propositions and voting. This is how a provider
-     * can vote for a pending configuration.
-     */
-    fun voteAsync(rowid: Long, yes: Boolean): TransactionBuilder {
-        return makeTransactionWithNop().makeVoteOperation(config.pubkey().data, rowid, yes)
-    }
-
 }

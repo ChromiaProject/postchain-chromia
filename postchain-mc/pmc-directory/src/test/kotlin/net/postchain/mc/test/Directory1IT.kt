@@ -29,6 +29,7 @@ import net.postchain.chain0.common.voting.createVoterSetOperation
 import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
+import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerFromOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.model.ProviderTier
@@ -129,7 +130,7 @@ class Directory1IT : ManagedModeTest() {
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
         doAndBuildBlocks(tx)
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
-        doAndBuildBlocks(prov2Executor.voteAsync(id, true))
+        doAndBuildBlocks(voteAsync(prov2Executor, id, true))
         assertProviderDisabled(prov2Config.pubkey())
     }
 
@@ -152,7 +153,9 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(proposeProviderIsSystemAsync(prov2Executor, provConfig.pubkey(), false))
 
         // Prov votes no
-        voteNo(ProposalType.provider_is_system)
+        val id = assertProposalTypeAndGetRowid(ProposalType.provider_is_system).id
+        doAndBuildBlocks(voteAsync(provExecutor, id, false))
+
         val listVoterSet = provExecutor.getPostchainClient().getVoterSetMembers(voterSetSystemP)
         assertEquals(2, listVoterSet.size)
     }
@@ -191,7 +194,7 @@ class Directory1IT : ManagedModeTest() {
                 )
         doAndBuildBlocks(tx1)
         var id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
-        doAndBuildBlocks(prov2Executor.voteAsync(id, true))
+        doAndBuildBlocks(voteAsync(prov2Executor, id, true))
         members = provExecutor.getPostchainClient().getVoterSetMembers(voterSetName)
         assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
 
@@ -201,7 +204,7 @@ class Directory1IT : ManagedModeTest() {
         )
         doAndBuildBlocks(tx2)
         id = assertProposalTypeAndGetRowid(ProposalType.voter_set_update).id
-        doAndBuildBlocks(prov2Executor.voteAsync(id, true))
+        doAndBuildBlocks(voteAsync(prov2Executor, id, true))
 
         //add prov2 to voter set Ellen again. Since now only one member, no voting is needed for this proposal to be applied.
         val tx3 = provExecutor.getPostchainClient().transactionBuilder().addNop()
@@ -315,11 +318,6 @@ class Directory1IT : ManagedModeTest() {
                         pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force, ""
                 ).post()
         buildAndAwaitBlocks(1, false)
-    }
-
-    private fun voteNo(proposalType: ProposalType) {
-        val id = assertProposalTypeAndGetRowid(proposalType).id
-        doAndBuildBlocks(provExecutor.voteAsync(id, false))
     }
 
     @Test
@@ -553,6 +551,11 @@ class Directory1IT : ManagedModeTest() {
         return executor.getPostchainClient().transactionBuilder().addNop().proposeBlockchainOperation(
                 pubKeyOf(executor.config), data, name, container, ""
         )
+    }
+
+    private fun voteAsync(executor: CliExecution, rowid: Long, yes: Boolean): TransactionBuilder {
+        return executor.getPostchainClient().transactionBuilder().addNop().makeVoteOperation(
+                pubKeyOf(executor.config), rowid, yes)
     }
 
 }
