@@ -27,19 +27,6 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-admin-service</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-container</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-        </dependency>
 
         <!-- Cli -->
         <dependency>
@@ -97,10 +84,6 @@
             <artifactId>kformat</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-api</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
