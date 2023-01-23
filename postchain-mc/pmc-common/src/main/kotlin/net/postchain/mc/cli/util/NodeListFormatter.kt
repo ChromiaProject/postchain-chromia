@@ -19,7 +19,7 @@ object NodeListFormatter {
                             it[1].asString(),
                             it[2].asInteger().toString(),
                             it[3].asBoolean().toString(),
-                            Date.from(Instant.ofEpochMilli(it[4].asInteger()))
+                            Date.from(Instant.ofEpochMilli(it[4].asInteger())).toString()
                     )
                 }
             }

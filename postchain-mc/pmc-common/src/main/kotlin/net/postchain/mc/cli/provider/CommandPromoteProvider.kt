@@ -31,7 +31,7 @@ class CommandPromoteProvider : CliktCommand(
                 }
                 .postAwaitConfirmation()
                 .printResult(
-                        "Provider was promoted",
+                        "Promotion of provider has been proposed",
                         "Failed to promote provider"
                 )
     }
