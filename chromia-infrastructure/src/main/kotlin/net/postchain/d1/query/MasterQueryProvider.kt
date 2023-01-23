@@ -43,7 +43,7 @@ object MasterQueryProvider {
     private fun getMasterRestApiUrl(appConfig: AppConfig): String {
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-        return URL("http",
+        return URL(if(containerNodeConfig.masterRestApiTlsEnabled) "https" else "http",
                 containerNodeConfig.masterHost,
                 containerNodeConfig.masterRestApiPort,
                 restApiConfig.basePath
