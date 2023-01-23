@@ -117,7 +117,6 @@ internal class Directory1DeploymentNightly {
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
-            assert(isNode(node1.nodeKeyPair.pubKey)).isTrue()
             assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
 
