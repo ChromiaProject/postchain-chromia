@@ -52,11 +52,19 @@ container.subnode-database-url=jdbc:postgresql://localhost:5432/postchain
 
 ## Docker
 
-When starting a node using docker you must expose a few ports and add some mount points. Folders containing node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, the api port and the subnode port must be exposed. 
+When starting a node using docker you must expose a few ports and add some mount points. Folders containing 
+node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a 
+volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, 
+the api port and the subnode port must be exposed. The container will run as the current user/group, and subnode containers 
+will be run as the same user/group. It needs the `docker` group to be able to talk to the docker daemon. 
+
 Example:
 ```shell
 docker run -d --name postchain \
+    --user $(id -u):$(id -g) \
+    --group-add $(cut -d: -f3 < <(getent group docker)) \
     --volume /var/run/docker.sock:/var/run/docker.sock \
+    --mount type=bind,source="/etc/passwd",target=/etc/passwd,readonly \
     --mount type=bind,source=/var/lib/subnode,target=/var/lib/subnode \
     --mount type=bind,source="$(pwd)/config",target=/config,readonly \
     --mount type=bind,source="$(pwd)/build",target=/build,readonly \
