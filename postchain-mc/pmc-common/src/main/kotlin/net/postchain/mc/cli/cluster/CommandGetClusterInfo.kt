@@ -8,6 +8,7 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getClusterData
 import net.postchain.chain0.common.queries.getClusterNodes
 import net.postchain.chain0.common.queries.getClusterProviders
+import net.postchain.chain0.common.queries.getClusterReplicaNodes
 import net.postchain.chain0.model.ClusterResourceLimitType
 import net.postchain.chain0.nm_api.nmGetClusterLimits
 import net.postchain.mc.cli.util.clientOption
@@ -39,7 +40,7 @@ class CommandGetClusterInfo : CliktCommand(
                 clusterProviders.forEach { provider ->
                     row(provider.pubkey.toString(), provider.name)
                 }
-                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+                defaultHints()
             }.render().also { println(it) }
         } else {
             println("No providers")
@@ -52,10 +53,23 @@ class CommandGetClusterInfo : CliktCommand(
                 clusterNodes.forEach { node ->
                     row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
                 }
-                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+                defaultHints()
             }.render().also { println(it) }
         } else {
             println("No nodes")
+        }
+
+        val clusterReplicas = client.getClusterReplicaNodes(name)
+        if (clusterReplicas.isNotEmpty()) {
+            table {
+                header("Replica node", "Address")
+                clusterReplicas.forEach { node ->
+                    row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
+                }
+                defaultHints()
+            }.render().also { println(it) }
+        } else {
+            println("No replica nodes")
         }
 
         table {
@@ -64,7 +78,14 @@ class CommandGetClusterInfo : CliktCommand(
             ClusterResourceLimitType.values().forEach {
                 row(it.name, limits[it.name]?.toString() ?: "-1")
             }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            defaultHints()
         }.render().also { println(it) }
+    }
+
+    private fun Table.defaultHints() {
+        hints {
+            borderStyle = Table.BorderStyle.SINGLE_LINE
+            defaultAlignment = Table.Hints.Alignment.LEFT
+        }
     }
 }
