@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
@@ -30,7 +31,7 @@ class CommandRegisterNode : CliktCommand(
             "-c",
             "--cluster",
             help = "comma delimited list of clusters this node belongs to"
-    ).split(",").required()
+    ).split(",").default(emptyList())
 
     override fun run() {
         client.transactionBuilder()
