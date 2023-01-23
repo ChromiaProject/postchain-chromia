@@ -54,7 +54,6 @@ internal class Directory1DeploymentNightly {
         private val dapps = mutableMapOf<String, BlockchainRid>()
         private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
-        private const val globalAnchoringContainer = "anchoring_system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -141,7 +140,7 @@ internal class Directory1DeploymentNightly {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
-                assert(getSummary().containers).isEqualTo(2L)
+                assert(getSummary().containers).isEqualTo(1L)
             }
 
             transactionBuilder()
@@ -156,7 +155,7 @@ internal class Directory1DeploymentNightly {
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, globalAnchoringContainer, foobarContainer), containers)
+                assertEquals(setOf(systemContainer, foobarContainer), containers)
             }
         }
     }
