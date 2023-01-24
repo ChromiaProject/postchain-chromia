@@ -7,8 +7,8 @@ import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.proposal.proposeAnchoringConfigurationOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeAnchoringConfiguration : CliktCommand(
         name = "update",
@@ -25,7 +25,7 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
     override fun run() {
-        val bcConfig = readConfigurationFile(anchoringConfig)
+        val bcConfig = BlockchainConfig.readFromFile(anchoringConfig)
         client.transactionBuilder()
                 .proposeAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()

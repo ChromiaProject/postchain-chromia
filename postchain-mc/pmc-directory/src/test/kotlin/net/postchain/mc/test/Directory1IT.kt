@@ -50,7 +50,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.util.readConfigurationFile
+import net.postchain.mc.cli.util.BlockchainConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
@@ -307,7 +307,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
         val configFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_$configId.xml")
-        val configData = readConfigurationFile(configFile).data
+        val configData = BlockchainConfig.readFromFile(configFile).data
         provClient.transactionBuilder().addNop()
                 .proposeConfigurationAtOperation(
                         pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force, ""
@@ -539,7 +539,7 @@ class Directory1IT : ManagedModeTest() {
     }
 
     private fun proposeBlockchain(client: PostchainClient, blockchainConfigFile: File, container: String, name: String): TransactionBuilder {
-        val data = readConfigurationFile(blockchainConfigFile).data
+        val data = BlockchainConfig.readFromFile(blockchainConfigFile).data
         return client.transactionBuilder().addNop().proposeBlockchainOperation(
                 pubKeyOf(client.config), data, name, container, ""
         )

@@ -13,19 +13,22 @@ import java.io.File
 class BlockchainConfig(
         val hash: WrappedByteArray,
         val data: ByteArray
-)
+) {
 
-fun readConfigurationFile(blockchainConfigFile: File): BlockchainConfig {
-    val (gtv, data) = if (blockchainConfigFile.extension == "gtv") {
-        val data = blockchainConfigFile.readBytes()
-        val gtv = GtvFactory.decodeGtv(data)
-        gtv to data
-    } else {
-        val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
-        val data = GtvEncoder.encodeGtv(gtv)
-        gtv to data
+    companion object {
+        fun readFromFile(blockchainConfigFile: File): BlockchainConfig {
+            val (gtv, data) = if (blockchainConfigFile.extension == "gtv") {
+                val data = blockchainConfigFile.readBytes()
+                val gtv = GtvFactory.decodeGtv(data)
+                gtv to data
+            } else {
+                val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
+                val data = GtvEncoder.encodeGtv(gtv)
+                gtv to data
+            }
+
+            val hash = gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            return BlockchainConfig(hash.wrap(), data)
+        }
     }
-
-    val hash = gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-    return BlockchainConfig(hash.wrap(), data)
 }

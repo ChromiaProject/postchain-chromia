@@ -13,9 +13,9 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.forceOption
 import net.postchain.mc.cli.heightOption
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
-import net.postchain.mc.cli.util.readConfigurationFile
 import net.postchain.mc.compat.delta
 import net.postchain.mc.compat.sigma
 import net.postchain.mc.network.Version
@@ -45,7 +45,7 @@ class CommandProposeConfiguration : CliktCommand(
 
     override fun run() {
         val version = Version(client)
-        val bcConfig = readConfigurationFile(blockchainConfigFile)
+        val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
 
         client.transactionBuilder()
                 .apply {

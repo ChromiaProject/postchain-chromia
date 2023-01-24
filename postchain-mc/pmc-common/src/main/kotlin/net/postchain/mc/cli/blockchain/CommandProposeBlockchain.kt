@@ -7,9 +7,9 @@ import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainConfigOption
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeBlockchain : CliktCommand(
         name = "add",
@@ -24,7 +24,7 @@ class CommandProposeBlockchain : CliktCommand(
     private val name by nameOption("Name of blockchain").required()
 
     override fun run() {
-        val bcConfig = readConfigurationFile(blockchainConfigFile)
+        val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
         client.transactionBuilder()
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
