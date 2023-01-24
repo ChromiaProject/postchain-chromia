@@ -15,13 +15,8 @@ class BlockchainConfig(
         val data: ByteArray
 )
 
-fun readConfigurationFile(blockchainConfigFile: File, format: String?): BlockchainConfig {
-    var fmt = format
-    if (fmt == null) {
-        fmt = if (blockchainConfigFile.extension == "gtv") "gtv" else "xml"
-    }
-
-    val (gtv, data) = if (fmt == "gtv") {
+fun readConfigurationFile(blockchainConfigFile: File): BlockchainConfig {
+    val (gtv, data) = if (blockchainConfigFile.extension == "gtv") {
         val data = blockchainConfigFile.readBytes()
         val gtv = GtvFactory.decodeGtv(data)
         gtv to data

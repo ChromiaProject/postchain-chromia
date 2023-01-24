@@ -25,7 +25,7 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
     override fun run() {
-        val bcConfig = readConfigurationFile(anchoringConfig, null)
+        val bcConfig = readConfigurationFile(anchoringConfig)
         client.transactionBuilder()
                 .proposeAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()

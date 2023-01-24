@@ -24,7 +24,7 @@ class CommandProposeBlockchain : CliktCommand(
     private val name by nameOption("Name of blockchain").required()
 
     override fun run() {
-        val bcConfig = readConfigurationFile(blockchainConfigFile, null)
+        val bcConfig = readConfigurationFile(blockchainConfigFile)
         client.transactionBuilder()
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()

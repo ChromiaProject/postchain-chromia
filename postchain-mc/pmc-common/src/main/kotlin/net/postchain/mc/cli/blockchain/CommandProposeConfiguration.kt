@@ -45,7 +45,7 @@ class CommandProposeConfiguration : CliktCommand(
 
     override fun run() {
         val version = Version(client)
-        val bcConfig = readConfigurationFile(blockchainConfigFile, null)
+        val bcConfig = readConfigurationFile(blockchainConfigFile)
 
         client.transactionBuilder()
                 .apply {

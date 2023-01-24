@@ -22,7 +22,7 @@ class CommandInit : CliktCommand(
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true)
 
     override fun run() {
-        val anchoringConfigData = anchoringConfig?.let { readConfigurationFile(it, null).data }
+        val anchoringConfigData = anchoringConfig?.let { readConfigurationFile(it).data }
         client.transactionBuilder()
                 .initOperation(anchoringConfigData)
                 .postAwaitConfirmation()
