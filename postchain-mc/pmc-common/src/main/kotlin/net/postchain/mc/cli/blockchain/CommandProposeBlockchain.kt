@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
@@ -23,14 +24,22 @@ class CommandProposeBlockchain : CliktCommand(
 
     private val name by nameOption("Name of blockchain").required()
 
+    private val quite by option("-q", "--quite", help = "Only prints Blockchain RID if succeeds").flag()
+
     override fun run() {
         val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
         client.transactionBuilder()
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
-                .printResult(
-                        "Blockchain $name has been proposed: ${bcConfig.hash}",
-                        "Cannot add bc proposal"
-                )
+                .apply {
+                    if (quite) {
+                        printResult(bcConfig.hash.toString(), "")
+                    } else {
+                        printResult(
+                                "Blockchain $name has been proposed: ${bcConfig.hash}",
+                                "Cannot add bc proposal"
+                        )
+                    }
+                }
     }
 }
