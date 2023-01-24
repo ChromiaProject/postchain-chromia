@@ -24,12 +24,12 @@ class CommandProposeBlockchain : CliktCommand(
     private val name by nameOption("Name of blockchain").required()
 
     override fun run() {
-        val data = readConfigurationFile(blockchainConfigFile, null)
+        val bcConfig = readConfigurationFile(blockchainConfigFile, null)
         client.transactionBuilder()
-                .proposeBlockchainOperation(client.pubkey, data, name, container, "")
+                .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
                 .printResult(
-                        "Blockchain $name has been proposed",
+                        "Blockchain $name has been proposed: ${bcConfig.blockchainRid}",
                         "Cannot add bc proposal"
                 )
     }

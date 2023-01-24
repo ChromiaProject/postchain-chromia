@@ -25,13 +25,13 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
     override fun run() {
+        val bcConfig = readConfigurationFile(anchoringConfig, null)
         client.transactionBuilder()
-                .apply {
-                    val configData = readConfigurationFile(anchoringConfig, null)
-                    proposeAnchoringConfigurationOperation(client.config.pubkey().data, configData)
-                }
+                .proposeAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()
-                .printResult("Anchoring configuration was proposed",
-                        "Failed to propose anchoring configuration")
+                .printResult(
+                        "Anchoring configuration was proposed: ${bcConfig.blockchainRid}",
+                        "Failed to propose anchoring configuration"
+                )
     }
 }

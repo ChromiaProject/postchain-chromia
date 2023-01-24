@@ -307,7 +307,7 @@ class Directory1IT : ManagedModeTest() {
 
     private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
         val configFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_$configId.xml")
-        val configData = readConfigurationFile(configFile, "xml")
+        val configData = readConfigurationFile(configFile, "xml").data
         provClient.transactionBuilder().addNop()
                 .proposeConfigurationAtOperation(
                         pubKeyOf(provConfig), provConfig.blockchainRid, configData, height, force, ""
@@ -539,7 +539,7 @@ class Directory1IT : ManagedModeTest() {
     }
 
     private fun proposeBlockchain(client: PostchainClient, blockchainConfigFile: File, format: String?, container: String, name: String): TransactionBuilder {
-        val data = readConfigurationFile(blockchainConfigFile, format)
+        val data = readConfigurationFile(blockchainConfigFile, format).data
         return client.transactionBuilder().addNop().proposeBlockchainOperation(
                 pubKeyOf(client.config), data, name, container, ""
         )
