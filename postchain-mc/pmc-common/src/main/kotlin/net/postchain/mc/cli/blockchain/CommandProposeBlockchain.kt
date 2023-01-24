@@ -24,7 +24,7 @@ class CommandProposeBlockchain : CliktCommand(
 
     private val name by nameOption("Name of blockchain").required()
 
-    private val quite by option("-q", "--quite", help = "Only prints Blockchain RID if succeeds").flag()
+    private val quiet by option("-q", "--quiet", help = "Only prints Blockchain RID if succeeds").flag()
 
     override fun run() {
         val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
@@ -32,7 +32,7 @@ class CommandProposeBlockchain : CliktCommand(
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
                 .apply {
-                    if (quite) {
+                    if (quiet) {
                         printResult(bcConfig.hash.toString(), "")
                     } else {
                         printResult(
