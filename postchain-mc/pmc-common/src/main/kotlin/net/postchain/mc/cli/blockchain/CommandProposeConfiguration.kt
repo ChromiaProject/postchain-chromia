@@ -76,7 +76,7 @@ class CommandProposeConfiguration : CliktCommand(
                 }
                 .postAwaitConfirmation()
                 .printResult(
-                        "Configuration was proposed: ${bcConfig.blockchainRid}",
+                        "Configuration was proposed: ${bcConfig.hash}",
                         "Failed to propose configuration"
                 )
     }

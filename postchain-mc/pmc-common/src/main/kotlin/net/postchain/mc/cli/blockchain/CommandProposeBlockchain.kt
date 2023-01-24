@@ -29,7 +29,7 @@ class CommandProposeBlockchain : CliktCommand(
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
                 .printResult(
-                        "Blockchain $name has been proposed: ${bcConfig.blockchainRid}",
+                        "Blockchain $name has been proposed: ${bcConfig.hash}",
                         "Cannot add bc proposal"
                 )
     }

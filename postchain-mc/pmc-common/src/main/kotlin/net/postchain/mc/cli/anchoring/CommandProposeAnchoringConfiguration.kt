@@ -30,7 +30,7 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
                 .proposeAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()
                 .printResult(
-                        "Anchoring configuration was proposed: ${bcConfig.blockchainRid}",
+                        "Anchoring configuration was proposed: ${bcConfig.hash}",
                         "Failed to propose anchoring configuration"
                 )
     }

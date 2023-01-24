@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.util
 
-import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -10,7 +11,7 @@ import net.postchain.mc.cli.base.cryptoSystem
 import java.io.File
 
 class BlockchainConfig(
-        val blockchainRid: BlockchainRid,
+        val hash: WrappedByteArray,
         val data: ByteArray
 )
 
@@ -30,6 +31,6 @@ fun readConfigurationFile(blockchainConfigFile: File, format: String?): Blockcha
         gtv to data
     }
 
-    val brid = BlockchainRid(gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
-    return BlockchainConfig(brid, data)
+    val hash = gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+    return BlockchainConfig(hash.wrap(), data)
 }
