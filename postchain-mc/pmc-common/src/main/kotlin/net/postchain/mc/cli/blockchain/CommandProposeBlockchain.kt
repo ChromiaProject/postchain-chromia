@@ -1,15 +1,16 @@
 package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainConfigOption
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandProposeBlockchain : CliktCommand(
         name = "add",
@@ -23,14 +24,22 @@ class CommandProposeBlockchain : CliktCommand(
 
     private val name by nameOption("Name of blockchain").required()
 
+    private val quiet by option("-q", "--quiet", help = "Only prints Blockchain RID if succeeds").flag()
+
     override fun run() {
-        val data = readConfigurationFile(blockchainConfigFile, null)
+        val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
         client.transactionBuilder()
-                .proposeBlockchainOperation(client.pubkey, data, name, container, "")
+                .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()
-                .printResult(
-                        "Blockchain $name has been proposed",
-                        "Cannot add bc proposal"
-                )
+                .apply {
+                    if (quiet) {
+                        printResult(bcConfig.hash.toString(), "")
+                    } else {
+                        printResult(
+                                "Blockchain $name has been proposed: ${bcConfig.hash}",
+                                "Cannot add bc proposal"
+                        )
+                    }
+                }
     }
 }

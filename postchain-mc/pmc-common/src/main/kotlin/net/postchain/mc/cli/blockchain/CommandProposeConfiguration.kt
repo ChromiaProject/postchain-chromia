@@ -13,9 +13,9 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.forceOption
 import net.postchain.mc.cli.heightOption
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
-import net.postchain.mc.cli.util.readConfigurationFile
 import net.postchain.mc.compat.delta
 import net.postchain.mc.compat.sigma
 import net.postchain.mc.network.Version
@@ -45,31 +45,30 @@ class CommandProposeConfiguration : CliktCommand(
 
     override fun run() {
         val version = Version(client)
+        val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
 
         client.transactionBuilder()
                 .apply {
-                    val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
                         sigma(version) {
-                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData, description)
+                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, description)
                         }
-                        // TODO: [POS-595]: Add compat client to avoid version arg here (?)
                         delta(version) {
                             addOperation("propose_configuration",
                                     gtv(client.config.pubkey().data),
                                     gtv(blockchainRID),
-                                    gtv(configData)
+                                    gtv(bcConfig.data)
                             )
                         }
                     } else {
                         sigma(version) {
-                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE, description)
+                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, height!!, force == AlreadyExistMode.FORCE, description)
                         }
                         delta(version) {
                             addOperation("propose_configuration_at",
                                     gtv(client.config.pubkey().data),
                                     gtv(blockchainRID),
-                                    gtv(configData),
+                                    gtv(bcConfig.data),
                                     gtv(height!!),
                                     gtv(force == AlreadyExistMode.FORCE))
                         }
@@ -77,7 +76,7 @@ class CommandProposeConfiguration : CliktCommand(
                 }
                 .postAwaitConfirmation()
                 .printResult(
-                        "Configuration was proposed",
+                        "Configuration was proposed: ${bcConfig.hash}",
                         "Failed to propose configuration"
                 )
     }

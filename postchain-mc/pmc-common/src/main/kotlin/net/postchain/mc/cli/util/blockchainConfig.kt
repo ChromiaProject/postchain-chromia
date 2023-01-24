@@ -1,27 +1,34 @@
 package net.postchain.mc.cli.util
 
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
+import net.postchain.mc.cli.base.cryptoSystem
 import java.io.File
 
-fun readConfigurationFile(blockchainConfigFile: File, format: String?): ByteArray {
-    var fmt = format
-    if (fmt == null) {
-        fmt = if (blockchainConfigFile.extension == "gtv") "gtv" else "xml"
-    }
-    val data: ByteArray
-    if (fmt == "gtv") {
-        data = blockchainConfigFile.readBytes()
-        // try to decode to ensure data is valid
-        GtvFactory.decodeGtv(data)
-    } else {
-        data = getEncodedGtxValueFromFile(blockchainConfigFile)
-    }
-    return data
-}
+class BlockchainConfig(
+        val hash: WrappedByteArray,
+        val data: ByteArray
+) {
 
-private fun getEncodedGtxValueFromFile(blockchainConfigFile: File): ByteArray {
-    val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
-    return GtvEncoder.encodeGtv(gtv)
+    companion object {
+        fun readFromFile(blockchainConfigFile: File): BlockchainConfig {
+            val (gtv, data) = if (blockchainConfigFile.extension == "gtv") {
+                val data = blockchainConfigFile.readBytes()
+                val gtv = GtvFactory.decodeGtv(data)
+                gtv to data
+            } else {
+                val gtv = GtvMLParser.parseGtvML(blockchainConfigFile.readText())
+                val data = GtvEncoder.encodeGtv(gtv)
+                gtv to data
+            }
+
+            val hash = gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            return BlockchainConfig(hash.wrap(), data)
+        }
+    }
 }

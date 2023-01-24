@@ -5,8 +5,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.mc.cli.base.printResult
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.readConfigurationFile
 
 class CommandInit : CliktCommand(
         name = "initialize",
@@ -22,7 +22,7 @@ class CommandInit : CliktCommand(
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true)
 
     override fun run() {
-        val anchoringConfigData = anchoringConfig?.let { readConfigurationFile(it, null) }
+        val anchoringConfigData = anchoringConfig?.let { BlockchainConfig.readFromFile(it).data }
         client.transactionBuilder()
                 .initOperation(anchoringConfigData)
                 .postAwaitConfirmation()
