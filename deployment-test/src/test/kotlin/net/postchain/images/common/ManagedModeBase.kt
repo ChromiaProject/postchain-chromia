@@ -44,20 +44,18 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
 
-    fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int, provider: KeyPair, configDir: String): PostchainContainer {
+    fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
         return PostchainContainer(
                 DockerImages.chromiaServerImage(),
                 appConfig,
                 startupMsg = "Postchain server started, listening on 50051",
                 nodeHost = hostName,
-                nodePort = messagePort,
                 provider = provider
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
-                .withFixedExposedPort(apiPort, apiPort) // Must be fixed so subnode can connect
-                .withExposedPorts(50051)
+                .withExposedPorts(50051, appConfig.getInt("api.port"))
                 .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
