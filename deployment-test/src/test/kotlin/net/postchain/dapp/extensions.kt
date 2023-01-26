@@ -18,7 +18,7 @@ import java.time.Duration
  */
 fun Postable.postTransactionUntilConfirmed(
     transactionName: String = "",
-    retries: Int = 20,
+    retries: Int = 100,
     timeOut: Duration = Duration.ofSeconds(2)
 ): TransactionResult {
     repeat(retries) { attempt ->

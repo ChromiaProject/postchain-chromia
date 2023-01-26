@@ -30,7 +30,6 @@ import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
 import net.postchain.d1.rell.cluster_anchoring.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -39,7 +38,6 @@ import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.BindMode
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import kotlin.test.assertEquals
@@ -47,37 +45,19 @@ import kotlin.test.assertEquals
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-internal class Directory1DeploymentNightly {
+abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase("../chain0-impl/rell/src") {
+        @JvmStatic
+        protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
-        private val resolvedDockerHost = getResolvedDockerHost()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
         private val foobarResourceLimits = ContainerResourceLimits(
                 Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
         )
-
-        init {
-            node3.withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                    .withMasterDockerConfig()
-                    .withClasspathResourceMapping(
-                            "${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/node3",
-                            MOUNT_DIR, BindMode.READ_ONLY
-                    )
-                    .withEnv("POSTCHAIN_CONFIG", "$MOUNT_DIR/node-config.properties")
-        }
-
-
-        @JvmStatic
-        @BeforeAll
-        fun setup() {
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
 
         @JvmStatic
         @AfterAll
@@ -86,7 +66,7 @@ internal class Directory1DeploymentNightly {
             removeSubnodeContainers()
         }
 
-        private fun removeSubnodeContainers() {
+        fun removeSubnodeContainers() {
             dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
                 if (it.image().contains("chromia-subnode")) {
                     dockerClient.stopContainer(it.id(), 0)
@@ -95,6 +75,8 @@ internal class Directory1DeploymentNightly {
             }
         }
     }
+
+    abstract val numberOfMasterNodes: Int
 
     @Test
     @Order(1)
@@ -309,7 +291,7 @@ internal class Directory1DeploymentNightly {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(2)
+            assert(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
         }
     }
 
