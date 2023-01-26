@@ -13,7 +13,7 @@ class LocalQueryProvider(
         private val clusterManagement: ClusterManagement,
         private val managedNodeDataSource: ManagedNodeDataSource
 ) : ChromiaQueryProvider {
-    override fun getChain0Query()= PostchainQuery { name, gtv -> managedNodeDataSource.query(name, gtv) }
+    override fun getChain0Query() = PostchainQuery { name, gtv -> managedNodeDataSource.query(name, gtv) }
 
     override fun getAnchorQuery(): PostchainBlockClient? {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
@@ -21,8 +21,8 @@ class LocalQueryProvider(
         return getQuery(info.anchoringChain)
     }
 
-    override fun getQuery(blockchainRid: BlockchainRid): PostchainBlockClient? =
-            blockQueriesProvider.getBlockQueries(blockchainRid)?.let {
+    override fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient? =
+            blockQueriesProvider.getBlockQueries(targetBlockchainRid)?.let {
                 BlockQueriesAdapter(it)
             }
 }

@@ -7,5 +7,5 @@ import net.postchain.common.BlockchainRid
 interface ChromiaQueryProvider {
     fun getChain0Query(): PostchainQuery
     fun getAnchorQuery(): PostchainBlockClient?
-    fun getQuery(blockchainRid: BlockchainRid): PostchainBlockClient?
+    fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient?
 }
