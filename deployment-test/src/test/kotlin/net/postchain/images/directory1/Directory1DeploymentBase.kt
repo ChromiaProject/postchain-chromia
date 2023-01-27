@@ -62,6 +62,7 @@ abstract class Directory1DeploymentBase {
         @JvmStatic
         @AfterAll
         fun breakdown() {
+            saveSubnodeLogs(dockerClient)
             stopNodes()
             removeSubnodeContainers()
         }
