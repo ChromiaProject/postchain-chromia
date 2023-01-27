@@ -20,6 +20,8 @@ COPY src/main/docker/scripts/* ${postchain_dir}/
 ENV POSTCHAIN_DIR=$postchain_dir
 ENV POSTCHAIN_LOG4J2=$POSTCHAIN_DIR/log/log4j2.yml
 
+ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
+
 WORKDIR $postchain_dir
 ENTRYPOINT ["./entrypoint.sh"]
 
