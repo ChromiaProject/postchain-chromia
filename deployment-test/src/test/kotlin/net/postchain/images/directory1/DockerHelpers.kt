@@ -46,6 +46,6 @@ internal fun saveSubnodeLogs(dockerClient: DockerClient) {
     all.filter { it.image().contains("chromia-subnode") }.forEach {
         val log = dockerClient.logs(it.id(), LogsParam.stdout(), LogsParam.stderr())
             .readFully()
-        File("logs/${it.names()!!.first().replace("/", "")}.log").writeText(log)
+        File("logs/${it.names()!!.first().replace("/", "")}.log").appendText(log)
     }
 }
