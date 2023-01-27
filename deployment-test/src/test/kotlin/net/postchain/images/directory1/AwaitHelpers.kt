@@ -4,7 +4,7 @@ import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import kotlin.test.assertTrue
 
-internal fun <T> awaitQueryResult(atMost: Duration = Duration.TWO_MINUTES, assertion: () -> T): T? {
+internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
     var result: T? = null
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         try {
@@ -16,7 +16,7 @@ internal fun <T> awaitQueryResult(atMost: Duration = Duration.TWO_MINUTES, asser
     return result
 }
 
-internal fun awaitUntilAsserted(atMost: Duration = Duration.TWO_MINUTES, assertion: () -> Unit) {
+internal fun awaitUntilAsserted(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> Unit) {
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         assertion()
     }

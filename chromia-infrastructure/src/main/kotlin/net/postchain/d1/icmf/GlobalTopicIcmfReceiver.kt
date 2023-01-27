@@ -27,7 +27,7 @@ class GlobalTopicIcmfReceiver(
     private val storage: Storage,
     private val queryProvider: ChromiaQueryProvider,
     private val myChainId: Long,
-    myBlockchainRid: BlockchainRid,
+    private val myBlockchainRid: BlockchainRid,
     private val clusterManagement: ClusterManagement,
     private val clientProvider: ChromiaClientProvider,
     private val dbOperations: IcmfDatabaseOperations
@@ -41,9 +41,9 @@ class GlobalTopicIcmfReceiver(
     private val jobSynchronizer = Object()
     private var job: Job? = null
 
-    private val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
-
     private fun start(): Job {
+        val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
+
         val lastMessageHeights = withReadConnection(storage, myChainId) {
             dbOperations.loadAllLastMessageHeights(it)
         }
@@ -53,6 +53,7 @@ class GlobalTopicIcmfReceiver(
             if (route.chains.isNotEmpty()) {
                 route.chains.map { clusterManagement.getClusterOfBlockchain(it) }.distinct().forEach { clusterName ->
                     pipes[clusterName to route] = createPipe(
+                        myCluster,
                         clusterName,
                         route,
                         lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
@@ -60,6 +61,7 @@ class GlobalTopicIcmfReceiver(
             } else {
                 for (clusterName in allClusters) {
                     pipes[clusterName to route] = createPipe(
+                        myCluster,
                         clusterName,
                         route,
                         lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
@@ -72,7 +74,7 @@ class GlobalTopicIcmfReceiver(
                 delay(pollInterval)
                 try {
                     logger.info("Updating set of clusters")
-                    updateClusters()
+                    updateClusters(myCluster)
                     logger.info("Updated set of clusters")
                 } catch (e: CancellationException) {
                     break
@@ -84,6 +86,7 @@ class GlobalTopicIcmfReceiver(
     }
 
     private fun createPipe(
+        myCluster: String,
         clusterName: String,
         route: TopicRoute,
         lastMessageHeights: List<Pair<BlockchainRid, Long>>
@@ -108,7 +111,7 @@ class GlobalTopicIcmfReceiver(
         }
     }
 
-    private fun updateClusters() {
+    private fun updateClusters(myCluster: String) {
         val currentClusters = pipes.keys.map { it.first }.toSet()
         val updatedClusters = clusterManagement.getClusterNames().toSet()
         val removedClusters = currentClusters - updatedClusters
@@ -120,7 +123,7 @@ class GlobalTopicIcmfReceiver(
         }
         for (clusterName in addedClusters) {
             for (route in routes) {
-                pipes[clusterName to route] = createPipe(clusterName, route, listOf())
+                pipes[clusterName to route] = createPipe(myCluster, clusterName, route, listOf())
             }
         }
     }
@@ -128,7 +131,12 @@ class GlobalTopicIcmfReceiver(
     override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>> {
         synchronized(jobSynchronizer) {
             if (job == null) {
-                job = start()
+                try {
+                    job = start()
+                } catch (e: Exception) {
+                    logger.error("Failed to start receiver", e)
+                    shutdown() // Clean up
+                }
             }
         }
         return pipes.values.toList()
