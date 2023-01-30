@@ -1,7 +1,5 @@
 package net.postchain.images.directory1
 
-import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.DockerClient.LogsParam
 import mu.KLogger
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
@@ -10,6 +8,8 @@ import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.parseConfig
+import org.mandas.docker.client.DockerClient
+import org.mandas.docker.client.DockerClient.LogsParam
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL

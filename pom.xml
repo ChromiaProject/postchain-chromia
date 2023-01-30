@@ -6,7 +6,7 @@
 
     <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.8.0-SNAPSHOT</version>
+    <version>3.8.0-SNAPSHOT-docker</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
     <url>https://docs.chromia.com/</url>
@@ -26,7 +26,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.8.0-SNAPSHOT</postchain.version>
+        <postchain.version>3.8.0-SNAPSHOT-docker</postchain.version>
         <rellr.version>0.11.0</rellr.version>
         <kotlin.version>1.6.21</kotlin.version>
 
