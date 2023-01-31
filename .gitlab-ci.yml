@@ -50,7 +50,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests deploy
+    - mvn $MAVEN_CLI_OPTS -DskipTests --activate-profiles gitlab-registry,distro deploy
 #    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 nightly-tests:

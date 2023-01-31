@@ -41,7 +41,8 @@
                         <images>
                             <image>
                                 <!--suppress UnresolvedMavenProperty -->
-                                <name>${image.name}:latest</name>
+<!--                                <name>${image.name}:latest</name>-->
+                                <name>${image.name}:3.8.0-SNAPSHOT-docker</name>
                                 <build>
                                     <contextDir>${project.basedir}</contextDir>
                                     <filter>@</filter>
