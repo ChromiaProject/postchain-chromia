@@ -36,9 +36,11 @@ internal class MultiNodeLegacyIT {
     private val node1 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node1/config/node-config.properties")!!))
             .withNetwork(network)
             .withNetworkAliases("node1")
-            .withClasspathResourceMapping("$resourceFolder/node1/config", "${PostchainContainer.RELL_PATH}/config", BindMode.READ_ONLY)
+            .withClasspathResourceMapping("$resourceFolder/node1/config", "${PostchainContainer.POSTCHAIN_PATH}/config", BindMode.READ_ONLY)
             .withClasspathResourceMapping("$resourceFolder/src", PostchainContainer.RELL_SRC, BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+            .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.POSTCHAIN_PATH}/config/node-config.properties")
+            .withCommand("run-node-auto", "-nc", "${PostchainContainer.POSTCHAIN_PATH}/config/node-config.properties")
 
     private val node2 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node2/config/node-config.properties")!!))
             .withNetwork(network)
@@ -46,6 +48,8 @@ internal class MultiNodeLegacyIT {
             .withClasspathResourceMapping("$resourceFolder/node2/config", "${PostchainContainer.RELL_PATH}/config", BindMode.READ_ONLY)
             .withClasspathResourceMapping("$resourceFolder/src", PostchainContainer.RELL_SRC, BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+            .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.RELL_PATH}/config/node-config.properties")
+            .withCommand("run-node-auto", "-nc", "${PostchainContainer.POSTCHAIN_PATH}/config/node-config.properties")
 
     @BeforeEach
     fun setup() {

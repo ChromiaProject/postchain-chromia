@@ -16,7 +16,7 @@ class DockerComposeIT {
     @Container
     private val composeContainer = PostchainComposeContainer(File(this::class.java.getResource("/docker-compose.yml")!!.toURI()))
             .withEnv("DAPP_PATH", this.javaClass.getResource("/simple-dapp")!!.path)
-            .withEnv("IMAGE", System.getProperty("POSTCHAIN_TEST_DAPP_IMAGE", "chromaway/postchain-test-dapp:latest"))
+            .withEnv("IMAGE", System.getProperty("POSTCHAIN_TEST_DAPP_IMAGE", "chromaway/chromia-server:latest"))
 
     @Test
     fun `Postchain can be started with docker compose file`() {
