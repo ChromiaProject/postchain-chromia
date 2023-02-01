@@ -1,33 +1,25 @@
 package net.postchain.container.docker
 
 import com.google.common.base.Charsets.UTF_8
-import com.spotify.docker.client.DefaultDockerClient
-import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.DockerClient.ListContainersFilterParam
-import com.spotify.docker.client.exceptions.DockerRequestException
-import com.spotify.docker.client.messages.ContainerConfig
-import com.spotify.docker.client.messages.HostConfig
-import com.spotify.docker.client.messages.PortBinding
 import mu.KLogging
 import net.postchain.container.PostchainContainer
 import net.postchain.container.PostchainContainerClient
 import net.postchain.container.PostchainContainerClientFactory
 import net.postchain.container.PostchainContainerConfig
 import net.postchain.container.exception.ContainerStartupException
-import org.glassfish.jersey.client.RequestEntityProcessing
+import net.postchain.containers.bpm.docker.DockerClientFactory
+import org.mandas.docker.client.DockerClient
+import org.mandas.docker.client.exceptions.DockerRequestException
+import org.mandas.docker.client.messages.ContainerConfig
+import org.mandas.docker.client.messages.HostConfig
+import org.mandas.docker.client.messages.PortBinding
 import java.time.Duration
 import java.time.Instant
 
 class DockerPostchainContainerClient(val client: DockerClient) : PostchainContainerClient {
 
     companion object : KLogging(), PostchainContainerClientFactory {
-        override fun create() = DockerPostchainContainerClient(
-            DefaultDockerClient
-                .fromEnv()
-                .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
-                .build()
-        )
-
+        override fun create() = DockerPostchainContainerClient(DockerClientFactory.create())
     }
 
     override fun close() = client.close()
@@ -35,10 +27,10 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
     override fun createContainer(config: PostchainContainerConfig): PostchainContainer {
 
         val volumes = config.volumes.map { (from, to) ->
-            HostConfig.Bind
-                .from(from)
-                .to(to)
-                .build()
+            HostConfig.Bind.builder()
+                    .from(from)
+                    .to(to)
+                    .build()
         }
 
         val portBindings = mutableMapOf<String, List<PortBinding>>() // { dockerPort -> hostIp:hostPort }
@@ -59,37 +51,37 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
         // Host config
         val resources = config.resourceLimits
         val hostConfig = HostConfig.builder()
-            .appendBinds(*volumes.toTypedArray())
-            .appendBinds(HostConfig.Bind.from(config.configFile.parentFile.absolutePath).to("/config").build())
-            .portBindings(portBindings)
-            .publishAllPorts(true)
-            .apply {
-                if (resources.hasRam()) memory(resources.ramBytes())
-                if (resources.hasCpu()) {
-                    cpuPeriod(resources.cpuPeriod())
-                    cpuQuota(resources.cpuQuota())
+                .binds(*volumes.toTypedArray())
+                .binds(HostConfig.Bind.builder().from(config.configFile.parentFile.absolutePath).to("/config").build())
+                .portBindings(portBindings)
+                .publishAllPorts(true)
+                .apply {
+                    if (resources.hasRam()) memory(resources.ramBytes())
+                    if (resources.hasCpu()) {
+                        cpuPeriod(resources.cpuPeriod())
+                        cpuQuota(resources.cpuQuota())
+                    }
                 }
-            }
-            .build()
+                .build()
 
         val env = config.env.map { "${it.key}=${it.value}" }.toMutableList()
-            .also {
-                it.add("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
-                it.add("POSTCHAIN_SERVER_PORT=$adminPort")
-            }
+                .also {
+                    it.add("POSTCHAIN_CONFIG=/config/${config.configFile.name}")
+                    it.add("POSTCHAIN_SERVER_PORT=$adminPort")
+                }
         val builder = ContainerConfig.builder()
-            .image(config.imageName)
-            .hostConfig(hostConfig)
-            .exposedPorts(portBindings.keys)
+                .image(config.imageName)
+                .hostConfig(hostConfig)
+                .exposedPorts(portBindings.keys)
         val dockerConfig = builder
-            .env(env)
-            .cmd(config.command)
-            .build()
+                .env(env)
+                .cmd(config.command)
+                .build()
 
         val container =
-            config.containerName?.let { client.createContainer(dockerConfig, it) } ?: client.createContainer(
-                dockerConfig
-            )
+                config.containerName?.let { client.createContainer(dockerConfig, it) } ?: client.createContainer(
+                        dockerConfig
+                )
         container.warnings()?.forEach { logger.warn(it) }
         return DockerPostchainContainer(dockerConfig, container.id()!!)
     }
@@ -114,18 +106,18 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
     }
 
     private fun awaitServerStarted(
-        name: String,
-        awaitMessage: String,
-        startTime: Instant,
-        timeOut: Duration = Duration.ofSeconds(5)
+            name: String,
+            awaitMessage: String,
+            startTime: Instant,
+            timeOut: Duration = Duration.ofSeconds(5)
     ): Boolean {
         with(
-            client.logs(
-                name,
-                DockerClient.LogsParam.stdout(),
-                DockerClient.LogsParam.since(startTime.epochSecond.toInt()),
-                DockerClient.LogsParam.follow()
-            )
+                client.logs(
+                        name,
+                        DockerClient.LogsParam.stdout(),
+                        DockerClient.LogsParam.since(startTime.epochSecond.toInt()),
+                        DockerClient.LogsParam.follow()
+                )
         ) {
             while (hasNext() && Instant.now() < startTime.plus(timeOut)) {
                 val log = UTF_8.decode(next().content()).toString()
@@ -152,8 +144,8 @@ class DockerPostchainContainerClient(val client: DockerClient) : PostchainContai
 
     override fun findContainer(name: String) = tryCatch {
         client.listContainers(
-            DockerClient.ListContainersParam.allContainers(),
-            ListContainersFilterParam("name", name),
+                DockerClient.ListContainersParam.allContainers(),
+                DockerClient.ListContainersFilterParam("name", name),
         ).isNotEmpty()
     }
 
