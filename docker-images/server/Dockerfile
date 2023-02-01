@@ -9,6 +9,6 @@ ENV POSTCHAIN_DEBUG=false
 ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
 
 WORKDIR $postchain_dir
-ENTRYPOINT ["/usr/bin/java", "-Dlog4j.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
+ENTRYPOINT ["/usr/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.AppKt" ]
