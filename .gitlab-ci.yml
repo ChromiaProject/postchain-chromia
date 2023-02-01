@@ -50,8 +50,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests --activate-profiles gitlab-registry,distro deploy -U
-#    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 nightly-tests:
   extends: .setup
@@ -125,6 +124,6 @@ services:
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
-#cache:
-#  paths:
-#    - .m2/repository
+cache:
+  paths:
+    - .m2/repository
