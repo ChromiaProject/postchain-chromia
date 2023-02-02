@@ -7,9 +7,8 @@ COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_DEBUG=false
 ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
-ENV POSTCHAIN_LOG4J2=/opt/chromaway/postchain/log/log4j2.yml
 
 WORKDIR $postchain_dir
-ENTRYPOINT ["/usr/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j2.configurationFile=$POSTCHAIN_LOG4J2" \
+ENTRYPOINT ["/usr/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j2.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.AppKt" ]

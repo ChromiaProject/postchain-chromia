@@ -6,11 +6,10 @@ COPY target/lib $postchain_dir/lib
 COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_BLOCKCHAIN_CONFIG=/config/0.xml
-ENV POSTCHAIN_LOG4J2=/opt/chromaway/postchain/log/log4j2.yml
 
 EXPOSE 50051
 
 WORKDIR $postchain_dir
-ENTRYPOINT ["/usr/bin/java", "-Dlog4j2.configurationFile=$POSTCHAIN_LOG4J2" \
+ENTRYPOINT ["/usr/bin/java", "-Dlog4j2.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.admin.cli.AppKt" ]
