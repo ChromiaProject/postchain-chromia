@@ -5,7 +5,9 @@ ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
 COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
+ENV POSTCHAIN_LOG4J2=/opt/chromaway/postchain/log/log4j2.yml
+
 WORKDIR $postchain_dir
-ENTRYPOINT ["/usr/bin/java", "-Dlog4j.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
+ENTRYPOINT ["/usr/bin/java", "-Dlog4j2.configurationFile=$POSTCHAIN_LOG4J2" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.mc.Directory1Kt" ]
