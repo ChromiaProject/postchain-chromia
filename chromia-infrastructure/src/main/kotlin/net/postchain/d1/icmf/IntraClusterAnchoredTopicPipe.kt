@@ -114,8 +114,8 @@ class IntraClusterAnchoredTopicPipe(
             }
 
             anchorPackets.add(IcmfAnchorPacket(
-                    anchorBlock.header,
-                    anchorBlock.witness,
+                    anchorBlock.header.data,
+                    anchorBlock.witness.data,
                     anchorHeight,
                     packets
             ))

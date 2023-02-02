@@ -5,6 +5,7 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.core.BlockDetail
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.KeyPair
@@ -329,7 +330,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header, block.witness).toOpData()
+        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -346,7 +347,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header, block.witness).toOpData()
+        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -381,7 +382,7 @@ class IcmfValidationTest {
 
         val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
 
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header, block.witness).toOpData()
+        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
 
         val messageOps = createMessageOps(messageBodies)
 
@@ -404,12 +405,12 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(messageSigner).signDigest(blockRid))
         ).getRawData()
         return BlockDetail(
-                blockRid,
-                header.getPreviousBlockRid(),
-                GtvEncoder.encodeGtv(gtvBlockHeader),
+                blockRid.wrap(),
+                header.getPreviousBlockRid().wrap(),
+                GtvEncoder.encodeGtv(gtvBlockHeader).wrap(),
                 header.getHeight(),
                 listOf(),
-                rawWitness,
+                rawWitness.wrap(),
                 header.getTimestamp()
         )
     }
