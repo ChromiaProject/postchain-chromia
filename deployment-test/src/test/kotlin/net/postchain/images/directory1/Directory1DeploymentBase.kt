@@ -22,7 +22,6 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
-import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
@@ -359,7 +358,7 @@ abstract class Directory1DeploymentBase {
                 }
                 assert(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
@@ -386,9 +385,9 @@ abstract class Directory1DeploymentBase {
                 }
                 assert(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
 
-                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness)
+                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness.data)
                 val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
 
                 assert(dappWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)

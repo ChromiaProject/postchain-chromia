@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
@@ -46,7 +45,7 @@ class IntraClusterTopicPipe(
                 return null
             }
 
-            val decodedHeader = BlockHeaderData.fromBinary(block.header)
+            val decodedHeader = BlockHeaderData.fromBinary(block.header.data)
             val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
             if (icmfHeaderData == null) {
                 logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${block.rid.toHex()} for blockchain-rid: ${blockchainRid.toHex()} at height: $height")
@@ -68,9 +67,9 @@ class IntraClusterTopicPipe(
                             height = height,
                             sender = blockchainRid,
                             topic = route.topic,
-                            blockRid = block.rid,
-                            rawHeader = block.header,
-                            rawWitness = block.witness,
+                            blockRid = block.rid.data,
+                            rawHeader = block.header.data,
+                            rawWitness = block.witness.data,
                             prevMessageBlockHeight = topicData.previousBlockHeight,
                             messages = messages
                     )

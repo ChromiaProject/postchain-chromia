@@ -13,6 +13,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
@@ -466,12 +467,12 @@ class IcmfReceiverIT : ManagedModeTest() {
         ).getRawData()
 
         return BlockDetail(
-                blockRid,
-                blockHeader.getPreviousBlockRid(),
-                GtvEncoder.encodeGtv(gtvBlockHeader),
+                blockRid.wrap(),
+                blockHeader.getPreviousBlockRid().wrap(),
+                GtvEncoder.encodeGtv(gtvBlockHeader).wrap(),
                 0,
                 listOf(),
-                rawWitness,
+                rawWitness.wrap(),
                 blockHeader.getTimestamp()
         )
     }
@@ -506,12 +507,12 @@ class IcmfReceiverIT : ManagedModeTest() {
                 )
         ).getRawData()
         return BlockDetail(
-                blockRid,
-                anchorChainRid.data,
-                GtvEncoder.encodeGtv(blockHeader),
+                blockRid.wrap(),
+                anchorChainRid.data.wrap(),
+                GtvEncoder.encodeGtv(blockHeader).wrap(),
                 0L,
                 listOf(),
-                rawWitness,
+                rawWitness.wrap(),
                 0L
         )
     }
