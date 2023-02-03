@@ -2,14 +2,13 @@ module;
 
 import ^.model.*;
 import ^.cm_api.*;
+import ^.cluster.*;
 import ^.nm_api.*;
 import .anchoring;
-import .cluster.*;
 import .voting.*;
 import .proposal.*;
 import .queries.*;
 import .util.*;
-import ^.cluster.*;
 
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(
