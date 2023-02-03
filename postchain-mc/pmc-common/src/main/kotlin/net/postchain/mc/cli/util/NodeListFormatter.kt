@@ -9,7 +9,7 @@ import java.util.*
 
 object NodeListFormatter {
 
-    fun render(nodes: List<Array<out Gtv>>, includeInactive: Boolean): StringBuilder {
+    fun renderNodes(nodes: List<Array<out Gtv>>, includeInactive: Boolean): StringBuilder {
         return table {
             header("pubkey", "host", "port", "active", "last updated")
             nodes.forEach {

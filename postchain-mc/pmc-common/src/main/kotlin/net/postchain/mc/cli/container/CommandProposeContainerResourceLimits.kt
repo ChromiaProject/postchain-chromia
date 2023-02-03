@@ -39,7 +39,7 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     override fun run() {
         if (_maxBlockchains == null && _cpu == null && _ram == null && _storage == null) {
-            println("No resource limits are specified. At least one value should be specified.")
+            echo("No resource limits are specified. At least one value should be specified.")
             return
         }
 
