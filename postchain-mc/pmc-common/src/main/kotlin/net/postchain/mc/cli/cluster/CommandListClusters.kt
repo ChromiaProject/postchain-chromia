@@ -4,24 +4,28 @@ import com.github.ajalt.clikt.core.CliktCommand
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getClusters
-import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.clientOption
 
 class CommandListClusters : CliktCommand(
         name = "list",
         help = "List all existing clusters"
 ) {
-    private val config by configOption()
+    private val client by clientOption()
+
     override fun run() {
-        val client = ClientUtil.fromConfig(config)
-        table {
-            header("Name", "Governor", "Operational")
-            client.getClusters().forEach {
-                row(it.name, it.governor, it.operational.toString())
-            }
-            hints {
-                borderStyle = Table.BorderStyle.SINGLE_LINE
-            }
-        }.render().also { println(it) }
+        val clusters = client.getClusters()
+        if (clusters.isEmpty()) {
+            echo("Is empty")
+        } else {
+            table {
+                header("Name", "Governor", "Operational")
+                clusters.forEach {
+                    row(it.name, it.governor, it.operational.toString())
+                }
+                hints {
+                    borderStyle = Table.BorderStyle.SINGLE_LINE
+                }
+            }.render().also { println(it) }
+        }
     }
 }
