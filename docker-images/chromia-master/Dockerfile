@@ -1,5 +1,5 @@
 # Copyright (c) 2023 ChromaWay Inc. See README for license information.
-FROM eclipse-temurin:11-jammy@sha256:6a7b3762b5db37d5c7b1ee18123351becbd2d2ad6301e62f67251f10e53f183b
+FROM eclipse-temurin:11-jammy@sha256:8c02cc578c299c24c3e93b84011c5647d5fdd8a940a5cfd0948e71abe93eb153
 
 RUN apt update && apt install -y zfsutils-linux
 
