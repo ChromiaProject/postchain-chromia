@@ -13,7 +13,5 @@ class BlockQueriesAdapter(private val blockQueries: BlockQueries) : PostchainBlo
         }
     }
 
-    override fun currentBlockHeight() = blockQueries.getBestHeight().get()
-
     override fun query(name: String, args: Gtv) = blockQueries.query(name, args).get()
 }

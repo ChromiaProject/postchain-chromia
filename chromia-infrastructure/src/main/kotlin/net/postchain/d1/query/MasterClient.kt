@@ -21,10 +21,6 @@ class MasterClient(
         ).toCompletableFuture().get()?.let(::transformBlockDetail)
     }
 
-    override fun currentBlockHeight(): Long {
-        throw NotImplementedError("Not yet implemented")
-    }
-
     override fun query(name: String, args: Gtv): Gtv = queryManager.query(
             myChainId,
             myBlockchainRid,
@@ -32,5 +28,4 @@ class MasterClient(
             name,
             args
     ).toCompletableFuture().get()
-
 }
