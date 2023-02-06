@@ -24,6 +24,42 @@ file_env() {
 	unset "$fileVar"
 }
 
+configure_resource_limits() {
+  # Parse cgroup info to find memory limit
+  if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
+    TOTALMEM=$(cat /sys/fs/cgroup/memory.max)
+  elif [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    TOTALMEM=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
+  fi
+
+  # Unlimited memory is denoted as "max" for cgroup v2
+  if [ -z "$TOTALMEM" ] || [ "$TOTALMEM" = "max" ] || [ ${#TOTALMEM} -gt 15 ]; then
+    echo "Container is not restricted on memory, leaving postgres memory settings as default"
+  else
+    # Not exact but to avoid overflow in calculations below
+    TOTALMEM_MB=${TOTALMEM%??????}
+
+    PSQL_MEMORY_SHARE_MB=$((TOTALMEM_MB * PSQL_MEMORY_SHARE / 100))
+
+    echo "Setting the following limits (in MB):"
+    # Formula: 25%
+    SHARED_BUFFERS_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4))
+    echo "shared_buffers = $SHARED_BUFFERS_LIMIT"
+    sed -i -E "/^shared_buffers =/ s/= .*/= ${SHARED_BUFFERS_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
+
+    # Formula: 25% / max_connections, where max_connections is POSTCHAIN_DB_READ_CONCURRENCY + 2 write connections
+    WORK_MEM_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4 / (POSTCHAIN_DB_READ_CONCURRENCY + 2)))
+    WORK_MEM_LIMIT=$((WORK_MEM_LIMIT > 0 ? WORK_MEM_LIMIT : 1)) # Min 1MB
+    echo "work_mem = $WORK_MEM_LIMIT"
+    sed -i -E "/^#?work_mem =/ s/.*/work_mem = ${WORK_MEM_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
+
+    # Formula: 50%
+    EFFECTIVE_CACHE_SIZE_LIMIT=$((PSQL_MEMORY_SHARE_MB / 2))
+    echo "effective_cache_size = $EFFECTIVE_CACHE_SIZE_LIMIT"
+    sed -i -E "/^#?effective_cache_size =/ s/.*/effective_cache_size = ${EFFECTIVE_CACHE_SIZE_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
+  fi
+}
+
 if [ "${1:0:1}" = '-' ]; then
 	set -- postgres "$@"
 fi
@@ -95,6 +131,8 @@ if [ "$1" = 'postgres' ]; then
 			echo "host all all all $authMethod"
 		} >> "$PGDATA/pg_hba.conf"
 
+		configure_resource_limits
+
 		# starting the database server
 		PGUSER="${PGUSER:-postgres}" \
 		pg_ctl -D "$PGDATA" -w start
@@ -140,6 +178,9 @@ if [ "$1" = 'postgres' ]; then
 		echo 'PostgreSQL init process complete; ready for start up.'
 		echo
         else
+                # Container limits may have changed
+                configure_resource_limits
+
                 # starting the database server
                 PGUSER="${PGUSER:-postgres}" \
                 pg_ctl -D "$PGDATA" -w start
