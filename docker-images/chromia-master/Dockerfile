@@ -1,7 +1,7 @@
 # Copyright (c) 2023 ChromaWay Inc. See README for license information.
-FROM eclipse-temurin:11-jammy@sha256:8c02cc578c299c24c3e93b84011c5647d5fdd8a940a5cfd0948e71abe93eb153
+FROM eclipse-temurin:11-alpine@sha256:8368526729a4fa4275807761f51770c505a16c8dcad969609d7644de9dab9367
 
-RUN apt update && apt install -y zfsutils-linux
+RUN apk update && apk add zfs
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
