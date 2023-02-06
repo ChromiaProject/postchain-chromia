@@ -2,6 +2,7 @@ package net.postchain.d1.query
 
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
+import net.postchain.concurrent.util.get
 import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.Gtv
 
