@@ -8,9 +8,8 @@ import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getNodesByProvider
 import net.postchain.crypto.PubKey
-import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.base.pubkey
-import net.postchain.mc.cli.util.configOption
+import net.postchain.mc.cli.util.clientOption
 import java.time.Instant
 import java.util.*
 
@@ -18,29 +17,30 @@ class CommandListProviderNodes : CliktCommand(
         name = "nodes",
         help = "List nodes by provider"
 ) {
-    private val config by configOption()
+    private val client by clientOption()
 
-    private val key by option("-pk", "--pubkey").convert { PubKey(it) }.defaultLazy { config.pubkey() }
+    private val key by option("-pk", "--pubkey").convert { PubKey(it) }.defaultLazy { client.config.pubkey() }
 
     override fun run() {
-        println("Nodes for provider $key")
-        table {
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-
-            header("Pubkey", "Host", "Port", "Api port", "Active", "Last updated")
-
-            ClientUtil.fromConfig(config).getNodesByProvider(key).forEach {
-                row(
-                        it.pubkey.hex(),
-                        it.host,
-                        it.port.toString(),
-                        it.apiUrl,
-                        it.active.toString(),
-                        Date.from(Instant.ofEpochMilli(it.lastUpdated)).toString()
-                )
-            }
+        val nodes = client.getNodesByProvider(key)
+        if (nodes.isEmpty()) {
+            echo("No nodes for provider $key")
+        } else {
+            echo("Nodes for provider $key")
+            table {
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+                header("Pubkey", "Host", "Port", "Api port", "Active", "Last updated")
+                nodes.forEach {
+                    row(
+                            it.pubkey.hex(),
+                            it.host,
+                            it.port.toString(),
+                            it.apiUrl,
+                            it.active.toString(),
+                            Date.from(Instant.ofEpochMilli(it.lastUpdated)).toString()
+                    )
+                }
+            }.render().also { echo(it) }
         }
-                .render(StringBuilder())
-                .also { println(it) }
     }
 }

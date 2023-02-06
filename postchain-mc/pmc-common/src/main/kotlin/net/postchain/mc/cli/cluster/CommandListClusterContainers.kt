@@ -16,12 +16,17 @@ class CommandListClusterContainers : CliktCommand(
     private val clusterName by nameOption("Cluster name").required()
 
     override fun run() {
-        table {
-            header("Container name", "deployer")
-            client.getClusterContainers(clusterName).forEach {
-                row(it.name, it.deployer)
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val containers = client.getClusterContainers(clusterName)
+        if (containers.isEmpty()) {
+            echo("No containers")
+        } else {
+            table {
+                header("Container name", "deployer")
+                containers.forEach {
+                    row(it.name, it.deployer)
+                }
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            }.render().also { echo(it) }
+        }
     }
 }

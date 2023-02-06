@@ -22,6 +22,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
+import net.postchain.concurrent.util.get
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File

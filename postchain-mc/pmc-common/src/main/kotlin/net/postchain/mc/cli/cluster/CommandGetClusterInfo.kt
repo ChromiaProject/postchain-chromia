@@ -31,7 +31,7 @@ class CommandGetClusterInfo : CliktCommand(
             row("Governor:", info.governor)
             row("Is Operational:", info.isOperational.toString())
             row()
-        }.render().also { println(it) }
+        }.render().also { echo(it) }
 
         val clusterProviders = client.getClusterProviders(name)
         if (clusterProviders.isNotEmpty()) {
@@ -41,9 +41,9 @@ class CommandGetClusterInfo : CliktCommand(
                     row(provider.pubkey.toString(), provider.name)
                 }
                 defaultHints()
-            }.render().also { println(it) }
+            }.render().also { echo(it) }
         } else {
-            println("No providers")
+            echo("No providers")
         }
 
         val clusterNodes = client.getClusterNodes(name)
@@ -54,9 +54,9 @@ class CommandGetClusterInfo : CliktCommand(
                     row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
                 }
                 defaultHints()
-            }.render().also { println(it) }
+            }.render().also { echo(it) }
         } else {
-            println("No nodes")
+            echo("No nodes")
         }
 
         val clusterReplicas = client.getClusterReplicaNodes(name)
@@ -67,9 +67,9 @@ class CommandGetClusterInfo : CliktCommand(
                     row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
                 }
                 defaultHints()
-            }.render().also { println(it) }
+            }.render().also { echo(it) }
         } else {
-            println("No replica nodes")
+            echo("No replica nodes")
         }
 
         table {
@@ -79,7 +79,7 @@ class CommandGetClusterInfo : CliktCommand(
                 row(it.name, limits[it.name]?.toString() ?: "-1")
             }
             defaultHints()
-        }.render().also { println(it) }
+        }.render().also { echo(it) }
     }
 
     private fun Table.defaultHints() {
