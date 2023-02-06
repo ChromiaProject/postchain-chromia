@@ -53,7 +53,7 @@ abstract class Directory1DeploymentBase {
         private val dapps = mutableMapOf<String, BlockchainRid>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
-        private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
+        private val resourceLimitsValues = Triple(50L, 2048L, -1L) // (cpu, ram, storage)
         private val foobarResourceLimits = ContainerResourceLimits(
                 Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
         )
