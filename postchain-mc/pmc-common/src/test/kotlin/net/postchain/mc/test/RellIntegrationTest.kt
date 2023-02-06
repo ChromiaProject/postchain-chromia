@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
+import net.postchain.concurrent.util.get
 import net.postchain.core.*
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.core.block.BlockBuilder
@@ -17,12 +18,8 @@ import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.mc.config.app.BaseClientConfig
-import net.postchain.mc.config.app.ClientConfig
-import net.postchain.mc.config.app.DelegatingClientConfig
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
 import java.util.concurrent.LinkedBlockingQueue
 

@@ -5,6 +5,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
