@@ -2,12 +2,14 @@
 
 ## Version compatibility 
 
-| Directory1                                    | PMC           |
-|-----------------------------------------------|---------------|
-| Delta                                         | 3.7.0 / 3.7.1 |
-| Sigma                                         | 3.8.0*        |
+| Directory1                                    | PMC             |
+|-----------------------------------------------|-----------------|
+| Delta                                         | 3.7.0 / 3.7.1 * |
+| Sigma                                         | 3.8.0 **        |
 
-*) Command `pmc blockchain update` is backward compatible, so `Delta` can be upgraded to `Sigma` by means of pmc 3.8.0   
+*) PMC 3.7.1 is not backward compatible with PMC 3.7.0
+
+**) Command `pmc blockchain update` is backward compatible, so `Delta` can be upgraded to `Sigma` by means of pmc 3.8.0   
 
 
 ## Multiple versions environment
