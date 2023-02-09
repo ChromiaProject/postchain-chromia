@@ -98,17 +98,72 @@ $ export JAVA_TOOL_OPTIONS="-Xmx2g"
 $ postchain.sh run-node -nc config/node-config.properties --blockchain-config build/bc-config.xml --debug
 ```
 
-### Subnode disk quotas 
+## Subnode disk quotas
 
-In case of postchain process is running natively, ZFS disk quotas can be set for subnodes. To achieve this:
+Subnode disk quotas can be enforced either with ZFS or ext4.
 
-1. Create ZFS pool named `psvol` (e.g. `$ zpool create psvol /dev/sda`).
+### ZFS
 
-2. Add the following properties to the node configuration file:
+ZFS disk quotas requires a native master node. To enable this:
+
+Create ZFS pool named `psvol`:
+
+```shell
+zpool create psvol /dev/...
+```
+
+Add the following properties to the node configuration file:
 
 ```properties
 container.filesystem=zfs
 container.zfs.pool-name=psvol
 ```
 
-In this case `container.host-mount-dir` (and `container.master-mount-dir` if present) will be ignored and all container's files will be located in `/${zfs_pool_name}/${container_name}`.
+In this case `container.host-mount-dir` (and `container.master-mount-dir` if present) will be ignored and all 
+container's files will be located in `/${zfs_pool_name}/${container_name}`.
+
+### ext4
+
+Ext4 disk quotas can be used with a native master node, or a master node running in a Docker container with 
+`chromaway/chromia-server` image started with `--privileged` and run as root. To enable this:
+
+Create an ext4 file system with project quotas enabled and mount it with project quota enabled:
+
+```shell
+mkfs.ext4 -v -L postchain -O quota -E quotatype=prjquota /dev/...
+mount -o prjquota /dev/... /mnt/chromaway/postchain
+```
+
+Add the following properties to the node configuration file:
+
+```properties
+container.filesystem=ext4
+container.host-mount-dir=/mnt/chromaway/postchain
+```
+
+Start master node container:
+
+```shell
+docker run -d --name postchain \
+    --privileged \
+    --restart unless-stopped \
+    --volume /var/run/docker.sock:/var/run/docker.sock \
+    --mount type=bind,source=/mnt/chromaway/postchain,target=/mnt/chromaway/postchain \
+    --mount type=bind,source="$(pwd)/config",target=/config,readonly \
+    --mount type=bind,source="$(pwd)/build",target=/build,readonly \
+    -e JAVA_TOOL_OPTIONS="-Xmx2g" \
+    -e POSTCHAIN_DEBUG=true \
+    -e POSTCHAIN_CONFIG=/config/node-config.properties \
+    -e POSTCHAIN_BLOCKCHAIN_CONFIG=/build/bc-config.xml \
+    -e POSTCHAIN_SUBNODE_USER=$(id -u):$(id -g) \    
+    -p 9870:9870/tcp \
+    -p 7740:7740/tcp \
+    -p 9880:9880/tcp \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.7.2 \
+    run-node
+```
+
+If running master node natively, it needs to be run as root and the quota tool `setquota` needs to be installed. 
+It can be found in the package `quota` in Debian and Ubuntu.
+
+Subnode containers need to run as a non-root user, configured with `POSTCHAIN_SUBNODE_USER=<user-id>:<group-id>`.
