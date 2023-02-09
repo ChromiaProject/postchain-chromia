@@ -301,6 +301,7 @@ function test_disable_provider() {
     assert_true(dp1.active);
     assert_true(np1.active);
     assert_true(sp.active);
+    assert_equals(get_all_providers().size(), 5);
     // Disabling providers
     rell.test.tx().op(
         propose_provider_state(initial_provider.pub, dapp_provider1.pub, false)
@@ -317,6 +318,7 @@ function test_disable_provider() {
     assert_false(dp1.active);
     assert_false(np1.active);
     assert_false(sp.active);
+    assert_equals(get_all_providers().size(), 2);
 
     /*
           | CNP | NP  | SP
