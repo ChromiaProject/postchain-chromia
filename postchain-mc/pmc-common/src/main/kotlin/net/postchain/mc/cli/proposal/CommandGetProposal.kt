@@ -24,7 +24,6 @@ import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
-import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
@@ -53,7 +52,7 @@ class CommandGetProposal : CliktCommand(
 
         table {
             row("Proposal:", "${proposal.id.id} - ${proposal.type.name}")
-            row("Proposed by:", "${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
+            row("Proposed by:", "${proposedBy.pubkey.toHex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
             row("Time:", "${Date.from(Instant.ofEpochMilli(proposal.timestamp))}")
             row("Positive votes:", votingResults.positiveVotes.toString())
             row("Negative votes:", votingResults.negativeVotes.toString())

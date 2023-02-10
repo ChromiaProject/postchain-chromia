@@ -149,7 +149,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
             assert(nodeData.host).isEqualTo(host)
             assert(nodeData.port).isEqualTo(port)
             assertEquals(nodeData.provider, providerPublicKey.hexStringToWrappedByteArray())
-            assertEquals(nodeData.pubkey, nodePK)
+            assertEquals(nodeData.pubkey, nodePK.wData)
             if (cluster != "") {
                 val clusters = provClient.listClustersOfNode(nodePK)
                 assertEquals(clusters, listOf(cluster))
@@ -167,7 +167,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     ) {
         assertEquals(nodeHost, n.host)
         assertEquals(nodePort, n.port)
-        assertEquals(nodePubkey, n.pubkey.hex())
+        assertEquals(nodePubkey, n.pubkey.toHex())
 
         assertEquals(providerPubkey, n.provider.toHex())
         assertEquals(b, n.providerActive)
