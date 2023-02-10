@@ -202,6 +202,7 @@ class CommandGetProposal : CliktCommand(
                 "Proposed anchoring configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
             ProposalType.other -> "No details"
+            ProposalType.provider_remove -> TODO()
         }
     }
 }
