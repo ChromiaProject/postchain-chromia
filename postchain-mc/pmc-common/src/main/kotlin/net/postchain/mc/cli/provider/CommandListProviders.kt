@@ -22,7 +22,7 @@ class CommandListProviders : CliktCommand(
             table {
                 header("Name", "Url", "Pubkey", "Is System", "Tier", "Active")
                 providers.forEach {
-                    row(it.name, it.url, it.pubkey.hex(), it.system.toString(), it.tier.toString(), it.active.toString())
+                    row(it.name, it.url, it.pubkey.toHex(), it.system.toString(), it.tier.toString(), it.active.toString())
                 }
                 hints {
                     borderStyle = Table.BorderStyle.SINGLE_LINE

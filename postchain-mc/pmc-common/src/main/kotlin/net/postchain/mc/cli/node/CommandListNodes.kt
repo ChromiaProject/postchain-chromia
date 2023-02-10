@@ -20,7 +20,7 @@ class CommandListNodes : CliktCommand(
             table {
                 header("Pubkey", "Host", "Port", "Active", "Provided by")
                 nodes.forEach {
-                    row(it.pubkey.hex(), it.host, it.port.toString(), it.nodeActive.toString(), it.provider.toHex())
+                    row(it.pubkey.toHex(), it.host, it.port.toString(), it.nodeActive.toString(), it.provider.toHex())
                 }
                 hints {
                     defaultAlignment = Table.Hints.Alignment.LEFT
