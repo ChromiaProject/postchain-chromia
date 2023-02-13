@@ -26,6 +26,7 @@ class CommandGetProviderInfo : CliktCommand(
         val nodesByProvider = client.getNodesByProvider(pubkey)
         table {
             row("Provider:", providerData.name)
+            row("Url:", providerData.url)
             row("Pubkey:", providerData.pubkey.toHex())
             row("System:", providerData.system.toString())
             row("Tier:", providerData.tier.toString())
