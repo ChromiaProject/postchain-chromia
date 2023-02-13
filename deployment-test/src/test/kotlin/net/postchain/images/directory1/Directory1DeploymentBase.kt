@@ -53,9 +53,13 @@ abstract class Directory1DeploymentBase {
         private val dapps = mutableMapOf<String, BlockchainRid>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
-        private val resourceLimitsValues = Triple(50L, 2048L, -1L) // (cpu, ram, storage)
+        private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
         private val foobarResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
+                Cpu(resourceLimitsValues["cpu"] ?: -1),
+                Ram(resourceLimitsValues["ram"] ?: -1),
+                Storage(resourceLimitsValues["storage"] ?: -1),
+                IoRead(resourceLimitsValues["io_read"] ?: -1),
+                IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
 
         @JvmStatic
@@ -145,7 +149,7 @@ abstract class Directory1DeploymentBase {
     @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L))
+        val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L), IoRead(-1), IoWrite(-1))
         val actualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
@@ -154,7 +158,13 @@ abstract class Directory1DeploymentBase {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                     node1.providerPubkey,
                     foobarContainer,
-                    mapOf(cpu to first, ram to second, storage to third),
+                    mapOf(
+                            cpu to getOrDefault("cpu", -1),
+                            ram to getOrDefault("ram", -1),
+                            storage to getOrDefault("storage", -1),
+                            io_read to getOrDefault("io_read", -1),
+                            io_write to getOrDefault("io_write", -1)
+                    ),
                     ""
             ).postTransactionUntilConfirmed("container limits")
         }
@@ -300,16 +310,14 @@ abstract class Directory1DeploymentBase {
     fun `Subnode container has resource limits`() {
         testLogger.info("Asserting container resource limits")
 
-        val expectedResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
-        )
-
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
             if (it.names()?.get(0)?.contains(foobarContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                Assertions.assertEquals(expectedResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                Assertions.assertEquals(expectedResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                Assertions.assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                Assertions.assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                Assertions.assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
+                Assertions.assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
             }
         }
     }

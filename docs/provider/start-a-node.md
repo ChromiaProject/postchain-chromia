@@ -39,6 +39,10 @@ container.testmode=false
 container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
 # Mount path to a directory on the host that can be used to store configurations. Note that we don't want to use /tmp since this folder will be cleaned when a container is stopped
 container.host-mount-dir=/var/lib/chromaway/postchain/subnode
+# The host device that the `container.host-mount-dir` is located on. This is used to enforce disk I/O limits.
+# Note that this should only be the name of the device, not the partition.
+# For mac you may use `/dev/vda` to enforce limits
+container.host-mount-device=/dev/sda
 # Hostname of the master host as seen by a subnode. If master is on docker, then the subnode will perceive the host as the internal docker host
 # 172.17.0.1 on linux/Windows. Can be localhost if master node is a native java process
 container.master-host=host.docker.internal

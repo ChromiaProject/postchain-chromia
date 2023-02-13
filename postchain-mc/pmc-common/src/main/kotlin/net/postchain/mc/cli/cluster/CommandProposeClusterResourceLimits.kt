@@ -10,6 +10,8 @@ import net.postchain.chain0.model.ClusterResourceLimitType.*
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.cpuOptionHelp
+import net.postchain.mc.cli.util.ioReadOptionHelp
+import net.postchain.mc.cli.util.ioWriteOptionHelp
 import net.postchain.mc.cli.util.maxBlockchainsOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
@@ -42,6 +44,10 @@ class CommandProposeClusterResourceLimits : CliktCommand(
 
     private val _storage by option("-s", "--storage", help = storageOptionHelp).long()
 
+    private val _ioRead by option("-ir", "--io-read", help = ioReadOptionHelp).long()
+
+    private val _ioWrite by option("-iw", "--io-write", help = ioWriteOptionHelp).long()
+
     private val description by proposalDescriptionOption()
 
     override fun run() {
@@ -52,6 +58,8 @@ class CommandProposeClusterResourceLimits : CliktCommand(
                     setIfNotNull(default_container_cpu, _cpu)
                     setIfNotNull(default_container_ram, _ram)
                     setIfNotNull(default_container_storage, _storage)
+                    setIfNotNull(default_container_io_read, _ioRead)
+                    setIfNotNull(default_container_io_write, _ioWrite)
                 }
 
         client.transactionBuilder()

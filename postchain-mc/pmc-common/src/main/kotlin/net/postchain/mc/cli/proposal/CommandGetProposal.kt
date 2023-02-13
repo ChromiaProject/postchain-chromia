@@ -157,6 +157,8 @@ class CommandGetProposal : CliktCommand(
                     row("CPU:", pcl.cpu.toString())
                     row("RAM (MiB):", pcl.ram.toString())
                     row("Storage (MiB):", pcl.storage.toString())
+                    row("Disk I/O read (MiB/s):", pcl.ioRead.toString())
+                    row("Disk I/O write (MiB/s):", pcl.ioWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -169,6 +171,8 @@ class CommandGetProposal : CliktCommand(
                     row("Default container CPU:", pcl.defaultContainerCpu.toString())
                     row("Default container RAM (MiB):", pcl.defaultContainerRam.toString())
                     row("Default container storage (MiB):", pcl.defaultContainerStorage.toString())
+                    row("Default disk I/O read (MiB/s):", pcl.defaultContainerIoRead.toString())
+                    row("Default disk I/O write (MiB/s):", pcl.defaultContainerIoWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
