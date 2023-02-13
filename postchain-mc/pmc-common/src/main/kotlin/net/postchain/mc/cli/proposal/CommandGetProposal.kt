@@ -155,8 +155,8 @@ class CommandGetProposal : CliktCommand(
                     row("Container:", pcl.container)
                     row("Max blockchains:", pcl.maxBlockchains.toString())
                     row("CPU:", pcl.cpu.toString())
-                    row("RAM (MB):", pcl.ram.toString())
-                    row("Storage (MB):", pcl.storage.toString())
+                    row("RAM (MiB):", pcl.ram.toString())
+                    row("Storage (MiB):", pcl.storage.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -167,8 +167,8 @@ class CommandGetProposal : CliktCommand(
                     row("Max containers:", pcl.maxContainers.toString())
                     row("Default container max blockchains:", pcl.defaultContainerMaxBlockchains.toString())
                     row("Default container CPU:", pcl.defaultContainerCpu.toString())
-                    row("Default container RAM (MB):", pcl.defaultContainerRam.toString())
-                    row("Default container storage (MB):", pcl.defaultContainerStorage.toString())
+                    row("Default container RAM (MiB):", pcl.defaultContainerRam.toString())
+                    row("Default container storage (MiB):", pcl.defaultContainerStorage.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }

@@ -101,8 +101,8 @@ fun CliktCommand.pubkeysOrVotersetOption() = mutuallyExclusiveOptions(
 fun CliktCommand.maxBlockchainsOption() = option("-mb", "--max-blockchains", help = "Max number of blockchains per container").long()
 
 const val cpuOptionHelp = "CPU limit (percent of cpus, 10 == 0.1 cpu(s), 150 == 1.5 cpu(s))"
-const val ramOptionHelp = "RAM limit (Mb)"
-const val storageOptionHelp = "Storage limit (Mb)"
+const val ramOptionHelp = "RAM limit (MiB)"
+const val storageOptionHelp = "Storage limit (MiB)"
 
 fun CliktCommand.providerTierOption() = option(help = "Provider tier").switch(
         "-cnp" to ProviderType.COMMUNITY_NODE_PROVIDER,
