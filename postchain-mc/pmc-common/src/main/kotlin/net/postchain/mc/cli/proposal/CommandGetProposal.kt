@@ -19,6 +19,7 @@ import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderBatchProposal
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
+import net.postchain.chain0.common.proposal.getProviderRemoveProposal
 import net.postchain.chain0.common.proposal.getProviderStateProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
@@ -108,9 +109,7 @@ class CommandGetProposal : CliktCommand(
                     row("Provider:", cpc.provider.toHex())
                     row("Add/Remove:", if (cpc.add) "Add" else "remove")
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
-                }
-                        .render()
-                        .toString()
+                }.render().toString()
             }
             ProposalType.provider_is_system -> {
                 val pis = client.getSystemProviderProposal(proposal.id) ?: return ""
@@ -148,6 +147,14 @@ class CommandGetProposal : CliktCommand(
                 }.render().toString()
 
                 return info + providers
+            }
+            ProposalType.provider_remove -> {
+                val prp = client.getProviderRemoveProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider:", prp.provider.toHex())
+                    row("Provider name:", prp.providerName)
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
             }
             ProposalType.container_limits -> {
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
