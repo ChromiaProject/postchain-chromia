@@ -104,27 +104,7 @@ $ postchain.sh run-node -nc config/node-config.properties --blockchain-config bu
 
 ## Subnode disk quotas
 
-Subnode disk quotas can be enforced either with ZFS or ext4.
-
-### ZFS
-
-ZFS disk quotas requires a native master node. To enable this:
-
-Create ZFS pool named `psvol`:
-
-```shell
-zpool create psvol /dev/...
-```
-
-Add the following properties to the node configuration file:
-
-```properties
-container.filesystem=zfs
-container.zfs.pool-name=psvol
-```
-
-In this case `container.host-mount-dir` (and `container.master-mount-dir` if present) will be ignored and all 
-container's files will be located in `/${zfs_pool_name}/${container_name}`.
+Subnode disk quotas can be enforced with either ext4 or ZFS.
 
 ### ext4
 
@@ -170,4 +150,26 @@ docker run -d --name postchain \
 If running master node natively, it needs to be run as root and the quota tool `setquota` needs to be installed. 
 It can be found in the package `quota` in Debian and Ubuntu.
 
-Subnode containers need to run as a non-root user, configured with `POSTCHAIN_SUBNODE_USER=<user-id>:<group-id>`.
+Subnode containers need to run as a non-root user, configured with node configuration property `container.subnode-user` 
+or environment variable `POSTCHAIN_SUBNODE_USER`. The value should be "<user-id>:<group-id>", numerical user and group 
+ids need to be used.
+
+### ZFS
+
+ZFS disk quotas requires a native master node. To enable this:
+
+Create ZFS pool named `psvol`:
+
+```shell
+zpool create psvol /dev/...
+```
+
+Add the following properties to the node configuration file:
+
+```properties
+container.filesystem=zfs
+container.zfs.pool-name=psvol
+```
+
+In this case `container.host-mount-dir` (and `container.master-mount-dir` if present) will be ignored and all 
+container's files will be located in `/${zfs_pool_name}/${container_name}`.
