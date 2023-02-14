@@ -32,7 +32,7 @@ class CommandListProviderNodes : CliktCommand(
                 header("Pubkey", "Host", "Port", "Api port", "Active", "Last updated")
                 nodes.forEach {
                     row(
-                            it.pubkey.hex(),
+                            it.pubkey.toHex(),
                             it.host,
                             it.port.toString(),
                             it.apiUrl,

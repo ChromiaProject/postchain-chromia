@@ -25,7 +25,6 @@ import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
-import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
@@ -54,7 +53,7 @@ class CommandGetProposal : CliktCommand(
 
         table {
             row("Proposal:", "${proposal.id.id} - ${proposal.type.name}")
-            row("Proposed by:", "${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
+            row("Proposed by:", "${proposedBy.pubkey.toHex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
             row("Time:", "${Date.from(Instant.ofEpochMilli(proposal.timestamp))}")
             row("Positive votes:", votingResults.positiveVotes.toString())
             row("Negative votes:", votingResults.negativeVotes.toString())
@@ -163,8 +162,10 @@ class CommandGetProposal : CliktCommand(
                     row("Container:", pcl.container)
                     row("Max blockchains:", pcl.maxBlockchains.toString())
                     row("CPU:", pcl.cpu.toString())
-                    row("RAM (MB):", pcl.ram.toString())
-                    row("Storage (MB):", pcl.storage.toString())
+                    row("RAM (MiB):", pcl.ram.toString())
+                    row("Storage (MiB):", pcl.storage.toString())
+                    row("Disk I/O read (MiB/s):", pcl.ioRead.toString())
+                    row("Disk I/O write (MiB/s):", pcl.ioWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -175,8 +176,10 @@ class CommandGetProposal : CliktCommand(
                     row("Max containers:", pcl.maxContainers.toString())
                     row("Default container max blockchains:", pcl.defaultContainerMaxBlockchains.toString())
                     row("Default container CPU:", pcl.defaultContainerCpu.toString())
-                    row("Default container RAM (MB):", pcl.defaultContainerRam.toString())
-                    row("Default container storage (MB):", pcl.defaultContainerStorage.toString())
+                    row("Default container RAM (MiB):", pcl.defaultContainerRam.toString())
+                    row("Default container storage (MiB):", pcl.defaultContainerStorage.toString())
+                    row("Default disk I/O read (MiB/s):", pcl.defaultContainerIoRead.toString())
+                    row("Default disk I/O write (MiB/s):", pcl.defaultContainerIoWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }

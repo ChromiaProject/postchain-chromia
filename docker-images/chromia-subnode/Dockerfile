@@ -8,6 +8,7 @@ RUN apk update && apk add openjdk17 bash curl libc6-compat gcompat su-exec
 ENV POSTGRES_DB=postchain
 ENV POSTGRES_USER=postchain
 ENV POSTGRES_PASSWORD=postchain
+ENV POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
 # --- INTERNAL POSTGRES DB END ---
 
 ARG postchain_dir=/opt/chromaway/postchain
