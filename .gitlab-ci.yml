@@ -28,6 +28,7 @@ stages:
   - build
   - nightly-tests
   - deploy
+  - dependency-check
   - release
 
 deploy:
@@ -45,10 +46,13 @@ build:
   stage: build
   interruptible: true
   except:
-    - dev
-    - master
-    - tags
-    - /^support\/.*$/
+    refs:
+      - dev
+      - master
+      - tags
+      - /^support\/.*$/
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
@@ -63,6 +67,38 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
+
+dependency-check:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles dependency-check verify -DskipTests
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
+
+container-scanning:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - echo "Scanning image $IMAGE:$VERSION"
+    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --scope all-layers --fail-on high --only-fixed -q
+  parallel:
+    matrix:
+      - IMAGE: [chromaway/postchain-admin-client,
+                chromaway/postchain-mc,
+                chromaway/postchain-test-dapp,
+                chromaway/postchain-server,
+                chromaway/postchain-admin-client,
+                chromaway/chromia-subnode,
+                chromaway/chromia-server]
+        VERSION: [3.7.1, 3.8.0-SNAPSHOT]
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
 
 release:
   stage: release
