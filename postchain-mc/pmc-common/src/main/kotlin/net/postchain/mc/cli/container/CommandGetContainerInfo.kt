@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.validate
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.proposal.getContainerLimitsProposal
+import net.postchain.chain0.common.queries.getContainerBlockchain
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.chain0.nm_api.nmGetBlockchainsForContainer
@@ -51,7 +52,20 @@ class CommandGetContainerInfo : CliktCommand(
             defaultHints()
         }.render().also { echo(it) }
 
-        //client.nmGetBlockchainsForContainer()
+        val blockchains = client.getContainerBlockchain(name)
+        if (blockchains.isEmpty()) {
+            echo("No blockchains")
+        } else {
+            echo("Blockchains:")
+            table {
+                header("Name", "Rid", "System", "Active")
+                blockchains.forEach {
+                    row(it.name, it.rid.toHex(), it.system.toString(), it.active.toString())
+                }
+                defaultHints()
+            }.render().also { echo(it) }
+        }
+
     }
 
     private fun Table.defaultHints() {
