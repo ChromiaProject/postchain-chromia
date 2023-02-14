@@ -41,6 +41,17 @@ class CommandGetContainerInfo : CliktCommand(
                 defaultAlignment = Table.Hints.Alignment.LEFT
             }
         }.render().also { echo(it) }
+
+        table {
+            header("Resource type", "Value")
+            val limits = client.nmGetContainerLimits(name)
+            ContainerResourceLimitType.values().forEach {
+                row(it.name, limits[it.name]?.toString() ?: "-1")
+            }
+            defaultHints()
+        }.render().also { echo(it) }
+
+        //client.nmGetBlockchainsForContainer()
     }
 
     private fun Table.defaultHints() {
