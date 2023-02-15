@@ -85,7 +85,8 @@ container-scanning:
   script:
     - echo "Scanning image $IMAGE:$VERSION"
     - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --scope all-layers --fail-on high --only-fixed -q
+    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --only-fixed -q
+    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
       - IMAGE: [chromaway/postchain-admin-client,
