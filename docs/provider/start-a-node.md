@@ -151,7 +151,7 @@ If running master node natively, it needs to be run as root and the quota tool `
 It can be found in the package `quota` in Debian and Ubuntu.
 
 Subnode containers need to run as a non-root user, configured with node configuration property `container.subnode-user` 
-or environment variable `POSTCHAIN_SUBNODE_USER`. The value should be "<user-id>:<group-id>", numerical user and group 
+or environment variable `POSTCHAIN_SUBNODE_USER`. The value should be `<user-id>:<group-id>`, numerical user and group 
 ids need to be used.
 
 ### ZFS
