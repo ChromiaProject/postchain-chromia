@@ -37,7 +37,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    val icmfReceiver = ClusterAnchoringReceiver()
+    lateinit var clusterAnchoringReceiver: ClusterAnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
@@ -67,7 +67,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     /**
-     * For Anchor chain we simply pull all the messages from all the ICMF pipes and create operations.
+     * For Anchor chain we simply pull all the messages from all the cluster anchoring pipes and create operations.
      *
      * Since the Extension framework expects us to add a TX before and/or after the main data of a block,
      * we create ONE BIG tx with all operations in it (for the "before" position).
@@ -77,7 +77,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val pipes = icmfReceiver.getRelevantPipes()
+        val pipes = clusterAnchoringReceiver.getRelevantPipes()
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
@@ -121,7 +121,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
     /**
      * Transform to [ClusterAnchoringPacket] to [OpData] put arguments in correct order
      *
-     * @param clusterAnchorPacket is what we get from ICMF
+     * @param clusterAnchorPacket is what we get from pipe
      * @return is the [OpData] we can use to create a special TX.
      */
     private fun buildOpData(clusterAnchorPacket: ClusterAnchoringPacket): OpData {

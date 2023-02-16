@@ -31,6 +31,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -156,6 +157,48 @@ class AnchoringIT : ManagedModeTest() {
                 }
             }
         }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun onlyClusterChainsAreAnchored() {
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
+
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
+
+        val moduleRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/module.rell").readText()
+        val icmfRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/icmf.rell").readText()
+        val anchorGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_anchor.xml")!!.readText(),
+                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
+
+        val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+
+        // Add an extra dapp chain that will get chainId == 3, do string replacement to make it unique
+        // This dapp will be mocked to be in another cluster
+        val dapp2GtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText().replace("NOT_USED", "NOT_USED2")
+        )
+
+        val dapp2Chain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dapp2GtvConfig))
+
+        // Build one block each on the dapp chains
+        buildBlock(dappChain, 0L)
+        buildBlock(dapp2Chain, 0L)
+
+        // Build a block on the anchor chain
+        buildBlock(anchorChain, 0)
+
+        // Ensure only the block from dapp1 was anchored
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].blockQueries(anchorChain)
+        val dappBlock = anchorBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(dappChain))))).get()
+        assertFalse(dappBlock.isNull())
+
+        val dapp2Block = anchorBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(dapp2Chain))))).get()
+        assertTrue(dapp2Block.isNull())
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
