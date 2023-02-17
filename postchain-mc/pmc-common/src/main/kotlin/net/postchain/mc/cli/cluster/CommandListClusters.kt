@@ -15,7 +15,7 @@ class CommandListClusters : CliktCommand(
     override fun run() {
         val clusters = client.getClusters()
         if (clusters.isEmpty()) {
-            echo("Is empty")
+            echo("No clusters")
         } else {
             table {
                 header("Name", "Governor", "Operational")
