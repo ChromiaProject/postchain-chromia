@@ -45,9 +45,7 @@ class PostchainContainer(
     private val bridMap = mutableMapOf<Long, String>()
 
     companion object {
-        const val RELL_PATH = "/opt/chromaway/rell"
         const val POSTCHAIN_PATH = "/opt/chromaway/postchain"
-        const val RELL_SRC = "$RELL_PATH/src"
 
         // Path that is OK to use on your local machine, so host machine can mount subnode config
         val MOUNT_DIR = System.getenv("TEST_MOUNT_DIRECTORY")
@@ -98,14 +96,12 @@ class PostchainContainer(
             .postTransactionUntilConfirmed(opName)
     }
 
-    fun getBlockchainRidStr(chainId: Long): String {
-        return bridMap.getOrPut(chainId) {
-            execInContainer("cat", "${envMap["RELL_OUT"] ?: "$RELL_PATH/out"}/blockchains/$chainId/brid.txt").stdout
-        }
-    }
+    private fun getBlockchainRid(chainId: Long) = BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))
 
-    fun getBlockchainRid(chainId: Long): BlockchainRid {
-        return BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))
+    private fun getBlockchainRidStr(chainId: Long): String {
+        return bridMap.getOrPut(chainId) {
+            execInContainer("cat", "${envMap["RELL_OUT"] ?: POSTCHAIN_PATH}/blockchains/$chainId/brid.txt").stdout
+        }
     }
 
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
