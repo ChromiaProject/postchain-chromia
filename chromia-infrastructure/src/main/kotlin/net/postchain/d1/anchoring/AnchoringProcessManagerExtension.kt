@@ -2,7 +2,6 @@ package net.postchain.d1.anchoring
 
 import net.postchain.PostchainContext
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.client.core.PostchainQuery
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -12,7 +11,6 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
@@ -25,7 +23,7 @@ open class AnchoringProcessManagerExtension(
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
 
     /**
-     * Connect process to ICMF:
+     * Connect process to cluster anchoring:
      * 1. register receiver chain if necessary
      * 2. connect process to local dispatcher
      */
@@ -37,8 +35,13 @@ open class AnchoringProcessManagerExtension(
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
-                localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
-                it.clusterManagement = createClusterManagement(cfg)
+                val clusterManagement = createClusterManagement(cfg)
+                val blockchainCluster = clusterManagement.getClusterOfBlockchain(cfg.blockchainRid)
+                val clusterAnchoringReceiver = ClusterAnchoringReceiver(blockchainCluster, clusterManagement)
+
+                localDispatcher.connectReceiver(cfg.chainID, clusterAnchoringReceiver)
+                it.clusterManagement = clusterManagement
+                it.clusterAnchoringReceiver = clusterAnchoringReceiver
             }
 
             // connect process to local dispatcher
