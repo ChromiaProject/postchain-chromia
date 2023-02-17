@@ -15,12 +15,17 @@ class CommandListContainersForNode : CliktCommand(
     private val key by requiredPubkeyOption()
 
     override fun run() {
-        table {
-            header("Name", "Cluster", "Deployer")
-            client.getNodeContainers(key).forEach {
-                row(it.name, it.cluster, it.deployer)
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val containers = client.getNodeContainers(key)
+        if (containers.isEmpty()) {
+            echo("No containers")
+        } else {
+            table {
+                header("Name", "Cluster", "Deployer")
+                containers.forEach {
+                    row(it.name, it.cluster, it.deployer)
+                }
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+            }.render().also { echo(it) }
+        }
     }
 }

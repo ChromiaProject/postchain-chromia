@@ -1,13 +1,16 @@
 # Copyright (c) 2022 ChromaWay Inc. See README for license information.
-FROM gcr.io/distroless/java17-debian11:debug@sha256:23f32ba072842ea8438ae3b6e203a3f842fe7d172fc246b7e91f7a552684cfca
+FROM eclipse-temurin:17-jammy@sha256:36d8a3b875dad9a98366a18244649ba71a1007410b14511c861e49ac58ef76ff
+
+RUN apt update && apt install -y quota
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
 COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_DEBUG=false
+ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
 
 WORKDIR $postchain_dir
-ENTRYPOINT ["/usr/bin/java", "-Dlog4j.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
+ENTRYPOINT ["/opt/java/openjdk/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j2.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.AppKt" ]

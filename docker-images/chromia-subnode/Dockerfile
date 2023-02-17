@@ -8,6 +8,7 @@ RUN apk update && apk add openjdk17 bash curl libc6-compat gcompat su-exec
 ENV POSTGRES_DB=postchain
 ENV POSTGRES_USER=postchain
 ENV POSTGRES_PASSWORD=postchain
+ENV POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
 # --- INTERNAL POSTGRES DB END ---
 
 ARG postchain_dir=/opt/chromaway/postchain
@@ -19,6 +20,8 @@ COPY src/main/docker/scripts/* ${postchain_dir}/
 
 ENV POSTCHAIN_DIR=$postchain_dir
 ENV POSTCHAIN_LOG4J2=$POSTCHAIN_DIR/log/log4j2.yml
+
+ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
 
 WORKDIR $postchain_dir
 ENTRYPOINT ["./entrypoint.sh"]

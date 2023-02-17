@@ -53,7 +53,7 @@ class PostchainContainer(
 
         // Path that is OK to use on your local machine, so host machine can mount subnode config
         val MOUNT_DIR = System.getenv("TEST_MOUNT_DIRECTORY")
-                ?: "/tmp/chromaway/postchain".also { File(it).deleteRecursively() }
+                ?: "/tmp/chromaway/postchain"
 
         // Install location of docker socket
         private val DOCKER_SOCKET = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"

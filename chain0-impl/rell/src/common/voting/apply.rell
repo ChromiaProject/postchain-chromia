@@ -35,6 +35,7 @@ function try_to_apply_proposal(prop: proposal) {
                 provider_is_system      -> apply_provider_is_system(prop);
                 provider_quota          -> apply_provider_quota(prop);
                 provider_batch          -> apply_provider_batch(prop);
+                provider_remove         -> apply_remove_provider(prop);
                 blockchain_action       -> apply_blockchain_action(prop);
                 anchoring_configuration -> apply_anchoring_configuration(prop);
             }
@@ -53,6 +54,8 @@ function apply_container_limits(proposal) {
     update container_resource_limit @ {pps.container, container_resource_limit_type.cpu} (pps.cpu);
     update container_resource_limit @ {pps.container, container_resource_limit_type.ram} (pps.ram);
     update container_resource_limit @ {pps.container, container_resource_limit_type.storage} (pps.storage);
+    update container_resource_limit @ {pps.container, container_resource_limit_type.io_read} (pps.io_read);
+    update container_resource_limit @ {pps.container, container_resource_limit_type.io_write} (pps.io_write);
 }
 
 function apply_cluster_limits(proposal) {
@@ -62,6 +65,8 @@ function apply_cluster_limits(proposal) {
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_cpu} (pps.default_container_cpu);
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_ram} (pps.default_container_ram);
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_storage} (pps.default_container_storage);
+    update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_io_read} (pps.default_container_io_read);
+    update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_io_write} (pps.default_container_io_write);
 }
 
 function apply_remove_cluster(proposal) {
@@ -136,13 +141,28 @@ function apply_provider_batch(proposal) {
         if (empty(provider @? { pi.pubkey })) {
             register_and_enable_provider(pi, ppb.provider_tier, null, null, ppb.active);
             when {
-                ppb.system -> enroll.system(provider @ { pi.pubkey }, ppb.active);
+                ppb.system -> {
+                    val provider = provider @ { pi.pubkey };
+                    enroll.system(provider);
+                    if (not(ppb.active)) {
+                        update_provider_state(provider, false);
+                    }
+                }
                 _is_node_provider(ppb.provider_tier) -> enroll.node(provider @ { pi.pubkey });
             }
         } else {
             print("Warning: provider already exists: " + pi.pubkey);
         }
     }
+}
+
+function apply_remove_provider(proposal) {
+    val provider = pending_remove_provider @ { proposal } (.provider);
+    delete node @* { provider };
+    delete cluster_provider @* { provider };
+    delete provider_rl_state @* { provider };
+    delete pending_remove_provider @ { proposal };
+    delete provider;
 }
 
 function apply_configuration(proposal) {

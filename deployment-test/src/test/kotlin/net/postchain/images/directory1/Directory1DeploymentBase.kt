@@ -6,7 +6,6 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
-import com.spotify.docker.client.DockerClient
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -23,7 +22,6 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
-import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
@@ -38,6 +36,7 @@ import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
+import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import kotlin.test.assertEquals
@@ -54,14 +53,19 @@ abstract class Directory1DeploymentBase {
         private val dapps = mutableMapOf<String, BlockchainRid>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
-        private val resourceLimitsValues = Triple(600L, 250L, -1L) // (ram, cpu, storage)
+        private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
         private val foobarResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
+                Cpu(resourceLimitsValues["cpu"] ?: -1),
+                Ram(resourceLimitsValues["ram"] ?: -1),
+                Storage(resourceLimitsValues["storage"] ?: -1),
+                IoRead(resourceLimitsValues["io_read"] ?: -1),
+                IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
 
         @JvmStatic
         @AfterAll
         fun breakdown() {
+            saveSubnodeLogs(dockerClient)
             stopNodes()
             removeSubnodeContainers()
         }
@@ -145,7 +149,7 @@ abstract class Directory1DeploymentBase {
     @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L))
+        val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L), IoRead(-1), IoWrite(-1))
         val actualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
@@ -154,7 +158,13 @@ abstract class Directory1DeploymentBase {
             node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                     node1.providerPubkey,
                     foobarContainer,
-                    mapOf(cpu to first, ram to second, storage to third),
+                    mapOf(
+                            cpu to getOrDefault("cpu", -1),
+                            ram to getOrDefault("ram", -1),
+                            storage to getOrDefault("storage", -1),
+                            io_read to getOrDefault("io_read", -1),
+                            io_write to getOrDefault("io_write", -1)
+                    ),
                     ""
             ).postTransactionUntilConfirmed("container limits")
         }
@@ -300,16 +310,14 @@ abstract class Directory1DeploymentBase {
     fun `Subnode container has resource limits`() {
         testLogger.info("Asserting container resource limits")
 
-        val expectedResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues.first), Ram(resourceLimitsValues.second), Storage(resourceLimitsValues.third)
-        )
-
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
             if (it.names()?.get(0)?.contains(foobarContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                Assertions.assertEquals(expectedResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                Assertions.assertEquals(expectedResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                Assertions.assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                Assertions.assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                Assertions.assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
+                Assertions.assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
             }
         }
     }
@@ -358,7 +366,7 @@ abstract class Directory1DeploymentBase {
                 }
                 assert(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
@@ -385,9 +393,9 @@ abstract class Directory1DeploymentBase {
                 }
                 assert(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid.wrap()).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
 
-                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness)
+                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness.data)
                 val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
 
                 assert(dappWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)

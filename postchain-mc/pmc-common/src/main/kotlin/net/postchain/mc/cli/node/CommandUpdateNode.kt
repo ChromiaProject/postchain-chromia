@@ -34,7 +34,7 @@ class CommandUpdateNode : CliktCommand(
 
     override fun run() {
         if (host == null && port == null && apiUrl == null && clusterName == null) {
-            println("No properties to update. At least one node's property should be specified")
+            echo("No properties to update. At least one node's property should be specified")
             return
         }
 
