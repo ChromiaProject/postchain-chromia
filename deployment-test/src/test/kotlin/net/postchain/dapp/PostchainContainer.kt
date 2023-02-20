@@ -1,10 +1,9 @@
 package net.postchain.dapp
 
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
-
+import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
@@ -20,7 +19,6 @@ import org.testcontainers.containers.InternetProtocol
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import org.testcontainers.lifecycle.Startable
 import org.testcontainers.utility.DockerImageName
-import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.net.URL
@@ -30,7 +28,7 @@ const val adminPubKey = "030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB46
 const val adminPrivKey = "69BC38753A11753354791A4F189F704C3D14B73B77AE3F55A4D466A991339541"
 
 class PostchainContainer(
-    dockerImageName: DockerImageName = DockerImageName.parse(System.getProperty("POSTCHAIN_TEST_DAPP_IMAGE", "chromaway/postchain-test-dapp:latest")),
+    dockerImageName: DockerImageName = DockerImageName.parse(System.getProperty("POSTCHAIN_IMAGE", "chromaway/chromia-server:latest")),
     val appConfig: AppConfig,
     startupMsg: String = "Blockchain has been started",
     val nodePort: Int = appConfig.getInt("messaging.port"),
@@ -47,9 +45,7 @@ class PostchainContainer(
     private val bridMap = mutableMapOf<Long, String>()
 
     companion object {
-        const val RELL_PATH = "/opt/chromaway/rell"
         const val POSTCHAIN_PATH = "/opt/chromaway/postchain"
-        const val RELL_SRC = "$RELL_PATH/src"
 
         // Path that is OK to use on your local machine, so host machine can mount subnode config
         val MOUNT_DIR = System.getenv("TEST_MOUNT_DIRECTORY")
@@ -100,14 +96,12 @@ class PostchainContainer(
             .postTransactionUntilConfirmed(opName)
     }
 
-    fun getBlockchainRidStr(chainId: Long): String {
-        return bridMap.getOrPut(chainId) {
-            execInContainer("cat", "${envMap["RELL_OUT"] ?: "$RELL_PATH/out"}/blockchains/$chainId/brid.txt").stdout
-        }
-    }
+    private fun getBlockchainRid(chainId: Long) = BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))
 
-    fun getBlockchainRid(chainId: Long): BlockchainRid {
-        return BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))
+    private fun getBlockchainRidStr(chainId: Long): String {
+        return bridMap.getOrPut(chainId) {
+            execInContainer("cat", "${envMap["RELL_OUT"] ?: POSTCHAIN_PATH}/blockchains/$chainId/brid.txt").stdout
+        }
     }
 
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"

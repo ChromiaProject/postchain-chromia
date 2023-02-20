@@ -1,7 +1,7 @@
-# Copyright (c) 2022 ChromaWay Inc. See README for license information.
-FROM eclipse-temurin:17-jammy@sha256:36d8a3b875dad9a98366a18244649ba71a1007410b14511c861e49ac58ef76ff
+# Copyright (c) 2023 ChromaWay Inc. See README for license information.
+FROM alpine:3.17.2@sha256:69665d02cb32192e52e07644d76bc6f25abeb5410edc1c7a81a10ba3f0efb90a
 
-RUN apt update && apt install -y quota
+RUN apk update && apk add openjdk17 quota-tools && rm -rf /var/cache/apk/*
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
@@ -11,6 +11,6 @@ ENV POSTCHAIN_DEBUG=false
 ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
 
 WORKDIR $postchain_dir
-ENTRYPOINT ["/opt/java/openjdk/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j2.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
+ENTRYPOINT ["/usr/bin/java", "-XX:+CrashOnOutOfMemoryError", "-Dlog4j2.configurationFile=/opt/chromaway/postchain/log/log4j2.yml" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
 , "net.postchain.AppKt" ]

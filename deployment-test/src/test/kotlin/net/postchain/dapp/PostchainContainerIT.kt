@@ -23,10 +23,11 @@ internal class PostchainContainerIT {
             .withEnv("POSTGRES_USER", "postchain")
 
     @Container
-    private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/config/node-config.properties")!!))
+    private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/node-config.properties")!!))
             .withNetwork(network)
-            .withClasspathResourceMapping("simple-dapp", "/opt/chromaway/rell", BindMode.READ_ONLY)
+            .withClasspathResourceMapping("simple-dapp", "/opt/chromaway/postchain", BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+            .withCommand("run-node-auto")
 
     @Test
     fun `A simple dapp can start and handle queries`() {

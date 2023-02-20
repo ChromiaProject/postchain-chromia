@@ -13,7 +13,6 @@
     <groupId>net.postchain.images</groupId>
     <packaging>pom</packaging>
     <modules>
-        <module>test-dapp</module>
         <module>server</module>
         <module>admin-client</module>
         <module>chromia-server</module>
