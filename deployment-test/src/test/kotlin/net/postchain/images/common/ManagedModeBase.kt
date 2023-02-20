@@ -7,6 +7,7 @@ import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
+import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -40,33 +41,28 @@ open class ManagedModeBase(rellFolder: String) {
             .withEnv("POSTGRES_USER", "postchain")
             .withEnv("POSTGRES_DB", "postchain")
 
-    val node1: PostchainContainer = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger), 9871, 7740,
-    KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"))
-    val node2: PostchainContainer = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger), 9872, 7741,
-    KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"))
-    val node3: PostchainContainer = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger), 9873, 7742,
-    KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"))
+    lateinit var node1: PostchainContainer
+    lateinit var node2: PostchainContainer
+    lateinit var node3: PostchainContainer
 
-    private fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, messagePort: Int, apiPort: Int, provider: KeyPair): PostchainContainer {
-        val appConfig = setupMasterNodeConfig(this::class.java.getResource("config/$hostName/node-config.properties")!!)
+    fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
+        val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
         return PostchainContainer(
                 DockerImages.chromiaServerImage(),
                 appConfig,
                 startupMsg = "Postchain server started, listening on 50051",
                 nodeHost = hostName,
-                nodePort = messagePort,
                 provider = provider
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
-                .withFixedExposedPort(apiPort, apiPort) // Must be fixed so subnode can connect
-                .withExposedPorts(50051)
-                .withClasspathResourceMapping("${this::class.java.getResource("config")!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
+                .withExposedPorts(50051, appConfig.getInt("api.port"))
+                .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
+                .withCommand("run-server")
     }
-
 
     var chain0Config: File
     lateinit var brid: BlockchainRid
@@ -84,6 +80,9 @@ open class ManagedModeBase(rellFolder: String) {
         val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
         configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
         chain0Config = gtvFile.toFile()
+        if (!File(MOUNT_DIR).deleteRecursively()) {
+            testLogger.error("Unable to clear mount directory")
+        }
     }
 
     lateinit var node1Db: ChainDatabaseCommunicator

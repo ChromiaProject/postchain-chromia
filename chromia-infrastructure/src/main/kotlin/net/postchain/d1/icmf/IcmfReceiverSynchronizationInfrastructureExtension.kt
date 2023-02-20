@@ -14,15 +14,19 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.query.Chain0MasterClient
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.query.DefaultChromiaQueryProvider
+import net.postchain.d1.query.MasterSubQueryProvider
 import net.postchain.d1.query.LocalQueryProvider
-import net.postchain.d1.query.MasterApiProvider
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.managed.BaseDirectoryDataSource
+import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfiguration
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 import java.time.Duration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
@@ -116,11 +120,15 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     configuration.dataSource
             )
         } else {
-            DefaultChromiaQueryProvider(
+            MasterSubQueryProvider(
                     configuration.blockchainRid,
-                    postchainContext.appConfig,
+                    configuration.chainID,
+                    postchainContext.connectionManager as SubConnectionManager,
                     clusterManagement,
-                    MasterApiProvider.getDirectoryManagement(postchainContext.appConfig),
+                    BaseDirectoryDataSource(
+                            Chain0MasterClient(configuration.blockchainRid, configuration.chainID, (postchainContext.connectionManager as SubConnectionManager).masterSubQueryManager)::query,
+                            postchainContext.appConfig
+                    ),
                     postchainContext.blockQueriesProvider
             )
         }
@@ -132,12 +140,14 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
          * configuration, therefore [ClusterManagement] uses the local [ManagedNodeDataSource] instance.
          *
          * In the case of cluster infrastructure, a dapp chain will have a default [GTXBlockchainConfiguration]
-         * configuration. [ClusterManagement] uses the remote query runner to chain0: [PostchainClient].
+         * configuration. [ClusterManagement] uses the master query runner to chain0: [Chain0MasterClient].
          */
         return if (configuration is DappBlockchainConfiguration) {
             ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
         } else {
-            MasterApiProvider.getClusterManagement(postchainContext.appConfig)
+            ClusterManagementImpl(
+                    Chain0MasterClient(configuration.blockchainRid, configuration.chainID, (postchainContext.connectionManager as SubConnectionManager).masterSubQueryManager)::query,
+            )
         }
     }
 

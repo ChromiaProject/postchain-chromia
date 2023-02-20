@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-mc</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.1</version>
+        <version>3.8.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -27,36 +27,8 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-admin-service</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-container</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- Cli -->
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.postchain</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <dependency>
             <groupId>com.github.ajalt.clikt</groupId>
             <artifactId>clikt-jvm</artifactId>
@@ -96,6 +68,14 @@
                     <groupId>org.bouncycastle</groupId>
                     <artifactId>bcprov-jdk15to18</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-javalite</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.squareup.okhttp3</groupId>
+                    <artifactId>okhttp</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
 
@@ -104,10 +84,6 @@
             <artifactId>kformat</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-api</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
@@ -143,6 +119,23 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>rell-client-gen</id>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
+                            <packageName>net.postchain.chain0</packageName>
+                            <mainModule>directory1</mainModule>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>

@@ -11,10 +11,11 @@
 operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
     val me = require_provider(my_pubkey);
     require_provider_auth_with_rl(me);
+    require_pubkey(pubkey);
     require(empty(provider @* { pubkey }), "Provider already exists: " + pubkey);
 
     register_and_enable_provider(
-        pubkey,
+        provider_info(pubkey),
         provider_tier,
         cluster = null,
         voter_set = null,
@@ -28,11 +29,12 @@ operation register_provider(my_pubkey: pubkey, pubkey, provider_tier) {
 
 function _is_node_provider(tier: provider_tier) = tier == provider_tier.NODE_PROVIDER;
 
-@extendable function register_and_enable_provider(pubkey, provider_tier, cluster?, voter_set?, enabled_by_default: boolean = false) {
-    require(empty(node @? { pubkey }), "This pubkey is already registered as a node: " + pubkey);
+@extendable function register_and_enable_provider(provider_info, provider_tier, cluster?, voter_set?, enabled_by_default: boolean = false) {
+    require(empty(node @? { provider_info.pubkey }), "This pubkey is already registered as a node: " + provider_info.pubkey);
     val provider = create provider(
-        pubkey,
-        name = "",
+        provider_info.pubkey,
+        name = provider_info.name,
+        url = provider_info.url,
         active = enabled_by_default,
         tier = provider_tier
     );
@@ -100,7 +102,7 @@ function require_provider_quota(provider, quota_type: provider_quota_type) {
     if (quota > 0) {
         when (quota_type) {
             max_nodes -> _require_provider_quota(quota, quota_type, node @ { provider } (@sum 1));
-            max_containers -> _require_provider_quota(quota, quota_type, container @ { provider, .name != containers.system } (@sum 1));
+            max_containers -> _require_provider_quota(quota, quota_type, container @ { provider, .system == false } (@sum 1));
         }
     }
 }

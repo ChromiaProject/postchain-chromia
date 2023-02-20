@@ -9,7 +9,7 @@ import java.util.*
 
 object NodeListFormatter {
 
-    fun render(nodes: List<Array<out Gtv>>, includeInactive: Boolean): StringBuilder {
+    fun renderNodes(nodes: List<Array<out Gtv>>, includeInactive: Boolean): StringBuilder {
         return table {
             header("pubkey", "host", "port", "active", "last updated")
             nodes.forEach {
@@ -19,7 +19,7 @@ object NodeListFormatter {
                             it[1].asString(),
                             it[2].asInteger().toString(),
                             it[3].asBoolean().toString(),
-                            Date.from(Instant.ofEpochMilli(it[4].asInteger()))
+                            Date.from(Instant.ofEpochMilli(it[4].asInteger())).toString()
                     )
                 }
             }

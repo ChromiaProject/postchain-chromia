@@ -11,7 +11,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.rell.anchoring.icmfGetHeadersWithMessagesAfterHeight
+import net.postchain.d1.rell.cluster_anchoring.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -114,8 +114,8 @@ class IntraClusterAnchoredTopicPipe(
             }
 
             anchorPackets.add(IcmfAnchorPacket(
-                    anchorBlock.header,
-                    anchorBlock.witness,
+                    anchorBlock.header.data,
+                    anchorBlock.witness.data,
                     anchorHeight,
                     packets
             ))

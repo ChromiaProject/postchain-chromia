@@ -6,15 +6,17 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.common.proposal.proposeConfigurationOperation
-import net.postchain.cli.AlreadyExistMode
-import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.forceOption
-import net.postchain.cli.util.heightOption
-import net.postchain.common.wrap
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.mc.cli.AlreadyExistMode
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.blockchainRidOption
+import net.postchain.mc.cli.forceOption
+import net.postchain.mc.cli.heightOption
+import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
-import net.postchain.mc.cli.util.readConfigurationFile
+import net.postchain.mc.cli.util.proposalDescriptionOption
+import net.postchain.mc.network.Version
 
 class CommandProposeConfiguration : CliktCommand(
         name = "update",
@@ -37,18 +39,47 @@ class CommandProposeConfiguration : CliktCommand(
 
     private val force by forceOption()
 
+    private val description by proposalDescriptionOption()
+
     override fun run() {
+        val version = Version(client)
+        val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
+
         client.transactionBuilder()
                 .apply {
-                    val configData = readConfigurationFile(blockchainConfigFile, null)
                     if (height == null) {
-                        proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, configData)
+                        when (version.version) {
+                            Version.Delta -> {
+                                addOperation("propose_configuration",
+                                        gtv(client.config.pubkey().data),
+                                        gtv(blockchainRID),
+                                        gtv(bcConfig.data)
+                                )
+                            }
+                            else -> {
+                                proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, description)
+                            }
+                        }
                     } else {
-                        proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, configData, height!!, force == AlreadyExistMode.FORCE)
+                        when (version.version) {
+                            Version.Delta -> {
+                                addOperation("propose_configuration_at",
+                                        gtv(client.config.pubkey().data),
+                                        gtv(blockchainRID),
+                                        gtv(bcConfig.data),
+                                        gtv(height!!),
+                                        gtv(force == AlreadyExistMode.FORCE))
+                            }
+                            else -> {
+                                proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, height!!, force == AlreadyExistMode.FORCE, description)
+                            }
+                        }
                     }
                 }
                 .postAwaitConfirmation()
-                .printResult("Configuration was proposed",
-                        "Failed to propose configuration")
+                .printResult(
+                        "Configuration was proposed: ${bcConfig.hash}",
+                        "Failed to propose configuration"
+                )
     }
 }

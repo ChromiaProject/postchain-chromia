@@ -2,9 +2,9 @@ package net.postchain.mc.cli.blockchain
 
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.chain0.common.queries.getBlockchainSigners
-import net.postchain.cli.util.blockchainRidOption
+import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.includeInactiveOption
-import net.postchain.mc.cli.util.NodeListFormatter
+import net.postchain.mc.cli.util.NodeListFormatter.renderNodes
 import net.postchain.mc.cli.util.clientOption
 
 class CommandListBlockchainSigners : CliktCommand(
@@ -18,7 +18,12 @@ class CommandListBlockchainSigners : CliktCommand(
     private val includeInactive by includeInactiveOption()
 
     override fun run() {
-        NodeListFormatter.render(client.getBlockchainSigners(blockchainRID), includeInactive)
-                .also { println(it) }
+        val signers = client.getBlockchainSigners(blockchainRID)
+        if (signers.isEmpty()) {
+            echo("No signers")
+        } else {
+            renderNodes(signers, includeInactive).also { echo(it) }
+        }
+
     }
 }

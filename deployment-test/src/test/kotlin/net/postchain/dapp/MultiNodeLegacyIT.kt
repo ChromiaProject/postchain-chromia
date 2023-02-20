@@ -33,19 +33,21 @@ internal class MultiNodeLegacyIT {
                 .withEnv("POSTGRES_USER", "postchain")
     }
 
-    private val node1 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node1/config/node-config.properties")!!))
+    private val node1 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node1/node-config.properties")!!))
             .withNetwork(network)
             .withNetworkAliases("node1")
-            .withClasspathResourceMapping("$resourceFolder/node1/config", "${PostchainContainer.RELL_PATH}/config", BindMode.READ_ONLY)
-            .withClasspathResourceMapping("$resourceFolder/src", PostchainContainer.RELL_SRC, BindMode.READ_ONLY)
+            .withClasspathResourceMapping("$resourceFolder/node1", PostchainContainer.POSTCHAIN_PATH, BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+            .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.POSTCHAIN_PATH}/node-config.properties")
+            .withCommand("run-node-auto")
 
-    private val node2 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node2/config/node-config.properties")!!))
+    private val node2 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node2/node-config.properties")!!))
             .withNetwork(network)
             .withNetworkAliases("node2")
-            .withClasspathResourceMapping("$resourceFolder/node2/config", "${PostchainContainer.RELL_PATH}/config", BindMode.READ_ONLY)
-            .withClasspathResourceMapping("$resourceFolder/src", PostchainContainer.RELL_SRC, BindMode.READ_ONLY)
+            .withClasspathResourceMapping("$resourceFolder/node2", PostchainContainer.POSTCHAIN_PATH, BindMode.READ_ONLY)
             .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+            .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.POSTCHAIN_PATH}/node-config.properties")
+            .withCommand("run-node-auto")
 
     @BeforeEach
     fun setup() {

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dict>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="name">
+                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="configurationfactory">
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string></string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="main.rell">
+                                <string>entity city { key name; }
+
+operation add_city (name) { create city (name); }
+
+query get_cities () { return city @* {} ( .name ); }
+</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.11.0</string>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="signers">
+        <array>
+            <bytea>03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070</bytea>
+            <bytea>031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F</bytea>
+        </array>
+    </entry>
+</dict>

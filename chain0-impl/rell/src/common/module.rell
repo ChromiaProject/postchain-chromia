@@ -11,8 +11,6 @@ import .queries.*;
 import .util.*;
 import ^.cluster.*;
 
-query directory_version() = "0.1";
-
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(
     initial_provider: pubkey,
@@ -38,7 +36,7 @@ function initialize_module(
 
     print("Creating initial provider with pubkey: " + initial_provider);
     register_and_enable_provider(
-        initial_provider,
+        provider_info(initial_provider),
         provider_tier.NODE_PROVIDER,
         cluster = null,
         voter_set = null,
@@ -51,19 +49,13 @@ function initialize_module(
     val system_cluster = create_cluster_impl(
         provider,
         clusters.system,
-        governor=system_voter_set,
-        providers=list<pubkey>()
+        governor = system_voter_set,
+        providers = list<pubkey>()
        );
 
-    print("Creating system container");
-    val system_container = create_container_with_resource_limits(
-        provider,
-        containers.system,
-        cluster = system_cluster,
-        voter_set = system_voter_set
-    );
-
     enroll.system(provider);
+
+    val system_container = container @ { .cluster == system_cluster, .system };
 
     print("Adding c0 blockchain to system container");
     val c0_config = map<text,gtv>.from_gtv(chain_context.raw_config);
@@ -100,7 +92,7 @@ function _setup_provider_quotas(actions_per_day: integer, max_containers: intege
     create provider_quota(tier = provider_tier.NODE_PROVIDER, provider_quota_type.max_actions_per_day, value = actions_per_day);
     // max_nodes
     create provider_quota(tier = provider_tier.COMMUNITY_NODE_PROVIDER, provider_quota_type.max_nodes, value = provider_quota_defaults.MAX_NODES);
-    create provider_quota(tier = provider_tier.NODE_PROVIDER, provider_quota_type.max_nodes, value = provider_quota_defaults.MAX_NODES);
+    create provider_quota(tier = provider_tier.NODE_PROVIDER, provider_quota_type.max_nodes, value = -1);
     // max_containers
     create provider_quota(tier = provider_tier.NODE_PROVIDER, provider_quota_type.max_containers, value = max_containers);
 }

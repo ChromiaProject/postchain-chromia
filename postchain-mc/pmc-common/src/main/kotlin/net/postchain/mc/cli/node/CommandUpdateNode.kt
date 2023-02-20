@@ -5,11 +5,11 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import net.postchain.chain0.common.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.updateNodeOperation
-import net.postchain.cli.util.hostOption
-import net.postchain.cli.util.portOption
-import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
+import net.postchain.mc.cli.hostOption
+import net.postchain.mc.cli.portOption
+import net.postchain.mc.cli.requiredPubkeyOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandUpdateNode : CliktCommand(
@@ -34,7 +34,7 @@ class CommandUpdateNode : CliktCommand(
 
     override fun run() {
         if (host == null && port == null && apiUrl == null && clusterName == null) {
-            println("No properties to update. At least one node's property should be specified")
+            echo("No properties to update. At least one node's property should be specified")
             return
         }
 

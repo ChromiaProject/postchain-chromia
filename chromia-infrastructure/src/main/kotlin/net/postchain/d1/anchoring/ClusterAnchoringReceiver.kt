@@ -2,10 +2,13 @@
 
 package net.postchain.d1.anchoring
 
-class ClusterAnchoringReceiver {
+import net.postchain.d1.cluster.ClusterManagement
+
+class ClusterAnchoringReceiver(private val cluster: String, private val clusterManagement: ClusterManagement) {
     val localPipes = mutableMapOf<Long, ClusterAnchoringPipe>()
 
     fun getRelevantPipes(): List<ClusterAnchoringPipe> {
-        return localPipes.values.toList()
+        val activeClusterChains = clusterManagement.getActiveBlockchains(cluster)
+        return localPipes.values.filter { it.blockchainRid in activeClusterChains }
     }
 }

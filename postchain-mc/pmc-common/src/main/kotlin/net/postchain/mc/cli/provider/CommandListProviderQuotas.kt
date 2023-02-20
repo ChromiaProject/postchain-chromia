@@ -20,15 +20,19 @@ class CommandListProviderQuotas : CliktCommand(
             (it.providerQuotaType to it.tier) to it.value
         }
 
-        table {
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-            header("Quotas", NODE_PROVIDER.name, COMMUNITY_NODE_PROVIDER.name)
-            ProviderQuotaType.values().forEach {
-                row(
-                        it.name,
-                        quotas[it to NODE_PROVIDER]?.toString() ?: "n/a",
-                        quotas[it to COMMUNITY_NODE_PROVIDER]?.toString() ?: "n/a")
-            }
-        }.render(StringBuilder()).also { println(it) }
+        if (quotas.isEmpty()) {
+            echo("No provider quotas")
+        } else {
+            table {
+                hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
+                header("Quotas", NODE_PROVIDER.name, COMMUNITY_NODE_PROVIDER.name)
+                ProviderQuotaType.values().forEach {
+                    row(
+                            it.name,
+                            quotas[it to NODE_PROVIDER]?.toString() ?: "n/a",
+                            quotas[it to COMMUNITY_NODE_PROVIDER]?.toString() ?: "n/a")
+                }
+            }.render(StringBuilder()).also { println(it) }
+        }
     }
 }

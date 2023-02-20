@@ -4,7 +4,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.1</version>
+        <version>3.8.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -125,9 +125,10 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
-                                <mainModule>anchoring</mainModule>
+                                <mainModule>cluster_anchoring</mainModule>
                                 <mainModule>icmf</mainModule>
                             </mainModules>
                         </configuration>

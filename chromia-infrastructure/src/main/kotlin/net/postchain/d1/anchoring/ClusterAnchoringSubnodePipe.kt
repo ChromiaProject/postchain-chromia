@@ -46,9 +46,9 @@ class ClusterAnchoringSubnodePipe(
             }?.let {
                 ClusterAnchoringPacket(
                         currentPointer,
-                        it.rid,
-                        it.header,
-                        it.witness
+                        it.rid.data,
+                        it.header.data,
+                        it.witness.data
                 )
             }
 

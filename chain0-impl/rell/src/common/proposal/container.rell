@@ -1,5 +1,5 @@
 
-operation propose_container_limits(my_pubkey: pubkey, container_name: text, limits: map<container_resource_limit_type, integer>) {
+operation propose_container_limits(my_pubkey: pubkey, container_name: text, limits: map<container_resource_limit_type, integer>, description: text = "") {
     val limits_map = _get_current_container_resource_limits(container_name);
     limits_map.put_all(limits);
 
@@ -9,14 +9,16 @@ operation propose_container_limits(my_pubkey: pubkey, container_name: text, limi
     val container = require_container(container_name);
     require_cluster_governor(container.cluster, me);
 
-    val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.governance);
+    val prop = create proposal(op_context.last_block_time, proposal_type.container_limits, me, container.cluster.governance, description);
     create pending_container_limits(
         prop,
         container,
         max_blockchains = limits_map[container_resource_limit_type.max_blockchains],
         cpu = limits_map[container_resource_limit_type.cpu],
         ram = limits_map[container_resource_limit_type.ram],
-        storage = limits_map[container_resource_limit_type.storage]
+        storage = limits_map[container_resource_limit_type.storage],
+        io_read = limits_map[container_resource_limit_type.io_read],
+        io_write = limits_map[container_resource_limit_type.io_write]
     );
     internal_vote(me, prop, true);
 }

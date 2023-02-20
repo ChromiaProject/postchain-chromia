@@ -26,14 +26,15 @@ class CommandGetProviderInfo : CliktCommand(
         val nodesByProvider = client.getNodesByProvider(pubkey)
         table {
             row("Provider:", providerData.name)
-            row("Pubkey:", providerData.pubkey.hex())
+            row("Url:", providerData.url)
+            row("Pubkey:", providerData.pubkey.toHex())
             row("System:", providerData.system.toString())
             row("Tier:", providerData.tier.toString())
             row("Active:", providerData.active.toString())
             row("Action points:", actionPoints.toString())
             row("Belongs to cluster(s)", providerClusters.joinToString(","))
             nodesByProvider.forEachIndexed { index, node ->
-                row("Node $index", node.pubkey.hex())
+                row("Node $index", node.pubkey.toHex())
             }
             hints {
                 defaultAlignment = Table.Hints.Alignment.LEFT

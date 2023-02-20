@@ -26,5 +26,5 @@ object QueryProviderMocks : ChromiaQueryProvider {
 
     override fun getAnchorQuery(): PostchainBlockClient? = anchorQueries
 
-    override fun getQuery(blockchainRid: BlockchainRid): PostchainBlockClient? = mockQueries[blockchainRid]
+    override fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient? = mockQueries[targetBlockchainRid]
 }

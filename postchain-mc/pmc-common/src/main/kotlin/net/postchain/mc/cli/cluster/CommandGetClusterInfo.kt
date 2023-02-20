@@ -5,9 +5,11 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
+import net.postchain.chain0.common.queries.getClusterContainers
 import net.postchain.chain0.common.queries.getClusterData
 import net.postchain.chain0.common.queries.getClusterNodes
 import net.postchain.chain0.common.queries.getClusterProviders
+import net.postchain.chain0.common.queries.getClusterReplicaNodes
 import net.postchain.chain0.model.ClusterResourceLimitType
 import net.postchain.chain0.nm_api.nmGetClusterLimits
 import net.postchain.mc.cli.util.clientOption
@@ -30,23 +32,46 @@ class CommandGetClusterInfo : CliktCommand(
             row("Governor:", info.governor)
             row("Is Operational:", info.isOperational.toString())
             row()
-        }.render().also { println(it) }
+        }.render().also { echo(it) }
 
-        table {
-            header("Provider", "Alias")
-            client.getClusterProviders(name).forEach { provider ->
-                row(provider.pubkey.toString(), provider.name)
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val clusterProviders = client.getClusterProviders(name)
+        if (clusterProviders.isNotEmpty()) {
+            table {
+                header("Provider", "Alias")
+                clusterProviders.forEach { provider ->
+                    row(provider.pubkey.toString(), provider.name)
+                }
+                defaultHints()
+            }.render().also { echo(it) }
+        } else {
+            echo("No providers")
+        }
 
-        table {
-            header("Node", "Address")
-            client.getClusterNodes(name).forEach { node ->
-                row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
-            }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+        val clusterNodes = client.getClusterNodes(name)
+        if (clusterNodes.isNotEmpty()) {
+            table {
+                header("Node", "Address")
+                clusterNodes.forEach { node ->
+                    row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
+                }
+                defaultHints()
+            }.render().also { echo(it) }
+        } else {
+            echo("No nodes")
+        }
+
+        val clusterReplicas = client.getClusterReplicaNodes(name)
+        if (clusterReplicas.isNotEmpty()) {
+            table {
+                header("Replica node", "Address")
+                clusterReplicas.forEach { node ->
+                    row(node.pubkey.toString(), "${node.host}:${node.port} / ${node.apiUrl}")
+                }
+                defaultHints()
+            }.render().also { echo(it) }
+        } else {
+            echo("No replica nodes")
+        }
 
         table {
             header("Resource type", "Value")
@@ -54,7 +79,27 @@ class CommandGetClusterInfo : CliktCommand(
             ClusterResourceLimitType.values().forEach {
                 row(it.name, limits[it.name]?.toString() ?: "-1")
             }
-            hints { borderStyle = Table.BorderStyle.SINGLE_LINE }
-        }.render().also { println(it) }
+            defaultHints()
+        }.render().also { echo(it) }
+
+        val containers = client.getClusterContainers(name)
+        if (containers.isNotEmpty()) {
+            table {
+                header("Container", "Deployer")
+                containers.forEach {
+                    row(it.name, it.deployer)
+                }
+                defaultHints()
+            }.render().also { echo(it) }
+        } else {
+            echo("No containers")
+        }
+    }
+
+    private fun Table.defaultHints() {
+        hints {
+            borderStyle = Table.BorderStyle.SINGLE_LINE
+            defaultAlignment = Table.Hints.Alignment.LEFT
+        }
     }
 }

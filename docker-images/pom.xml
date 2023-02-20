@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.1</version>
+        <version>3.8.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,8 +13,6 @@
     <groupId>net.postchain.images</groupId>
     <packaging>pom</packaging>
     <modules>
-        <module>test-dapp</module>
-        <module>server</module>
         <module>admin-client</module>
         <module>chromia-server</module>
         <module>chromia-subnode</module>
@@ -28,6 +26,7 @@
         <gitlab.password>${CI_REGISTRY_PASSWORD}</gitlab.password>
         <gitlab.registry>registry.gitlab.com/chromaway/postchain-chromia</gitlab.registry>
         <docker.cache>/tmp/docker-cache</docker.cache>
+        <image.platforms>linux/amd64,linux/arm64</image.platforms>
     </properties>
 
     <build>
@@ -104,7 +103,7 @@
                                             <argument>buildx</argument>
                                             <argument>build</argument>
                                             <argument>--platform</argument>
-                                            <argument>linux/amd64,linux/arm64</argument>
+                                            <argument>${image.platforms}</argument>
                                             <argument>--tag</argument>
                                             <argument>${gitlab.registry}/${image.name}:${project.version}
                                             </argument>

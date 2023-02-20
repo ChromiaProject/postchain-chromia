@@ -13,6 +13,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
@@ -116,8 +117,6 @@ class IcmfReceiverIT : ManagedModeTest() {
             override fun blockAtHeight(height: Long) =
                     buildAnchorHeader(listOf(senderTwoQueryResponse["block_header"]!!.asByteArray()))
 
-            override fun currentBlockHeight(): Long = throw NotImplementedError()
-
             override fun query(name: String, args: Gtv): Gtv =
                     if (name == "icmf_get_headers_with_messages_after_height" && args["topic"] == gtv("my-topic") && args["from_anchor_height"] == gtv(
                                     -1
@@ -133,8 +132,6 @@ class IcmfReceiverIT : ManagedModeTest() {
         QueryProviderMocks.addMockQueries(senderTwoChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) = throw NotImplementedError()
 
-            override fun currentBlockHeight() = throw NotImplementedError()
-
             override fun query(name: String, args: Gtv) =
                     if (name == "icmf_get_messages_at_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(0))
                         gtv(listOf(senderTwoMessageBody))
@@ -149,8 +146,6 @@ class IcmfReceiverIT : ManagedModeTest() {
         QueryProviderMocks.addMockQueries(senderTwoChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
                     if (height == 0L) createBlockDetail(senderTwoChainRid, listOf(senderTwoMessageBody)) else null
-
-            override fun currentBlockHeight() = throw NotImplementedError()
 
             override fun query(name: String, args: Gtv) =
                     if (name == "icmf_get_messages_after_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
@@ -466,12 +461,12 @@ class IcmfReceiverIT : ManagedModeTest() {
         ).getRawData()
 
         return BlockDetail(
-                blockRid,
-                blockHeader.getPreviousBlockRid(),
-                GtvEncoder.encodeGtv(gtvBlockHeader),
+                blockRid.wrap(),
+                blockHeader.getPreviousBlockRid().wrap(),
+                GtvEncoder.encodeGtv(gtvBlockHeader).wrap(),
                 0,
                 listOf(),
-                rawWitness,
+                rawWitness.wrap(),
                 blockHeader.getTimestamp()
         )
     }
@@ -506,12 +501,12 @@ class IcmfReceiverIT : ManagedModeTest() {
                 )
         ).getRawData()
         return BlockDetail(
-                blockRid,
-                anchorChainRid.data,
-                GtvEncoder.encodeGtv(blockHeader),
+                blockRid.wrap(),
+                anchorChainRid.data.wrap(),
+                GtvEncoder.encodeGtv(blockHeader).wrap(),
                 0L,
                 listOf(),
-                rawWitness,
+                rawWitness.wrap(),
                 0L
         )
     }

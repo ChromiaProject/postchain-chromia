@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.1</version>
+        <version>3.8.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -22,35 +22,21 @@
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>admin-client</artifactId>
-            <version>3.7.1</version>
+            <version>3.8.0</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-server</artifactId>
-            <version>3.7.1</version>
+            <version>3.8.0</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>3.7.1</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain.images</groupId>
-            <artifactId>server</artifactId>
-            <version>3.7.1</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain.images</groupId>
-            <artifactId>test-dapp</artifactId>
-            <version>3.7.1</version>
+            <version>3.8.0</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
@@ -60,12 +46,6 @@
             <artifactId>kotlin-stdlib-jdk8</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>net.postchain.chain0</groupId>
-            <artifactId>directory1</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-client-cli</artifactId>
@@ -97,7 +77,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.spotify</groupId>
+            <groupId>org.mandas</groupId>
             <artifactId>docker-client</artifactId>
             <scope>test</scope>
         </dependency>
@@ -142,10 +122,10 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chromia-infrastructure/src/main/rell</source>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>anchoring</mainModule>
+                                <mainModule>cluster_anchoring</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

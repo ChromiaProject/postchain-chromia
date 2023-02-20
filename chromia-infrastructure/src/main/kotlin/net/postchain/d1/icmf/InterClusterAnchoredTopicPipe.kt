@@ -20,7 +20,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.rell.anchoring.icmfGetHeadersWithMessagesAfterHeight
+import net.postchain.d1.rell.cluster_anchoring.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -126,10 +126,10 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 return
             }
 
-            val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header)
+            val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header.data)
             val blockRid = decodedAnchorHeader.toGtv().merkleHash(merkleHashCalculator)
 
-            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header, anchorBlock.witness, blockRid, cryptoSystem, clusterManagement, ICMF_ANCHOR_HEADERS_EXTRA)
+            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header.data, anchorBlock.witness.data, blockRid, cryptoSystem, clusterManagement, ICMF_ANCHOR_HEADERS_EXTRA)
                     ?: return
 
             val anchorHeaderData = anchorExtraData[route.topic]
@@ -201,8 +201,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
 
             icmfAnchorPackets.add(
                     IcmfAnchorPacket(
-                            anchorBlock.header,
-                            anchorBlock.witness,
+                            anchorBlock.header.data,
+                            anchorBlock.witness.data,
                             anchorHeight,
                             icmfPackets
                     )
