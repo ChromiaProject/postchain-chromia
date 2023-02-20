@@ -20,7 +20,6 @@
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
         <module>docker-images</module>
-        <module>postchain-dist</module>
         <module>chromia-dist</module>
     </modules>
     <packaging>pom</packaging>

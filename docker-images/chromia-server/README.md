@@ -1,4 +1,4 @@
-# Postchain-server
+# Chromia-server
 
 This image is used to run postchain in a container, with the default behavior of acting as a server.
 A postchain running as a server accepts messages over rpc protocol to interact with it. We recommend that this traffic
@@ -19,13 +19,13 @@ We also recommend encrypting the REST API, which is configured separately in the
 
 ### Environment
 
-| Variable                     | Default                        | Description                                                       |
-|:-----------------------------|:-------------------------------|:------------------------------------------------------------------|
-| POSTCHAIN_CONF               | /config/node-config.properties | File for node configuration                                       |
-| POSTCHAIN_SERVER_PORT        | 50051                          | Port used for rpc communication                                   |
-| POSTCHAIN_DEBUG              | false                          | Enables debug functionalities such as `/_debug` rest api endpoint |   
-| POSTCHAIN_SERVER_CERTIFICATE |                                | Path to mounted certificate file                                  |   
-| POSTCHAIN_SERVER_PRIVKEY     |                                | Path to server certificate private key                            |   
+| Variable                     | Default | Description                                                       |
+|:-----------------------------|:--------|:------------------------------------------------------------------|
+| POSTCHAIN_DEBUG              | false   | Enables debug functionalities such as `/_debug` rest api endpoint |   
+| POSTCHAIN_CONFIG             |         | File for node configuration                                       |
+| POSTCHAIN_SERVER_PORT        | 50051   | Port used for RPC communication                                   |
+| POSTCHAIN_SERVER_CERTIFICATE |         | Path to mounted certificate file                                  |   
+| POSTCHAIN_SERVER_PRIVKEY     |         | Path to server certificate private key                            |   
 
 ### Ports
 
@@ -39,24 +39,51 @@ A few ports need to be exposed from the container to communicate properly
 
 ### Database
 
-This image will assume that you have a postgres database running.
+This image will assume that you have a postgres database running, see [these instructions](https://gitlab.com/chromaway/postchain/-/blob/dev/postchain-devtools/README_postgres_setup.md) for how to set it up.
 Specify the path to this using either `database.url=` in the node config or `POSTCHAIN_DB_URL` environment variable.
 If you are using docker compose, the environment variable to set on the postchain service is
 `POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain`
 
 ## Example usage
 
-Put the files [private.properties](../test-dapp/README.md#configprivateproperties) and [node-config.properties](../test-dapp/README.md#confignode-configproperties) in a folder called `config`.
+Put files `private.properties` and `node-config.properties` in a folder called `config`.
+
+### config/private.properties
+
+```shell
+messaging.privkey=3132333435363738393031323334353637383930313233343536373839303131
+messaging.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+```
+
+### config/node-config.properties
+
+```shell
+include=private.properties
+
+configuration.provider.node=manual
+infrastructure=base/ebft
+
+database.driverclass=org.postgresql.Driver
+database.url=jdbc:postgresql://host.docker.internal:5432/postchain
+
+database.username=postchain
+database.password=postchain
+database.schema=postchain_single_dapp_
+
+api.port=7740
+
+messaging.port=9870
+```
 
 Start the server using
 ```commandline
 docker run -it --rm \
-    --name postchain
+    --name postchain \
     -h postchain \
     -p 50051:50051 \
     -p 9870:9870   \
     -p 7740:7740   \
     -v $(pwd)/config:/config/ \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/postchain-server:3.8.0-SNAPSHOT \
-    run-server
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.8.0-SNAPSHOT \
+    run-server --node-config /config/node-config.properties
 ```
