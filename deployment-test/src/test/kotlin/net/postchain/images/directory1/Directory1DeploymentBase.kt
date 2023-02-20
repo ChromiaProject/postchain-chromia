@@ -4,6 +4,7 @@ import assertk.assert
 import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
@@ -184,8 +185,6 @@ abstract class Directory1DeploymentBase {
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true, "")
                 .postTransactionUntilConfirmed("Register p2 as system")
 
-        voteOnAllProposals(node2.provider)
-
         node1.client(brid, listOf(node2.provider)).transactionBuilder()
                 .registerNodeOperation(
                         node2.providerPubkey,
@@ -215,7 +214,6 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("Register p3 as system")
 
         voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
 
         testLogger.info("Adding node3 to [node1, node2] network")
         node1.client(brid, listOf(node3.provider)).transactionBuilder()
@@ -238,6 +236,10 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
+        awaitQueryResult {
+            assert(node1.c0.getProposalsSince(RowId(0))).isNotEmpty()
+        }
+
         node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
             node1.client(brid, listOf(provider)).transactionBuilder()
                     .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
@@ -281,8 +283,10 @@ abstract class Directory1DeploymentBase {
                         .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName, "")
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
-                voteOnAllProposals(node2.provider)
-                voteOnAllProposals(node3.provider)
+                if (containerName == systemContainer) {
+                    voteOnAllProposals(node2.provider)
+                    voteOnAllProposals(node3.provider)
+                }
             }
         }
 
