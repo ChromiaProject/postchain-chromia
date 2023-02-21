@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dict>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="maxblocktime">
+                <int>2000</int>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="configurationfactory">
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <string>net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
+                </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string>anchoring_chain_common</string>
+                            <string>anchoring_chain_cluster</string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="anchoring_chain_common/module.rell">
+                                <param key="anchoring_chain_common" type="string"/>
+                            </entry>
+                            <entry key="anchoring_chain_cluster/module.rell">
+                                <param key="anchoring_chain_cluster" type="string"/>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.11.0</string>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+</dict>

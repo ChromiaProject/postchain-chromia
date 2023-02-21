@@ -13,11 +13,11 @@ import java.lang.Long.max
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
-class ClusterAnchoringSubnodePipe(
+class AnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         restApiUrl: String
-) : ClusterAnchoringPipe {
+) : AnchoringPipe {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
@@ -37,14 +37,14 @@ class ClusterAnchoringSubnodePipe(
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? =
+    override fun fetchNext(currentPointer: Long): AnchoringPacket? =
             try {
                 client.blockAtHeight(currentPointer)
             } catch (e: Exception) {
                 logger.warn(e) { "Block fetching from sub node failed: $e" }
                 null
             }?.let {
-                ClusterAnchoringPacket(
+                AnchoringPacket(
                         currentPointer,
                         it.rid.data,
                         it.header.data,

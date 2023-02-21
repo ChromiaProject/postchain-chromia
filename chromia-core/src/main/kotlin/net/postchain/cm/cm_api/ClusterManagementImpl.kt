@@ -29,4 +29,10 @@ class ClusterManagementImpl(private val query: PostchainQuery) : ClusterManageme
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String =
             query.cmGetBlockchainCluster(blockchainRid.data)
+
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> =
+            query.cmGetClusterAnchoringChains().map { BlockchainRid(it) }
+
+    override fun getSystemAnchoringChain(): BlockchainRid? =
+            query.cmGetSystemAnchoringChain()?.let { BlockchainRid(it) }
 }

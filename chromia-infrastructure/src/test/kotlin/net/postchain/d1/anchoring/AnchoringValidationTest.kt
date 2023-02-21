@@ -219,7 +219,7 @@ class AnchoringValidationTest {
     }
 
     private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
-        val txExtension = AnchoringSpecialTxExtension()
+        val txExtension = AnchoringSpecialTxExtension {_, _ -> mock()}
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.clusterManagement = clusterManagement
         return txExtension

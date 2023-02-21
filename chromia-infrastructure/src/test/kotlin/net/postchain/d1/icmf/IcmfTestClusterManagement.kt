@@ -42,4 +42,12 @@ class IcmfTestClusterManagement : ClusterManagement {
         anchorChainRid, senderOneChainRid -> senderCluster
         else -> receiverCluster
     }
+
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> {
+        throw NotImplementedError("Not yet implemented")
+    }
+
+    override fun getSystemAnchoringChain(): BlockchainRid? {
+        throw NotImplementedError("Not yet implemented")
+    }
 }

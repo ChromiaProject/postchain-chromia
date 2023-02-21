@@ -10,11 +10,11 @@ import net.postchain.core.Storage
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
-class ClusterAnchoringLocalPipe(
+class AnchoringLocalPipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         private val storage: Storage
-) : ClusterAnchoringPipe {
+) : AnchoringPipe {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
@@ -22,7 +22,7 @@ class ClusterAnchoringLocalPipe(
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): ClusterAnchoringPacket? {
+    override fun fetchNext(currentPointer: Long): AnchoringPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
@@ -33,7 +33,7 @@ class ClusterAnchoringLocalPipe(
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
-                ClusterAnchoringPacket(currentPointer, blockRID, rawHeader, rawWitness)
+                AnchoringPacket(currentPointer, blockRID, rawHeader, rawWitness)
             } else {
                 null
             }

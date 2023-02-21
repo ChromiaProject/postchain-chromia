@@ -43,4 +43,12 @@ class AnchoringTestClusterManagement : ClusterManagement {
             else -> "unknown_cluster"
         }
     }
+
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> {
+        return listOf(ChainUtil.ridOf(2))
+    }
+
+    override fun getSystemAnchoringChain(): BlockchainRid {
+        return ChainUtil.ridOf(1)
+    }
 }

@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
-import net.postchain.chain0.common.proposal.proposeAnchoringConfigurationOperation
+import net.postchain.chain0.common.proposal.proposeClusterAnchoringConfigurationOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.BlockchainConfig
@@ -27,7 +27,7 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
     override fun run() {
         val bcConfig = BlockchainConfig.readFromFile(anchoringConfig)
         client.transactionBuilder()
-                .proposeAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
+                .proposeClusterAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()
                 .printResult(
                         "Anchoring configuration was proposed: ${bcConfig.hash}",

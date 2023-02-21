@@ -1,4 +1,4 @@
-package net.postchain.d1.anchoring
+package net.postchain.d1.anchoring.cluster
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
@@ -16,7 +16,7 @@ import net.postchain.gtv.merkleHash
 const val EVENT_TYPE = "icmf_header"
 const val ICMF_ANCHOR_HEADERS_EXTRA = "icmf_anchor_headers"
 
-class AnchorBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
+class ClusterAnchoringIcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem

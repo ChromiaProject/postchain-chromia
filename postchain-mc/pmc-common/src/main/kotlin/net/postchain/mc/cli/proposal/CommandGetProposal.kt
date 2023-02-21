@@ -6,7 +6,7 @@ import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.proposal.GetProposalResult
 import net.postchain.chain0.common.proposal.ProposalType
-import net.postchain.chain0.common.proposal.getAnchoringConfigurationProposal
+import net.postchain.chain0.common.proposal.getClusterAnchoringConfigurationProposal
 import net.postchain.chain0.common.proposal.getBlockchainActionProposal
 import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterLimitsProposal
@@ -205,8 +205,8 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
-            ProposalType.anchoring_configuration -> {
-                val p = client.getAnchoringConfigurationProposal(proposal.id) ?: return ""
+            ProposalType.cluster_anchoring_configuration -> {
+                val p = client.getClusterAnchoringConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
                 "Proposed anchoring configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"

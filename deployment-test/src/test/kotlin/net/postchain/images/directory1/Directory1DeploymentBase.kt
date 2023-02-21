@@ -8,8 +8,9 @@ import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
-import net.postchain.chain0.anchoring.integrated.getLastLegacyAnchoredBlock
+import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
@@ -23,11 +24,12 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
+import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
-import net.postchain.d1.rell.cluster_anchoring.getLastAnchoredBlock
+import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
@@ -93,14 +95,28 @@ abstract class Directory1DeploymentBase {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val moduleRellCode = File("../chain0-impl/rell/src/cluster_anchoring/module.rell").readText()
-            val icmfRellCode = File("../chain0-impl/rell/src/cluster_anchoring/icmf.rell").readText()
-            val anchorGtvConfig = GtvMLParser.parseGtvML(
-                    javaClass.getResource("/anchoring/blockchain_config_anchor.xml")!!.readText(),
-                    mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
+            val anchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_common/module.rell").readText()
+            val clusterAnchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_cluster/module.rell").readText()
+            val icmfRellCode = File("../chain0-impl/rell/src/anchoring_chain_cluster/icmf.rell").readText()
+            val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(
+                    javaClass.getResource("/anchoring/blockchain_config_cluster_anchoring.xml")!!.readText(),
+                    mapOf(
+                            "anchoring_chain_common" to gtv(anchoringRellCode),
+                            "anchoring_chain_cluster" to gtv(clusterAnchoringRellCode + icmfRellCode)
+                    )
+            )
+
+            val systemAnchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_system/module.rell").readText()
+            val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(
+                    javaClass.getResource("/anchoring/blockchain_config_system_anchoring.xml")!!.readText(),
+                    mapOf(
+                            "anchoring_chain_common" to gtv(anchoringRellCode),
+                            "anchoring_chain_system" to gtv(systemAnchoringRellCode)
+                    )
+            )
 
             transactionBuilder()
-                    .initOperation(GtvEncoder.encodeGtv(anchorGtvConfig))
+                    .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
 
             assert(getSummary().providers).isEqualTo(1L)
@@ -112,12 +128,15 @@ abstract class Directory1DeploymentBase {
 
     private fun assertAnchoringChainProperties() {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
-        assertEquals(2, systemChains.size)
+        assertEquals(3, systemChains.size)
 
-        // Getting anchoring chain for system cluster via CM API
-        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
-        // Asserting anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it.rid }).contains(anchoringChainBrid)
+        // Getting cluster anchoring chain for system cluster via CM API
+        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+        // Asserting cluster anchoring chain is in system_chains list of NP API
+        assert(systemChains.map { it.rid }).contains(clusterAnchoringChainBrid)
+
+        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()
+        assert(systemChains.map { it.rid }).contains(systemAnchoringChainBrid!!.wrap())
     }
 
     @Test
@@ -251,7 +270,7 @@ abstract class Directory1DeploymentBase {
     @Order(7)
     fun `Deploy new dapp`(@TempDir tmpSources: File) {
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(2)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
         File("../chain0-impl/rell/src/icmf").copyRecursively(tmpSources.resolve("icmf"))
@@ -260,7 +279,7 @@ abstract class Directory1DeploymentBase {
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(4)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
     }
 
@@ -380,32 +399,42 @@ abstract class Directory1DeploymentBase {
     fun `Blocks can be anchored`() {
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
 
-        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp"]!!)
-        assertThatDappBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp2"]!!)
+        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp"]!!)
+        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp2"]!!)
     }
 
-    private fun assertThatDappBlocksAreAnchored(anchoringChainBrid: BlockchainRid, dappBrid: BlockchainRid) {
+    @Test
+    @Order(14)
+    fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
+        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()
+        assert(systemAnchoringChainBrid).isNotNull()
+        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+
+        assertThatBlocksAreAnchored(BlockchainRid(systemAnchoringChainBrid!!), BlockchainRid(clusterAnchoringChainBrid))
+    }
+
+    private fun assertThatBlocksAreAnchored(anchoringChainBrid: BlockchainRid, sourceBrid: BlockchainRid) {
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val lastAnchoredBlock = awaitQueryResult {
-                    node.client(anchoringChainBrid).getLastAnchoredBlock(dappBrid)
+                    node.client(anchoringChainBrid).getLastAnchoredBlock(sourceBrid)
                 }
                 assert(lastAnchoredBlock).isNotNull()
 
-                val dappChainBlock = awaitQueryResult {
-                    node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.blockHeight)
+                val sourceChainBlock = awaitQueryResult {
+                    node.client(sourceBrid).blockAtHeight(lastAnchoredBlock!!.blockHeight)
                 }
-                assert(dappChainBlock).isNotNull()
+                assert(sourceChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assert(sourceChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
 
-                val dappWitness = BaseBlockWitness.fromBytes(dappChainBlock.witness.data)
+                val sourceWitness = BaseBlockWitness.fromBytes(sourceChainBlock.witness.data)
                 val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
 
-                assert(dappWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
-                dappWitness.getSignatures().forEach { dappSignature ->
+                assert(sourceWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
+                sourceWitness.getSignatures().forEach { sourceSignature ->
                     assert(anchorWitness.getSignatures().any {
-                        it.subjectID.contentEquals(dappSignature.subjectID) && it.data.contentEquals(dappSignature.data)
+                        it.subjectID.contentEquals(sourceSignature.subjectID) && it.data.contentEquals(sourceSignature.data)
                     }).isTrue()
                 }
             }
@@ -413,7 +442,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(14)
+    @Order(15)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
