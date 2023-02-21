@@ -11,7 +11,7 @@ import net.postchain.gtx.data.OpData
  * This data class hides the ordering of the [OpData] arguments to the outside world
  * Can do primitive validation of [OpData] too.
  */
-data class AnchorOpData(
+data class AnchoringOpData(
         val blockRid: ByteArray,
         val headerData: BlockHeaderData,
         val witness: ByteArray
@@ -20,12 +20,12 @@ data class AnchorOpData(
     companion object : KLogging() {
 
         /**
-         * Does first part of validation, and hands over a "decoded" [AnchorOpData] for further validation
+         * Does first part of validation, and hands over a "decoded" [AnchoringOpData] for further validation
          *
          * @param op is what we should validate/decode
          * @return is a simple DTO or null if decode failed
          */
-        fun validateAndDecodeOpData(op: OpData): AnchorOpData? {
+        fun validateAndDecodeOpData(op: OpData): AnchoringOpData? {
             if (AnchoringSpecialTxExtension.OP_BLOCK_HEADER != op.opName) {
                 logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
                 return null
@@ -49,7 +49,7 @@ data class AnchorOpData(
                     return null
                 }
 
-                AnchorOpData(blockRid, header, rawWitness)
+                AnchoringOpData(blockRid, header, rawWitness)
             } catch (e: RuntimeException) {
                 logger.warn("Invalid spcl operation: Error: ${e.message}")
                 null // We don't really care what's wrong, just log it and return null

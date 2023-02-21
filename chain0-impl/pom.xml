@@ -23,7 +23,7 @@
         <rell.directory>${project.parent.basedir}/rell</rell.directory>
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
-        <rellCompileModules>delta,cluster_anchoring,icmf</rellCompileModules>
+        <rellCompileModules>delta,anchoring_chain_system,anchoring_chain_cluster,icmf</rellCompileModules>
         <rellTestModules>common,roles,container,cluster,nm_api</rellTestModules>
     </properties>
 

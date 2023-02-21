@@ -17,10 +17,10 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.rell.cluster_anchoring.icmfGetHeadersWithMessagesAfterHeight
+import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv

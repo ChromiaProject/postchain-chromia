@@ -14,7 +14,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.d1.anchoring.AnchoringGTXModule</string>
+                    <string>net.postchain.d1.anchoring.system.SystemAnchoringGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
@@ -23,18 +23,22 @@
                 <dict>
                     <entry key="modules">
                         <array>
-                            <string>cluster_anchoring</string>
+                            <string>anchoring_chain_common</string>
+                            <string>anchoring_chain_system</string>
                         </array>
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="cluster_anchoring/module.rell">
-                                <param key="rell" type="string"/>
+                            <entry key="anchoring_chain_common/module.rell">
+                                <param key="anchoring_chain_common" type="string"/>
+                            </entry>
+                            <entry key="anchoring_chain_system/module.rell">
+                                <param key="anchoring_chain_system" type="string"/>
                             </entry>
                         </dict>
                     </entry>
                     <entry key="version">
-                        <string>0.10.11</string>
+                        <string>0.11.0</string>
                     </entry>
                 </dict>
             </entry>

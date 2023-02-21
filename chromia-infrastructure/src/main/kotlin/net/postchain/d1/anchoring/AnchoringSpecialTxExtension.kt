@@ -29,7 +29,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
+class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -37,7 +37,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    lateinit var clusterAnchoringReceiver: ClusterAnchoringReceiver
+    lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
@@ -55,6 +55,10 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
     ) {
         this.module = module
         cryptoSystem = cs
+    }
+
+    fun createReceiver(anchoringBlockchainRid: BlockchainRid) {
+        anchoringReceiver = anchoringReceiverFactory.create(clusterManagement, anchoringBlockchainRid)
     }
 
     /**
@@ -77,7 +81,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val pipes = clusterAnchoringReceiver.getRelevantPipes()
+        val pipes = anchoringReceiver.getRelevantPipes()
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
@@ -93,10 +97,10 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: ClusterAnchoringPipe,
+            pipe: AnchoringPipe,
             bctx: BlockEContext
-    ): List<ClusterAnchoringPacket> {
-        val packets = mutableListOf<ClusterAnchoringPacket>()
+    ): List<AnchoringPacket> {
+        val packets = mutableListOf<AnchoringPacket>()
         val blockchainRid = pipe.blockchainRid
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
@@ -119,12 +123,12 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
 
     /**
-     * Transform to [ClusterAnchoringPacket] to [OpData] put arguments in correct order
+     * Transform to [AnchoringPacket] to [OpData] put arguments in correct order
      *
      * @param clusterAnchorPacket is what we get from pipe
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(clusterAnchorPacket: ClusterAnchoringPacket): OpData {
+    private fun buildOpData(clusterAnchorPacket: AnchoringPacket): OpData {
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
         val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
@@ -142,7 +146,7 @@ class AnchoringSpecialTxExtension : GTXSpecialTxExtension {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
 
         for (op in ops) {
-            val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
+            val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
 
             val headerData = anchorOpData.headerData
             val blockRid = headerData.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))

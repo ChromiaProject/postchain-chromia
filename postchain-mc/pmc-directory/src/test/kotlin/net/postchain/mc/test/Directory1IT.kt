@@ -104,7 +104,7 @@ class Directory1IT : ManagedModeTest() {
     @BeforeEach
     fun setup() {
         blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
-        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null))
+        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null, null))
     }
 
     @Test

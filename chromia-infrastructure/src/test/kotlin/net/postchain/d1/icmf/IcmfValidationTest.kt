@@ -11,7 +11,7 @@ import net.postchain.core.BlockRid
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv

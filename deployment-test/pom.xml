@@ -125,7 +125,7 @@
                             <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>cluster_anchoring</mainModule>
+                                <mainModule>anchoring_chain_common</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

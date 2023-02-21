@@ -9,6 +9,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -56,19 +57,9 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun happyAnchor() {
         startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain()
 
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
-
-        val moduleRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/module.rell").readText()
-        val icmfRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/icmf.rell").readText()
-        val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_anchor.xml")!!.readText(),
-                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
-
-        val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+        val dappChain = startDappChain()
 
         // --------------------
         // Dapp chain: Build 4 blocks
@@ -163,19 +154,9 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun onlyClusterChainsAreAnchored() {
         startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain()
 
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
-
-        val moduleRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/module.rell").readText()
-        val icmfRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/icmf.rell").readText()
-        val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_anchor.xml")!!.readText(),
-                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
-
-        val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+        val dappChain = startDappChain()
 
         // Add an extra dapp chain that will get chainId == 3, do string replacement to make it unique
         // This dapp will be mocked to be in another cluster
@@ -199,6 +180,64 @@ class AnchoringIT : ManagedModeTest() {
 
         val dapp2Block = anchorBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(dapp2Chain))))).get()
         assertTrue(dapp2Block.isNull())
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun systemAnchoringAnchorsClusterAnchoringBlocks() {
+        startManagedSystem(3, 0)
+        val systemAnchoringChain = startSystemAnchoringChain()
+        val clusterAnchoringChain = startClusterAnchoringChain()
+
+        buildBlock(clusterAnchoringChain, 0L)
+        buildBlock(systemAnchoringChain, 0L)
+
+        // Verify that system anchoring chain has anchored the block that was built on cluster anchoring chain
+        val systemAnchoringBlockQueries = getChainNodes(systemAnchoringChain)[0].blockQueries(systemAnchoringChain)
+        val clusterAnchoringBlock = systemAnchoringBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(clusterAnchoringChain))))).get()
+        assertFalse(clusterAnchoringBlock.isNull())
+
+        buildBlock(clusterAnchoringChain, 1L)
+        // Verify that cluster anchoring chain has not anchored the block that was built on system anchoring chain
+        val clusterAnchoringBlockQueries = getChainNodes(clusterAnchoringChain)[0].blockQueries(clusterAnchoringChain)
+        val systemAnchoringBlock = clusterAnchoringBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(systemAnchoringChain))))).get()
+        assertTrue(systemAnchoringBlock.isNull())
+    }
+
+    private fun startDappChain(): Long {
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
+
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
+    }
+
+    private fun startClusterAnchoringChain(): Long {
+        val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
+        val clusterAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/module.rell").readText()
+        val icmfRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/icmf.rell").readText()
+        val anchorGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")!!.readText(),
+                mapOf(
+                        "anchoring_chain_common" to gtv(anchoringRellCode),
+                        "anchoring_chain_cluster" to gtv(clusterAnchoringRellCode + icmfRellCode)
+                )
+        )
+
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+    }
+
+    private fun startSystemAnchoringChain(): Long {
+        val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
+        val systemAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_system/module.rell").readText()
+        val anchorGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_system_anchoring.xml")!!.readText(),
+                mapOf(
+                        "anchoring_chain_common" to gtv(anchoringRellCode),
+                        "anchoring_chain_system" to gtv(systemAnchoringRellCode)
+                )
+        )
+
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {

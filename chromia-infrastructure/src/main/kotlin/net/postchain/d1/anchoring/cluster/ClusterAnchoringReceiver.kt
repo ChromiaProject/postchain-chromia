@@ -1,0 +1,21 @@
+// Copyright (c) 2022 ChromaWay AB. See README for license information.
+
+package net.postchain.d1.anchoring.cluster
+
+import net.postchain.common.BlockchainRid
+import net.postchain.d1.anchoring.AnchoringPipe
+import net.postchain.d1.anchoring.AnchoringReceiver
+import net.postchain.d1.cluster.ClusterManagement
+
+class ClusterAnchoringReceiver(
+        private val cluster: String,
+        private val systemAnchoringChain: BlockchainRid?,
+        private val clusterManagement: ClusterManagement
+) : AnchoringReceiver {
+    override val localPipes = mutableMapOf<Long, AnchoringPipe>()
+
+    override fun getRelevantPipes(): List<AnchoringPipe> {
+        val activeClusterChains = clusterManagement.getActiveBlockchains(cluster)
+        return localPipes.values.filter { it.blockchainRid in activeClusterChains && it.blockchainRid != systemAnchoringChain }
+    }
+}
