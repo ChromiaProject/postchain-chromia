@@ -57,6 +57,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val rawIcmfReceiverConfig = configuration.rawConfig["icmf"]?.get("receiver")
                         ?: throw UserMistake("Missing configuration key icmf/receiver")
                 val config = IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig)
+                txExt.icmfReceiverBlockchainConfigData = config
 
                 if (config.global != null) {
                     if (!config.global.topics.isNullOrEmpty()) {
@@ -100,7 +101,6 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                             queryProvider
                     )
                     receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(intraClusterTopicIcmfReceiver)
-                    txExt.intraClusterOrigins = origins.toSet()
                     txExt.intraClusterReceivers.add(intraClusterTopicIcmfReceiver)
                 }
             }

@@ -1,5 +1,6 @@
 package net.postchain.d1.anchoring.system
 
+import net.postchain.common.BlockchainRid
 import net.postchain.d1.anchoring.AnchoringPipe
 import net.postchain.d1.anchoring.AnchoringReceiver
 import net.postchain.d1.cluster.ClusterManagement
@@ -8,7 +9,10 @@ class SystemAnchoringReceiver(private val clusterManagement: ClusterManagement) 
     override val localPipes = mutableMapOf<Long, AnchoringPipe>()
 
     override fun getRelevantPipes(): List<AnchoringPipe> {
-        val clusterAnchoringChains = clusterManagement.getClusterAnchoringChains()
-        return localPipes.values.filter { it.blockchainRid in clusterAnchoringChains }
+        return localPipes.values.filter { it.blockchainRid in getRelevantChains() }
+    }
+
+    override fun getRelevantChains(): Set<BlockchainRid> {
+        return clusterManagement.getClusterAnchoringChains().toSet()
     }
 }
