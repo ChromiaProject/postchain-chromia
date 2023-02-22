@@ -5,6 +5,8 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.chain0.common.proposal.proposeBlockchainOperation
+import net.postchain.common.BlockchainRid
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.blockchainConfigOption
@@ -28,6 +30,7 @@ class CommandProposeBlockchain : CliktCommand(
 
     override fun run() {
         val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
+        GTXBlockchainConfigurationFactory.validateConfiguration(bcConfig.gtv, BlockchainRid(bcConfig.hash))
         client.transactionBuilder()
                 .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
                 .postAwaitConfirmation()

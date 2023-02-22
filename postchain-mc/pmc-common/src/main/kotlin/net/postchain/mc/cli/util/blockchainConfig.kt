@@ -2,6 +2,7 @@ package net.postchain.mc.cli.util
 
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -12,7 +13,8 @@ import java.io.File
 
 class BlockchainConfig(
         val hash: WrappedByteArray,
-        val data: ByteArray
+        val data: ByteArray,
+        val gtv: Gtv
 ) {
 
     companion object {
@@ -28,7 +30,7 @@ class BlockchainConfig(
             }
 
             val hash = gtv.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-            return BlockchainConfig(hash.wrap(), data)
+            return BlockchainConfig(hash.wrap(), data, gtv)
         }
     }
 }
