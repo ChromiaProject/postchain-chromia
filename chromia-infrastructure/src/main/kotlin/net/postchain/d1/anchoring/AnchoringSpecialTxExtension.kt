@@ -144,11 +144,18 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
             ops: List<OpData>
     ): Boolean {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
+        val relevantChains = anchoringReceiver.getRelevantChains()
 
         for (op in ops) {
             val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
 
             val headerData = anchorOpData.headerData
+            val bcRid = BlockchainRid(headerData.getBlockchainRid())
+            if (bcRid !in relevantChains) {
+                logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
+                return false
+            }
+
             val blockRid = headerData.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
             if (!blockRid.contentEquals(anchorOpData.blockRid)) {
                 logger.warn("Invalid block-rid: ${anchorOpData.blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}, expected: ${blockRid.toHex()}")
@@ -162,7 +169,6 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                 return false
             }
 
-            val bcRid = BlockchainRid(headerData.getBlockchainRid())
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
 
             val headers = chainHeadersMap.computeIfAbsent(bcRid) { mutableSetOf() }
