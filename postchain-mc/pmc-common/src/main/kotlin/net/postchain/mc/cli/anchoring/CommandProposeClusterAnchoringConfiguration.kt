@@ -10,10 +10,10 @@ import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
 
-class CommandProposeAnchoringConfiguration : CliktCommand(
+class CommandProposeClusterAnchoringConfiguration : CliktCommand(
         name = "update",
         help = """
-        Propose new anchoring configuration. 
+        Propose new cluster anchoring configuration. 
         """.trimIndent()
 ) {
     private val client by nopClientOption()
@@ -21,7 +21,7 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
     private val anchoringConfig by option(
             "-ac",
             "--anchoring-config",
-            help = "Configuration file for anchoring chain (GtvML (*.xml) or Gtv (*.gtv))"
+            help = "Configuration file for cluster anchoring chain (GtvML (*.xml) or Gtv (*.gtv))"
     ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
     override fun run() {
@@ -30,8 +30,8 @@ class CommandProposeAnchoringConfiguration : CliktCommand(
                 .proposeClusterAnchoringConfigurationOperation(client.config.pubkey().data, bcConfig.data)
                 .postAwaitConfirmation()
                 .printResult(
-                        "Anchoring configuration was proposed: ${bcConfig.hash}",
-                        "Failed to propose anchoring configuration"
+                        "Cluster anchoring configuration was proposed: ${bcConfig.hash}",
+                        "Failed to propose cluster anchoring configuration"
                 )
     }
 }

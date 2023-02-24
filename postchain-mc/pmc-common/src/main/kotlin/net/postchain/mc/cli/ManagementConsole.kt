@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
-import net.postchain.mc.cli.anchoring.anchoringCommands
+import net.postchain.mc.cli.anchoring.clusterAnchoringCommands
 import net.postchain.mc.cli.blockchain.blockchainCommands
 import net.postchain.mc.cli.cluster.clusterCommands
 import net.postchain.mc.cli.config.CommandConfig
@@ -31,7 +31,7 @@ open class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
                 clusterCommands(),
                 containerCommands(),
                 blockchainCommands(),
-                anchoringCommands()
+                clusterAnchoringCommands()
         )
     }
 

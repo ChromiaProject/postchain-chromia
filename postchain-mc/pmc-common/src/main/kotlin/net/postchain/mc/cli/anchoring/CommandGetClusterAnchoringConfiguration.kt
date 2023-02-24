@@ -9,9 +9,9 @@ import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.mc.cli.base.ClientUtil
 import net.postchain.mc.cli.util.configOption
 
-class CommandGetAnchoringConfiguration : CliktCommand(
+class CommandGetClusterAnchoringConfiguration : CliktCommand(
         name = "get",
-        help = "Get anchoring configuration"
+        help = "Get cluster anchoring configuration"
 ) {
     private val config by configOption()
 
