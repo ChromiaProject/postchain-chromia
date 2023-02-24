@@ -25,8 +25,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     val globalTopicReceivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     val intraClusterReceivers: MutableList<IntraClusterTopicIcmfReceiver> = mutableListOf()
-    var intraClusterOrigins: Set<Pair<String, BlockchainRid>> = setOf()
     lateinit var clusterManagement: ClusterManagement
+    lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
     var maxBlockSize: Long = -1
 
     private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, AnchoredHeaderOp.OP_NAME, NonAnchoredHeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
@@ -232,7 +232,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                         if (headerOp is AnchoredHeaderOp) {
                             headerBlockRidsByTopic.computeIfAbsent(topic) { mutableListOf() }
                                     .add(blockRid)
-                        } else if (!intraClusterOrigins.contains(topic to BlockchainRid(decodedHeader.getBlockchainRid()))) {
+                        } else if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(decodedHeader.getBlockchainRid()) && it.topic == topic } != true) {
                             logger.warn("Received a ${NonAnchoredHeaderOp.OP_NAME} for non configured origin blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} and topic: $topic")
                             return false
                         }
@@ -246,6 +246,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
                 MessageHashOp.OP_NAME -> {
                     val messageHashOp = MessageHashOp.fromOpData(op) ?: return false
+
+                    if (!validateSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
 
                     if (currentHeaderData == null) {
                         logger.warn("got ${MessageHashOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME}")
@@ -446,6 +448,17 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             }
         }
         return true
+    }
+
+    private fun validateSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
+        if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
+                || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true) {
+            return true
+        }
+
+        logger.warn("Blockchain $sender is not allowed to send us messages on topic $topic")
+        return false
     }
 
     data class AnchorHeaderValidationInfo(

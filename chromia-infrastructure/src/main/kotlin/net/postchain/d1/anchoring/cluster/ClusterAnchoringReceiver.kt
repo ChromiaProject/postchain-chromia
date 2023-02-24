@@ -15,7 +15,15 @@ class ClusterAnchoringReceiver(
     override val localPipes = mutableMapOf<Long, AnchoringPipe>()
 
     override fun getRelevantPipes(): List<AnchoringPipe> {
-        val activeClusterChains = clusterManagement.getActiveBlockchains(cluster)
-        return localPipes.values.filter { it.blockchainRid in activeClusterChains && it.blockchainRid != systemAnchoringChain }
+        return localPipes.values.filter { it.blockchainRid in getRelevantChains() }
+    }
+
+    override fun getRelevantChains(): Set<BlockchainRid> {
+        val activeClusterChains = clusterManagement.getActiveBlockchains(cluster).toSet()
+        return if (systemAnchoringChain != null) {
+            activeClusterChains - systemAnchoringChain
+        } else {
+            activeClusterChains
+        }
     }
 }
