@@ -38,8 +38,11 @@
                 <artifactId>rell-maven-plugin</artifactId>
                 <configuration>
                     <source>${project.parent.basedir}/chain0-impl/rell/src</source>
-                    <packageName>net.postchain.cm</packageName>
-                    <mainModule>cm_api</mainModule>
+                    <packageName>net.postchain.chromia</packageName>
+                    <mainModules>
+                        <mainModule>cm_api</mainModule>
+                        <mainModule>nm_api</mainModule>
+                    </mainModules>
                 </configuration>
                 <executions>
                     <execution>
