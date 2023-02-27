@@ -234,8 +234,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                         if (headerOp is AnchoredHeaderOp) {
                             headerBlockRidsByTopic.computeIfAbsent(topic) { mutableListOf() }
                                     .add(blockRid)
-                        } else if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(decodedHeader.getBlockchainRid()) && it.topic == topic } != true) {
-                            logger.warn("Received a ${NonAnchoredHeaderOp.OP_NAME} for non configured origin blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} and topic: $topic")
+                        } else if (!validateHeaderSenderAndTopic(decodedHeader.getBlockchainRid(), topic)) {
                             return false
                         }
                     }
@@ -249,7 +248,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 MessageHashOp.OP_NAME -> {
                     val messageHashOp = MessageHashOp.fromOpData(op) ?: return false
 
-                    if (!validateSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
+                    if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
 
                     if (currentHeaderData == null) {
                         logger.warn("got ${MessageHashOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME}")
@@ -335,6 +334,29 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         }
 
         return true
+    }
+
+    private fun validateHeaderSenderAndTopic(sender: ByteArray, topic: String): Boolean {
+        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender) && it.topic == topic } == true
+                || icmfReceiverBlockchainConfigData.clusterAnchor?.topics?.contains(topic) == true) {
+            return true
+        }
+
+        logger.warn("Received a ${NonAnchoredHeaderOp.OP_NAME} for non configured origin blockchain-rid: ${sender.toHex()} and topic: $topic")
+        return false
+    }
+
+    private fun validateMessageSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
+        if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
+                || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                || icmfReceiverBlockchainConfigData.clusterAnchor?.topics?.contains(topic) == true)
+        {
+            return true
+        }
+
+        logger.warn("Blockchain $sender is not allowed to send us messages on topic $topic")
+        return false
     }
 
     private fun validateHeaders(
@@ -450,17 +472,6 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             }
         }
         return true
-    }
-
-    private fun validateSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
-        if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
-                || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
-                || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true) {
-            return true
-        }
-
-        logger.warn("Blockchain $sender is not allowed to send us messages on topic $topic")
-        return false
     }
 
     data class AnchorHeaderValidationInfo(
