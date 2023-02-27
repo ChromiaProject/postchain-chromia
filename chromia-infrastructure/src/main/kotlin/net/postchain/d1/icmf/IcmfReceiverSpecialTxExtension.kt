@@ -25,6 +25,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     val globalTopicReceivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     val intraClusterReceivers: MutableList<IntraClusterTopicIcmfReceiver> = mutableListOf()
+    val clusterAnchorReceivers: MutableList<ClusterAnchorIcmfReceiver> = mutableListOf()
     lateinit var clusterManagement: ClusterManagement
     lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
     var maxBlockSize: Long = -1
@@ -49,14 +50,16 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val allOps = mutableListOf<OpData>()
-        val sizeOfIntraClusterMessages = createIntraClusterOperations(bctx, hashCalculator, allOps, 0)
-        createGlobalOperations(bctx, hashCalculator, allOps, sizeOfIntraClusterMessages)
+        createNonAnchoredOperations(bctx, hashCalculator, allOps, intraClusterReceivers.flatMap { it.getRelevantPipes() }, 0).let { size ->
+            createNonAnchoredOperations(bctx, hashCalculator, allOps, clusterAnchorReceivers.flatMap { it.getRelevantPipes() }, size)
+        }.let { size ->
+            createAnchoredOperations(bctx, hashCalculator, allOps, globalTopicReceivers.flatMap { it.getRelevantPipes() }, size)
+        }
         return allOps
     }
 
-    private fun createIntraClusterOperations(bctx: BlockEContext, hashCalculator: GtvMerkleHashCalculator, allOps: MutableList<OpData>, initialSize: Int): Int {
-        val pipes = intraClusterReceivers.flatMap { it.getRelevantPipes() }
-
+    private fun createNonAnchoredOperations(bctx: BlockEContext, hashCalculator: GtvMerkleHashCalculator, allOps: MutableList<OpData>,
+                                            pipes: List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>>, initialSize: Int): Int {
         var currentSize = initialSize
         var hasSpilledMessages = false
         for (pipe in pipes) {
@@ -87,9 +90,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         return currentSize
     }
 
-    private fun createGlobalOperations(bctx: BlockEContext, hashCalculator: GtvMerkleHashCalculator, allOps: MutableList<OpData>, initialSize: Int): Int {
-        val pipes = globalTopicReceivers.flatMap { it.getRelevantPipes() }
-
+    private fun createAnchoredOperations(bctx: BlockEContext, hashCalculator: GtvMerkleHashCalculator, allOps: MutableList<OpData>,
+                                         pipes: List<IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>>, initialSize: Int): Int {
         val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 
         var currentSize = initialSize
