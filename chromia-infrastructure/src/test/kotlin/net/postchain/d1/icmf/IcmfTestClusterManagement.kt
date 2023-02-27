@@ -17,6 +17,7 @@ class IcmfTestClusterManagement : ClusterManagement {
         val anchorChainRid = BlockchainRid.buildRepeat(0)
         val senderOneChainRid = BlockchainRid.buildRepeat(1)
         val senderTwoChainRid = BlockchainRid.buildRepeat(2)
+        val receiverAnchorChainRid = BlockchainRid.buildRepeat(3)
     }
 
     private val peers = listOf(
@@ -28,8 +29,11 @@ class IcmfTestClusterManagement : ClusterManagement {
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long) =
         peers.map { it.pubkey }
 
-    override fun getClusterInfo(clusterName: String) =
-        D1ClusterInfo(clusterName, anchorChainRid, peers)
+    override fun getClusterInfo(clusterName: String) = when (clusterName) {
+        senderCluster -> D1ClusterInfo(clusterName, anchorChainRid, peers)
+        receiverCluster -> D1ClusterInfo(clusterName, receiverAnchorChainRid, peers)
+        else -> throw IllegalArgumentException(clusterName)
+    }
 
     override fun getBlockchainApiUrls(blockchainRid: BlockchainRid): Collection<String> {
         throw NotImplementedError("Not yet implemented")
