@@ -1,11 +1,11 @@
 package net.postchain.d1.query
 
+import net.postchain.chromia.nm_api.nmGetContainerForBlockchain
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.PostchainQuery
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class MasterSubQueryProvider(
@@ -13,7 +13,6 @@ class MasterSubQueryProvider(
         private val myChainId: Long,
         private val subConnectionManager: SubConnectionManager,
         private val clusterManagement: ClusterManagement,
-        private val directoryDataSource: DirectoryDataSource,
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
@@ -26,8 +25,9 @@ class MasterSubQueryProvider(
     }
 
     override fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient? {
-        val thisContainer = directoryDataSource.getContainerForBlockchain(myBlockchainRid)
-        val chainContainer = directoryDataSource.getContainerForBlockchain(targetBlockchainRid)
+        val chainQuery = getChain0Query()
+        val thisContainer = chainQuery.nmGetContainerForBlockchain(myBlockchainRid)
+        val chainContainer = chainQuery.nmGetContainerForBlockchain(targetBlockchainRid)
         return if (thisContainer == chainContainer) {
             blockQueriesProvider.getBlockQueries(targetBlockchainRid)?.let {
                 BlockQueriesAdapter(it)
