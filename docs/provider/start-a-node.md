@@ -34,7 +34,6 @@ genesis.host=231.123.12.2
 genesis.port=9870
 
 # Container
-container.testmode=false
 # Path to image used by subnode containers
 container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
 # Mount path to a directory on the host that can be used to store configurations. Note that we don't want to use /tmp since this folder will be cleaned when a container is stopped
