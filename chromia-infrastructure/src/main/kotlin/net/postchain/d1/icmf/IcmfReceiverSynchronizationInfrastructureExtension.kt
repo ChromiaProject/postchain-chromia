@@ -24,7 +24,6 @@ import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
-import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
 import net.postchain.network.mastersub.subnode.SubConnectionManager
@@ -146,10 +145,6 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     configuration.chainID,
                     subConnectionManager,
                     clusterManagement,
-                    BaseDirectoryDataSource(
-                            Chain0MasterClient(configuration.blockchainRid, configuration.chainID, subConnectionManager.masterSubQueryManager)::query,
-                            postchainContext.appConfig
-                    ),
                     postchainContext.blockQueriesProvider
             )
         } else if (configuration is ManagedDataSourceAware) {
