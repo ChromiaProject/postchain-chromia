@@ -14,8 +14,10 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
+import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.rell.icmf.icmfGetMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 import java.util.concurrent.ConcurrentSkipListMap
@@ -25,8 +27,10 @@ import kotlin.time.Duration.Companion.seconds
 
 class InterClusterNonAnchoredTopicPipe(override val route: TopicRoute,
                                        override val id: BlockchainRid,
+                                       private val cryptoSystem: CryptoSystem,
                                        private val clusterName: String,
                                        private val clientProvider: ChromiaClientProvider,
+                                       private val clusterManagement: ClusterManagement,
                                        lastMessageHeight: Long) : IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
@@ -83,13 +87,11 @@ class InterClusterNonAnchoredTopicPipe(override val route: TopicRoute,
             }
 
             val decodedHeader = BlockHeaderData.fromBinary(block.header.data)
-            val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-            if (icmfHeaderData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${block.rid.toHex()} for blockchain-rid: ${blockchainRid.toHex()} at height: $height")
-                return
-            }
+            val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, block.header.data, block.witness.data, block.rid.data,
+                        cryptoSystem, clusterManagement, ICMF_BLOCK_HEADER_EXTRA)
+                    ?: return
 
-            val topicData = icmfHeaderData[route.topic]?.let { TopicHeaderData.fromGtv(it) }
+            val topicData = topicHeaderData[route.topic]
             if (topicData == null) {
                 logger.warn(
                         "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${block.rid.toHex()} for blockchain-rid: ${

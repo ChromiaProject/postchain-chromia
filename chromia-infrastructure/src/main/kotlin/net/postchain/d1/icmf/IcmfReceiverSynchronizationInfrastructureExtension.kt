@@ -107,6 +107,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 if (config.clusterAnchor != null) {
                     val clusterAnchorReceiver = ClusterAnchorIcmfReceiver(
                             config.clusterAnchor.topics,
+                            cryptoSystem,
                             engine.storage,
                             configuration.chainID,
                             clusterManagement,
