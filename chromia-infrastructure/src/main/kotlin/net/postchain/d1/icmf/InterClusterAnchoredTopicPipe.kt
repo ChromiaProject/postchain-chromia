@@ -59,7 +59,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
 
-        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
+        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("anchored-pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
             while (isActive) {
                 try {
                     logger.info("Fetching messages")

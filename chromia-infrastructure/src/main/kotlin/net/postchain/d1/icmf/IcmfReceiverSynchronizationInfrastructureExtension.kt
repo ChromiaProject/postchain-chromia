@@ -103,6 +103,20 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(intraClusterTopicIcmfReceiver)
                     txExt.intraClusterReceivers.add(intraClusterTopicIcmfReceiver)
                 }
+
+                if (config.clusterAnchor != null) {
+                    val clusterAnchorReceiver = ClusterAnchorIcmfReceiver(
+                            config.clusterAnchor.topics,
+                            cryptoSystem,
+                            engine.storage,
+                            configuration.chainID,
+                            clusterManagement,
+                            clientProvider,
+                            dbOperations
+                    )
+                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(clusterAnchorReceiver)
+                    txExt.clusterAnchorReceivers.add(clusterAnchorReceiver)
+                }
             }
         }
     }
