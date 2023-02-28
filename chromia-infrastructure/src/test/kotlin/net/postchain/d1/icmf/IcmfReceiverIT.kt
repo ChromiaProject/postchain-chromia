@@ -317,6 +317,54 @@ class IcmfReceiverIT : ManagedModeTest() {
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
+    fun clusterAnchorReceiver() {
+        MockPostchainRestApi.addMockClient(anchorChainRid, mock {
+            on { blockAtHeight(0L) } doReturn createBlockDetail(anchorChainRid, listOf(senderOneMessageBody))
+            on {
+                query(
+                        "icmf_get_messages_after_height", gtv(
+                        mapOf(
+                                "topic" to gtv("my-topic"),
+                                "height" to gtv(-1)
+                        )
+                )
+                )
+            } doReturn gtv(listOf(gtv(mapOf("body" to senderOneMessageBody, "height" to gtv(0)))))
+        })
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_cluster_anchor_receiver_1.xml")!!.readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
+                    DatabaseAccess.of(ctx).apply {
+                        val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                        val messages = jooq.select()
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                        assert(messages).hasSize(1)
+                        assert(messages.any { it.sender == anchorChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
     fun maxMessageSize() {
         val context = LoggerContext.getContext(false)
         val logger = context.getLogger(InterClusterAnchoredTopicPipe::class.java)
