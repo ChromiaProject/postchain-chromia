@@ -13,6 +13,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
+import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap
@@ -21,6 +22,7 @@ import kotlin.time.Duration.Companion.minutes
 
 class ClusterAnchorIcmfReceiver(
         private val topics: List<String>,
+        private val cryptoSystem: CryptoSystem,
         private val storage: Storage,
         private val myChainId: Long,
         private val clusterManagement: ClusterManagement,
@@ -48,7 +50,7 @@ class ClusterAnchorIcmfReceiver(
                     val route = TopicRoute(topic, listOf())
                     val lastMessageHeight = lastMessageHeights.firstOrNull { it.topic == topic && it.sender == blockchainRid }?.height
                             ?: -1
-                    InterClusterNonAnchoredTopicPipe(route, blockchainRid, clusterName, clientProvider, lastMessageHeight)
+                    InterClusterNonAnchoredTopicPipe(route, blockchainRid, cryptoSystem, clusterName, clientProvider, clusterManagement, lastMessageHeight)
                 }
             }
         }
@@ -84,7 +86,7 @@ class ClusterAnchorIcmfReceiver(
                 pipes[clusterName to topic] = run {
                     val blockchainRid = clusterManagement.getClusterInfo(clusterName).anchoringChain
                     val route = TopicRoute(topic, listOf())
-                    InterClusterNonAnchoredTopicPipe(route, blockchainRid, clusterName, clientProvider, -1)
+                    InterClusterNonAnchoredTopicPipe(route, blockchainRid, cryptoSystem, clusterName, clientProvider, clusterManagement, -1)
                 }
             }
         }
