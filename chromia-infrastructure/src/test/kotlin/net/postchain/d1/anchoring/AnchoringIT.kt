@@ -100,12 +100,12 @@ class AnchoringIT : ManagedModeTest() {
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         assertContentEquals(anchorHash, topicHeaderData.hash)
 
+        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
+        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
         withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
             val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
-            val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
-            val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
             val res = jooq.select(blockchainRidColumn, blockHeightColumn)
                     .from(table(db.tableName(it, "anchor_block")))
                     .fetch()
@@ -147,6 +147,26 @@ class AnchoringIT : ManagedModeTest() {
                     assertTrue(cryptoSystem.verifyDigest(digest, signature))
                 }
             }
+        }
+
+        // restart anchoring chain
+        nodes.forEach {
+            it.stopBlockchain(anchorChain)
+            it.startBlockchain(anchorChain)
+        }
+
+        // build another block and verify it is anchored
+        buildBlock(dappChain, 4)
+        buildBlock(anchorChain, 1)
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(5, res.size)
         }
     }
 
