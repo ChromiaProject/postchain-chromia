@@ -1,5 +1,6 @@
 package net.postchain.mc.cli
 
+import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
@@ -16,9 +17,10 @@ import net.postchain.mc.cli.provider.providerCommands
 import net.postchain.mc.cli.votingupdates.voterSetCommands
 import net.postchain.mc.network.networkCommands
 
-open class ManagementConsole : NoOpCliktCommand(name = "postchain-mc") {
+open class ManagementConsole : NoOpCliktCommand(name = "pmc") {
 
     init {
+        completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
         subcommands(
                 CommandKeygen(),
