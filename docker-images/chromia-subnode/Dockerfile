@@ -19,7 +19,7 @@ COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
 COPY src/main/docker/scripts/* ${postchain_dir}/
 
 ENV POSTCHAIN_DIR=$postchain_dir
-ENV POSTCHAIN_LOG4J2=$POSTCHAIN_DIR/log/log4j2.yml
+ENV LOG4J_CONFIGURATION_FILE=$POSTCHAIN_DIR/log/log4j2.yml
 
 ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
 
