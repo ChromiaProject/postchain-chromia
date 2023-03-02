@@ -32,7 +32,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.logging.log4j.core.Logger
 import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.test.appender.ListAppender
+import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
