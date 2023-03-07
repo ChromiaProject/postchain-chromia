@@ -8,6 +8,7 @@ import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
@@ -36,6 +37,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
+import net.postchain.mc.cli.base.cryptoSystem
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -292,16 +294,18 @@ abstract class Directory1DeploymentBase {
         rellConfig.config.chains.forEach { chain ->
             testLogger.info { "Adding test dapp $dappName" }
             chain.configs.forEach { (height, config) ->
-                blockchainRid = BlockchainRid(chain.brid.toByteArray())
+                node3Db.awaitNewBlock()
+
+                val fullConfig = config.gtvConfig.asDict().toMutableMap()
+                fullConfig.remove("signers")
+                val configGtv = gtv(fullConfig)
+
+                blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
                 dapps[dappName] = blockchainRid!!
                 testLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
-                node3Db.awaitNewBlock()
-                val fullConfig = config.gtvConfig.asDict().toMutableMap()
-                fullConfig.remove("signers")
-                val configGtv = GtvEncoder.encodeGtv(gtv(fullConfig))
                 node1.c0.transactionBuilder()
-                        .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName, "")
+                        .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
                 if (containerName == systemContainer) {
