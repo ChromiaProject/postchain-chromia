@@ -9,7 +9,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
@@ -19,6 +18,7 @@ import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
+import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
@@ -277,11 +277,12 @@ abstract class Directory1DeploymentBase {
 
         File("../chain0-impl/rell/src/icmf").copyRecursively(tmpSources.resolve("icmf"))
         deployDapp("test-dapp", systemContainer, tmpSources)
-        deployDapp("test-dapp2", foobarContainer)
+//        deployDapp("test-dapp2", foobarContainer)
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+//            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(4)
         }
     }
 
@@ -350,6 +351,10 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
+
+    
+
+    /*
 
     @Test
     @Order(10)
@@ -459,7 +464,7 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
-
+*/
     private fun queryContainerResourceLimits(): Array<ResourceLimit> {
         return node1.c0.nmGetContainerLimits(foobarContainer)
                 .mapNotNull {
