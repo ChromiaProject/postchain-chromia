@@ -9,6 +9,7 @@ import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.requiredPubkeyOption
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 
 class CommandProposeClusterProvider : CliktCommand(
         name = "provider",
@@ -26,9 +27,11 @@ class CommandProposeClusterProvider : CliktCommand(
     private val add by option("-a", "--add", help = "Add or remove provider pubkey from cluster")
             .flag("-r", "--remove", default = true)
 
+    private val description by proposalDescriptionOption()
+
     override fun run() {
         client.transactionBuilder()
-                .proposeClusterProviderOperation(client.pubkey, clusterName, provider.data, add, "")
+                .proposeClusterProviderOperation(client.pubkey, clusterName, provider.data, add, description)
                 .postAwaitConfirmation()
                 .printResult(
                         "Cluster $clusterName providers update proposed",

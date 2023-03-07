@@ -11,6 +11,7 @@ import net.postchain.mc.cli.blockchainConfigOption
 import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.nopClientOption
+import net.postchain.mc.cli.util.proposalDescriptionOption
 
 class CommandProposeBlockchain : CliktCommand(
         name = "add",
@@ -26,10 +27,12 @@ class CommandProposeBlockchain : CliktCommand(
 
     private val quiet by option("-q", "--quiet", help = "Only prints Blockchain RID if succeeds").flag()
 
+    private val description by proposalDescriptionOption()
+
     override fun run() {
         val bcConfig = BlockchainConfig.readFromFile(blockchainConfigFile)
         client.transactionBuilder()
-                .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, "")
+                .proposeBlockchainOperation(client.pubkey, bcConfig.data, name, container, description)
                 .postAwaitConfirmation()
                 .apply {
                     if (quiet) {
