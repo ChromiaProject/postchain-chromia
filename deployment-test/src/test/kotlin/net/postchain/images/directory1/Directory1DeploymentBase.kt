@@ -297,7 +297,9 @@ abstract class Directory1DeploymentBase {
                 testLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
 
                 node3Db.awaitNewBlock()
-                val configGtv = GtvEncoder.encodeGtv(config.gtvConfig)
+                val fullConfig = config.gtvConfig.asDict().toMutableMap()
+                fullConfig.remove("signers")
+                val configGtv = GtvEncoder.encodeGtv(gtv(fullConfig))
                 node1.c0.transactionBuilder()
                         .proposeBlockchainOperation(node1.providerPubkey, configGtv, "dapp", containerName, "")
                         .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
