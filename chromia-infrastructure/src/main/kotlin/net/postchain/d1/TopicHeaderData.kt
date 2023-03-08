@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
@@ -24,8 +25,10 @@ class TopicHeaderData(val hash: ByteArray, val previousBlockHeight: Long) {
             val chainPeers = clusterManagement.getBlockchainPeers(BlockchainRid(header.getBlockchainRid()), header.getHeight())
             val witness = BaseBlockWitness.fromBytes(rawWitness)
 
-            if (!Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, chainPeers, witness)) {
-                logger.warn("Invalid block header signature when extracting data from extra data '$extraField' for block-rid: ${blockRid.toHex()} in blockchain: ${header.getBlockchainRid().toHex()} at height: ${header.getHeight()}")
+            try {
+                Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, chainPeers, witness)
+            } catch (e: UserMistake) {
+                logger.warn("Invalid block header signature when extracting data from extra data '$extraField' for block-rid: ${blockRid.toHex()} in blockchain: ${header.getBlockchainRid().toHex()} at height: ${header.getHeight()}: ${e.message}")
                 return null
             }
 

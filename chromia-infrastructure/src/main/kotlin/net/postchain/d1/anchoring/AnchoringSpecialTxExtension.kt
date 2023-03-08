@@ -6,6 +6,7 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
@@ -164,8 +165,10 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
             val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
             val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
-            if (!Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)) {
-                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}")
+            try {
+                Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
+            } catch (e: UserMistake) {
+                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")
                 return false
             }
 

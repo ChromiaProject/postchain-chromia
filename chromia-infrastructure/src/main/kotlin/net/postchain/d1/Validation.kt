@@ -15,21 +15,25 @@ object Validation {
                                 rawHeader: ByteArray,
                                 blockRid: Hash,
                                 peers: Collection<PubKey>,
-                                witness: BaseBlockWitness): Boolean {
+                                witness: BaseBlockWitness) {
+        val threshold = getBFTRequiredSignatureCount(peers.size)
+
+        if (witness.getSignatures().size < threshold) {
+            throw UserMistake("Insufficient number of witness (needs at least $threshold but got only ${witness.getSignatures().size})")
+        }
+
         val blockWitnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, object : BlockHeader {
             override val prevBlockRID = previousBlockRid
             override val rawData = rawHeader
             override val blockRID = blockRid
-        }, peers.map { it.data }.toTypedArray(), getBFTRequiredSignatureCount(peers.size))
+        }, peers.map { it.data }.toTypedArray(), threshold)
 
         for (signature in witness.getSignatures()) {
-            try {
-                blockWitnessBuilder.applySignature(signature)
-            } catch (e: UserMistake) {
-                return false
-            }
+            blockWitnessBuilder.applySignature(signature)
         }
 
-        return blockWitnessBuilder.isComplete()
+        if (!blockWitnessBuilder.isComplete()) {
+            throw UserMistake("Insufficient number of valid witness signatures")
+        }
     }
 }
