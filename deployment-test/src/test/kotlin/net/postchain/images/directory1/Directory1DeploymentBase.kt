@@ -132,6 +132,13 @@ abstract class Directory1DeploymentBase {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
         assertEquals(3, systemChains.size)
 
+        // Printing system chains
+        println("System chains:")
+        val blockchains = node1.c0.getBlockchainInfoList(true).associateBy { it.rid }
+        systemChains.forEach {
+            println("\t" + blockchains[it.rid])
+        }
+
         // Getting cluster anchoring chain for system cluster via CM API
         val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
         // Asserting cluster anchoring chain is in system_chains list of NP API
@@ -352,10 +359,6 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    
-
-    /*
-
     @Test
     @Order(10)
     fun `Transactions can be sent to test-dapp`() {
@@ -464,7 +467,7 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
-*/
+
     private fun queryContainerResourceLimits(): Array<ResourceLimit> {
         return node1.c0.nmGetContainerLimits(foobarContainer)
                 .mapNotNull {
