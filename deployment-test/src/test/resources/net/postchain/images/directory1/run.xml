@@ -5,6 +5,7 @@
     <chains>
         <chain name="manager" iid="0">
             <config height="0" add-dependencies="false">
+                <gtv path="config_consensus_strategy"><string>HEADER_HASH</string></gtv>
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
                 <app module="directory1">
                     <args module="common.init">
