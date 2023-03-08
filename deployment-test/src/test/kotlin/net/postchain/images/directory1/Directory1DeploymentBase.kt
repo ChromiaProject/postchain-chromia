@@ -310,7 +310,7 @@ abstract class Directory1DeploymentBase {
 
                 blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
                 dapps[dappName] = blockchainRid!!
-                testLogger.info { "Proposing a blockchain ${blockchainRid?.toShortHex()} with config at height $height" }
+                testLogger.info { "Proposing a blockchain ${blockchainRid?.toHex()} with config at height $height" }
 
                 node1.c0.transactionBuilder()
                         .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
@@ -372,7 +372,7 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
-        testLogger.info("Send TX to new dapp ${brid.toShortHex()} and fetch data")
+        testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
         node2.tx(brid, txOp, gtv(txArg))
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
