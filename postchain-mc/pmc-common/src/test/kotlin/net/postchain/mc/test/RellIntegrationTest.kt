@@ -155,6 +155,10 @@ class SmartOnDemandBlockBuildingStrategy(
         blocks.add(blockData)
     }
 
+    override fun blockFailed() {
+        TODO("Not yet implemented")
+    }
+
     fun awaitCommitted(height: Int) {
         while (committedHeight < height) {
             blocks.take()
