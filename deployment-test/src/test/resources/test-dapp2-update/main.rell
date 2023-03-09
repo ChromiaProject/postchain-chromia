@@ -1,0 +1,16 @@
+module;
+
+entity book { key name; }
+
+// Cities are received from city chain via ICMF
+entity city { key name; }
+
+operation add_book (name) { create book (name); }
+
+query get_books () { return book @* {} ( .name ); }
+
+operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
+    create city(text.from_gtv(body));
+}
+
+query get_icmf_cities () { return city @* {} ( .name ); }
