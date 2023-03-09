@@ -187,12 +187,23 @@ function apply_configuration_chain0(pc: pending_configuration) {
 
 function apply_configuration_pcu(pc: pending_configuration) {
     val base_config = pc.data;
-    val base_config_hash = gtv.from_bytes(base_config).hash();
+
     val last_configuration_height = (blockchain_configuration @? { pc.blockchain } (@sort_desc .height) limit 1) ?: 0;
-    val last_pending_configuration_height = (pending_blockchain_configuration @? { pc.blockchain } (@sort_desc .minimum_height) limit 1) ?: 0;
-    val minimum_height = last_configuration_height.max(last_pending_configuration_height) + 1;
-    log("Applying configuration update with PCU for chain %s at minimum height %d".format(pc.blockchain.rid, minimum_height));
-    create pending_blockchain_configuration(pc.blockchain, minimum_height, base_config_hash, base_config);
+    val last_pending_configuration = pending_blockchain_configuration @? { pc.blockchain } (@sort_desc @omit .minimum_height, $) limit 1;
+    val (minimum_height, signers) = if (last_pending_configuration != null)
+        (last_configuration_height.max(last_pending_configuration.minimum_height) + 1,
+         last_pending_configuration.signers)
+     else
+        (last_configuration_height + 1,
+         blockchain_configuration_signers @ { pc.blockchain } (@omit @sort_desc .height, .signers) limit 1);
+    log("Applying base configuration update with PCU for chain %s at minimum height %d".format(pc.blockchain.rid, minimum_height));
+    create pending_blockchain_configuration(
+        pc.blockchain,
+        minimum_height,
+        base_config_hash=gtv.from_bytes(base_config).hash(),
+        base_config,
+        signers
+    );
 }
 
 function apply_configuration_legacy(pc: pending_configuration) {
