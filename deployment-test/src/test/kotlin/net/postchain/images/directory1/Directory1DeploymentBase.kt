@@ -34,12 +34,14 @@ import net.postchain.crypto.KeyPair
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.mc.cli.base.cryptoSystem
+import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -298,10 +300,7 @@ abstract class Directory1DeploymentBase {
             chain.configs.forEach { (height, config) ->
                 node3Db.awaitNewBlock()
 
-                val fullConfig = config.gtvConfig.asDict().toMutableMap()
-                fullConfig.remove("signers")
-                val configGtv = gtv(fullConfig)
-
+                val configGtv = getBaseConfig(config)
                 blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
                 dapps[dappName] = blockchainRid!!
                 testLogger.info { "Proposing a blockchain ${blockchainRid?.toHex()} with config at height $height" }
@@ -404,9 +403,7 @@ abstract class Directory1DeploymentBase {
 
         val rellConfig = compileDapp("$dappName-update", additionalSources)
                 .config.chains.first().configs.entries.first().value
-        val fullConfig = rellConfig.gtvConfig.asDict().toMutableMap()
-        fullConfig.remove("signers")
-        val config = GtvEncoder.encodeGtv(gtv(fullConfig))
+        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
 
         node1.c0.transactionBuilder()
                 .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
@@ -503,6 +500,12 @@ abstract class Directory1DeploymentBase {
                 .mapNotNull {
                     ResourceLimitFactory.fromPair(it.toPair())
                 }.toTypedArray()
+    }
+
+    private fun getBaseConfig(config: RellPostAppChainConfig): Gtv {
+        val fullConfig = config.gtvConfig.asDict().toMutableMap()
+        fullConfig.remove("signers")
+        return gtv(fullConfig)
     }
 
     private val PostchainContainer.c0 get() = client(brid)
