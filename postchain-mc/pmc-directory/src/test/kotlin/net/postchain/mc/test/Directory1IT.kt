@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.disableNodeOperation
 import net.postchain.chain0.common.init.initOperation
@@ -16,7 +17,6 @@ import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.common.proposal.proposeProviderStateOperation
 import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchain
-import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getClusterProviders
@@ -37,6 +37,7 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
+import net.postchain.chain0.nm_api.nmGetPendingBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
@@ -48,6 +49,7 @@ import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
 import net.postchain.mc.cli.util.BlockchainConfig
@@ -297,15 +299,15 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testProposeConfiguration() {
-        proposeConfig(1000, 10, false)
-        assertNextConfiguration(provConfig, 10L, 1000)
+    fun testProposeConfigurationAt() {
+        proposeConfigAt(1000, 10, false)
+        assertNextConfiguration(provConfig, 10, 1000)
 
-        proposeConfig(1001, 8, false)
-        assertNextConfiguration(provConfig, 8L, 1001)
+        proposeConfigAt(1001, 8, false)
+        assertNextConfiguration(provConfig, 8, 1001)
     }
 
-    private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
+    private fun proposeConfigAt(configId: Int, height: Long, force: Boolean) {
         val configFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_$configId.xml")
         val configData = BlockchainConfig.readFromFile(configFile).data
         provClient.transactionBuilder().addNop()
@@ -323,9 +325,14 @@ class Directory1IT : ManagedModeTest() {
         // Add node1 to system cluster
         addNode(prov2Client, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
 
-        // Get next configuration height after adding new node as blockchain's signer
-        // expected next configuration height = -1 + init + addNode + proposeSystemProvider + proposeBlockhain + addNode + 4 = 10 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 8L)
+        // Get next configuration height of new blockchain configuration
+        val lastHeight = getPostchainClient(cliConf(adminKey, provConfig.blockchainRid)).currentBlockHeight()
+        assertTrue(lastHeight >= 0)
+        val chain0Client = getPostchainClient(provConfig)
+        val pendingConfig = chain0Client.nmGetPendingBlockchainConfiguration(provConfig.blockchainRid, lastHeight)
+        assertNotNull(pendingConfig)
+        val gtv = GtvDecoder.decodeGtv(pendingConfig.baseConfig.data)
+        assertEquals(null, gtv[KEY_QUEUE_CAPACITY]?.asInteger())
 
         //Build blocks until new configuration is enabled
         buildAndAwaitBlocks(2)
@@ -398,15 +405,6 @@ class Directory1IT : ManagedModeTest() {
 
         listBlockchains = provClient.nmComputeBlockchainList(nodes[0].pubKey.hexStringToByteArray())
         assertEquals(1, listBlockchains.size)
-    }
-
-
-    @Test
-    fun testGetBlockchainLastHeight() {
-        val h = provClient.getBlockchainLastHeight(provConfig.blockchainRid)
-        // expected height = -1 + init() + addNode0 + proposeBlockchain0 + vote = 3
-        // expected height = -1 + init() + addNode0 + proposeBlockchain0 = 2 (vote included in proposal)
-        assertEquals(0, h)
     }
 
     @Test
