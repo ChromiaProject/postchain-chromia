@@ -11,4 +11,5 @@ fun networkCommands() = NetworkCommand().subcommands(
         CommandInit(),
         SummaryCommand(),
         CommandVersion(),
+        UpgradeCommand()
 )

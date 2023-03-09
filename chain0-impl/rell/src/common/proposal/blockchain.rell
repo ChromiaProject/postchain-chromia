@@ -26,7 +26,15 @@ operation propose_blockchain(my_pubkey: pubkey, config_data: byte_array, bc_name
     }
 }
 
+operation propose_network_upgrade(my_pubkey: pubkey, config_data: byte_array, description: text = "") {
+    propose_configuration_impl(my_pubkey, chain_context.blockchain_rid, config_data, description);
+}
+
 operation propose_configuration(my_pubkey: pubkey, blockchain_rid: byte_array, config_data: byte_array, description: text = "") {
+    propose_configuration_impl(my_pubkey, blockchain_rid, config_data, description);
+}
+
+function propose_configuration_impl(my_pubkey: pubkey, blockchain_rid: byte_array, config_data: byte_array, description: text) {
     val me = require_is_provider_with_rl(my_pubkey);
     val blockchain = require_blockchain(blockchain_rid);
     val container = container_blockchain @ {blockchain} .container;
