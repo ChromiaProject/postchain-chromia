@@ -49,6 +49,8 @@ import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -385,7 +387,9 @@ abstract class Directory1DeploymentBase {
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
             val height = node1.client(brid).currentBlockHeight()
-            val config0 = node1.c0.nmGetBlockchainConfiguration(dapps["test-dapp2"]!!, height)!!
+            assertTrue(height > 0)
+            val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
+            assertNotNull(config0)
             return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
         }
 

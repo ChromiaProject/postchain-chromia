@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <dict>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made
