@@ -7,6 +7,7 @@ definitions:
       - 9870
       - ${GENESIS_API_URL:-http://localhost:7740}
   config: &common_config
+    config_consensus_strategy: HEADER_HASH
     blockstrategy:
       maxblocktime: 2000
     fast_revolt_status_timeout: 1000
@@ -43,6 +44,7 @@ blockchains:
   system_anchoring:
     module: anchoring_chain_system
     config:
+      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
       gtx:
@@ -51,6 +53,7 @@ blockchains:
   cluster_anchoring:
     module: anchoring_chain_cluster
     config:
+      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
       gtx:
