@@ -9,7 +9,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
@@ -19,9 +18,11 @@ import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
+import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
@@ -33,6 +34,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -377,6 +379,42 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(12)
+    fun `Reconfiguration of test-dapp2`() {
+        val getAssertingParam = {
+            val brid = dapps["test-dapp2"]!!
+            val height = node1.client(brid).currentBlockHeight()
+            val config0 = node1.c0.nmGetBlockchainConfiguration(dapps["test-dapp2"]!!, height)!!
+            GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
+        }
+
+        // initial value
+        assertEquals(500L, getAssertingParam())
+
+        // reconfiguring test-dapp2
+        updateDapp("test-dapp2")
+
+        // new value
+        awaitUntilAsserted {
+            assertEquals(1000L, getAssertingParam())
+        }
+    }
+
+    private fun updateDapp(dappName: String, additionalSources: File? = null) {
+        testLogger.info("Update dapp $dappName")
+
+        val rellConfig = compileDapp("$dappName-update", additionalSources)
+                .config.chains.first().configs.entries.first().value
+        val fullConfig = rellConfig.gtvConfig.asDict().toMutableMap()
+        fullConfig.remove("signers")
+        val config = GtvEncoder.encodeGtv(gtv(fullConfig))
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
+                .postTransactionUntilConfirmed("Propose $dappName config")
+    }
+
+    @Test
+    @Order(13)
     fun `Legacy anchoring can anchor blocks`() {
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
@@ -401,7 +439,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(13)
+    @Order(14)
     fun `Blocks can be anchored`() {
         val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
 
@@ -410,7 +448,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(14)
+    @Order(15)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
         val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()
         assert(systemAnchoringChainBrid).isNotNull()
@@ -448,7 +486,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(15)
+    @Order(16)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
