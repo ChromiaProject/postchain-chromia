@@ -406,7 +406,7 @@ abstract class Directory1DeploymentBase {
 
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
-            val height = node1.client(brid).currentBlockHeight()
+            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
             assertTrue(height > 0)
             val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
             assertNotNull(config0)
