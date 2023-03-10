@@ -25,6 +25,7 @@ query nm_get_peer_infos() = node @* {} (_ = .host, _ = .port, _ = .pubkey, _ = .
 /*
     Returns last built height of the blockchain
     NM API Version: 4
+    Deprecated: relies on legacy anchoring which will be removed
 */
 query nm_get_blockchain_last_built_height(blockchain_rid: byte_array) =
     get_blockchain_last_height(blockchain_rid);
@@ -131,6 +132,7 @@ query nm_get_blockchain_replica_node_map(blockchain_rids: set<byte_array>): map<
 /*
     Function used by  mustSyncUntil (height) pos-146
     NM API Version: 2
+    Deprecated: relies on legacy anchoring which will be removed
 */
 query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : list<integer> {
     val res = list<integer>();
