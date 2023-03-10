@@ -24,7 +24,7 @@
         <rell.main.module>${project.artifactId}</rell.main.module>
         <postgres.host>localhost:5432</postgres.host>
         <rellCompileModules>management_chain_testnet,anchoring_chain_system,anchoring_chain_cluster,icmf,iccf</rellCompileModules>
-        <rellTestModules>common,roles,container,cluster,nm_api,config</rellTestModules>
+        <rellTestModules>common,roles,container,cluster,nm_api,config,proposal,proposal_voter_set</rellTestModules>
     </properties>
 
     <build>
