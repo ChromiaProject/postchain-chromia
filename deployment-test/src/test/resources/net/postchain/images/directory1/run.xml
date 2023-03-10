@@ -7,6 +7,22 @@
             <config height="0" add-dependencies="false">
                 <gtv path="config_consensus_strategy"><string>HEADER_HASH</string></gtv>
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
+                <gtv path="fast_revolt_status_timeout"><int>1000</int></gtv>
+                <gtv path="sync_ext">
+                    <array>
+                       <string>net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension</string>
+                    </array>
+                </gtv>
+                <gtv path="gtx/modules">
+                    <array>
+                        <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
+                    </array>
+                </gtv>
+                <gtv path="icmf/receiver/cluster-anchor/topics">
+                    <array>
+                        <string>configuration_updated</string>
+                    </array>
+                </gtv>
                 <app module="directory1">
                     <args module="common.init">
                         <arg key="initial_provider"><bytea>03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05</bytea></arg>
