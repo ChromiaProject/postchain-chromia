@@ -13,7 +13,7 @@ port=9870
 brid=1FEE4B2B2A0AD08DA4B3B110CCCFF38FDA2C32EA5AF24DE7C1A96376663AC148
 ```
 To achieve this, do the following steps.
-1. Check out `https://gitlab.com/chromaway/postchain-chromia`
+1. Check out [postchain-chromia](https://gitlab.com/chromaway/postchain-chromia)
 2. Run `mvn clean package -DskipTest` and use `chromia-node` under `chromia-dist/target/chromia-dist-<version>-dist` folder
 3. Create new folder called `run-replica` or whatever name that you want.
 4. Copy `chromia-node` at step#2 under new folder `run-replica`
