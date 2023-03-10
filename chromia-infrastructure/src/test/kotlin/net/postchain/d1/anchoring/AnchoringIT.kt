@@ -7,9 +7,10 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.getClusterAnchoringChainConfig
+import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -28,7 +29,6 @@ import org.jooq.impl.DSL.table
 import org.jooq.util.postgres.PostgresDataType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -232,37 +232,19 @@ class AnchoringIT : ManagedModeTest() {
     }
 
     private fun startClusterAnchoringChain(): Long {
-        val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
-        val clusterAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/module.rell").readText()
-        val icmfRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/icmf.rell").readText()
-        val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")!!.readText(),
-                mapOf(
-                        "anchoring_chain_common" to gtv(anchoringRellCode),
-                        "anchoring_chain_cluster" to gtv(clusterAnchoringRellCode + icmfRellCode)
-                )
-        )
-
+        val anchorGtvConfig = getClusterAnchoringChainConfig()
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
     private fun startSystemAnchoringChain(): Long {
-        val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
-        val systemAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_system/module.rell").readText()
-        val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_system_anchoring.xml")!!.readText(),
-                mapOf(
-                        "anchoring_chain_common" to gtv(anchoringRellCode),
-                        "anchoring_chain_system" to gtv(systemAnchoringRellCode)
-                )
-        )
-
+        val anchorGtvConfig = getSystemAnchoringChainConfig()
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
         nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", D1TestInfrastructureFactory::class.qualifiedName)
+        nodeSetup.nodeSpecificConfigs.setProperty("clusterManagementMock", AnchoringTestClusterManagement::class.qualifiedName)
     }
 
     private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv, anchorChainId: Long): Gtv =

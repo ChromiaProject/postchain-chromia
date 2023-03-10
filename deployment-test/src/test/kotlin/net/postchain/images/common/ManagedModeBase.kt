@@ -7,7 +7,6 @@ import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -80,9 +79,6 @@ open class ManagedModeBase(rellFolder: String) {
         val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
         configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
         chain0Config = gtvFile.toFile()
-        if (!File(MOUNT_DIR).deleteRecursively()) {
-            testLogger.error("Unable to clear mount directory")
-        }
     }
 
     lateinit var node1Db: ChainDatabaseCommunicator

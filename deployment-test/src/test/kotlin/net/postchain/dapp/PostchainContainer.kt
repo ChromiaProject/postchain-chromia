@@ -9,6 +9,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.Gtx
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -87,13 +88,13 @@ class PostchainContainer(
             .postTransactionUntilConfirmed(opName)
     }
 
-    fun tx(chainId: Long, opName: String, vararg args: Gtv): TransactionResult =
-            tx(BlockchainRid.buildFromHex(getBlockchainRidStr(chainId)), opName, *args)
-
-    fun tx(brid: BlockchainRid, opName: String, vararg args: Gtv): TransactionResult {
-        return client(brid).transactionBuilder()
-            .addOperation(opName, *args)
+    fun tx(brid: BlockchainRid, opName: String, vararg args: Gtv): Pair<Gtx, TransactionResult> {
+        val txBuilder = client(brid).transactionBuilder(listOf())
+                .addOperation(opName, *args)
+        val txResult = txBuilder
             .postTransactionUntilConfirmed(opName)
+        val tx = txBuilder.finish().buildGtx()
+        return tx to txResult
     }
 
     private fun getBlockchainRid(chainId: Long) = BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))

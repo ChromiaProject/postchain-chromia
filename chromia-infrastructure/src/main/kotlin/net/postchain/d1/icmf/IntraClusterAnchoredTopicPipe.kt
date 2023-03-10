@@ -31,7 +31,7 @@ class IntraClusterAnchoredTopicPipe(
     override fun mightHaveNewPackets(): Boolean = true
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
-        val anchorQuery = queryProvider.getAnchorQuery()
+        val anchorQuery = queryProvider.getClusterAnchoringQuery()
         if (anchorQuery == null) {
             logger.warn("Anchor chain does not exist!")
             return null

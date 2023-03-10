@@ -15,8 +15,6 @@ object DockerImages {
         val imageName = System.getenv("POSTCHAIN_TEST_DOCKER_IMAGE_POSTCHAIN_SERVER")
                 ?: "chromaway/chromia-server:latest"
 
-        return DockerImageName
-                .parse(imageName)
-                .asCompatibleSubstituteFor("chromaway/postchain-dapp:latest")
+        return DockerImageName.parse(imageName)
     }
 }
