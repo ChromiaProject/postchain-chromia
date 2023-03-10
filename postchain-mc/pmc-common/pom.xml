@@ -131,7 +131,7 @@
                         <configuration>
                             <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
-                            <mainModule>directory1</mainModule>
+                            <mainModule>management_chain_directory1</mainModule>
                         </configuration>
                     </execution>
                 </executions>
