@@ -80,23 +80,44 @@ function update_configuration_signers(cluster) {
         // do not write new configuration when size is 0 since it's impossible to recover from that
         require(signers.size() > 0);
 
-        val last_signers_height = (blockchain_configuration_signers @? { blockchain } (@sort_desc .height) limit 1) ?: 0;
-        val last_pending_configuration = pending_blockchain_configuration @? { blockchain } (@sort_desc @omit .minimum_height, $) limit 1;
-        val (minimum_height, base_config) = if (last_pending_configuration != null)
-            (last_signers_height.max(last_pending_configuration.minimum_height) + 1,
-             last_pending_configuration.base_config)
-        else
-            (last_signers_height + 1,
-             blockchain_configuration @ { blockchain } (@omit @sort_desc .height, .data) limit 1);
-        log("Applying signers update with PCU for chain %s at minimum height %d".format(blockchain.rid, minimum_height));
-        create pending_blockchain_configuration(
-            blockchain,
-            minimum_height,
-            base_config_hash=gtv.from_bytes(base_config).hash(),
-            base_config,
-            signers=signers.to_gtv().to_bytes()
-        );
+        val is_chain0 = blockchain.rid == chain_context.blockchain_rid;
+
+        if (is_chain0) {
+            update_configuration_signers_chain0(blockchain, signers);
+        } else {
+            update_configuration_signers_pcu(blockchain, signers);
+        }
     }
+}
+
+function update_configuration_signers_chain0(blockchain, signers: list<pubkey>) {
+    val height = op_context.block_height + 1;
+    log("Applying signers update for chain0 at height %d".format(height));
+    val bc_signers = blockchain_configuration_signers @? { blockchain, height };
+    if (bc_signers == null) {
+        create blockchain_configuration_signers(blockchain, height, signers.to_gtv().to_bytes());
+    } else {
+        bc_signers.signers = signers.to_gtv().to_bytes();
+    }
+}
+
+function update_configuration_signers_pcu(blockchain, signers: list<pubkey>) {
+    val last_signers_height = (blockchain_configuration_signers @? { blockchain } (@sort_desc .height) limit 1) ?: 0;
+    val last_pending_configuration = pending_blockchain_configuration @? { blockchain } (@sort_desc @omit .minimum_height, $) limit 1;
+    val (minimum_height, base_config) = if (last_pending_configuration != null)
+        (last_signers_height.max(last_pending_configuration.minimum_height) + 1,
+         last_pending_configuration.base_config)
+    else
+        (last_signers_height + 1,
+         blockchain_configuration @ { blockchain } (@omit @sort_desc .height, .data) limit 1);
+    log("Applying signers update with PCU for chain %s at minimum height %d".format(blockchain.rid, minimum_height));
+    create pending_blockchain_configuration(
+        blockchain,
+        minimum_height,
+        base_config_hash=gtv.from_bytes(base_config).hash(),
+        base_config,
+        signers=signers.to_gtv().to_bytes()
+    );
 }
 
 function require_cluster_available_for_removal(cluster) {
