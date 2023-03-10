@@ -2,7 +2,7 @@ package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.directory1.updateProviderOperation
+import net.postchain.chain0.management_chain_directory1.updateProviderOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption

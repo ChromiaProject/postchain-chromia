@@ -66,7 +66,7 @@ import kotlin.test.assertTrue
 class Directory1IT : ManagedModeTest() {
 
     override fun chainConfSnippet(): String {
-        val module = "directory1"
+        val module = "management_chain_directory1"
 
         return """
             <chains>
