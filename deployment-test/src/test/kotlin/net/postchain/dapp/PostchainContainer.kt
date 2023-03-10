@@ -105,6 +105,7 @@ class PostchainContainer(
         }
     }
 
+    fun nodeApiPath() = "http://$nodeHost:$apiPort"
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
 
     fun client(chainId: Long, signers: List<KeyPair> = listOf(provider)) = client(getBlockchainRid(chainId), signers)
