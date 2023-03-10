@@ -20,6 +20,15 @@ pipeline {
   }
 
   stages {
+    stage('report success to gitlab') {
+      steps {
+        updateGitlabCommitStatus(
+          name: 'build',
+          state: 'success',
+        )
+      }
+    }
+
     stage('set up docker buildx') {
       steps {
         sh """
