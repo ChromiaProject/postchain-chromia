@@ -104,7 +104,7 @@ class Directory1IT : ManagedModeTest() {
     @BeforeEach
     fun setup() {
         blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
-        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null))
+        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null, null))
     }
 
     @Test
@@ -289,7 +289,7 @@ class Directory1IT : ManagedModeTest() {
         val clusterProviders = provClient.getClusterProviders(newClusterName)
         println(clusterProviders.toTypedArray().contentToString())
         assert(clusterProviders.size).isEqualTo(1)
-        assert(clusterProviders.first().pubkey.hex()).isEqualTo(provConfig.pubkey())
+        assert(clusterProviders.first().pubkey.toHex()).isEqualTo(provConfig.pubkey())
         // UNKNOWN cluster providers
         assertThrows<UserMistake> {
             provClient.getClusterProviders("unknown cluster name")

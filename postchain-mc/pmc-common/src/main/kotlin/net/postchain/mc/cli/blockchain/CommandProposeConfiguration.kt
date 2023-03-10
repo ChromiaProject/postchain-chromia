@@ -16,8 +16,6 @@ import net.postchain.mc.cli.heightOption
 import net.postchain.mc.cli.util.BlockchainConfig
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.proposalDescriptionOption
-import net.postchain.mc.compat.delta
-import net.postchain.mc.compat.sigma
 import net.postchain.mc.network.Version
 
 class CommandProposeConfiguration : CliktCommand(
@@ -50,27 +48,31 @@ class CommandProposeConfiguration : CliktCommand(
         client.transactionBuilder()
                 .apply {
                     if (height == null) {
-                        sigma(version) {
-                            proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, description)
-                        }
-                        delta(version) {
-                            addOperation("propose_configuration",
-                                    gtv(client.config.pubkey().data),
-                                    gtv(blockchainRID),
-                                    gtv(bcConfig.data)
-                            )
+                        when (version.version) {
+                            Version.Delta -> {
+                                addOperation("propose_configuration",
+                                        gtv(client.config.pubkey().data),
+                                        gtv(blockchainRID),
+                                        gtv(bcConfig.data)
+                                )
+                            }
+                            else -> {
+                                proposeConfigurationOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, description)
+                            }
                         }
                     } else {
-                        sigma(version) {
-                            proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, height!!, force == AlreadyExistMode.FORCE, description)
-                        }
-                        delta(version) {
-                            addOperation("propose_configuration_at",
-                                    gtv(client.config.pubkey().data),
-                                    gtv(blockchainRID),
-                                    gtv(bcConfig.data),
-                                    gtv(height!!),
-                                    gtv(force == AlreadyExistMode.FORCE))
+                        when (version.version) {
+                            Version.Delta -> {
+                                addOperation("propose_configuration_at",
+                                        gtv(client.config.pubkey().data),
+                                        gtv(blockchainRID),
+                                        gtv(bcConfig.data),
+                                        gtv(height!!),
+                                        gtv(force == AlreadyExistMode.FORCE))
+                            }
+                            else -> {
+                                proposeConfigurationAtOperation(client.config.pubkey().data, blockchainRID, bcConfig.data, height!!, force == AlreadyExistMode.FORCE, description)
+                            }
                         }
                     }
                 }

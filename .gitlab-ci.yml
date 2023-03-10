@@ -28,6 +28,7 @@ stages:
   - build
   - nightly-tests
   - deploy
+  - dependency-check
   - release
 
 deploy:
@@ -45,10 +46,13 @@ build:
   stage: build
   interruptible: true
   except:
-    - dev
-    - master
-    - tags
-    - /^support\/.*$/
+    refs:
+      - dev
+      - master
+      - tags
+      - /^support\/.*$/
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
@@ -63,6 +67,36 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
+
+dependency-check:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles dependency-check verify -DskipTests
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
+
+container-scanning:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - echo "Scanning image $IMAGE:$VERSION"
+    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --only-fixed -q
+    - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
+  parallel:
+    matrix:
+      - IMAGE: [chromaway/postchain-admin-client,
+                chromaway/postchain-mc,
+                chromaway/chromia-subnode,
+                chromaway/chromia-server]
+        VERSION: [3.8.0, 3.9.0-SNAPSHOT]
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
 
 release:
   stage: release
@@ -103,6 +137,7 @@ variables:
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
   # Instruct Testcontainers to use the daemon of DinD.
   DOCKER_HOST: tcp://docker:2375
   # Instruct Docker not to start over TLS.
@@ -112,7 +147,7 @@ variables:
   DOCKER_CLI_EXPERIMENTAL: enabled
   BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
-  # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GB free, therefore we remove the check to avoid failing.
+  # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:

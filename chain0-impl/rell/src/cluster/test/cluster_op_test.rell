@@ -114,16 +114,16 @@ function test_request_cluster() {
     ).sign(initial_provider).run();
 
     rell.test.tx().op(
-        register_node(rell.test.pubkeys.bob, x"01", "localhost", 1, "http:")
+        register_node(rell.test.pubkeys.bob, rell.test.pubkeys.eve, "localhost", 1, "http:")
     ).sign(rell.test.keypairs.bob).run();
     rell.test.tx().op(
-        register_node(rell.test.pubkeys.trudy, x"02", "localhost", 2, "http:")
+        register_node(rell.test.pubkeys.trudy, rell.test.pubkeys.frank, "localhost", 2, "http:")
     ).sign(rell.test.keypairs.trudy).run();
     rell.test.tx().op(
-        register_node(rell.test.pubkeys.charlie, x"03", "localhost", 3, "http:")
+        register_node(rell.test.pubkeys.charlie, rell.test.pubkeys.grace, "localhost", 3, "http:")
     ).sign(rell.test.keypairs.charlie).run();
     rell.test.tx().op(
-        register_node(rell.test.pubkeys.dave, x"04", "localhost", 4, "http:")
+        register_node(rell.test.pubkeys.dave, rell.test.pubkeys.heidi, "localhost", 4, "http:")
     ).sign(rell.test.keypairs.dave).run();
 
     assert_equals((node @* {}).size(), 5);

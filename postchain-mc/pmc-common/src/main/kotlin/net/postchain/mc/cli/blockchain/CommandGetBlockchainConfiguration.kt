@@ -25,25 +25,25 @@ class CommandGetBlockchainConfiguration : CliktCommand(
     private val save by option(help = "where to save configuration XML").file(canBeFile = true, canBeDir = false)
 
     override fun run() {
-        val actualHeight = if (height == -1L) {
+        val (actualHeight, message) = if (height == -1L) {
             val current = client.getBlockchainLastHeight(blockchainRID)
-            echo("Blockchain configuration at current height: $current")
-            current
+            current to "Blockchain configuration at current height $current"
         } else {
-            echo("Blockchain configuration at height: $height")
-            height
+            height to "Blockchain configuration at height $height"
         }
 
         val bcConfig = client.nmGetBlockchainConfiguration(blockchainRID, actualHeight)
         if (bcConfig == null) {
-            echo("is absent")
+            echo("$message is absent")
         } else {
             val xmlGtv = GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(bcConfig))
             if (save != null) {
-                save!!.parentFile.mkdirs()
+                save!!.parentFile?.mkdirs()
                 save!!.writeText(xmlGtv)
+                echo("$message saved to ${save!!.name}")
             } else {
-                println(xmlGtv)
+                echo("$message:")
+                echo(xmlGtv)
             }
         }
     }

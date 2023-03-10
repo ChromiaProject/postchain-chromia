@@ -218,10 +218,33 @@ class AnchoringValidationTest {
                 )))
     }
 
+    @Test
+    fun irrelevantChain() {
+        val txExtension = createAnchorSpecialTxExtension()
+
+        val irrelevantChain = BlockchainRid.buildRepeat(2)
+        val blockHeader = makeBlockHeader(irrelevantChain, BlockRid(irrelevantChain.data), 0)
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
+        ).getRawData()
+
+        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                listOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                                gtv(blockRid),
+                                blockHeader,
+                                gtv(rawWitness)))
+                )))
+    }
+
     private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
-        val txExtension = AnchoringSpecialTxExtension()
+        val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.clusterManagement = clusterManagement
+        txExtension.anchoringReceiver = mock {
+            on { getRelevantChains() } doReturn setOf(blockchainRID)
+        }
         return txExtension
     }
 

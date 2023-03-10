@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.mc.cli.blockchainRidOption
 import net.postchain.mc.cli.includeInactiveOption
-import net.postchain.mc.cli.util.NodeListFormatter
+import net.postchain.mc.cli.util.NodeListFormatter.renderNodes
 import net.postchain.mc.cli.util.clientOption
 
 class CommandListBlockchainReplicas : CliktCommand(
@@ -18,7 +18,11 @@ class CommandListBlockchainReplicas : CliktCommand(
     private val includeInactive by includeInactiveOption()
 
     override fun run() {
-        NodeListFormatter.render(client.getBlockchainReplicas(blockchainRID), includeInactive)
-                .also { println(it) }
+        val replicas = client.getBlockchainReplicas(blockchainRID)
+        if (replicas.isEmpty()) {
+            echo("No replicas")
+        } else {
+            renderNodes(replicas, includeInactive).also { echo(it) }
+        }
     }
 }

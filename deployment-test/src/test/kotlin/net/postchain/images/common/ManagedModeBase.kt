@@ -65,7 +65,7 @@ open class ManagedModeBase(rellFolder: String) {
     }
 
     var chain0Config: File
-    lateinit var brid: BlockchainRid
+    lateinit var chain0Brid: BlockchainRid
 
     init {
         val runConf = this::class.java.getResource("run.xml")!!
@@ -111,10 +111,11 @@ open class ManagedModeBase(rellFolder: String) {
         channel3 = createChannel(node3).usePlaintext().build()
         addPeer(channel2, node1)
         addPeer(channel3, node1)
-        brid = startBlockchain(
+        chain0Brid = startBlockchain(
                 channel1,
                 chain0Config
         ).let { BlockchainRid.buildFromHex(it) }
+        testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
         startBlockchain(channel2, chain0Config)
         startBlockchain(channel3, chain0Config)
 

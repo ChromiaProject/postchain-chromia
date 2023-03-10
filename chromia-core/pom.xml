@@ -4,7 +4,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.8.0-SNAPSHOT</version>
+        <version>3.9.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -38,8 +38,11 @@
                 <artifactId>rell-maven-plugin</artifactId>
                 <configuration>
                     <source>${project.parent.basedir}/chain0-impl/rell/src</source>
-                    <packageName>net.postchain.cm</packageName>
-                    <mainModule>cm_api</mainModule>
+                    <packageName>net.postchain.chromia</packageName>
+                    <mainModules>
+                        <mainModule>cm_api</mainModule>
+                        <mainModule>nm_api</mainModule>
+                    </mainModules>
                 </configuration>
                 <executions>
                     <execution>

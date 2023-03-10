@@ -1,12 +1,12 @@
 import ^.proposal.*;
 import ^^.model.util.constants.*;
-import ^.anchoring;
+import ^^.cluster_anchoring;
 
 // NB: check authority before calling this function
 function internal_vote(provider, proposal, vote: boolean) {
     require(voter_set_member @? { proposal.voter_set, provider }, provider.pubkey + " must be a member of the voter set");
     create vote(proposal, provider, vote);
-    print("vote added with value:", if (vote) "Yes" else "False");
+    log("vote added with value:", if (vote) "Yes" else "False");
     try_to_apply_proposal(proposal);
 }
 
@@ -14,13 +14,13 @@ function try_to_apply_proposal(prop: proposal) {
     val prop_str = proposal_str(prop);
     val results = get_proposal_voting_results(prop.rowid);
     when (results.voting_result) {
-        pending -> print("proposal is still under discussion:", prop_str);
+        pending -> log("proposal is still under discussion:", prop_str);
         rejected -> {
-            print("proposal rejected:", prop_str);
+            log("proposal rejected:", prop_str);
             delete_proposal(prop);
         }
         approved -> {
-            print("proposal approved:", prop_str);
+            log("proposal approved:", prop_str);
             when (prop.proposal_type) {
                 other                   -> apply_other_voting_result(prop);
                 configuration           -> apply_configuration(prop);
@@ -35,8 +35,9 @@ function try_to_apply_proposal(prop: proposal) {
                 provider_is_system      -> apply_provider_is_system(prop);
                 provider_quota          -> apply_provider_quota(prop);
                 provider_batch          -> apply_provider_batch(prop);
+                provider_remove         -> apply_remove_provider(prop);
                 blockchain_action       -> apply_blockchain_action(prop);
-                anchoring_configuration -> apply_anchoring_configuration(prop);
+                cluster_anchoring_configuration -> apply_cluster_anchoring_configuration(prop);
             }
             delete_proposal(prop);
         }
@@ -53,6 +54,8 @@ function apply_container_limits(proposal) {
     update container_resource_limit @ {pps.container, container_resource_limit_type.cpu} (pps.cpu);
     update container_resource_limit @ {pps.container, container_resource_limit_type.ram} (pps.ram);
     update container_resource_limit @ {pps.container, container_resource_limit_type.storage} (pps.storage);
+    update container_resource_limit @ {pps.container, container_resource_limit_type.io_read} (pps.io_read);
+    update container_resource_limit @ {pps.container, container_resource_limit_type.io_write} (pps.io_write);
 }
 
 function apply_cluster_limits(proposal) {
@@ -62,6 +65,8 @@ function apply_cluster_limits(proposal) {
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_cpu} (pps.default_container_cpu);
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_ram} (pps.default_container_ram);
     update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_storage} (pps.default_container_storage);
+    update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_io_read} (pps.default_container_io_read);
+    update cluster_resource_limit @ {pps.cluster, cluster_resource_limit_type.default_container_io_write} (pps.default_container_io_write);
 }
 
 function apply_remove_cluster(proposal) {
@@ -146,13 +151,51 @@ function apply_provider_batch(proposal) {
                 _is_node_provider(ppb.provider_tier) -> enroll.node(provider @ { pi.pubkey });
             }
         } else {
-            print("Warning: provider already exists: " + pi.pubkey);
+            log("Warning: provider already exists: " + pi.pubkey);
         }
     }
 }
 
+function apply_remove_provider(proposal) {
+    val provider = pending_remove_provider @ { proposal } (.provider);
+    delete node @* { provider };
+    delete cluster_provider @* { provider };
+    delete provider_rl_state @* { provider };
+    delete pending_remove_provider @ { proposal };
+    delete provider;
+}
+
 function apply_configuration(proposal) {
     val pc = pending_configuration @ { proposal };
+    val is_chain0 = pc.blockchain.rid == chain_context.blockchain_rid;
+
+    if (is_chain0) {
+        apply_configuration_chain0(pc);
+    } else if (proposal.description == "pcu") { // TODO remove this feature toggle and always do PCU
+        apply_configuration_pcu(pc);
+    } else {
+        apply_configuration_legacy(pc);
+    }
+}
+
+function apply_configuration_chain0(pc: pending_configuration) {
+    val apply_at_height = op_context.block_height + 1;
+    require(empty(blockchain_configuration @? { pc.blockchain, apply_at_height }), "Configuration at height %d already exists".format(apply_at_height));
+    create blockchain_configuration(pc.blockchain, apply_at_height, pc.data);
+    add_dependencies(pc.data, pc.blockchain.rid, apply_at_height);
+}
+
+function apply_configuration_pcu(pc: pending_configuration) {
+    val base_config = pc.data;
+    val base_config_hash = gtv.from_bytes(base_config).hash();
+    val last_configuration_height = (blockchain_configuration @? { pc.blockchain } (@sort_desc .height) limit 1) ?: 0;
+    val last_pending_configuration_height = (pending_blockchain_configuration @? { pc.blockchain } (@sort_desc .minimum_height) limit 1) ?: 0;
+    val minimum_height = last_configuration_height.max(last_pending_configuration_height) + 1;
+    log("Applying configuration update with PCU for chain %s at minimum height %d".format(pc.blockchain.rid, minimum_height));
+    create pending_blockchain_configuration(pc.blockchain, minimum_height, base_config_hash, base_config);
+}
+
+function apply_configuration_legacy(pc: pending_configuration) {
     val apply_at_height = get_last_height(pc.blockchain) + 10;
     require(empty(blockchain_configuration @? { pc.blockchain, apply_at_height }), "Configuration at height %d already exists".format(apply_at_height));
     create blockchain_configuration(pc.blockchain, apply_at_height, pc.data);
@@ -186,18 +229,13 @@ function apply_configuration_at(proposal) {
 // Initial signers of new bc are the ones in cluster_node table.
 function apply_bc(proposal) {
     val bc = pending_blockchain @ {proposal};
-    val config = map<text, gtv>.from_gtv(gtv.from_bytes(bc.data));
-    val blockchain_rid = config.hash();
-    val blockchain = create blockchain(blockchain_rid, bc.name);
-    print("Added blockchain", blockchain_rid);
-    create blockchain_configuration (blockchain, 0, bc.data);
+
     val nodes = cluster_node @* { bc.container.cluster } (@sort .node.pubkey);
     // do not write new configuration when size is 0 since it's impossible to recover from that
     require(nodes.size() > 0, "Cluster must have at least one node");
-    create blockchain_configuration_signers(blockchain, 0, nodes.to_gtv().to_bytes());
-    create blockchain_added(blockchain, op_context.transaction);
-    create container_blockchain(bc.container, blockchain);
-    add_dependencies(bc.data, blockchain_rid, 0);
+
+    val blockchain_rid = add_blockchain(bc.data, nodes.to_gtv().to_bytes(), bc.name, bc.container);
+    log("Added blockchain", blockchain_rid);
 }
 
 function apply_blockchain_action(proposal) {
@@ -209,9 +247,9 @@ function apply_blockchain_action(proposal) {
     }
 }
 
-function apply_anchoring_configuration(proposal) {
-    val ac = pending_anchoring_configuration @ { proposal };
-    anchoring.set_config(ac.data);
+function apply_cluster_anchoring_configuration(proposal) {
+    val ac = pending_cluster_anchoring_configuration @ { proposal };
+    cluster_anchoring.set_config(ac.data);
 }
 
 // Stop block production by inactivating bc, and keep replicas.

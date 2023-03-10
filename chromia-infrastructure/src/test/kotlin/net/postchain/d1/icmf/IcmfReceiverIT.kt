@@ -14,8 +14,9 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
+import net.postchain.d1.QueryProviderMocks
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
@@ -32,7 +33,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.logging.log4j.core.Logger
 import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.test.appender.ListAppender
+import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
@@ -113,7 +114,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     private fun setupQueriesMocks() {
         QueryProviderMocks.clearMocks()
 
-        QueryProviderMocks.anchorQueries = object : PostchainBlockClient {
+        QueryProviderMocks.clusterAnchoringQueries = object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
                     buildAnchorHeader(listOf(senderTwoQueryResponse["block_header"]!!.asByteArray()))
 
@@ -309,6 +310,54 @@ class IcmfReceiverIT : ManagedModeTest() {
                         assert(message.sender).isEqualTo(senderTwoChainRid)
                         assert(message.topic).isEqualTo("my-topic")
                         assert(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun clusterAnchorReceiver() {
+        MockPostchainRestApi.addMockClient(anchorChainRid, mock {
+            on { blockAtHeight(0L) } doReturn createBlockDetail(anchorChainRid, listOf(senderOneMessageBody))
+            on {
+                query(
+                        "icmf_get_messages_after_height", gtv(
+                        mapOf(
+                                "topic" to gtv("my-topic"),
+                                "height" to gtv(-1)
+                        )
+                )
+                )
+            } doReturn gtv(listOf(gtv(mapOf("body" to senderOneMessageBody, "height" to gtv(0)))))
+        })
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_cluster_anchor_receiver_1.xml")!!.readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.storage, dappChain) { ctx ->
+                    DatabaseAccess.of(ctx).apply {
+                        val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                        val messages = jooq.select()
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                        assert(messages).hasSize(1)
+                        assert(messages.any { it.sender == anchorChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
                     }
                 }
             }

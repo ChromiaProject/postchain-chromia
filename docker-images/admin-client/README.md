@@ -6,7 +6,7 @@ The admin-client is a client for communicating over rpc to a postchain node runn
 
 ### TLS
 
-When running postchain in production, we recommend encrypting the communication. This is done by [enabling it on the postchain server](../server/README.md#tls) and specifying the certificate file in the admin client when running commands. This is typically done using environment variables.
+When running postchain in production, we recommend encrypting the communication. This is done by [enabling it on the postchain server](../chromia-server/README.md#tls) and specifying the certificate file in the admin client when running commands. This is typically done using environment variables.
 
 ### Environment
 
@@ -22,7 +22,7 @@ Use `--help` on a command to get more information.
 
 ## Example usage
 
-Say that we have a postchain-server running on localhost exposing port 50051. Then we can list peer information by:
+Say that we have a Postchain server running on localhost exposing port 50051. Then we can list peer information by:
 
 ```commandline
 docker run -it --rm registry.gitlab.com/chromaway/postchain-chromia/chromaway/postchain-admin-client:3.8.0-SNAPSHOT list-peers -t localhost:50051

@@ -34,7 +34,7 @@ class CommandListProposals : CliktCommand(
         } else {
             client.getRelevantProposals(client.pubkey, RowId(since)).map { it.rowid to it.proposalType }
         }
-        if (proposals.isEmpty()) return println("No proposals found")
+        if (proposals.isEmpty()) return echo("No proposals found")
 
         val votes = client.getProviderVotes(client.pubkey)
 

@@ -5,6 +5,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.PubKey
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
+import net.postchain.devtools.utils.ChainUtil
 
 class AnchoringTestClusterManagement : ClusterManagement {
     override fun getClusterInfo(clusterName: String): D1ClusterInfo {
@@ -28,10 +29,26 @@ class AnchoringTestClusterManagement : ClusterManagement {
     }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
-        throw NotImplementedError("Not yet implemented")
+        return when (clusterName) {
+            "clusterA" -> listOf(ChainUtil.ridOf(1L), ChainUtil.ridOf(2L))
+            "clusterB" -> listOf(ChainUtil.ridOf(3L))
+            else -> emptyList()
+        }
     }
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
-        throw NotImplementedError("Not yet implemented")
+        return when (ChainUtil.iidOf(blockchainRid)) {
+            1L, 2L -> "clusterA"
+            3L -> "clusterB"
+            else -> "unknown_cluster"
+        }
+    }
+
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> {
+        return listOf(ChainUtil.ridOf(2))
+    }
+
+    override fun getSystemAnchoringChain(): BlockchainRid {
+        return ChainUtil.ridOf(1)
     }
 }

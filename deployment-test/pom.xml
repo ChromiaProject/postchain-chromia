@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.8.0-SNAPSHOT</version>
+        <version>3.9.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -22,35 +22,21 @@
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>admin-client</artifactId>
-            <version>3.8.0-SNAPSHOT</version>
+            <version>3.9.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-server</artifactId>
-            <version>3.8.0-SNAPSHOT</version>
+            <version>3.9.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>3.8.0-SNAPSHOT</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain.images</groupId>
-            <artifactId>server</artifactId>
-            <version>3.8.0-SNAPSHOT</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain.images</groupId>
-            <artifactId>test-dapp</artifactId>
-            <version>3.8.0-SNAPSHOT</version>
+            <version>3.9.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
@@ -139,7 +125,7 @@
                             <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>cluster_anchoring</mainModule>
+                                <mainModule>anchoring_chain_common</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

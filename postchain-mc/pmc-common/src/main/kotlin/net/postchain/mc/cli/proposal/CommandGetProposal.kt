@@ -6,7 +6,7 @@ import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import net.postchain.chain0.common.proposal.GetProposalResult
 import net.postchain.chain0.common.proposal.ProposalType
-import net.postchain.chain0.common.proposal.getAnchoringConfigurationProposal
+import net.postchain.chain0.common.proposal.getClusterAnchoringConfigurationProposal
 import net.postchain.chain0.common.proposal.getBlockchainActionProposal
 import net.postchain.chain0.common.proposal.getBlockchainProposal
 import net.postchain.chain0.common.proposal.getClusterLimitsProposal
@@ -19,12 +19,12 @@ import net.postchain.chain0.common.proposal.getProposal
 import net.postchain.chain0.common.proposal.getProposalVotingResults
 import net.postchain.chain0.common.proposal.getProviderBatchProposal
 import net.postchain.chain0.common.proposal.getProviderQuotaProposal
+import net.postchain.chain0.common.proposal.getProviderRemoveProposal
 import net.postchain.chain0.common.proposal.getProviderStateProposal
 import net.postchain.chain0.common.proposal.getSystemProviderProposal
 import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.client.core.PostchainClient
-import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
@@ -53,7 +53,7 @@ class CommandGetProposal : CliktCommand(
 
         table {
             row("Proposal:", "${proposal.id.id} - ${proposal.type.name}")
-            row("Proposed by:", "${proposedBy.pubkey.hex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
+            row("Proposed by:", "${proposedBy.pubkey.toHex()}${if (proposedBy.name.isNotEmpty()) " - " + proposedBy.name else ""}")
             row("Time:", "${Date.from(Instant.ofEpochMilli(proposal.timestamp))}")
             row("Positive votes:", votingResults.positiveVotes.toString())
             row("Negative votes:", votingResults.negativeVotes.toString())
@@ -109,9 +109,7 @@ class CommandGetProposal : CliktCommand(
                     row("Provider:", cpc.provider.toHex())
                     row("Add/Remove:", if (cpc.add) "Add" else "remove")
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
-                }
-                        .render()
-                        .toString()
+                }.render().toString()
             }
             ProposalType.provider_is_system -> {
                 val pis = client.getSystemProviderProposal(proposal.id) ?: return ""
@@ -150,14 +148,24 @@ class CommandGetProposal : CliktCommand(
 
                 return info + providers
             }
+            ProposalType.provider_remove -> {
+                val prp = client.getProviderRemoveProposal(proposal.id) ?: return ""
+                return table {
+                    row("Provider:", prp.provider.toHex())
+                    row("Provider name:", prp.providerName)
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
             ProposalType.container_limits -> {
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
                 return table {
                     row("Container:", pcl.container)
                     row("Max blockchains:", pcl.maxBlockchains.toString())
                     row("CPU:", pcl.cpu.toString())
-                    row("RAM (MB):", pcl.ram.toString())
-                    row("Storage (MB):", pcl.storage.toString())
+                    row("RAM (MiB):", pcl.ram.toString())
+                    row("Storage (MiB):", pcl.storage.toString())
+                    row("Disk I/O read (MiB/s):", pcl.ioRead.toString())
+                    row("Disk I/O write (MiB/s):", pcl.ioWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -168,8 +176,10 @@ class CommandGetProposal : CliktCommand(
                     row("Max containers:", pcl.maxContainers.toString())
                     row("Default container max blockchains:", pcl.defaultContainerMaxBlockchains.toString())
                     row("Default container CPU:", pcl.defaultContainerCpu.toString())
-                    row("Default container RAM (MB):", pcl.defaultContainerRam.toString())
-                    row("Default container storage (MB):", pcl.defaultContainerStorage.toString())
+                    row("Default container RAM (MiB):", pcl.defaultContainerRam.toString())
+                    row("Default container storage (MiB):", pcl.defaultContainerStorage.toString())
+                    row("Default disk I/O read (MiB/s):", pcl.defaultContainerIoRead.toString())
+                    row("Default disk I/O write (MiB/s):", pcl.defaultContainerIoWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -195,8 +205,8 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
-            ProposalType.anchoring_configuration -> {
-                val p = client.getAnchoringConfigurationProposal(proposal.id) ?: return ""
+            ProposalType.cluster_anchoring_configuration -> {
+                val p = client.getClusterAnchoringConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
                 "Proposed anchoring configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"

@@ -1,11 +1,15 @@
 module;
 
-import ^.anchoring.integrated.*;
+import ^.cluster_anchoring.*;
+import ^.system_anchoring.*;
+import ^.legacy_anchoring.integrated.*;
 import ^.common.*;
 import ^.common.init.*;
 import .proposal.*;
 import ^.container.container_op.*;
 import ^.cluster.cluster_op.*;
+import ^.chain0_icmf_receiver.*;
+import ^.config.*;
 
 /*
  * Directory1 is an enterprise dapp where the d1 dapp manages and controls creating and deleting clusters, containers and blockchains.

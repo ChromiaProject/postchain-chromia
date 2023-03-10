@@ -5,9 +5,12 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.getClusterAnchoringChainConfig
+import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -26,10 +29,10 @@ import org.jooq.impl.DSL.table
 import org.jooq.util.postgres.PostgresDataType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -54,19 +57,9 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun happyAnchor() {
         startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain()
 
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
-
-        val moduleRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/module.rell").readText()
-        val icmfRellCode = File(RELL_SOURCE_PATH, "cluster_anchoring/icmf.rell").readText()
-        val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_2_anchor.xml")!!.readText(),
-                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
-
-        val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+        val dappChain = startDappChain()
 
         // --------------------
         // Dapp chain: Build 4 blocks
@@ -107,12 +100,12 @@ class AnchoringIT : ManagedModeTest() {
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         assertContentEquals(anchorHash, topicHeaderData.hash)
 
+        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
+        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
         withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
             val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
-            val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
-            val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
             val res = jooq.select(blockchainRidColumn, blockHeightColumn)
                     .from(table(db.tableName(it, "anchor_block")))
                     .fetch()
@@ -155,11 +148,103 @@ class AnchoringIT : ManagedModeTest() {
                 }
             }
         }
+
+        // restart anchoring chain
+        nodes.forEach {
+            it.stopBlockchain(anchorChain)
+            it.startBlockchain(anchorChain)
+        }
+
+        // build another block and verify it is anchored
+        buildBlock(dappChain, 4)
+        buildBlock(anchorChain, 1)
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(5, res.size)
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun onlyClusterChainsAreAnchored() {
+        startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain()
+
+        val dappChain = startDappChain()
+
+        // Add an extra dapp chain that will get chainId == 3, do string replacement to make it unique
+        // This dapp will be mocked to be in another cluster
+        val dapp2GtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText().replace("NOT_USED", "NOT_USED2")
+        )
+
+        val dapp2Chain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dapp2GtvConfig))
+
+        // Build one block each on the dapp chains
+        buildBlock(dappChain, 0L)
+        buildBlock(dapp2Chain, 0L)
+
+        // Build a block on the anchor chain
+        buildBlock(anchorChain, 0)
+
+        // Ensure only the block from dapp1 was anchored
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].blockQueries(anchorChain)
+        val dappBlock = anchorBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(dappChain))))).get()
+        assertFalse(dappBlock.isNull())
+
+        val dapp2Block = anchorBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(dapp2Chain))))).get()
+        assertTrue(dapp2Block.isNull())
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun systemAnchoringAnchorsClusterAnchoringBlocks() {
+        startManagedSystem(3, 0)
+        val systemAnchoringChain = startSystemAnchoringChain()
+        val clusterAnchoringChain = startClusterAnchoringChain()
+
+        buildBlock(clusterAnchoringChain, 0L)
+        buildBlock(systemAnchoringChain, 0L)
+
+        // Verify that system anchoring chain has anchored the block that was built on cluster anchoring chain
+        val systemAnchoringBlockQueries = getChainNodes(systemAnchoringChain)[0].blockQueries(systemAnchoringChain)
+        val clusterAnchoringBlock = systemAnchoringBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(clusterAnchoringChain))))).get()
+        assertFalse(clusterAnchoringBlock.isNull())
+
+        buildBlock(clusterAnchoringChain, 1L)
+        // Verify that cluster anchoring chain has not anchored the block that was built on system anchoring chain
+        val clusterAnchoringBlockQueries = getChainNodes(clusterAnchoringChain)[0].blockQueries(clusterAnchoringChain)
+        val systemAnchoringBlock = clusterAnchoringBlockQueries.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(ChainUtil.ridOf(systemAnchoringChain))))).get()
+        assertTrue(systemAnchoringBlock.isNull())
+    }
+
+    private fun startDappChain(): Long {
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
+
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
+    }
+
+    private fun startClusterAnchoringChain(): Long {
+        val anchorGtvConfig = getClusterAnchoringChainConfig()
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
+    }
+
+    private fun startSystemAnchoringChain(): Long {
+        val anchorGtvConfig = getSystemAnchoringChainConfig()
+        return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
         nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", D1TestInfrastructureFactory::class.qualifiedName)
+        nodeSetup.nodeSpecificConfigs.setProperty("clusterManagementMock", AnchoringTestClusterManagement::class.qualifiedName)
     }
 
     private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv, anchorChainId: Long): Gtv =

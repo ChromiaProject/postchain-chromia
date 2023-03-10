@@ -4,25 +4,22 @@ import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
+import net.postchain.concurrent.util.get
 import net.postchain.core.*
-import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.mc.config.app.BaseClientConfig
-import net.postchain.mc.config.app.ClientConfig
-import net.postchain.mc.config.app.DelegatingClientConfig
 import net.postchain.rell.module.RellVersions
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
-import org.apache.commons.configuration2.MapConfiguration
 import java.io.File
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -76,11 +73,11 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
     protected fun cliConf(keyIndex: Int): PostchainClientConfig {
         return PostchainClientConfig(
-            nodes[0].getBlockchainRid(0)!!,
-            EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
-            listOf(
-                KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
-            )
+                nodes[0].getBlockchainRid(0)!!,
+                EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
+                listOf(
+                        KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
+                )
         )
     }
 
@@ -131,9 +128,9 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
-    configData: BaseBlockBuildingStrategyConfigurationData,
-    blockQueries: BlockQueries,
-    val txQueue: TransactionQueue
+        configData: BaseBlockBuildingStrategyConfigurationData,
+        blockQueries: BlockQueries,
+        val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()
@@ -156,6 +153,9 @@ class SmartOnDemandBlockBuildingStrategy(
     override fun blockCommitted(blockData: BlockData) {
         committedHeight++
         blocks.add(blockData)
+    }
+
+    override fun blockFailed() {
     }
 
     fun awaitCommitted(height: Int) {
