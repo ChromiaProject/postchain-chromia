@@ -135,6 +135,11 @@
                 <artifactId>java-diff-utils</artifactId>
                 <version>4.12</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.tomakehurst</groupId>
+                <artifactId>wiremock-jre8</artifactId>
+                <version>2.35.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

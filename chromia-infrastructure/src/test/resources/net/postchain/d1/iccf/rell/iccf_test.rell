@@ -1,0 +1,4 @@
+// Dummy operation that checks that tx has been proven and nothing else
+operation iccf_test(source_blockchain_rid: byte_array, source_tx_hash: byte_array) {
+    require(check_iccf_proof(source_blockchain_rid, source_tx_hash), "No proof operation present for TX");
+}

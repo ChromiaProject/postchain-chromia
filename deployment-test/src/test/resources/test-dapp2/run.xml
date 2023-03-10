@@ -18,6 +18,7 @@
                 <gtv path="gtx/modules">
                     <array>
                        <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
+                       <string>net.postchain.d1.iccf.IccfGTXModule</string>
                     </array>
                 </gtv>
                 <gtv path="sync_ext">

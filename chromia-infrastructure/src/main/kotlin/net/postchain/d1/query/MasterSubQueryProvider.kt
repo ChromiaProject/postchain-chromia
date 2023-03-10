@@ -18,7 +18,13 @@ class MasterSubQueryProvider(
 
     override fun getChain0Query(): PostchainQuery = Chain0MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager)
 
-    override fun getAnchorQuery(): PostchainBlockClient {
+    override fun getSystemAnchoringQuery(): PostchainBlockClient? {
+        return clusterManagement.getSystemAnchoringChain()?.let {
+            MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager, it)
+        }
+    }
+
+    override fun getClusterAnchoringQuery(): PostchainBlockClient {
         val cluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
         val info = clusterManagement.getClusterInfo(cluster)
         return MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager, info.anchoringChain)
