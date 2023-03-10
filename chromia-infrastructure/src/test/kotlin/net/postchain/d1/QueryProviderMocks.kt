@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf
+package net.postchain.d1
 
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.PostchainQuery
@@ -10,7 +10,9 @@ object QueryProviderMocks : ChromiaQueryProvider {
 
     var chain0Queries: PostchainQuery? = null
 
-    var anchorQueries: PostchainBlockClient? = null
+    var clusterAnchoringQueries: PostchainBlockClient? = null
+
+    var systemAnchoringQueries: PostchainBlockClient? = null
 
     fun addMockQueries(blockchainRid: BlockchainRid, query: PostchainBlockClient) {
         mockQueries[blockchainRid] = query
@@ -19,12 +21,14 @@ object QueryProviderMocks : ChromiaQueryProvider {
     fun clearMocks() {
         mockQueries.clear()
         chain0Queries = null
-        anchorQueries = null
+        clusterAnchoringQueries = null
     }
 
     override fun getChain0Query() = chain0Queries!!
 
-    override fun getAnchorQuery(): PostchainBlockClient? = anchorQueries
+    override fun getSystemAnchoringQuery() = systemAnchoringQueries
+
+    override fun getClusterAnchoringQuery(): PostchainBlockClient? = clusterAnchoringQueries
 
     override fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient? = mockQueries[targetBlockchainRid]
 }

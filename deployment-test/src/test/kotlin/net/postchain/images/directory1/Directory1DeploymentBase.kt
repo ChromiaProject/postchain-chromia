@@ -16,6 +16,7 @@ import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
@@ -24,13 +25,19 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
+import net.postchain.client.config.FailOverConfig
+import net.postchain.client.core.TxRid
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
+import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -39,6 +46,9 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
+import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.mc.cli.base.cryptoSystem
 import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
@@ -60,6 +70,7 @@ abstract class Directory1DeploymentBase {
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
+        private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
@@ -130,6 +141,11 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
+
+        // This will replace the dummy URL {apiUrl} in config
+        node1.c0.transactionBuilder()
+                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.apiPath())
+                .postTransactionUntilConfirmed("Fix node1 REST API URL")
     }
 
     private fun assertAnchoringChainProperties() {
@@ -276,14 +292,15 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(7)
-    fun `Deploy new dapp`(@TempDir tmpSources: File) {
+    fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
         listOf(node1, node2, node3).forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpSources.resolve("icmf"))
-        deployDapp("test-dapp", systemContainer, tmpSources)
-        deployDapp("test-dapp2", foobarContainer)
+        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpIcmfSources.resolve("icmf"))
+        deployDapp("test-dapp", systemContainer, tmpIcmfSources)
+        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
+        deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
 
         // Asserting that blockchain is added
         listOf(node1, node2, node3).forEach { node ->
@@ -368,7 +385,7 @@ abstract class Directory1DeploymentBase {
 
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
         testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
-        node2.tx(brid, txOp, gtv(txArg))
+        dappTxs[brid] = node2.tx(brid, txOp, gtv(txArg)).first
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
@@ -380,7 +397,7 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(12)
-    fun `Reconfiguration of test-dapp2`() {
+    fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
 
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
@@ -393,7 +410,8 @@ abstract class Directory1DeploymentBase {
         assertEquals(500L, getAssertingParam())
 
         // reconfiguring test-dapp2
-        updateDapp("test-dapp2")
+        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
+        updateDapp("test-dapp2", tmpIccfSources)
 
         // new value
         awaitUntilAsserted {
@@ -492,6 +510,33 @@ abstract class Directory1DeploymentBase {
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
+                        .asArray().map { it.asString() }
+                assert(cities).containsExactly("Heraklion")
+            }
+        }
+    }
+
+    @Test
+    @Order(17)
+    fun `ICCF transfers are validated`() {
+        val sourceDapp = dapps["test-dapp"]!!
+        val targetDapp = dapps["test-dapp2"]!!
+
+        val txToProve = dappTxs[sourceDapp]!!
+        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), ClusterManagementImpl(node1.c0))
+        val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
+                TxRid(txToProve.gtxBody.rid.toHex()),
+                txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                listOf(),
+                sourceDapp,
+                targetDapp
+        )
+        val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
+        iccfMaterial.txBuilder.addOperation("iccf_transfer", gtv(sourceDapp), actualTxToProve.toGtv())
+                .postTransactionUntilConfirmed("iccf_transfer")
+        awaitUntilAsserted {
+            listOf(node1, node2, node3).forEach { node ->
+                val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
             }

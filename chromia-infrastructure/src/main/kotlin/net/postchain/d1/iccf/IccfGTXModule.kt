@@ -1,0 +1,32 @@
+package net.postchain.d1.iccf
+
+import net.postchain.PostchainContext
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.d1.ChromiaQueryProviderFactory
+import net.postchain.d1.ClusterManagementFactory
+import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.gtx.PostchainContextAware
+import net.postchain.gtx.SimpleGTXModule
+import net.postchain.network.common.ConnectionManager
+
+open class IccfGTXModule : SimpleGTXModule<IccfGTXModuleContext> (
+        IccfGTXModuleContext(),
+        mapOf(IccfProofTxMaterialBuilder.ICCF_OP_NAME to ::IccfGTXOperation),
+        mapOf()
+), PostchainContextAware {
+    override fun initializeDB(ctx: EContext) {}
+
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+        conf.apply {
+            cryptoSystem = postchainContext.cryptoSystem
+            clusterManagement = createClusterManagement(configuration, postchainContext.connectionManager)
+            queryProvider = ChromiaQueryProviderFactory.create(configuration, postchainContext.blockQueriesProvider, postchainContext.connectionManager, clusterManagement)
+            nodeIsReplica = configuration.blockchainContext.nodeID == NODE_ID_READ_ONLY
+        }
+    }
+
+    open fun createClusterManagement(configuration: BlockchainConfiguration, connectionManager: ConnectionManager): ClusterManagement =
+            ClusterManagementFactory.create(configuration, connectionManager)
+}
