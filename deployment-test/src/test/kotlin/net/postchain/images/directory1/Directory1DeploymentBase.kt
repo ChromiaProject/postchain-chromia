@@ -88,6 +88,9 @@ abstract class Directory1DeploymentBase {
             saveSubnodeLogs(dockerClient)
             stopNodes()
             removeSubnodeContainers()
+            if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
+                testLogger.error("Unable to clear mount directory")
+            }
         }
 
         fun removeSubnodeContainers() {
