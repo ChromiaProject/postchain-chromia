@@ -404,7 +404,7 @@ abstract class Directory1DeploymentBase {
 
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
-            val height = node1.client(brid).currentBlockHeight()
+            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
             val config0 = node1.c0.nmGetBlockchainConfiguration(dapps["test-dapp2"]!!, height)!!
             return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
         }
