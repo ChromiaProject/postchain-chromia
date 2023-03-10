@@ -1,7 +1,7 @@
 package net.postchain.mc.cli.provider
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.chain0.common.proposal.proposeProviderStateOperation
+import net.postchain.chain0.proposal.proposeProviderStateOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.requiredPubkeyOption

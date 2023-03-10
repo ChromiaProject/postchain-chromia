@@ -2,7 +2,7 @@ package net.postchain.mc.cli.proposal
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.proposal.revokeProposalOperation
+import net.postchain.chain0.proposal.revokeProposalOperation
 import net.postchain.common.types.RowId
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
