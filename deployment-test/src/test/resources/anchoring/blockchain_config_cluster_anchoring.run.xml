@@ -11,6 +11,7 @@
                 <gtv path="gtx/modules">
                     <array>
                         <string>net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule</string>
+                        <string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>
                     </array>
                 </gtv>
                 <app module="anchoring_chain_cluster"/>
