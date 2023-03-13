@@ -15,16 +15,17 @@ pipeline {
     DOCKER_DRIVER = "overlay2"
     DOCKER_CLI_EXPERIMENTAL = "enabled"
 
-    TEST_MOUNT_DIRECTORY = "/builds/$CI_PROJECT_PATH/mnt"
+    TEST_MOUNT_DIRECTORY = "$WORKSPACE/mnt"
     TESTCONTAINERS_CHECKS_DISABLE = "true"
   }
 
   stages {
-    stage('set up docker buildx') {
+    stage('prepare environment') {
       steps {
         sh """
           docker buildx rm postchain-builder || echo "Continuing anyway"
           docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
+          mkdir -p $TEST_MOUNT_DIRECTORY
         """
       }
     }
