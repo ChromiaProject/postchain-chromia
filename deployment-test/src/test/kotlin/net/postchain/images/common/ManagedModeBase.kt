@@ -144,17 +144,21 @@ open class ManagedModeBase(rellFolder: String) {
                 ).brid
     }
 
-    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null): RellPostAppCliConfig {
+    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null, runXmlFile: String = "run.xml"): RellPostAppCliConfig {
         val dappSources = this::class.java.classLoader.getResource(dappName)!!
         val applicationFolder = if (additionalSources != null) {
-            File(dappSources.toURI()).copyRecursively(additionalSources)
+            File(dappSources.toURI()).copyRecursively(additionalSources, true)
             additionalSources
         } else {
             File(dappSources.toURI())
         }
-        val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
+        return compileChain("$dappName/$runXmlFile", applicationFolder)
+    }
+
+    fun compileChain(runXmlFile: String, rellSources: File): RellPostAppCliConfig {
+        val runConf = requireNotNull(this::class.java.classLoader.getResource(runXmlFile))
         return RellRunConfigGenerator.generateCli(
-                applicationFolder,
+                rellSources,
                 File(runConf.toURI()),
                 RellVersions.VERSION,
                 false
