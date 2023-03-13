@@ -147,7 +147,7 @@ abstract class Directory1DeploymentBase {
 
         // This will replace the dummy URL {apiUrl} in config
         node1.c0.transactionBuilder()
-                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.apiPath())
+                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.nodeApiPath())
                 .postTransactionUntilConfirmed("Fix node1 REST API URL")
     }
 
@@ -237,7 +237,7 @@ abstract class Directory1DeploymentBase {
                         node2.nodeKeyPair.pubKey.data,
                         node2.nodeHost,
                         node2.nodePort.toLong(),
-                        node2.apiPath(),
+                        node2.nodeApiPath(),
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
@@ -268,7 +268,7 @@ abstract class Directory1DeploymentBase {
                         node3.pubkey.data,
                         node3.nodeHost,
                         node3.nodePort.toLong(),
-                        node3.apiPath(),
+                        node3.nodeApiPath(),
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
@@ -526,7 +526,9 @@ abstract class Directory1DeploymentBase {
         val targetDapp = dapps["test-dapp2"]!!
 
         val txToProve = dappTxs[sourceDapp]!!
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), ClusterManagementImpl(node1.c0))
+        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(),
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())))
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(txToProve.gtxBody.rid.toHex()),
                 txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
