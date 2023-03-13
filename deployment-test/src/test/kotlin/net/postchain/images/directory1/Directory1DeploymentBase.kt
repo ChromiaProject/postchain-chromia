@@ -530,7 +530,9 @@ abstract class Directory1DeploymentBase {
         val targetDapp = dapps["test-dapp2"]!!
 
         val txToProve = dappTxs[sourceDapp]!!
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), ClusterManagementImpl(node1.c0))
+        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(),
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())))
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(txToProve.gtxBody.rid.toHex()),
                 txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
