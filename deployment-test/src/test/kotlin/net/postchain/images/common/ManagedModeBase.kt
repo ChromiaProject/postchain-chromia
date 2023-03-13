@@ -152,9 +152,13 @@ open class ManagedModeBase(rellFolder: String) {
         } else {
             File(dappSources.toURI())
         }
-        val runConf = this::class.java.classLoader.getResource("$dappName/$runXmlFile")!!
+        return compileChain("$dappName/$runXmlFile", applicationFolder)
+    }
+
+    fun compileChain(runXmlFile: String, rellSources: File): RellPostAppCliConfig {
+        val runConf = requireNotNull(this::class.java.classLoader.getResource(runXmlFile))
         return RellRunConfigGenerator.generateCli(
-                applicationFolder,
+                rellSources,
                 File(runConf.toURI()),
                 RellVersions.VERSION,
                 false

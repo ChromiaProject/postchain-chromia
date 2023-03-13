@@ -61,12 +61,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+const val systemRellSource = "../chain0-impl/rell/src"
+
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 abstract class Directory1DeploymentBase {
 
-    companion object : ManagedModeBase("../chain0-impl/rell/src") {
+    companion object : ManagedModeBase(systemRellSource) {
         @JvmStatic
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
@@ -114,19 +116,13 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(2)
-    fun `Initialize network with provider1`(@TempDir tmpInitSources: File) {
+    fun `Initialize network with provider1`() {
         with(node1.c0) {
-            // compile cluster anchoring dapp
-            File("../chain0-impl/rell/src/anchoring_chain_common").copyRecursively(tmpInitSources.resolve("anchoring_chain_common"))
-            File("../chain0-impl/rell/src/anchoring_chain_cluster").copyRecursively(tmpInitSources.resolve("anchoring_chain_cluster"))
-            File("../chain0-impl/rell/src/config_common").copyRecursively(tmpInitSources.resolve("config_common"))
-            File("../chain0-impl/rell/src/icmf").copyRecursively(tmpInitSources.resolve("icmf"))
-            val clusterAnchoringDapp = compileDapp("anchoring", tmpInitSources, "blockchain_config_cluster_anchoring.run.xml")
+            val clusterAnchoringDapp = compileChain("anchoring/blockchain_config_cluster_anchoring.run.xml", File(systemRellSource))
             val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
 
             // compile system anchoring dapp
-            File("../chain0-impl/rell/src/anchoring_chain_system").copyRecursively(tmpInitSources.resolve("anchoring_chain_system"))
-            val systemAnchoringDapp = compileDapp("anchoring", tmpInitSources, "blockchain_config_system_anchoring.run.xml")
+            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
             val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
 
             transactionBuilder()
