@@ -2,6 +2,7 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import mu.KLogging
 import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.disableNodeOperation
@@ -67,6 +68,8 @@ import kotlin.test.assertTrue
 
 class Directory1IT : ManagedModeTest() {
 
+    companion object : KLogging()
+
     override fun chainConfSnippet(): String {
         val module = "management_chain_directory1"
 
@@ -111,21 +114,23 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testProposeEnableDisableProvider() {
-        //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
+        logger.info("proposes a second provider to system cluster. Includes also add it to system voter_set.")
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubkey())
 
-        // The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster. TODO: Start as
-        //  replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)
+        logger.info("The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster.")
+        // TODO: Start as replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)
         addNode(prov2Client, node1Pubkey, node1Host, node1Port, systemClusterName)
 
-        //First provider proposes Disable prov2. Prov2 agrees:
+        logger.info("First provider proposes Disable prov2. Prov2 agrees.")
         val tx = provClient.transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
         doAndBuildBlocks(tx)
+        logger.info("assertProposalTypeAndGetRowid")
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
         val tx2 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
         doAndBuildBlocks(tx2)
+        logger.info("assertProviderDisabled")
         assertProviderDisabled(prov2Config.pubkey())
     }
 

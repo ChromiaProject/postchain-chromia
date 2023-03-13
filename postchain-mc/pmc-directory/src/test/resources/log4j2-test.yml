@@ -63,3 +63,10 @@ Configuration:
         AppenderRef:
           - ref: SimpleConsoleAppender
           - ref: SimpleFileAppender
+
+      - name: net.postchain.mc.test
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: SimpleConsoleAppender
+          - ref: SimpleFileAppender
