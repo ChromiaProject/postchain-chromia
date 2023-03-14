@@ -8,7 +8,7 @@ import ^.config_common.*;
 
 entity pending_blockchain_configuration {
     key blockchain, minimum_height: integer;
-    index base_config_hash: byte_array;
+    index config_hash: byte_array;
     base_config: byte_array;
     signers: byte_array;
 }
@@ -25,12 +25,12 @@ entity pending_blockchain_configuration {
         "Received updated configuration from chain %s, which is not anchor chain for cluster %s".format(sender, cluster.name));
 
     log("Received updated configuration for chain %s at height %d to %s"
-        .format(message.blockchain_rid, message.height, message.base_config_hash));
+        .format(message.blockchain_rid, message.height, message.config_hash));
 
     val pending_configuration = require(
-        pending_blockchain_configuration @? { bc, .base_config_hash == message.base_config_hash, .minimum_height <= message.height }
+        pending_blockchain_configuration @? { bc, .config_hash == message.config_hash, .minimum_height <= message.height }
             (@omit @sort .minimum_height, $) limit 1,
-        "Configuration with hash %s not found for chain %s".format(message.base_config_hash, message.blockchain_rid)
+        "Configuration with hash %s not found for chain %s".format(message.config_hash, message.blockchain_rid)
     );
 
     val pending_base_config = pending_configuration.base_config;
