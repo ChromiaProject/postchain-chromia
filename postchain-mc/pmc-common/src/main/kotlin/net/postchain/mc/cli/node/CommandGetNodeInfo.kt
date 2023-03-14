@@ -25,6 +25,7 @@ class CommandGetNodeInfo : CliktCommand(
             row("Active:", "${node.active}")
             row("Host:", node.host)
             row("Port:", "${node.port}")
+            row("REST API:", node.apiUrl)
             row("Provided by:", node.provider.toHex())
             val clusters = client.listClustersOfNode(PubKey(node.pubkey))
             row("Used by clusters:", "$clusters")
