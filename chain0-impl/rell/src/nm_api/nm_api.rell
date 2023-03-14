@@ -58,9 +58,9 @@ query nm_get_blockchain_configuration(blockchain_rid: byte_array, height: intege
         // Thus, not needed to check here.
         val signers = blockchain_configuration_signers @ { bc, .height <= height } (@omit @sort_desc .height, .signers) limit 1;
 
-        val config_dict = map<text, gtv>.from_gtv(gtv.from_bytes(base_config.data));
-        config_dict["signers"] = gtv.from_bytes(signers);
-        return config_dict.to_gtv().to_bytes();
+        val full_config = map<text, gtv>.from_gtv(gtv.from_bytes(base_config.data));
+        full_config["signers"] = gtv.from_bytes(signers);
+        return full_config.to_gtv().to_bytes();
     } else {
         return null;
     }
@@ -245,7 +245,7 @@ query nm_get_pending_blockchain_configuration(blockchain_rid: byte_array, height
     Precise Configuration Update
     NM API Version: 5
 */
-query nm_is_pending_blockchain_configuration_applied(blockchain_rid: byte_array, height: integer, base_config_hash: byte_array): boolean {
+query nm_is_pending_blockchain_configuration_applied(blockchain_rid: byte_array, height: integer, config_hash: byte_array): boolean {
     val bc = require_blockchain(blockchain_rid);
-    return (pending_blockchain_configuration @* { bc, .minimum_height <= height, base_config_hash }).empty();
+    return (pending_blockchain_configuration @* { bc, .minimum_height <= height, config_hash }).empty();
 }

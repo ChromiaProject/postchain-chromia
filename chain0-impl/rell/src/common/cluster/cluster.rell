@@ -111,10 +111,12 @@ function update_configuration_signers_pcu(blockchain, signers: list<pubkey>) {
         (last_signers_height + 1,
          blockchain_configuration @ { blockchain } (@omit @sort_desc .height, .data) limit 1);
     log("Applying signers update with PCU for chain %s at minimum height %d".format(blockchain.rid, minimum_height));
+    val full_config = map<text, gtv>.from_gtv(gtv.from_bytes(base_config));
+    full_config["signers"] = signers.to_gtv();
     create pending_blockchain_configuration(
         blockchain,
         minimum_height,
-        base_config_hash=gtv.from_bytes(base_config).hash(),
+        config_hash=full_config.to_gtv().hash(),
         base_config,
         signers=signers.to_gtv().to_bytes()
     );
