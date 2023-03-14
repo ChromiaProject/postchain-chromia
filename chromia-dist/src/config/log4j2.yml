@@ -4,19 +4,19 @@ Configuration:
 
   Properties:
     Property:
-      - name: logs
-        value: "logs"
-      - name: filename
-        value: "postchain"
-      - name: fileExt
-        value: "log"
+    - name: logs
+      value: "logs"
+    - name: filename
+      value: "postchain"
+    - name: fileExt
+      value: "log"
 
   Appenders:
     Console:
       name: ConsoleAppender
       target: SYSTEM_OUT
       PatternLayout:
-        pattern: "%-5level %c{1} - %msg%n"
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
     RollingFile:
       name: FileAppender
       fileName: "${logs}/${filename}.${fileExt}"
@@ -43,14 +43,31 @@ Configuration:
     Root:
       level: warn
       AppenderRef:
-        - ref: ConsoleAppender
-        - ref: FileAppender
+      - ref: ConsoleAppender
+      - ref: FileAppender
 
     Logger:
 
-      - name: net.postchain
-        level: warn
-        additivity: false
-        AppenderRef:
-          - ref: ConsoleAppender
-          - ref: FileAppender
+    - name: net.postchain
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+      - ref: FileAppender
+
+    - name: net.postchain.base.BaseBlockchainProcessManager
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+      - ref: FileAppender
+        level: off
+
+    - name: net.postchain.network.x.DefaultXCommunicationManager
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+      - ref: FileAppender
+
+
