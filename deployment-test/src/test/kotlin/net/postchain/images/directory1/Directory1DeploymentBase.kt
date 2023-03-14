@@ -267,9 +267,9 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
-        assertChainSigners(chain0Brid, node1, node2, node3)
-        assertChainSigners(clusterAnchoringBrid, node1, node2, node3)
-        assertChainSigners(systemAnchoringBrid, node1, node2, node3)
+        assertChainSigners(chain0Brid, *nodes())
+        assertChainSigners(clusterAnchoringBrid, *nodes())
+        assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
@@ -287,7 +287,7 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(7)
     fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
-        listOf(node1, node2, node3).forEach { node ->
+        nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
@@ -297,7 +297,7 @@ abstract class Directory1DeploymentBase {
         deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
 
         // Asserting that blockchain is added
-        listOf(node1, node2, node3).forEach { node ->
+        nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
     }
@@ -330,7 +330,7 @@ abstract class Directory1DeploymentBase {
         }
 
         // Asserting that node1, node2, node3 are signers of newly added blockchain
-        assertChainSigners(blockchainRid!!, node1, node2, node3)
+        assertChainSigners(blockchainRid!!, *nodes())
     }
 
     @Test
@@ -377,7 +377,7 @@ abstract class Directory1DeploymentBase {
         testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
         dappTxs[brid] = node2.tx(brid, txOp, gtv(txArg)).first
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
@@ -432,7 +432,7 @@ abstract class Directory1DeploymentBase {
 
     private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val lastAnchoredBlock = awaitQueryResult {
                     node.c0.getLastLegacyAnchoredBlock(dappBrid)
                 }
@@ -463,7 +463,7 @@ abstract class Directory1DeploymentBase {
 
     private fun assertThatBlocksAreAnchored(anchoringChainBrid: BlockchainRid, sourceBrid: BlockchainRid) {
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val lastAnchoredBlock = awaitQueryResult {
                     node.client(anchoringChainBrid).getLastAnchoredBlock(sourceBrid)
                 }
@@ -494,7 +494,7 @@ abstract class Directory1DeploymentBase {
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
@@ -523,7 +523,7 @@ abstract class Directory1DeploymentBase {
         iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
                 .postTransactionUntilConfirmed("iccf_transfer")
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
