@@ -236,9 +236,9 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
 
         // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
-        assertChainSigners(chain0Brid, *nodes())
-        assertChainSigners(clusterAnchoringBrid, *nodes())
-        assertChainSigners(systemAnchoringBrid, *nodes())
+        assertChainSigners(chain0Brid, node1, node2)
+        assertChainSigners(clusterAnchoringBrid, node1, node2)
+        assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
     @Test

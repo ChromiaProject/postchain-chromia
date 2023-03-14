@@ -104,22 +104,28 @@ open class ManagedModeBase(rellFolder: String) {
         postgres.start()
         startContainers(*nodes())
 
+        // node1
         channel1 = createChannel(node1).usePlaintext().build()
-        channel2 = createChannel(node2).usePlaintext().build()
-        channel3 = createChannel(node3).usePlaintext().build()
-        addPeer(channel2, node1)
-        addPeer(channel3, node1)
-        chain0Brid = startBlockchain(
-                channel1,
-                chain0Config
-        ).let { BlockchainRid.buildFromHex(it) }
+        chain0Brid = startBlockchain(channel1, chain0Config)
+                .let { BlockchainRid.buildFromHex(it) }
         testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
-        startBlockchain(channel2, chain0Config)
-        startBlockchain(channel3, chain0Config)
-
         node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-        node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
-        node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
+
+        // node2
+        if (::node2.isInitialized) {
+            channel2 = createChannel(node2).usePlaintext().build()
+            addPeer(channel2, node1)
+            startBlockchain(channel2, chain0Config)
+            node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
+        }
+
+        // node3
+        if (::node3.isInitialized) {
+            channel3 = createChannel(node3).usePlaintext().build()
+            addPeer(channel3, node1)
+            startBlockchain(channel3, chain0Config)
+            node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
+        }
     }
 
     private fun createChannel(target: PostchainContainer) =
