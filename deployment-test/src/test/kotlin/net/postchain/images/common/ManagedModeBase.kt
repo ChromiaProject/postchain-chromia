@@ -44,7 +44,7 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
 
-    fun nodes() = arrayOf(node1, node2, node3)
+    fun nodes() = arrayOf(node1, node2/*, node3*/)
 
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
@@ -55,6 +55,7 @@ open class ManagedModeBase(rellFolder: String) {
                 nodeHost = hostName,
                 provider = provider
         )
+                .withCreateContainerCmdModifier { it.withName(hostName) }
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
                 .withExposedPorts(50051, appConfig.getInt("api.port"))

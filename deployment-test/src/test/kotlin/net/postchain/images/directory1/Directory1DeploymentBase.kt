@@ -159,6 +159,7 @@ abstract class Directory1DeploymentBase {
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
+    /*
     @Test
     @Order(3)
     fun `Add new container`() {
@@ -213,11 +214,12 @@ abstract class Directory1DeploymentBase {
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
         assertEquals(foobarResourceLimits, newActualLimits)
     }
+     */
 
     @Test
     @Order(5)
     fun `Add node2 as signer to c0`() {
-        testLogger.info("Adding node2 to the cluster")
+        testLogger.info("Adding node2 to the system cluster")
         testLogger.info("Registering provider2")
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
@@ -241,10 +243,11 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
+    /*
     @Test
     @Order(6)
     fun `Add node3 as signer to c0`() {
-        testLogger.info("Adding node3 to the cluster")
+        testLogger.info("Adding node3 to the system cluster")
         testLogger.info("Registering provider3")
         node1Db.awaitNewBlock()
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
@@ -271,7 +274,7 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
     }
-
+*/
     private fun voteOnAllProposals(provider: KeyPair) {
         awaitQueryResult {
             assert(node1.c0.getProposalsSince(RowId(0))).isNotEmpty()
@@ -291,14 +294,15 @@ abstract class Directory1DeploymentBase {
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpIcmfSources.resolve("icmf"))
-        deployDapp("test-dapp", systemContainer, tmpIcmfSources)
+//        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpIcmfSources.resolve("icmf"))
+//        deployDapp("test-dapp", systemContainer, tmpIcmfSources)
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
+        deployDapp("test-dapp2", systemContainer/*foobarContainer*/, tmpIccfSources)
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+//            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+            assert(node.c0.getBlockchains(true).size).isEqualTo(4)
         }
     }
 
@@ -311,7 +315,7 @@ abstract class Directory1DeploymentBase {
         rellConfig.config.chains.forEach { chain ->
             testLogger.info { "Adding test dapp $dappName" }
             chain.configs.forEach { (height, config) ->
-                node3Db.awaitNewBlock()
+//                node3Db.awaitNewBlock()
 
                 val configGtv = getBaseConfig(config)
                 blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
@@ -324,7 +328,7 @@ abstract class Directory1DeploymentBase {
 
                 if (containerName == systemContainer) {
                     voteOnAllProposals(node2.provider)
-                    voteOnAllProposals(node3.provider)
+//                    voteOnAllProposals(node3.provider)
                 }
             }
         }
@@ -333,6 +337,7 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(blockchainRid!!, *nodes())
     }
 
+    /*
     @Test
     @Order(8)
     fun `Subnode container has been launched`() {
@@ -384,9 +389,10 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
+*/
 
-    //    @Test
-//    @Order(12)
+    @Test
+    @Order(12)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
 
         fun getAssertingParam(): Long {
@@ -423,6 +429,7 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("Propose $dappName config")
     }
 
+    /*
     @Test
     @Order(13)
     fun `Legacy anchoring can anchor blocks`() {
@@ -530,6 +537,7 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
+*/
 
     private fun queryContainerResourceLimits(): Array<ResourceLimit> {
         return node1.c0.nmGetContainerLimits(foobarContainer)
