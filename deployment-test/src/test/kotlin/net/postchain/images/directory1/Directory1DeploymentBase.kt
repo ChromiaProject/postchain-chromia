@@ -330,7 +330,7 @@ abstract class Directory1DeploymentBase {
         }
 
         // Asserting that node1, node2, node3 are signers of newly added blockchain
-        assertChainSigners(blockchainRid, node1, node2, node3)
+        assertChainSigners(blockchainRid!!, node1, node2, node3)
     }
 
     @Test
