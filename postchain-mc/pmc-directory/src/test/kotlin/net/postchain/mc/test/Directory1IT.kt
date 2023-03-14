@@ -435,8 +435,6 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testListNodesWithProvider() {
-        addNode(provClient, nodes[0].pubKey, node0Host, node0Port, "")
-
         val providerNodes = provClient.getNodesByProvider(provConfig.signers.first().pubKey)
         assertEquals(1, providerNodes.size)
 
