@@ -9,6 +9,7 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
+import org.http4k.core.HttpHandler
 
 /**
  * Provides postchain clients that can be used to communicate with dapps within the chromia network
@@ -69,8 +70,9 @@ open class ChromiaClientProvider(
         /**
          * Builds an instance of [ChromiaClientProvider] that uses a http client to query chain0
          */
-        fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
-            val chain0Client: PostchainClient = PostchainClientImpl(config)
+        fun fromClientConfig(config: PostchainClientConfig, httpHandler: HttpHandler? = null): ChromiaClientProvider {
+            val chain0Client: PostchainClient = httpHandler?.let { PostchainClientImpl(config, it) }
+                    ?: PostchainClientImpl(config)
             val clusterManagement = ClusterManagementImpl(chain0Client)
             return ChromiaClientProvider(config.failOverConfig, clusterManagement)
         }
