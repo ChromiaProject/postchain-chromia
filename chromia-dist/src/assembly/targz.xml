@@ -28,5 +28,14 @@
             <fileMode>0755</fileMode>
             <filtered>true</filtered>
         </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/config</directory>
+            <outputDirectory>./</outputDirectory>
+            <includes>
+                <include>log4j2.yml</include>
+            </includes>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </fileSet>
     </fileSets>
 </assembly>
