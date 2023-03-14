@@ -18,9 +18,9 @@ operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
     create icmf_city(text.from_gtv(body));
 }
 
-operation iccf_transfer(sender: byte_array, transaction: gtx_transaction) {
+operation iccf_transfer(transaction: gtx_transaction) {
     val tx_hash = transaction.to_gtv().hash();
-    require(check_iccf_proof(sender, tx_hash), "No proof operation present for TX");
+    require(check_iccf_proof(transaction.body.blockchain_rid, tx_hash), "No proof operation present for TX");
 
     for (op in transaction.body.operations) {
         if (op.name == "add_city" and op.args.size() == 1) {

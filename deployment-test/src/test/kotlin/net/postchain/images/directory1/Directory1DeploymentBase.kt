@@ -529,7 +529,7 @@ abstract class Directory1DeploymentBase {
                 targetDapp
         )
         val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
-        iccfMaterial.txBuilder.addOperation("iccf_transfer", gtv(sourceDapp), actualTxToProve.toGtv())
+        iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
                 .postTransactionUntilConfirmed("iccf_transfer")
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
