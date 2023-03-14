@@ -10,6 +10,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.d1.client.ChromiaClientProvider
@@ -31,6 +32,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
             txToProveSigners: List<PubKey>,
             sourceBlockchainRid: BlockchainRid,
             targetBlockchainRid: BlockchainRid,
+            iccfTxSigners: List<KeyPair> = listOf(),
             forceIntraNetworkIccfOperation: Boolean = false
     ): IccfProofTxMaterial {
         val sourceClient = chromiaClientProvider.blockchain(sourceBlockchainRid)
@@ -46,7 +48,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         }
 
         val targetClient = chromiaClientProvider.blockchain(targetBlockchainRid)
-        val txBuilder = targetClient.transactionBuilder()
+        val txBuilder = targetClient.transactionBuilder(iccfTxSigners)
 
         val sourceCluster = clusterManagement.getClusterOfBlockchain(sourceBlockchainRid)
         val targetCluster = clusterManagement.getClusterOfBlockchain(targetBlockchainRid)
