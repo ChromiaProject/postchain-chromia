@@ -44,6 +44,8 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
 
+    fun nodes() = arrayOf(node1, node2, node3)
+
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
         return PostchainContainer(
@@ -93,14 +95,14 @@ open class ManagedModeBase(rellFolder: String) {
         if (::channel1.isInitialized) channel1.shutdownNow()
         if (::channel2.isInitialized) channel2.shutdownNow()
         if (::channel3.isInitialized) channel3.shutdownNow()
-        stopContainers(node1, node2, node3)
+        stopContainers(*nodes())
         postgres.stop()
     }
 
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
         postgres.start()
-        startContainers(node1, node2, node3)
+        startContainers(*nodes())
 
         channel1 = createChannel(node1).usePlaintext().build()
         channel2 = createChannel(node2).usePlaintext().build()
