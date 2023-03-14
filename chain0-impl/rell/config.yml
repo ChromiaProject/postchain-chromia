@@ -50,6 +50,7 @@ blockchains:
       gtx:
         modules:
           - "net.postchain.d1.anchoring.system.SystemAnchoringGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
   cluster_anchoring:
     module: anchoring_chain_cluster
     config:
