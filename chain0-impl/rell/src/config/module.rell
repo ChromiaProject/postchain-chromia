@@ -21,7 +21,7 @@ entity pending_blockchain_configuration {
     val bc = require_blockchain(message.blockchain_rid);
     val cluster = get_cluster_for_blockchain(message.blockchain_rid);
     val anchor_chain = cluster_anchoring_chain @ { cluster } (.blockchain);
-    require(sender == anchor_chain.rid,
+    require(sender == anchor_chain.rid or sender == system_anchoring_chain.rid,
         "Received updated configuration from chain %s, which is not anchor chain for cluster %s".format(sender, cluster.name));
 
     log("Received updated configuration for chain %s at height %d to %s"
