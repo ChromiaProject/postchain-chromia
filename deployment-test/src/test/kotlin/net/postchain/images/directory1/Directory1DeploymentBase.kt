@@ -31,11 +31,11 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
-import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -73,6 +73,8 @@ abstract class Directory1DeploymentBase {
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
+        lateinit var clusterAnchoringBrid: BlockchainRid
+        lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
@@ -142,18 +144,19 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun assertAnchoringChainProperties() {
-        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
+                .filter { it.system }.map { BlockchainRid(it.rid) }
         assertEquals(3, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
-        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
         // Asserting cluster anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it.rid }).contains(clusterAnchoringChainBrid)
-        testLogger.info("Cluster anchor chain bc-rid: ${clusterAnchoringChainBrid.toHex()}")
+        assert(systemChains.map { it }).contains(clusterAnchoringBrid)
+        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
-        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()!!.wrap()
-        assert(systemChains.map { it.rid }).contains(systemAnchoringChainBrid)
-        testLogger.info("System anchor chain bc-rid: ${systemAnchoringChainBrid.toHex()}")
+        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
+        assert(systemChains.map { it }).contains(systemAnchoringBrid)
+        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
     @Test
@@ -231,11 +234,11 @@ abstract class Directory1DeploymentBase {
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
-        // Asserting that node2 is signers of chain0
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(2)
-            assert(node2.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(2)
-        }
+
+        // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        assertChainSigners(chain0Brid, node1, node2)
+        assertChainSigners(clusterAnchoringBrid, node1, node2)
+        assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
     @Test
@@ -263,12 +266,10 @@ abstract class Directory1DeploymentBase {
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
-        // Asserting that node2 is signers of chain0
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-        }
+        // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        assertChainSigners(chain0Brid, node1, node2, node3)
+        assertChainSigners(clusterAnchoringBrid, node1, node2, node3)
+        assertChainSigners(systemAnchoringBrid, node1, node2, node3)
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
@@ -328,12 +329,8 @@ abstract class Directory1DeploymentBase {
             }
         }
 
-        // Asserting that node1/node2/node3 are signers of newly added blockchain
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-        }
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        assertChainSigners(blockchainRid, node1, node2, node3)
     }
 
     @Test
@@ -388,7 +385,7 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-//    @Test
+    //    @Test
 //    @Order(12)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
 
@@ -454,20 +451,14 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(14)
     fun `Blocks can be anchored`() {
-        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
-
-        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp"]!!)
-        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp2"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp2"]!!)
     }
 
     @Test
     @Order(15)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
-        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()
-        assert(systemAnchoringChainBrid).isNotNull()
-        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
-
-        assertThatBlocksAreAnchored(BlockchainRid(systemAnchoringChainBrid!!), BlockchainRid(clusterAnchoringChainBrid))
+        assertThatBlocksAreAnchored(systemAnchoringBrid, clusterAnchoringBrid)
     }
 
     private fun assertThatBlocksAreAnchored(anchoringChainBrid: BlockchainRid, sourceBrid: BlockchainRid) {
@@ -511,7 +502,7 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-//    @Test
+    //    @Test
 //    @Order(17)
     fun `ICCF transfers are validated`() {
         val sourceDapp = dapps["test-dapp"]!!
@@ -551,6 +542,14 @@ abstract class Directory1DeploymentBase {
         val fullConfig = config.gtvConfig.asDict().toMutableMap()
         fullConfig.remove("signers")
         return gtv(fullConfig)
+    }
+
+    private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
+        awaitQueryResult {
+            val actual = node1.c0.getBlockchainSigners(blockchainRid).map { PubKey(it[0].asByteArray()) }.toSet()
+            val expected = nodes.map { it.pubkey }.toSet()
+            assertEquals(expected, actual)
+        }
     }
 
     private val PostchainContainer.c0 get() = client(chain0Brid)
