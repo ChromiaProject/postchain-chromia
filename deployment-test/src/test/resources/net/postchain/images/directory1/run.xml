@@ -31,7 +31,7 @@
                                 <bytea>0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57</bytea>
                                 <string>node1</string>
                                 <int>9871</int>
-                                <string>{apiUrl}</string>
+                                <string>http://node1:7740</string>
                             </array>
                         </arg>
                     </args>
