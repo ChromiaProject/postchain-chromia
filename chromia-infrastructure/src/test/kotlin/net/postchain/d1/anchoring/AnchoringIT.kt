@@ -102,7 +102,7 @@ class AnchoringIT : ManagedModeTest() {
 
         val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
         val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
-        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+        withReadConnection(getChainNodes(anchorChain)[0].storage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
             val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
@@ -158,7 +158,7 @@ class AnchoringIT : ManagedModeTest() {
         // build another block and verify it is anchored
         buildBlock(dappChain, 4)
         buildBlock(anchorChain, 1)
-        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+        withReadConnection(getChainNodes(anchorChain)[0].storage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
             val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)

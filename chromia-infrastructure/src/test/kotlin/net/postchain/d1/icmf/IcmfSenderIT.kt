@@ -108,7 +108,7 @@ class IcmfSenderIT : ManagedModeTest() {
                                expectedAllMessages: List<String>
     ) {
         for (node in getChainNodes(dappChain)) {
-            withReadConnection(node.postchainContext.storage, dappChain) {
+            withReadConnection(node.storage, dappChain) {
                 val blockQueries = node.getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(height).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
