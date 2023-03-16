@@ -20,7 +20,7 @@ definitions:
         - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
     icmf:
       receiver:
-        cluster-anchor:
+        anchoring:
           topics:
             - configuration_updated
 

@@ -18,7 +18,7 @@
                         <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
                     </array>
                 </gtv>
-                <gtv path="icmf/receiver/cluster-anchor/topics">
+                <gtv path="icmf/receiver/anchoring/topics">
                     <array>
                         <string>configuration_updated</string>
                     </array>
