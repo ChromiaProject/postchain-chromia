@@ -3,7 +3,7 @@ package net.postchain.mc.cli.node
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
-import net.postchain.chain0.common.cluster.addNodeToClusterOperation
+import net.postchain.chain0.cluster.addNodeToClusterOperation
 import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
