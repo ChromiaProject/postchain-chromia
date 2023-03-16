@@ -33,7 +33,7 @@
                                 <array>
                                     <dict>
                                         <entry key="bc-rid">
-                                            <bytea>0101010101010101010101010101010101010101010101010101010101010101</bytea>
+                                            <bytea>0202020202020202020202020202020202020202020202020202020202020202</bytea>
                                         </entry>
                                         <entry key="topic">
                                             <string>my-topic</string>

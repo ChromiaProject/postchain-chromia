@@ -25,7 +25,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     val globalTopicReceivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     val intraClusterReceivers: MutableList<IntraClusterTopicIcmfReceiver> = mutableListOf()
-    val clusterAnchorReceivers: MutableList<ClusterAnchorIcmfReceiver> = mutableListOf()
+    val anchoringReceivers: MutableList<AnchoringIcmfReceiver> = mutableListOf()
     lateinit var clusterManagement: ClusterManagement
     lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
     var maxBlockSize: Long = -1
@@ -51,7 +51,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val allOps = mutableListOf<OpData>()
         createNonAnchoredOperations(bctx, hashCalculator, allOps, intraClusterReceivers.flatMap { it.getRelevantPipes() }, 0).let { size ->
-            createNonAnchoredOperations(bctx, hashCalculator, allOps, clusterAnchorReceivers.flatMap { it.getRelevantPipes() }, size)
+            createNonAnchoredOperations(bctx, hashCalculator, allOps, anchoringReceivers.flatMap { it.getRelevantPipes() }, size)
         }.let { size ->
             createAnchoredOperations(bctx, hashCalculator, allOps, globalTopicReceivers.flatMap { it.getRelevantPipes() }, size)
         }
@@ -338,7 +338,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     private fun validateHeaderSenderAndTopic(sender: ByteArray, topic: String): Boolean {
         if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender) && it.topic == topic } == true
-                || icmfReceiverBlockchainConfigData.clusterAnchor?.topics?.contains(topic) == true) {
+                || icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true) {
             return true
         }
 
@@ -350,7 +350,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
                 || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
                 || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
-                || icmfReceiverBlockchainConfigData.clusterAnchor?.topics?.contains(topic) == true)
+                || icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true)
         {
             return true
         }

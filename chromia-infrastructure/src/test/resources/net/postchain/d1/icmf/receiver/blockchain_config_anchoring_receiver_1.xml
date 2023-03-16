@@ -27,7 +27,7 @@
         <dict>
             <entry key="receiver">
                 <dict>
-                    <entry key="cluster-anchor">
+                    <entry key="anchoring">
                         <dict>
                             <entry key="topics">
                                 <array>
