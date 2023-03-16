@@ -1,6 +1,13 @@
 pipeline {
   agent any
 
+  options {
+    timeout(
+      time: 1,
+      unit: 'HOURS',
+    )
+  }
+
   environment {
     MAVEN_OPTS = "-Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=/home/jenkins/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
     MAVEN_CLI_OPTS = "--batch-mode -Dstyle.color=always --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
@@ -17,6 +24,8 @@ pipeline {
 
     TEST_MOUNT_DIRECTORY = "$WORKSPACE/mnt"
     TESTCONTAINERS_CHECKS_DISABLE = "true"
+
+    TEST_BREAKDOWN_COMMAND = "/usr/bin/reset-mnt-permissions"
   }
 
   stages {
@@ -56,6 +65,8 @@ pipeline {
           string(credentialsId: 'CI_REGISTRY_PASSWORD', variable: 'CI_REGISTRY_PASSWORD'),
         ]) {
           sh """
+            env
+
             sed -i 's/<name>.*<\\/name>/<name>Private-Token<\\/name>/' .gitlab-settings.xml
             sed -i 's/<value>.*<\\/value>/<value>$GITLAB_PAT_STRING<\\/value>/' .gitlab-settings.xml
 
@@ -63,6 +74,15 @@ pipeline {
           """
         }
       }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts(
+        artifacts: 'postchain-mc/pmc-directory/logs/*,postchain-mc/pmc-common/logs/*,chromia-infrastructure/logs/*,deployment-test/logs/*',
+        fingerprint: true,
+      )
     }
   }
 }
