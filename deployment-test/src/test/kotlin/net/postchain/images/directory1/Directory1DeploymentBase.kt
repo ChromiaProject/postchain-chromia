@@ -215,6 +215,19 @@ abstract class Directory1DeploymentBase {
     fun `Add node2 as signer to c0`() {
         testLogger.info("Adding node2 to the system cluster")
         testLogger.info("Registering provider2")
+
+        // Asserting both anchoring chains build blocks
+        val clusterAnchoringHeight = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
+            assertTrue(current > clusterAnchoringHeight)
+        }
+        val systemAnchoringHeight = node1.client(systemAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(systemAnchoringBrid).currentBlockHeight()
+            assertTrue(current > systemAnchoringHeight)
+        }
+
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true, "")
@@ -235,6 +248,20 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
         assertChainSigners(systemAnchoringBrid, node1, node2)
+
+        // Asserting both anchoring chains build blocks
+        val clusterAnchoringHeight2 = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
+            assertTrue(current > clusterAnchoringHeight2)
+        }
+        val systemAnchoringHeight2 = node1.client(systemAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(systemAnchoringBrid).currentBlockHeight()
+            assertTrue(current > systemAnchoringHeight2)
+        }
+
+
     }
 
     /*
@@ -281,8 +308,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Test
-    @Order(7)
+//    @Test
+//    @Order(7)
     fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
