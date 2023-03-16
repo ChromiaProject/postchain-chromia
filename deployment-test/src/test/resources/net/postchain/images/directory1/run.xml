@@ -23,6 +23,14 @@
                         <string>configuration_updated</string>
                     </array>
                 </gtv>
+                <gtv path="icmf/receiver/local">
+                    <array>
+                        <dict>
+                            <entry key="bc-rid"><bytea>5E045C4E1A37411757A392AE74466D148C67D71BCF25A81B13027E85EB89AAE2</bytea></entry>
+                            <entry key="topic"><string>hello_kitty</string></entry>
+                        </dict>
+                    </array>
+                </gtv>
                 <app module="management_chain_directory1">
                     <args module="common.init">
                         <arg key="initial_provider"><bytea>03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05</bytea></arg>
