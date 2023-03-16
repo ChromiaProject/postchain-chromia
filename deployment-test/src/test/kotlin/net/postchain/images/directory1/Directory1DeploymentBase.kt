@@ -16,7 +16,6 @@ import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
-import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
@@ -136,11 +135,6 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-
-        // This will replace the dummy URL {apiUrl} in config
-        node1.c0.transactionBuilder()
-                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.nodeApiPath())
-                .postTransactionUntilConfirmed("Fix node1 REST API URL")
     }
 
     private fun assertAnchoringChainProperties() {
