@@ -47,14 +47,13 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-test</id>
+                        <id>rell-integration-test</id>
                         <goals>
-                            <goal>rell-test</goal>
+                            <goal>rell-integration-test</goal>
                         </goals>
                         <configuration>
-                            <testModule>${rellTestModules}</testModule>
                             <skip>${skipTests}</skip>
-                            <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
+                            <runXml>rell/run.xml</runXml>
                         </configuration>
                     </execution>
                 </executions>

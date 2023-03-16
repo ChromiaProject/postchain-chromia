@@ -1,0 +1,8 @@
+module;
+
+import common.test.ops.*;
+import common.voting.test.ops.*;
+import config.test.helpers.*;
+import roles.test.ops.*;
+import management_chain_directory1.*;
+import container.container_proposal.*;
