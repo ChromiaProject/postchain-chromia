@@ -131,11 +131,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         client.transactionBuilder().addNop().registerNodeOperation(
                 client.config.pubkey().data,
                 key.hexStringToByteArray(),
-                host, port, "",
+                host, port, "http://rest-api",
                 if (clusterName == "") listOf() else listOf(clusterName)
         ).post()
         buildAndAwaitBlocks(1)
-        assertAddedNode(client.config.pubkey().hex(), key, host, port, clusterName)
+        assertAddedNode(client.config.pubkey().hex(), key, host, port, clusterName, "http://rest-api")
     }
 
     fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
@@ -144,7 +144,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assert(vs.asInteger()).isGreaterThan(0L)
     }
 
-    private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
+    private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String, apiUrl: String) {
         awaitUntilAsserted {
             val nodePK = PubKey(nodePubkey)
             val nodeData = provClient.getNodeData(nodePK)
@@ -153,6 +153,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
             assert(nodeData.port).isEqualTo(port)
             assertEquals(nodeData.provider, providerPublicKey.hexStringToWrappedByteArray())
             assertEquals(nodeData.pubkey, nodePK.wData)
+            assertEquals(nodeData.apiUrl, apiUrl)
             if (cluster != "") {
                 val clusters = provClient.listClustersOfNode(nodePK)
                 assertEquals(clusters, listOf(cluster))

@@ -179,7 +179,7 @@ class IccfProofTxMaterialBuilderTest {
                 clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
                 clusterATargetBlockchainRID,
-                true
+                forceIntraNetworkIccfOperation = true
         )
 
         val iccfTx = iccfTxMaterial.txBuilder.finish().buildGtx()
