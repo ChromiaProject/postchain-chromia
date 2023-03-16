@@ -40,6 +40,14 @@ pipeline {
     }
 
     stage('build') {
+      when {
+        not {
+          expression {
+            env.BRANCH_NAME in ['dev', 'master']
+          }
+        }
+      }
+
       steps {
         withCredentials([string(credentialsId: 'GITLAB_PAT_STRING', variable: 'GITLAB_PAT_STRING')]) {
           sh """
@@ -54,7 +62,9 @@ pipeline {
 
     stage('deploy') {
       when {
-        branch 'dev'
+        expression {
+          env.BRANCH_NAME in ['dev', 'master']
+        }
       }
 
       steps {
