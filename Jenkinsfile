@@ -15,6 +15,7 @@ pipeline {
     POSTGRES_DB = "postchain"
     POSTGRES_USER = "postchain"
     POSTGRES_PASSWORD = "postchain"
+    CHR_DB_URL = "jdbc:postgresql://postgres/postchain"
     POSTCHAIN_DB_URL = "jdbc:postgresql://postgres/postchain"
     POSTGRES_INITDB_ARGS = "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
 

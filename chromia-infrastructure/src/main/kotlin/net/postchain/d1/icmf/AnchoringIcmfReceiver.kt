@@ -30,21 +30,13 @@ class AnchoringIcmfReceiver(
     private val clusterAnchoringPipes: ConcurrentMap<Pair<String, String>, IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = ConcurrentHashMap()
     private val jobSynchronizer = Object()
     private var job: Job? = null
+    private var systemAnchoringPipesCreated = false
 
     private fun start(): Job {
         val allClusters = clusterManagement.getClusterNames()
-        for (topic in topics) {
-            systemAnchoringPipes[topic] = clusterManagement.getSystemAnchoringChain()?.let {
-                val route = TopicRoute(topic, listOf())
-                IntraClusterTopicPipe(queryProvider, route, it)
-            }
-            for (clusterName in allClusters) {
-                clusterAnchoringPipes[clusterName to topic] = run {
-                    val blockchainRid = clusterManagement.getClusterInfo(clusterName).anchoringChain
-                    val route = TopicRoute(topic, listOf())
-                    IntraClusterTopicPipe(queryProvider, route, blockchainRid)
-                }
-            }
+        if (allClusters.isNotEmpty()) {
+            createSystemAnchoringPipes()
+            createClusterAnchoringPipes(allClusters)
         }
 
         return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
@@ -73,7 +65,17 @@ class AnchoringIcmfReceiver(
                 clusterAnchoringPipes.remove(clusterName to topic)?.shutdown()
             }
         }
-        for (clusterName in addedClusters) {
+
+        if (addedClusters.isNotEmpty()) {
+            if (!systemAnchoringPipesCreated) {
+                createSystemAnchoringPipes()
+            }
+            createClusterAnchoringPipes(addedClusters)
+        }
+    }
+
+    private fun createClusterAnchoringPipes(clusterNames: Collection<String>) {
+        for (clusterName in clusterNames) {
             for (topic in topics) {
                 clusterAnchoringPipes[clusterName to topic] = run {
                     val blockchainRid = clusterManagement.getClusterInfo(clusterName).anchoringChain
@@ -82,6 +84,16 @@ class AnchoringIcmfReceiver(
                 }
             }
         }
+    }
+
+    private fun createSystemAnchoringPipes() {
+        clusterManagement.getSystemAnchoringChain()?.let {
+            for (topic in topics) {
+                val route = TopicRoute(topic, listOf())
+                systemAnchoringPipes[topic] = IntraClusterTopicPipe(queryProvider, route, it)
+            }
+        }
+        systemAnchoringPipesCreated = true
     }
 
     override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> {
