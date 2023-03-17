@@ -33,10 +33,11 @@ class AnchoringIcmfReceiver(
 
     private fun start(): Job {
         val allClusters = clusterManagement.getClusterNames()
+        val systemAnchoringChain = clusterManagement.getSystemAnchoringChain()
         for (topic in topics) {
-            systemAnchoringPipes[topic] = clusterManagement.getSystemAnchoringChain()?.let {
+            systemAnchoringChain?.let {
                 val route = TopicRoute(topic, listOf())
-                IntraClusterTopicPipe(queryProvider, route, it)
+                systemAnchoringPipes[topic] = IntraClusterTopicPipe(queryProvider, route, it)
             }
             for (clusterName in allClusters) {
                 clusterAnchoringPipes[clusterName to topic] = run {
