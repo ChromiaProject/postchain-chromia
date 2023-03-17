@@ -12,6 +12,7 @@
 | Operation                  | Permission                              | Rate limit | Comment                                                                                          |
 |----------------------------|-----------------------------------------|------------|--------------------------------------------------------------------------------------------------|
 | register_provider          | SP > [NP, CNP], NP > [CNP], CNP > [CNP] | actions    | SP can register NP, CNP; NP can register CNP; CNP can register CNP                               |
+| request_cluster            | system provider                         | actions    | TODO: Should only be able to claim system managed nodes                                          |
 | transfer_action_points     | any to any                              | actions    |                                                                                                  |
 | add_node                   | node provider (SP, NP)                  | actions    | CNP can add replicas. Limit number of nodes/replicas?                                            |
 | replace_node               | node provider (owner)                   | actions    |                                                                                                  |
