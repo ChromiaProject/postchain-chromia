@@ -92,8 +92,8 @@ class AnchoringIcmfReceiver(
                 val route = TopicRoute(topic, listOf())
                 systemAnchoringPipes[topic] = IntraClusterTopicPipe(queryProvider, route, it)
             }
+            systemAnchoringPipesCreated = true
         }
-        systemAnchoringPipesCreated = true
     }
 
     override fun getRelevantPipes(): List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> {
