@@ -21,10 +21,7 @@
 
     <properties>
         <rell.directory>${project.parent.basedir}/rell</rell.directory>
-        <rell.main.module>${project.artifactId}</rell.main.module>
-        <postgres.host>localhost:5432</postgres.host>
         <rellCompileModules>management_chain_testnet,anchoring_chain_system,anchoring_chain_cluster,icmf,iccf</rellCompileModules>
-        <rellTestModules>common,roles,container,cluster,nm_api,config</rellTestModules>
     </properties>
 
     <build>
@@ -34,7 +31,7 @@
                 <artifactId>rell-maven-plugin</artifactId>
                 <inherited>false</inherited>
                 <configuration>
-                    <source>rell/src</source>
+                    <source>${project.basedir}/rell/src</source>
                 </configuration>
                 <executions>
                     <execution>
@@ -47,14 +44,12 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-test</id>
+                        <id>rell-integration-test</id>
                         <goals>
-                            <goal>rell-test</goal>
+                            <goal>rell-integration-test</goal>
                         </goals>
                         <configuration>
-                            <testModule>${rellTestModules}</testModule>
                             <skip>${skipTests}</skip>
-                            <dbUrl>jdbc:postgresql://${postgres.host}/postchain?user=postchain&amp;username=postchain&amp;password=postchain&amp;schema=${rell.main.module}</dbUrl>
                         </configuration>
                     </execution>
                 </executions>
@@ -87,14 +82,4 @@
             </plugins>
         </pluginManagement>
     </build>
-
-    <profiles>
-        <profile>
-            <id>ci</id>
-            <properties>
-                <postgres.host>postgres</postgres.host>
-            </properties>
-        </profile>
-    </profiles>
-
 </project>
