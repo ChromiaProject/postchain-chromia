@@ -56,6 +56,8 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
+import java.lang.ProcessBuilder.Redirect
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -92,6 +94,23 @@ abstract class Directory1DeploymentBase {
             saveSubnodeLogs(dockerClient)
             stopNodes()
             removeSubnodeContainers()
+
+            /*
+                This is used by the CI to run a shell command right before the
+                files in the directory referenced by MOUNT_DIR are removed. It
+                is necessary because the permissions need to be altered, since
+                the files are owned by the root user account.
+            */
+            val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
+
+            if (testBreakdownCommand != null) {
+                ProcessBuilder(testBreakdownCommand)
+                    .redirectOutput(Redirect.INHERIT)
+                    .redirectError(Redirect.INHERIT)
+                    .start()
+                    .waitFor()
+            }
+
             if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
                 testLogger.error("Unable to clear mount directory")
             }
