@@ -20,6 +20,7 @@ import net.postchain.d1.query.ChromiaQueryProvider
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class GlobalTopicIcmfReceiver(
     topics: Map<String, List<BlockchainRid>>,

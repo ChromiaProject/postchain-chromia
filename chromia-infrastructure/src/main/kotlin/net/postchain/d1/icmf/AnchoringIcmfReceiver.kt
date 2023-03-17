@@ -15,7 +15,7 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class AnchoringIcmfReceiver(
         private val topics: List<String>,
@@ -23,7 +23,8 @@ class AnchoringIcmfReceiver(
         private val queryProvider: ChromiaQueryProvider,
 ) : IcmfReceiver<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
     companion object : KLogging() {
-        val pollInterval = 1.minutes
+        //        val pollInterval = 1.minutes
+        val pollInterval = 5.seconds
     }
 
     private val systemAnchoringPipes: ConcurrentMap<String, IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = ConcurrentHashMap()
@@ -56,6 +57,9 @@ class AnchoringIcmfReceiver(
     }
 
     private fun updateClusters() {
+        logger.error { "systemAnchoringPipes: $systemAnchoringPipes" }
+        systemAnchoringPipes["hello_kitty"]!!.mightHaveNewPackets()
+
         val currentClusters = clusterAnchoringPipes.keys.map { it.first }.toSet()
         val updatedClusters = clusterManagement.getClusterNames().toSet()
         val removedClusters = currentClusters - updatedClusters

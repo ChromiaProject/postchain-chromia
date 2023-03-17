@@ -21,6 +21,7 @@
                 <gtv path="icmf/receiver/anchoring/topics">
                     <array>
                         <string>configuration_updated</string>
+                        <string>hello_kitty</string>
                     </array>
                 </gtv>
                 <app module="management_chain_directory1">

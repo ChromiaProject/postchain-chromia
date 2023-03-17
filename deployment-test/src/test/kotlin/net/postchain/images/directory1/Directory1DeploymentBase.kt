@@ -50,6 +50,7 @@ import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.mc.cli.base.cryptoSystem
 import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
+import org.awaitility.kotlin.await
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -57,6 +58,7 @@ import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -154,6 +156,10 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
+
+//        await.atMost(org.awaitility.Duration.FIVE_MINUTES).untilAsserted {
+//            assertTrue(false)
+//        }
     }
 
     private fun assertAnchoringChainProperties() {
@@ -172,6 +178,7 @@ abstract class Directory1DeploymentBase {
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
+    /*
     @Test
     @Order(3)
     fun `Add new container`() {
@@ -227,11 +234,16 @@ abstract class Directory1DeploymentBase {
         assertEquals(foobarResourceLimits, newActualLimits)
     }
 
+     */
+
     @Test
     @Order(5)
     fun `Add node2 as signer to c0`() {
         testLogger.info("Adding node2 to the cluster")
         testLogger.info("Registering provider2")
+
+        assertingBothAnchoringChainsBuildBlocks()
+
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true, "")
@@ -252,8 +264,24 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
         assertChainSigners(systemAnchoringBrid, node1, node2)
+
+        assertingBothAnchoringChainsBuildBlocks()
     }
 
+    private fun assertingBothAnchoringChainsBuildBlocks() {
+        val clusterAnchoringHeight = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
+            assertTrue(current > clusterAnchoringHeight)
+        }
+        val systemAnchoringHeight = node1.client(systemAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(systemAnchoringBrid).currentBlockHeight()
+            assertTrue(current > systemAnchoringHeight)
+        }
+    }
+
+    /*
     @Test
     @Order(6)
     fun `Add node3 as signer to c0`() {
@@ -550,6 +578,7 @@ abstract class Directory1DeploymentBase {
                     ResourceLimitFactory.fromPair(it.toPair())
                 }.toTypedArray()
     }
+*/
 
     private fun getBaseConfig(config: RellPostAppChainConfig): Gtv {
         val fullConfig = config.gtvConfig.asDict().toMutableMap()

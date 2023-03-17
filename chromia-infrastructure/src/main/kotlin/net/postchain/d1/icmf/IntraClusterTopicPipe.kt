@@ -22,6 +22,8 @@ class IntraClusterTopicPipe(
     override fun mightHaveNewPackets(): Boolean = true
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
+        if (route.topic == "hello_kitty") logger.error { "fetchNext($currentPointer)" }
+
         val query = queryProvider.getQuery(blockchainRid)
         if (query == null) {
             logger.warn("Unable to query blockchain-rid: ${blockchainRid.toHex()}")
@@ -36,6 +38,8 @@ class IntraClusterTopicPipe(
             if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
             it.height to IcmfMessage(it.body, size)
         }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
+
+        if (route.topic == "hello_kitty") logger.error { "allMessages: $allMessages" }
 
         val packets = mutableListOf<IcmfPacket>()
         for ((height, messages) in allMessages) {
@@ -78,6 +82,9 @@ class IntraClusterTopicPipe(
 
         if (packets.isEmpty()) return null
         return IcmfPackets(packets.maxOf { it.height }, packets)
+                .also {
+                    if (route.topic == "hello_kitty") logger.error { "retVal: $it" }
+                }
     }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {}
