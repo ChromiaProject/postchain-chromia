@@ -58,6 +58,8 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
+import java.lang.ProcessBuilder.Redirect
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 @Testcontainers
@@ -88,6 +90,23 @@ abstract class Directory1DeploymentBase {
             saveSubnodeLogs(dockerClient)
             stopNodes()
             removeSubnodeContainers()
+
+            /*
+                This is used by the CI to run a shell command right before the
+                files in the directory referenced by MOUNT_DIR are removed. It
+                is necessary because the permissions need to be altered, since
+                the files are owned by the root user account.
+            */
+            val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
+
+            if (testBreakdownCommand != null) {
+                ProcessBuilder(testBreakdownCommand)
+                    .redirectOutput(Redirect.INHERIT)
+                    .redirectError(Redirect.INHERIT)
+                    .start()
+                    .waitFor()
+            }
+
             if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
                 testLogger.error("Unable to clear mount directory")
             }
@@ -147,7 +166,7 @@ abstract class Directory1DeploymentBase {
 
         // This will replace the dummy URL {apiUrl} in config
         node1.c0.transactionBuilder()
-                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.apiPath())
+                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.nodeApiPath())
                 .postTransactionUntilConfirmed("Fix node1 REST API URL")
     }
 
@@ -237,7 +256,7 @@ abstract class Directory1DeploymentBase {
                         node2.nodeKeyPair.pubKey.data,
                         node2.nodeHost,
                         node2.nodePort.toLong(),
-                        node2.apiPath(),
+                        node2.nodeApiPath(),
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
@@ -268,7 +287,7 @@ abstract class Directory1DeploymentBase {
                         node3.pubkey.data,
                         node3.nodeHost,
                         node3.nodePort.toLong(),
-                        node3.apiPath(),
+                        node3.nodeApiPath(),
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
@@ -404,7 +423,7 @@ abstract class Directory1DeploymentBase {
 
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
-            val height = node1.client(brid).currentBlockHeight()
+            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
             val config0 = node1.c0.nmGetBlockchainConfiguration(dapps["test-dapp2"]!!, height)!!
             return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
         }
@@ -526,7 +545,9 @@ abstract class Directory1DeploymentBase {
         val targetDapp = dapps["test-dapp2"]!!
 
         val txToProve = dappTxs[sourceDapp]!!
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), ClusterManagementImpl(node1.c0))
+        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(),
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())))
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(txToProve.gtxBody.rid.toHex()),
                 txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
@@ -535,7 +556,7 @@ abstract class Directory1DeploymentBase {
                 targetDapp
         )
         val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
-        iccfMaterial.txBuilder.addOperation("iccf_transfer", gtv(sourceDapp), actualTxToProve.toGtv())
+        iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
                 .postTransactionUntilConfirmed("iccf_transfer")
         awaitUntilAsserted {
             listOf(node1, node2, node3).forEach { node ->
