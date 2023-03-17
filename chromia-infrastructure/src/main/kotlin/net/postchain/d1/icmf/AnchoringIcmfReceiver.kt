@@ -34,10 +34,10 @@ class AnchoringIcmfReceiver(
     private fun start(): Job {
         val allClusters = clusterManagement.getClusterNames()
         for (topic in topics) {
-            systemAnchoringPipes[topic] = clusterManagement.getSystemAnchoringChain()?.let {
-                val route = TopicRoute(topic, listOf())
-                IntraClusterTopicPipe(queryProvider, route, it)
-            }
+systemAnchoringPipes[topic] = clusterManagement.getSystemAnchoringChain()?.let {
+    val route = TopicRoute(topic, listOf())
+    IntraClusterTopicPipe(queryProvider, route, it)
+}
             for (clusterName in allClusters) {
                 clusterAnchoringPipes[clusterName to topic] = run {
                     val blockchainRid = clusterManagement.getClusterInfo(clusterName).anchoringChain
