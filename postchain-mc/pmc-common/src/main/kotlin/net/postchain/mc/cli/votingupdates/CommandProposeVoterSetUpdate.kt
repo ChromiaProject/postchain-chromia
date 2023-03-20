@@ -7,7 +7,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
+import net.postchain.chain0.proposal_voter_set.proposeUpdateVoterSetOperation
 import net.postchain.common.hexStringToByteArray
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey

@@ -4,26 +4,26 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
-import net.postchain.chain0.common.proposal.GetProposalResult
-import net.postchain.chain0.common.proposal.ProposalType
-import net.postchain.chain0.common.proposal.getClusterAnchoringConfigurationProposal
-import net.postchain.chain0.common.proposal.getBlockchainActionProposal
-import net.postchain.chain0.common.proposal.getBlockchainProposal
-import net.postchain.chain0.common.proposal.getClusterLimitsProposal
-import net.postchain.chain0.common.proposal.getClusterProviderProposal
-import net.postchain.chain0.common.proposal.getClusterRemoveProposal
-import net.postchain.chain0.common.proposal.getConfigurationProposal
-import net.postchain.chain0.common.proposal.getConfigurationProposalAt
-import net.postchain.chain0.common.proposal.getContainerLimitsProposal
-import net.postchain.chain0.common.proposal.getProposal
-import net.postchain.chain0.common.proposal.getProposalVotingResults
-import net.postchain.chain0.common.proposal.getProviderBatchProposal
-import net.postchain.chain0.common.proposal.getProviderQuotaProposal
-import net.postchain.chain0.common.proposal.getProviderRemoveProposal
-import net.postchain.chain0.common.proposal.getProviderStateProposal
-import net.postchain.chain0.common.proposal.getSystemProviderProposal
-import net.postchain.chain0.common.proposal.voter_set.getVoterSetUpdateProposal
 import net.postchain.chain0.common.queries.getProviderData
+import net.postchain.chain0.proposal.GetProposalResult
+import net.postchain.chain0.proposal.ProposalType
+import net.postchain.chain0.proposal.getBlockchainActionProposal
+import net.postchain.chain0.proposal.getBlockchainProposal
+import net.postchain.chain0.proposal.getClusterAnchoringConfigurationProposal
+import net.postchain.chain0.proposal.getClusterLimitsProposal
+import net.postchain.chain0.proposal.getClusterProviderProposal
+import net.postchain.chain0.proposal.getClusterRemoveProposal
+import net.postchain.chain0.proposal.getConfigurationProposal
+import net.postchain.chain0.proposal.getConfigurationProposalAt
+import net.postchain.chain0.proposal.getContainerLimitsProposal
+import net.postchain.chain0.proposal.getProposal
+import net.postchain.chain0.proposal.getProposalVotingResults
+import net.postchain.chain0.proposal.getProviderBatchProposal
+import net.postchain.chain0.proposal.getProviderQuotaProposal
+import net.postchain.chain0.proposal.getProviderRemoveProposal
+import net.postchain.chain0.proposal.getProviderStateProposal
+import net.postchain.chain0.proposal.getSystemProviderProposal
+import net.postchain.chain0.proposal_voter_set.getVoterSetUpdateProposal
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.types.RowId
 import net.postchain.crypto.PubKey
@@ -78,18 +78,21 @@ class CommandGetProposal : CliktCommand(
                 val conf = GtvDecoder.decodeGtv(p.data.data)
                 "Container: ${p.container}\nData: $conf"
             }
+
             ProposalType.configuration -> {
                 val p = client.getConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
                 "Proposed configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
+
             ProposalType.configuration_at -> {
                 val p = client.getConfigurationProposalAt(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data.data) as GtvDictionary
                 "Enabled at height: ${p.proposedConf.height}\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
+
             ProposalType.voter_set_update -> {
                 val vsu = client.getVoterSetUpdateProposal(proposal.id.id) ?: return ""
                 val t = table {
@@ -102,6 +105,7 @@ class CommandGetProposal : CliktCommand(
                 }.render()
                 return t.toString()
             }
+
             ProposalType.cluster_provider -> {
                 val cpc = client.getClusterProviderProposal(proposal.id) ?: return ""
                 return table {
@@ -111,6 +115,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.provider_is_system -> {
                 val pis = client.getSystemProviderProposal(proposal.id) ?: return ""
                 return table {
@@ -119,6 +124,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.provider_quota -> {
                 val ppq = client.getProviderQuotaProposal(proposal.id) ?: return ""
                 return table {
@@ -128,6 +134,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.provider_batch -> {
                 val ppb = client.getProviderBatchProposal(proposal.id) ?: return ""
 
@@ -148,6 +155,7 @@ class CommandGetProposal : CliktCommand(
 
                 return info + providers
             }
+
             ProposalType.provider_remove -> {
                 val prp = client.getProviderRemoveProposal(proposal.id) ?: return ""
                 return table {
@@ -156,6 +164,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.container_limits -> {
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
                 return table {
@@ -169,6 +178,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.cluster_limits -> {
                 val pcl = client.getClusterLimitsProposal(proposal.id) ?: return ""
                 return table {
@@ -183,10 +193,12 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.cluster_remove -> {
                 val cluster = client.getClusterRemoveProposal(proposal.id) ?: return ""
                 return "Cluster to remove: $cluster"
             }
+
             ProposalType.provider_state -> {
                 val pps = client.getProviderStateProposal(proposal.id) ?: return ""
                 return table {
@@ -196,6 +208,7 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.blockchain_action -> {
                 val pba = client.getBlockchainActionProposal(proposal.id) ?: return ""
                 return table {
@@ -205,12 +218,14 @@ class CommandGetProposal : CliktCommand(
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
+
             ProposalType.cluster_anchoring_configuration -> {
                 val p = client.getClusterAnchoringConfigurationProposal(proposal.id) ?: return ""
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
                 "Proposed anchoring configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
             }
+
             ProposalType.other -> "No details"
         }
     }

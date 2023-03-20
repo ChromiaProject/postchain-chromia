@@ -4,9 +4,15 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.chain0.common.proposal.proposeClusterLimitsOperation
 import net.postchain.chain0.model.ClusterResourceLimitType
-import net.postchain.chain0.model.ClusterResourceLimitType.*
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_cpu
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_io_read
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_io_write
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_max_blockchains
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_ram
+import net.postchain.chain0.model.ClusterResourceLimitType.default_container_storage
+import net.postchain.chain0.model.ClusterResourceLimitType.max_containers
+import net.postchain.chain0.proposal.proposeClusterLimitsOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.cpuOptionHelp

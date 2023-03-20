@@ -12,7 +12,6 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
-import net.postchain.chain0.common.proposal.*
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
@@ -25,6 +24,7 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
+import net.postchain.chain0.proposal.*
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
