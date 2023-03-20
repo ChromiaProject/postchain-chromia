@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <dict>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made
@@ -26,7 +29,7 @@
             <array>
                 <string>My first dependency</string>
                 <!-- brid of config_1 -->
-                <bytea>a7d4cc0b86148b5bfc35bdd2d2ec4a818b859629d1567dac7c5e8fb5677b0344</bytea>
+                <bytea>E6B645242526CBF4A204CC824D30FC8925B678249DC3A923CB94D1E671B23443</bytea>
             </array>
         </array>
     </entry>

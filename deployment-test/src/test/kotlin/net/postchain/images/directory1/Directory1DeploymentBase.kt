@@ -15,7 +15,6 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
-import net.postchain.chain0.common.updateNodeOperation
 import net.postchain.chain0.common.voting.makeVoteOperation
 import net.postchain.chain0.container.container_op.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
@@ -31,11 +30,11 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
-import net.postchain.common.wrap
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -45,7 +44,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
@@ -59,19 +57,24 @@ import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+const val systemRellSource = "../chain0-impl/rell/src"
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 abstract class Directory1DeploymentBase {
 
-    companion object : ManagedModeBase("../chain0-impl/rell/src") {
+    companion object : ManagedModeBase(systemRellSource) {
         @JvmStatic
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
+        lateinit var clusterAnchoringBrid: BlockchainRid
+        lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
@@ -134,25 +137,12 @@ abstract class Directory1DeploymentBase {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val anchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_common/module.rell").readText()
-            val clusterAnchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_cluster/module.rell").readText()
-            val icmfRellCode = File("../chain0-impl/rell/src/anchoring_chain_cluster/icmf.rell").readText()
-            val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(
-                    javaClass.getResource("/anchoring/blockchain_config_cluster_anchoring.xml")!!.readText(),
-                    mapOf(
-                            "anchoring_chain_common" to gtv(anchoringRellCode),
-                            "anchoring_chain_cluster" to gtv(clusterAnchoringRellCode + icmfRellCode)
-                    )
-            )
+            val clusterAnchoringDapp = compileChain("anchoring/blockchain_config_cluster_anchoring.run.xml", File(systemRellSource))
+            val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
 
-            val systemAnchoringRellCode = File("../chain0-impl/rell/src/anchoring_chain_system/module.rell").readText()
-            val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(
-                    javaClass.getResource("/anchoring/blockchain_config_system_anchoring.xml")!!.readText(),
-                    mapOf(
-                            "anchoring_chain_common" to gtv(anchoringRellCode),
-                            "anchoring_chain_system" to gtv(systemAnchoringRellCode)
-                    )
-            )
+            // compile system anchoring dapp
+            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
+            val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
@@ -163,26 +153,22 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-
-        // This will replace the dummy URL {apiUrl} in config
-        node1.c0.transactionBuilder()
-                .updateNodeOperation(node1.providerPubkey, node1.pubkey.data, null, null, node1.nodeApiPath())
-                .postTransactionUntilConfirmed("Fix node1 REST API URL")
     }
 
     private fun assertAnchoringChainProperties() {
-        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data).filter { it.system }
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
+                .filter { it.system }.map { BlockchainRid(it.rid) }
         assertEquals(3, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
-        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
+        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
         // Asserting cluster anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it.rid }).contains(clusterAnchoringChainBrid)
-        testLogger.info("Cluster anchor chain bc-rid: ${clusterAnchoringChainBrid.toHex()}")
+        assert(systemChains.map { it }).contains(clusterAnchoringBrid)
+        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
-        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()!!.wrap()
-        assert(systemChains.map { it.rid }).contains(systemAnchoringChainBrid)
-        testLogger.info("System anchor chain bc-rid: ${systemAnchoringChainBrid.toHex()}")
+        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
+        assert(systemChains.map { it }).contains(systemAnchoringBrid)
+        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
     @Test
@@ -260,11 +246,11 @@ abstract class Directory1DeploymentBase {
                         listOf("system")
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
-        // Asserting that node2 is signers of chain0
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(2)
-            assert(node2.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(2)
-        }
+
+        // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        assertChainSigners(chain0Brid, node1, node2)
+        assertChainSigners(clusterAnchoringBrid, node1, node2)
+        assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
     @Test
@@ -292,12 +278,10 @@ abstract class Directory1DeploymentBase {
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
-        // Asserting that node2 is signers of chain0
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSigners(chain0Brid).size).isEqualTo(3)
-        }
+        // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        assertChainSigners(chain0Brid, *nodes())
+        assertChainSigners(clusterAnchoringBrid, *nodes())
+        assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
@@ -315,7 +299,7 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(7)
     fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
-        listOf(node1, node2, node3).forEach { node ->
+        nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
@@ -325,7 +309,7 @@ abstract class Directory1DeploymentBase {
         deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
 
         // Asserting that blockchain is added
-        listOf(node1, node2, node3).forEach { node ->
+        nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
     }
@@ -357,12 +341,8 @@ abstract class Directory1DeploymentBase {
             }
         }
 
-        // Asserting that node1/node2/node3 are signers of newly added blockchain
-        awaitQueryResult {
-            assert(node1.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node2.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-            assert(node3.c0.getBlockchainSigners(blockchainRid!!).size).isEqualTo(3)
-        }
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        assertChainSigners(blockchainRid!!, *nodes())
     }
 
     @Test
@@ -409,7 +389,7 @@ abstract class Directory1DeploymentBase {
         testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
         dappTxs[brid] = node2.tx(brid, txOp, gtv(txArg)).first
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly(txArg)
@@ -424,7 +404,9 @@ abstract class Directory1DeploymentBase {
         fun getAssertingParam(): Long {
             val brid = dapps["test-dapp2"]!!
             val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
-            val config0 = node1.c0.nmGetBlockchainConfiguration(dapps["test-dapp2"]!!, height)!!
+            assertTrue(height > 0)
+            val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
+            assertNotNull(config0)
             return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
         }
 
@@ -462,7 +444,7 @@ abstract class Directory1DeploymentBase {
 
     private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val lastAnchoredBlock = awaitQueryResult {
                     node.c0.getLastLegacyAnchoredBlock(dappBrid)
                 }
@@ -481,25 +463,19 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(14)
     fun `Blocks can be anchored`() {
-        val anchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
-
-        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp"]!!)
-        assertThatBlocksAreAnchored(BlockchainRid(anchoringChainBrid), dapps["test-dapp2"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp2"]!!)
     }
 
     @Test
     @Order(15)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
-        val systemAnchoringChainBrid = node1.c0.cmGetSystemAnchoringChain()
-        assert(systemAnchoringChainBrid).isNotNull()
-        val clusterAnchoringChainBrid = node1.c0.cmGetClusterInfo("system").anchoringChain
-
-        assertThatBlocksAreAnchored(BlockchainRid(systemAnchoringChainBrid!!), BlockchainRid(clusterAnchoringChainBrid))
+        assertThatBlocksAreAnchored(systemAnchoringBrid, clusterAnchoringBrid)
     }
 
     private fun assertThatBlocksAreAnchored(anchoringChainBrid: BlockchainRid, sourceBrid: BlockchainRid) {
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val lastAnchoredBlock = awaitQueryResult {
                     node.client(anchoringChainBrid).getLastAnchoredBlock(sourceBrid)
                 }
@@ -530,7 +506,7 @@ abstract class Directory1DeploymentBase {
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
@@ -559,7 +535,7 @@ abstract class Directory1DeploymentBase {
         iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
                 .postTransactionUntilConfirmed("iccf_transfer")
         awaitUntilAsserted {
-            listOf(node1, node2, node3).forEach { node ->
+            nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assert(cities).containsExactly("Heraklion")
@@ -578,6 +554,14 @@ abstract class Directory1DeploymentBase {
         val fullConfig = config.gtvConfig.asDict().toMutableMap()
         fullConfig.remove("signers")
         return gtv(fullConfig)
+    }
+
+    private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
+        awaitQueryResult {
+            val actual = node1.c0.getBlockchainSigners(blockchainRid).map { PubKey(it[0].asByteArray()) }.toSet()
+            val expected = nodes.map { it.pubkey }.toSet()
+            assertEquals(expected, actual)
+        }
     }
 
     private val PostchainContainer.c0 get() = client(chain0Brid)
