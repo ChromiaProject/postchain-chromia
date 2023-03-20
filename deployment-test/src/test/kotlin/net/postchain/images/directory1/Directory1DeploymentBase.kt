@@ -10,6 +10,7 @@ import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.*
@@ -258,7 +259,6 @@ abstract class Directory1DeploymentBase {
     fun `Add node3 as signer to c0`() {
         testLogger.info("Adding node3 to the cluster")
         testLogger.info("Registering provider3")
-        node1Db.awaitNewBlock()
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true, "")
@@ -285,11 +285,13 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
-        awaitQueryResult {
-            assert(node1.c0.getProposalsSince(RowId(0))).isNotEmpty()
-        }
+        val proposals = awaitQueryResult {
+            val result = node1.c0.getProposalsSince(RowId(0))
+            assert(result).isNotEmpty()
+            return@awaitQueryResult result
+        }!!
 
-        node1.c0.getProposalsSince(RowId(0)).sortedBy { it.rowid.id }.forEach {
+        proposals.sortedBy { it.rowid.id }.forEach {
             node1.client(chain0Brid, listOf(provider)).transactionBuilder()
                     .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
                     .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
@@ -558,7 +560,8 @@ abstract class Directory1DeploymentBase {
 
     private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
         awaitQueryResult {
-            val actual = node1.c0.getBlockchainSigners(blockchainRid).map { PubKey(it[0].asByteArray()) }.toSet()
+            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
+            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
             val expected = nodes.map { it.pubkey }.toSet()
             assertEquals(expected, actual)
         }
