@@ -9,6 +9,8 @@ import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -65,23 +67,8 @@ open class ManagedModeBase(rellFolder: String) {
                 .withCommand("run-server")
     }
 
-    var chain0Config: File
+    var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
     lateinit var chain0Brid: BlockchainRid
-
-    init {
-        val runConf = this::class.java.getResource("run.xml")!!
-        val configFiles = RellRunConfigGenerator.generateCli(
-                File(rellFolder),
-                File(runConf.toURI()),
-                RellVersions.VERSION,
-                false
-        ).let {
-            RellRunConfigGenerator.buildFiles(it.config)
-        }
-        val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
-        configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
-        chain0Config = gtvFile.toFile()
-    }
 
     lateinit var node1Db: ChainDatabaseCommunicator
     lateinit var node2Db: ChainDatabaseCommunicator
@@ -142,12 +129,12 @@ open class ManagedModeBase(rellFolder: String) {
         )
     }
 
-    private fun startBlockchain(channel: ManagedChannel, config: File): String {
+    private fun startBlockchain(channel: ManagedChannel, config: String): String {
         return PostchainServiceGrpc.newBlockingStub(channel)
                 .initializeBlockchain(
                         InitializeBlockchainRequest.newBuilder()
                                 .setChainId(0)
-                                .setGtv(ByteString.copyFrom(config.readBytes()))
+                                .setGtv(ByteString.copyFrom(GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(config))))
                                 .build()
                 ).brid
     }

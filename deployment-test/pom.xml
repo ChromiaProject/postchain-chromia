@@ -129,6 +129,18 @@
                             </mainModules>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>generate-d1</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
