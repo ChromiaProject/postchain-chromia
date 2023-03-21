@@ -49,7 +49,7 @@ class CommandProposeConfiguration : CliktCommand(
                 .apply {
                     if (height == null) {
                         when (version.version) {
-                            Version.Delta -> {
+                            1L -> {
                                 addOperation("propose_configuration",
                                         gtv(client.config.pubkey().data),
                                         gtv(blockchainRID),
@@ -63,7 +63,7 @@ class CommandProposeConfiguration : CliktCommand(
                         }
                     } else {
                         when (version.version) {
-                            Version.Delta -> {
+                            1L -> {
                                 addOperation("propose_configuration_at",
                                         gtv(client.config.pubkey().data),
                                         gtv(blockchainRID),
