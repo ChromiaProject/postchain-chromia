@@ -26,8 +26,8 @@
 
     <properties>
         <postchain.version>3.9.0-SNAPSHOT</postchain.version>
-        <rellr.version>0.11.0</rellr.version>
-        <kotlin.version>1.6.21</kotlin.version>
+        <rellr.version>0.12.0-SNAPSHOT</rellr.version>
+        <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>1676906618</project.build.outputTimestamp>
