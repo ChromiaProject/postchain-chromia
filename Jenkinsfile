@@ -44,7 +44,10 @@ pipeline {
       when {
         not {
           expression {
-            env.BRANCH_NAME in ['dev', 'master']
+            env.BRANCH_NAME in [
+              'dev',
+              'master',
+            ]
           }
         }
       }
@@ -64,7 +67,10 @@ pipeline {
     stage('deploy') {
       when {
         expression {
-          env.BRANCH_NAME in ['dev', 'master']
+            env.BRANCH_NAME in [
+              'dev',
+//              'master',
+            ]
         }
       }
 
