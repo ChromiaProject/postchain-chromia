@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -14,6 +14,8 @@
     <packaging>pom</packaging>
 
     <properties>
+        <revision>dev</revision>
+
         <project.build.scriptSourceDirectory>src/scripts</project.build.scriptSourceDirectory>
     </properties>
 

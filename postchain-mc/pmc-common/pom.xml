@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-mc</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -14,6 +14,7 @@
     <description>Common parts of the CLI</description>
 
     <properties>
+        <revision>dev</revision>
     </properties>
 
     <dependencies>

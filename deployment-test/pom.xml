@@ -5,11 +5,15 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>deployment-test</artifactId>
+
+    <properties>
+        <revision>dev</revision>
+    </properties>
 
     <dependencies>
         <dependency> <!-- Ensure build order -->
@@ -22,21 +26,21 @@
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>admin-client</artifactId>
-            <version>3.9.0-SNAPSHOT</version>
+            <version>${revision}</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-server</artifactId>
-            <version>3.9.0-SNAPSHOT</version>
+            <version>${revision}</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>3.9.0-SNAPSHOT</version>
+            <version>${revision}</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,6 +20,8 @@
     </modules>
 
     <properties>
+        <revision>dev</revision>
+
         <!--suppress UnresolvedMavenProperty -->
         <gitlab.username>${CI_REGISTRY_USER}</gitlab.username>
         <!--suppress UnresolvedMavenProperty -->
