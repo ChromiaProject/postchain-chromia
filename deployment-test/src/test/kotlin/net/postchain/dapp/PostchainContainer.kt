@@ -8,7 +8,9 @@ import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.KeyPair
+import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.Gtx
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -87,13 +89,13 @@ class PostchainContainer(
             .postTransactionUntilConfirmed(opName)
     }
 
-    fun tx(chainId: Long, opName: String, vararg args: Gtv): TransactionResult =
-            tx(BlockchainRid.buildFromHex(getBlockchainRidStr(chainId)), opName, *args)
-
-    fun tx(brid: BlockchainRid, opName: String, vararg args: Gtv): TransactionResult {
-        return client(brid).transactionBuilder()
-            .addOperation(opName, *args)
+    fun tx(brid: BlockchainRid, opName: String, vararg args: Gtv): Pair<Gtx, TransactionResult> {
+        val txBuilder = client(brid).transactionBuilder(listOf())
+                .addOperation(opName, *args)
+        val txResult = txBuilder
             .postTransactionUntilConfirmed(opName)
+        val tx = txBuilder.finish().buildGtx()
+        return tx to txResult
     }
 
     private fun getBlockchainRid(chainId: Long) = BlockchainRid.buildFromHex(getBlockchainRidStr(chainId))
@@ -104,14 +106,16 @@ class PostchainContainer(
         }
     }
 
+    fun nodeApiPath() = "http://$nodeHost:$apiPort"
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
 
     fun client(chainId: Long, signers: List<KeyPair> = listOf(provider)) = client(getBlockchainRid(chainId), signers)
     fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider)) = createClient(brid, signers)
 
-    private fun createClient(brid: BlockchainRid, signers: List<KeyPair>): PostchainClient {
-        return AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers)))
-    }
+    private fun createClient(brid: BlockchainRid, signers: List<KeyPair>): PostchainClient =
+            AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers)))
+
+    fun peerInfo(): D1PeerInfo = D1PeerInfo(apiPath(), pubkey)
 }
 
 fun parseConfig(url: URL, configOverrides: Map<String, Any?>? = null): AppConfig {

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <dict>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made
@@ -21,18 +24,12 @@
         -->
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
-    <entry key="signers">
-        <array>
-            <!-- Key0 -->
-            <bytea>03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070</bytea>
-        </array>
-    </entry>
     <entry key="dependencies">
         <array>
             <array>
                 <string>My first dependency</string>
                 <!-- brid of config_1 -->
-                <bytea>47388EDE43E8326379C14BE5FB7FF87F35A49EA304CFEEFACC7907B1C9462EE7</bytea>
+                <bytea>E6B645242526CBF4A204CC824D30FC8925B678249DC3A923CB94D1E671B23443</bytea>
             </array>
         </array>
     </entry>

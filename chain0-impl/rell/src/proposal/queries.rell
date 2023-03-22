@@ -1,0 +1,210 @@
+import ^.cluster_anchoring;
+
+query get_proposals_since(since: rowid) {
+    return proposal @* { .rowid >= since } (.rowid, .proposal_type);
+}
+
+query get_relevant_proposals(my_pubkey: pubkey, since: rowid) {
+    return (proposal, voter_set_member) @* {
+        voter_set_member.voter_set == proposal.voter_set,
+        voter_set_member.provider.pubkey == my_pubkey,
+        proposal.rowid >= since
+    } (proposal.rowid, proposal.proposal_type);
+}
+
+query get_proposal(id: rowid?): (id: rowid, timestamp: integer, type: proposal_type, proposed_by: pubkey, description: text)? {
+    val result = if (id == null) proposal @? {} (@sort_desc @omit .rowid, $) limit 1 else proposal @? { id };
+    if (result == null) return null;
+    return (
+        id = result.rowid,
+        timestamp = result.timestamp,
+        type = result.proposal_type,
+        proposed_by = result.proposed_by.pubkey,
+        description = result.description
+    );
+}
+
+query get_blockchain_proposal(rowid): (data:byte_array, container:text)? {
+    return pending_blockchain @? { require_proposal(rowid) } ( data = .data, container = .container.name );
+}
+
+function require_proposal(rowid) = require(proposal @? { rowid }, "Proposal " + rowid + " not found");
+
+query get_configuration_proposal_at(rowid?): (
+    current_conf:struct<blockchain_configuration>,
+    proposed_conf:struct<pending_configuration_at>
+)? {
+    val proposal = get_latest_proposal(rowid, proposal_type.configuration_at);
+    if (proposal == null) return null;
+    val config = pending_configuration_at @? { require_proposal(proposal.rowid) };
+    if (config == null) return null;
+    val current = (blockchain_configuration @ { config.blockchain, .height < config.height }
+     (@omit @sort_desc .height, $) limit 1);
+
+    return (
+        current_conf = current.to_struct(),
+        proposed_conf = config.to_struct()
+    );
+}
+
+query get_configuration_proposal(rowid?): (
+    current_conf:struct<blockchain_configuration>,
+    proposed_conf:struct<pending_configuration>
+)? {
+    val proposal = get_latest_proposal(rowid, proposal_type.configuration);
+    if (proposal == null) return null;
+    val config = pending_configuration @? { require_proposal(proposal.rowid) };
+    if (config == null) return null;
+
+    val current = (blockchain_configuration @ { config.blockchain, .height < get_blockchain_last_height(config.blockchain.rid) }
+     (@omit @sort_desc .height, $) limit 1);
+
+    return (
+        current_conf = current.to_struct(),
+        proposed_conf = config.to_struct()
+    );
+}
+
+query get_cluster_provider_proposal(rowid?) {
+    val proposal = get_latest_proposal(rowid, proposal_type.cluster_provider);
+    if (proposal == null) return null;
+    val pcp = pending_cluster_provider @ { proposal };
+    return (
+        cluster = pcp.cluster.name,
+        provider = pcp.provider.pubkey,
+        add = pcp.add
+    );
+}
+
+query get_system_provider_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_is_system);
+    if (proposal == null) return null;
+    val pis = pending_provider_is_system @ { proposal };
+    return (
+        provider = pis.provider.pubkey,
+        add = pis.system
+    );
+}
+
+query get_provider_quota_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_quota);
+    if (proposal == null) return null;
+    val ppq = pending_provider_quota @ { proposal };
+    return (
+        tier = ppq.provider_tier,
+        quota_type = ppq.provider_quota_type,
+        value = ppq.value
+    );
+}
+
+query get_provider_batch_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_batch);
+    if (proposal == null) return null;
+    val ppb = pending_provider_batch @ { proposal };
+    return (
+        provider_infos = list<provider_info>.from_gtv(gtv.from_bytes(ppb.provider_infos)),
+        tier = ppb.provider_tier,
+        system = ppb.system,
+        active = ppb.active
+    );
+}
+
+query get_container_limits_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.container_limits);
+    if (proposal == null) return null;
+    val pcl = pending_container_limits @ { proposal };
+    return (
+        container = pcl.container.name,
+        max_blockchains = pcl.max_blockchains,
+        cpu = pcl.cpu,
+        ram = pcl.ram,
+        storage = pcl.storage,
+        io_read = pcl.io_read,
+        io_write = pcl.io_write
+    );
+}
+
+query get_cluster_limits_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.cluster_limits);
+    if (proposal == null) return null;
+    val pcl = pending_cluster_limits @ { proposal };
+    return (
+        cluster = pcl.cluster.name,
+        max_containers = pcl.max_containers,
+        default_container_max_blockchains = pcl.default_container_max_blockchains,
+        default_container_cpu = pcl.default_container_cpu,
+        default_container_ram = pcl.default_container_ram,
+        default_container_storage = pcl.default_container_storage,
+        default_container_io_read = pcl.default_container_io_read,
+        default_container_io_write = pcl.default_container_io_write
+    );
+}
+
+query get_cluster_remove_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.cluster_remove);
+    if (proposal == null) return null;
+    return pending_remove_cluster @ { proposal } .cluster.name;
+}
+
+query get_provider_state_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_state);
+    if (proposal == null) return null;
+    val pps = pending_provider_state @ { proposal };
+    return (
+        provider = pps.provider.pubkey,
+        provider_name = pps.provider.name,
+        active = pps.active
+    );
+}
+
+query get_provider_remove_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.provider_remove);
+    if (proposal == null) return null;
+    val pps = pending_remove_provider @ { proposal };
+    return (
+        provider = pps.provider.pubkey,
+        provider_name = pps.provider.name
+    );
+}
+
+query get_blockchain_action_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.blockchain_action);
+    if (proposal == null) return null;
+    val pba = pending_blockchain_action @ { proposal };
+    return (
+        blockchain = pba.blockchain.rid,
+        blockchain_name = pba.blockchain.name,
+        action = pba.action
+    );
+}
+
+query get_cluster_anchoring_configuration_proposal(rowid) {
+    val proposal = get_latest_proposal(rowid, proposal_type.cluster_anchoring_configuration);
+    if (proposal == null) return null;
+    val pac = pending_cluster_anchoring_configuration @ { proposal };
+    val current_conf = cluster_anchoring.get_cluster_anchoring_configuration();
+    return (
+        current_conf = current_conf,
+        proposed_conf = pac.data
+    );
+}
+
+function get_latest_proposal(rowid?, proposal_type) = if (rowid == null) proposal @ { proposal_type } ( @max proposal ) else proposal @ { rowid };
+
+struct proposal_voting_results {
+    positive_votes: integer;
+    negative_votes: integer;
+    max_votes: integer;
+    threshold: integer;
+    voting_result;
+}
+
+query get_proposal_voting_results(rowid): proposal_voting_results {
+    val proposal = require_proposal(rowid);
+    val positive_votes = positive_votes(proposal);
+    val negative_votes = negative_votes(proposal);
+    val max_votes = max_votes(proposal.voter_set);
+    val threshold = proposal.voter_set.threshold;
+    val status = _compute_voting_result(positive_votes, negative_votes, max_votes, threshold);
+    return proposal_voting_results(positive_votes, negative_votes, max_votes, threshold, status);
+}

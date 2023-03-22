@@ -36,6 +36,7 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
         mapOf(
                 fullKey(KEY_MASTER_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
                 fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
+                fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
         )
     }
     return parseConfig(resource, configOverrides)

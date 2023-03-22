@@ -34,7 +34,6 @@ genesis.host=231.123.12.2
 genesis.port=9870
 
 # Container
-container.testmode=false
 # Path to image used by subnode containers
 container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-subnode:3.7.0
 # Mount path to a directory on the host that can be used to store configurations. Note that we don't want to use /tmp since this folder will be cleaned when a container is stopped
@@ -173,3 +172,35 @@ container.zfs.pool-name=psvol
 
 In this case `container.host-mount-dir` (and `container.master-mount-dir` if present) will be ignored and all 
 container's files will be located in `/${zfs_pool_name}/${container_name}`.
+
+## Logs
+
+Docker supports different kinds of log drivers that can be used when collecting logs from a running container. The
+different log variants are controlled through which log driver is configured to be used. For more information about
+available log drivers see the official [logging drivers](https://docs.docker.com/config/containers/logging/configure/)
+documentation.
+
+To start a node with a specific log driver add `log-driver` and optionally `log-opt` to the docker run command when
+starting the node.
+
+Example:
+
+```shell
+docker run -d --name postchain \
+    ...
+    --log-driver=fluentd
+    --log-opt fluentd-address=fluentdhost:24224
+    --log-opt fluentd-async=true
+    ...
+```
+
+### Subnodes
+
+Since subnodes are started automatically the log driver and log options has to be added to the node configuration file.
+
+Example:
+
+```properties
+container.docker-log-driver=fluentd
+container.docker-log-opts=fluentd-address=fluentdhost:24224;fluentd-async=true
+```

@@ -1,5 +1,13 @@
 package net.postchain.cm.cm_api
 
+import net.postchain.chromia.cm_api.cmGetBlockchainApiUrls
+import net.postchain.chromia.cm_api.cmGetBlockchainCluster
+import net.postchain.chromia.cm_api.cmGetClusterAnchoringChains
+import net.postchain.chromia.cm_api.cmGetClusterBlockchains
+import net.postchain.chromia.cm_api.cmGetClusterInfo
+import net.postchain.chromia.cm_api.cmGetClusterNames
+import net.postchain.chromia.cm_api.cmGetPeerInfo
+import net.postchain.chromia.cm_api.cmGetSystemAnchoringChain
 import net.postchain.client.core.PostchainQuery
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
@@ -29,4 +37,10 @@ class ClusterManagementImpl(private val query: PostchainQuery) : ClusterManageme
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String =
             query.cmGetBlockchainCluster(blockchainRid.data)
+
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> =
+            query.cmGetClusterAnchoringChains().map { BlockchainRid(it) }
+
+    override fun getSystemAnchoringChain(): BlockchainRid? =
+            query.cmGetSystemAnchoringChain()?.let { BlockchainRid(it) }
 }

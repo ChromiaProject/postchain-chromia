@@ -2,21 +2,10 @@ package net.postchain.mc.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
+import mu.KLogging
 import net.postchain.chain0.cluster.cluster_op.createClusterOperation
-import net.postchain.chain0.common.disableNodeOperation
 import net.postchain.chain0.common.init.initOperation
-import net.postchain.chain0.common.proposal.ProposalType
-import net.postchain.chain0.common.proposal.getProposal
-import net.postchain.chain0.common.proposal.getProposalsSince
-import net.postchain.chain0.common.proposal.proposeBlockchainActionOperation
-import net.postchain.chain0.common.proposal.proposeBlockchainOperation
-import net.postchain.chain0.common.proposal.proposeClusterProviderOperation
-import net.postchain.chain0.common.proposal.proposeConfigurationAtOperation
-import net.postchain.chain0.common.proposal.proposeProviderIsSystemOperation
-import net.postchain.chain0.common.proposal.proposeProviderStateOperation
-import net.postchain.chain0.common.proposal.voter_set.proposeUpdateVoterSetOperation
 import net.postchain.chain0.common.queries.getBlockchain
-import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getClusterProviders
@@ -37,6 +26,16 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
 import net.postchain.chain0.nm_api.nmGetPeerListVersion
+import net.postchain.chain0.proposal.ProposalType
+import net.postchain.chain0.proposal.getProposal
+import net.postchain.chain0.proposal.getProposalsSince
+import net.postchain.chain0.proposal.proposeBlockchainActionOperation
+import net.postchain.chain0.proposal.proposeBlockchainOperation
+import net.postchain.chain0.proposal.proposeClusterProviderOperation
+import net.postchain.chain0.proposal.proposeConfigurationAtOperation
+import net.postchain.chain0.proposal.proposeProviderIsSystemOperation
+import net.postchain.chain0.proposal.proposeProviderStateOperation
+import net.postchain.chain0.proposal_voter_set.proposeUpdateVoterSetOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
@@ -65,8 +64,10 @@ import kotlin.test.assertTrue
 
 class Directory1IT : ManagedModeTest() {
 
+    companion object : KLogging()
+
     override fun chainConfSnippet(): String {
-        val module = "directory1"
+        val module = "management_chain_directory1"
 
         return """
             <chains>
@@ -84,6 +85,9 @@ class Directory1IT : ManagedModeTest() {
                                     </array>
                                 </arg>
                             </args>
+                        <args module="config">
+                            <arg key="enable_pcu"><int>1</int></arg>
+                        </args>
                         </app>
                         <gtv path="signers">
                             <array>
@@ -104,26 +108,23 @@ class Directory1IT : ManagedModeTest() {
     @BeforeEach
     fun setup() {
         blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
-        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null))
+        doAndBuildBlocks(provClient.transactionBuilder().initOperation(null, null))
     }
 
     @Test
     fun testProposeEnableDisableProvider() {
-        //Then proposes a second provider to system cluster. Includes also add it to system voter_set.
         addSystemProv2()
         assertProviderEnabled(prov2Config.pubkey())
 
-        // The new provider adds node 1 to system cluster. It becomes automatically signer of bcs in cluster. TODO: Start as
-        //  replica and once it is in sync make it signer, (to not cause a potential blockbuilding stop.)
-        addNode(prov2Client, node1Pubkey, node1Host, node1Port, systemClusterName)
-
-        //First provider proposes Disable prov2. Prov2 agrees:
+        logger.info("First provider proposes Disable prov2. Prov2 agrees.")
         val tx = provClient.transactionBuilder().addNop()
                 .proposeProviderStateOperation(pubKeyOf(provConfig), pubKeyOf(prov2Config), false, "")
         doAndBuildBlocks(tx)
+        logger.info("assertProposalTypeAndGetRowid")
         val id = assertProposalTypeAndGetRowid(ProposalType.provider_state).id
         val tx2 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
         doAndBuildBlocks(tx2)
+        logger.info("assertProviderDisabled")
         assertProviderDisabled(prov2Config.pubkey())
     }
 
@@ -131,6 +132,7 @@ class Directory1IT : ManagedModeTest() {
      * Add provider prov2 as system provider. Includes proposeEnable and promoting to system: active = true, system = true
      */
     private fun addSystemProv2() {
+        logger.info("proposes a second provider to system cluster. Includes also add it to system voter_set.")
         doAndBuildBlocks(registerProvider(provClient, prov2Config.pubkey(), true))
         doAndBuildBlocks(proposeProviderIsSystem(provClient, prov2Config.pubkey(), true))
         assertProviderData(prov2Config.pubkey(), "", true)
@@ -297,15 +299,15 @@ class Directory1IT : ManagedModeTest() {
     }
 
     @Test
-    fun testProposeConfiguration() {
-        proposeConfig(1000, 10, false)
-        assertNextConfiguration(provConfig, 10L, 1000)
+    fun testProposeConfigurationAt() {
+        proposeConfigAt(1000, 10, false)
+        assertNextConfiguration(provConfig, 10, 1000)
 
-        proposeConfig(1001, 8, false)
-        assertNextConfiguration(provConfig, 8L, 1001)
+        proposeConfigAt(1001, 8, false)
+        assertNextConfiguration(provConfig, 8, 1001)
     }
 
-    private fun proposeConfig(configId: Int, height: Long, force: Boolean) {
+    private fun proposeConfigAt(configId: Int, height: Long, force: Boolean) {
         val configFile = getFileFromClasspath("/net/postchain/mc/test/config/blockchain_config_$configId.xml")
         val configData = BlockchainConfig.readFromFile(configFile).data
         provClient.transactionBuilder().addNop()
@@ -322,14 +324,7 @@ class Directory1IT : ManagedModeTest() {
 
         // Add node1 to system cluster
         addNode(prov2Client, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
-
-        // Get next configuration height after adding new node as blockchain's signer
-        // expected next configuration height = -1 + init + addNode + proposeSystemProvider + proposeBlockhain + addNode + 4 = 10 (with vote included in proposal)
-        assertNextConfiguration(provConfig, 8L)
-
-        //Build blocks until new configuration is enabled
-        buildAndAwaitBlocks(2)
-
+        
         // Try to send tnx to api end point after the blockchain was re-configuration with new block signer
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {
@@ -339,19 +334,6 @@ class Directory1IT : ManagedModeTest() {
                 true
             }
         }
-    }
-
-    @Test
-    fun testRemoveBlockchainSigners() {
-        addSystemProv2()
-        // Prov2 adds node1 to system cluster
-        addNode(prov2Client, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
-        assertEquals(2, provClient.getBlockchainSigners(provConfig.blockchainRid).size)
-
-        val tx = prov2Client.transactionBuilder()
-                .disableNodeOperation(pubKeyOf(prov2Config), node1Pubkey.hexStringToByteArray())
-        doAndBuildBlocks(tx)
-        assertEquals(1, provClient.getBlockchainSigners(provConfig.blockchainRid).size)
     }
 
     @Test
@@ -400,15 +382,6 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(1, listBlockchains.size)
     }
 
-
-    @Test
-    fun testGetBlockchainLastHeight() {
-        val h = provClient.getBlockchainLastHeight(provConfig.blockchainRid)
-        // expected height = -1 + init() + addNode0 + proposeBlockchain0 + vote = 3
-        // expected height = -1 + init() + addNode0 + proposeBlockchain0 = 2 (vote included in proposal)
-        assertEquals(0, h)
-    }
-
     @Test
     fun testGetBlockchainConfiguration() {
         val blockchain = provClient.nmGetBlockchainConfiguration(provConfig.blockchainRid, 0L)
@@ -435,8 +408,6 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testListNodesWithProvider() {
-        addNode(provClient, nodes[0].pubKey, node0Host, node0Port, "")
-
         val providerNodes = provClient.getNodesByProvider(provConfig.signers.first().pubKey)
         assertEquals(1, providerNodes.size)
 

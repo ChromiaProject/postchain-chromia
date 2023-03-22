@@ -5,11 +5,9 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
-import net.postchain.chain0.common.proposal.getContainerLimitsProposal
 import net.postchain.chain0.common.queries.getContainerBlockchain
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.model.ContainerResourceLimitType
-import net.postchain.chain0.nm_api.nmGetBlockchainsForContainer
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.mc.cli.util.clientOption
 import net.postchain.mc.cli.util.nameOption

@@ -5,28 +5,21 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.client.config.FailOverConfig
-import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.d1.ChromiaQueryProviderFactory
+import net.postchain.d1.ClusterManagementFactory
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.query.Chain0MasterClient
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.query.MasterSubQueryProvider
-import net.postchain.d1.query.LocalQueryProvider
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
-import net.postchain.managed.BaseDirectoryDataSource
-import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.managed.config.DappBlockchainConfiguration
-import net.postchain.network.mastersub.subnode.SubConnectionManager
 import java.time.Duration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
@@ -57,19 +50,20 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val rawIcmfReceiverConfig = configuration.rawConfig["icmf"]?.get("receiver")
                         ?: throw UserMistake("Missing configuration key icmf/receiver")
                 val config = IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig)
+                txExt.icmfReceiverBlockchainConfigData = config
 
                 if (config.global != null) {
                     if (!config.global.topics.isNullOrEmpty()) {
                         val globalTopicIcmfReceiver = GlobalTopicIcmfReceiver(
-                            config.global.topics.distinct().associateWith { listOf() },
-                            cryptoSystem,
-                            engine.storage,
-                            queryProvider,
-                            configuration.chainID,
-                            configuration.blockchainRid,
-                            clusterManagement,
-                            clientProvider,
-                            dbOperations
+                                config.global.topics.distinct().associateWith { listOf() },
+                                cryptoSystem,
+                                engine.storage,
+                                queryProvider,
+                                configuration.chainID,
+                                configuration.blockchainRid,
+                                clusterManagement,
+                                clientProvider,
+                                dbOperations
                         )
                         receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(globalTopicIcmfReceiver)
                         txExt.globalTopicReceivers.add(globalTopicIcmfReceiver)
@@ -77,16 +71,16 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                     if (!config.global.blockchains.isNullOrEmpty()) {
                         val specificChainReceiver = GlobalTopicIcmfReceiver(
-                            config.global.blockchains.groupBy { it.topic }
-                                .mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
-                            cryptoSystem,
-                            engine.storage,
-                            queryProvider,
-                            configuration.chainID,
-                            configuration.blockchainRid,
-                            clusterManagement,
-                            clientProvider,
-                            dbOperations
+                                config.global.blockchains.groupBy { it.topic }
+                                        .mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
+                                cryptoSystem,
+                                engine.storage,
+                                queryProvider,
+                                configuration.chainID,
+                                configuration.blockchainRid,
+                                clusterManagement,
+                                clientProvider,
+                                dbOperations
                         )
                         receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(specificChainReceiver)
                         txExt.globalTopicReceivers.add(specificChainReceiver)
@@ -100,56 +94,24 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                             queryProvider
                     )
                     receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(intraClusterTopicIcmfReceiver)
-                    txExt.intraClusterOrigins = origins.toSet()
                     txExt.intraClusterReceivers.add(intraClusterTopicIcmfReceiver)
+                }
+
+                if (config.anchoring != null) {
+                    val anchoringReceiver = AnchoringIcmfReceiver(
+                            config.anchoring.topics,
+                            clusterManagement,
+                            queryProvider
+                    )
+                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(anchoringReceiver)
+                    txExt.anchoringReceivers.add(anchoringReceiver)
                 }
             }
         }
     }
 
-    open fun createQueryProvider(
-        configuration: BlockchainConfiguration,
-        clusterManagement: ClusterManagement
-    ): ChromiaQueryProvider {
-        // We have the same case here as when we are creating our cluster management
-        return if (configuration is DappBlockchainConfiguration) {
-            LocalQueryProvider(
-                    configuration.blockchainRid,
-                    postchainContext.blockQueriesProvider,
-                    clusterManagement,
-                    configuration.dataSource
-            )
-        } else {
-            MasterSubQueryProvider(
-                    configuration.blockchainRid,
-                    configuration.chainID,
-                    postchainContext.connectionManager as SubConnectionManager,
-                    clusterManagement,
-                    BaseDirectoryDataSource(
-                            Chain0MasterClient(configuration.blockchainRid, configuration.chainID, (postchainContext.connectionManager as SubConnectionManager).masterSubQueryManager)::query,
-                            postchainContext.appConfig
-                    ),
-                    postchainContext.blockQueriesProvider
-            )
-        }
-    }
-
-    open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
-        /**
-         * In case of non-cluster infrastructure, a dapp chain will have [DappBlockchainConfiguration]
-         * configuration, therefore [ClusterManagement] uses the local [ManagedNodeDataSource] instance.
-         *
-         * In the case of cluster infrastructure, a dapp chain will have a default [GTXBlockchainConfiguration]
-         * configuration. [ClusterManagement] uses the master query runner to chain0: [Chain0MasterClient].
-         */
-        return if (configuration is DappBlockchainConfiguration) {
-            ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
-        } else {
-            ClusterManagementImpl(
-                    Chain0MasterClient(configuration.blockchainRid, configuration.chainID, (postchainContext.connectionManager as SubConnectionManager).masterSubQueryManager)::query,
-            )
-        }
-    }
+    open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement =
+            ClusterManagementFactory.create(configuration, postchainContext.connectionManager)
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(
             failOverConfig = FailOverConfig(
@@ -157,6 +119,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     attemptInterval = Duration.ZERO
             ), clusterManagement
     )
+
+    open fun createQueryProvider(
+            configuration: BlockchainConfiguration,
+            clusterManagement: ClusterManagement
+    ): ChromiaQueryProvider =
+            ChromiaQueryProviderFactory.create(configuration, postchainContext.blockQueriesProvider, postchainContext.connectionManager, clusterManagement)
 
     override fun disconnectProcess(process: BlockchainProcess) {
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.forEach { it.shutdown() }

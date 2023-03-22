@@ -19,13 +19,14 @@ We also recommend encrypting the REST API, which is configured separately in the
 
 ### Environment
 
-| Variable                     | Default | Description                                                       |
-|:-----------------------------|:--------|:------------------------------------------------------------------|
-| POSTCHAIN_DEBUG              | false   | Enables debug functionalities such as `/_debug` rest api endpoint |   
-| POSTCHAIN_CONFIG             |         | File for node configuration                                       |
-| POSTCHAIN_SERVER_PORT        | 50051   | Port used for RPC communication                                   |
-| POSTCHAIN_SERVER_CERTIFICATE |         | Path to mounted certificate file                                  |   
-| POSTCHAIN_SERVER_PRIVKEY     |         | Path to server certificate private key                            |   
+| Variable                     | Default                                 | Description                                                       |
+|:-----------------------------|:----------------------------------------|:------------------------------------------------------------------|
+| POSTCHAIN_DEBUG              | false                                   | Enables debug functionalities such as `/_debug` rest api endpoint |   
+| POSTCHAIN_CONFIG             |                                         | File for node configuration                                       |
+| POSTCHAIN_SERVER_PORT        | 50051                                   | Port used for RPC communication                                   |
+| POSTCHAIN_SERVER_CERTIFICATE |                                         | Path to mounted certificate file                                  |   
+| POSTCHAIN_SERVER_PRIVKEY     |                                         | Path to server certificate private key                            |   
+| LOG4J_CONFIGURATION_FILE     | /opt/chromaway/postchain/log/log4j2.yml | Path to Log4j 2 configuration file                                |   
 
 ### Ports
 

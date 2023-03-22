@@ -6,7 +6,6 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import net.postchain.base.configuration.KEY_QUEUE_CAPACITY
 import net.postchain.chain0.common.queries.GetNodesWithProviderResult
-import net.postchain.chain0.common.queries.getBlockchainLastHeight
 import net.postchain.chain0.common.queries.getBlockchainReplicas
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getNodeData
@@ -15,6 +14,7 @@ import net.postchain.chain0.common.queries.listClustersOfNode
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
+import net.postchain.chain0.nm_api.nmGetPendingBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.impl.PostchainClientProviderImpl
@@ -31,6 +31,8 @@ import net.postchain.mc.cli.base.pubkey
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 fun PostchainClientConfig.pubkey() = signers.first().pubKey.hex()
 fun PostchainClientConfig.privkey() = signers.first().privKey
@@ -106,13 +108,14 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     protected fun assertNextConfiguration(config: PostchainClientConfig, expectedHeight: Long, expectedQueueCapacity: Long? = null) {
         // Get next configuration height of new blockchain configuration
-        val client = getPostchainClient(config)
-        val lastHeight = client.getBlockchainLastHeight(config.blockchainRid)
-        val actualHeight = client.nmFindNextConfigurationHeight(config.blockchainRid, lastHeight)
+        val lastHeight = getPostchainClient(cliConf(adminKey, config.blockchainRid)).currentBlockHeight()
+        assertTrue(lastHeight >= 0)
+        val chain0Client = getPostchainClient(config)
+        val actualHeight = chain0Client.nmFindNextConfigurationHeight(config.blockchainRid, lastHeight)
         assert(actualHeight).isEqualTo(expectedHeight)
 
         // Get next configuration
-        val bc = client.nmGetBlockchainConfiguration(config.blockchainRid, actualHeight!!)
+        val bc = chain0Client.nmGetBlockchainConfiguration(config.blockchainRid, actualHeight!!)
         assert(bc).isNotNull()
 
         if (expectedQueueCapacity != null) {
@@ -128,11 +131,11 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         client.transactionBuilder().addNop().registerNodeOperation(
                 client.config.pubkey().data,
                 key.hexStringToByteArray(),
-                host, port, "",
+                host, port, "http://rest-api",
                 if (clusterName == "") listOf() else listOf(clusterName)
         ).post()
         buildAndAwaitBlocks(1)
-        assertAddedNode(client.config.pubkey().hex(), key, host, port, clusterName)
+        assertAddedNode(client.config.pubkey().hex(), key, host, port, clusterName, "http://rest-api")
     }
 
     fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
@@ -141,7 +144,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         assert(vs.asInteger()).isGreaterThan(0L)
     }
 
-    private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String) {
+    private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String, apiUrl: String) {
         awaitUntilAsserted {
             val nodePK = PubKey(nodePubkey)
             val nodeData = provClient.getNodeData(nodePK)
@@ -150,6 +153,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
             assert(nodeData.port).isEqualTo(port)
             assertEquals(nodeData.provider, providerPublicKey.hexStringToWrappedByteArray())
             assertEquals(nodeData.pubkey, nodePK.wData)
+            assertEquals(nodeData.apiUrl, apiUrl)
             if (cluster != "") {
                 val clusters = provClient.listClustersOfNode(nodePK)
                 assertEquals(clusters, listOf(cluster))

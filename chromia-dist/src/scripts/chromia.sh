@@ -2,11 +2,8 @@
 set -eu
 D=$(dirname "${BASH_SOURCE[0]}")
 
+export LOG4J_CONFIGURATION_FILE=${LOG4J_CONFIGURATION_FILE:=$D/log4j2.yml}
+
 JVM_FLAGS="-XX:+CrashOnOutOfMemoryError"
 
-if [ "${POSTCHAIN_LOG4J2:-}" ]
-then
-  exec "${RELL_JAVA:-java}" $JVM_FLAGS "-Dlog4j2.configurationFile=${POSTCHAIN_LOG4J2}" -classpath "$D/lib/*" net.postchain.AppKt "$@"
-else
-  exec "${RELL_JAVA:-java}" $JVM_FLAGS -classpath "$D/lib/*" net.postchain.AppKt "$@"
-fi
+exec "${RELL_JAVA:-java}" $JVM_FLAGS -classpath "$D/lib/*" net.postchain.AppKt "$@"

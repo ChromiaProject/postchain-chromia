@@ -19,7 +19,7 @@ open class AnchoringProcessManagerExtension(
         postchainContext: PostchainContext
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
-    private val localDispatcher = ClusterAnchoringDispatcher(postchainContext.storage)
+    private val localDispatcher = AnchoringDispatcher(postchainContext.storage)
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
 
     /**
@@ -36,12 +36,10 @@ open class AnchoringProcessManagerExtension(
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 val clusterManagement = createClusterManagement(cfg)
-                val blockchainCluster = clusterManagement.getClusterOfBlockchain(cfg.blockchainRid)
-                val clusterAnchoringReceiver = ClusterAnchoringReceiver(blockchainCluster, clusterManagement)
-
-                localDispatcher.connectReceiver(cfg.chainID, clusterAnchoringReceiver)
                 it.clusterManagement = clusterManagement
-                it.clusterAnchoringReceiver = clusterAnchoringReceiver
+
+                it.createReceiver(cfg.blockchainRid)
+                localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
             }
 
             // connect process to local dispatcher

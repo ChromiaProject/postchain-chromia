@@ -1,0 +1,182 @@
+module;
+
+import ^.common.*;
+import ^.common.voting.*;
+
+enum proposal_type {
+    other,
+    configuration_at,
+    configuration,
+    bc,
+    container_limits,
+    cluster_limits,
+    cluster_provider,
+    cluster_remove,
+    voter_set_update,
+    provider_state,
+    provider_is_system,
+    provider_quota,
+    provider_batch,
+    provider_remove,
+    blockchain_action,
+    cluster_anchoring_configuration
+    // and a lot more
+}
+
+entity proposal {
+    index timestamp, proposal_type;
+    proposed_by: provider;
+    index voter_set;
+    description: text = "";
+}
+
+entity pending_configuration_at {
+    key proposal;
+    blockchain;
+    height: integer;
+    force: boolean;
+    data: byte_array;
+}
+
+entity pending_configuration {
+    key proposal;
+    blockchain;
+    data: byte_array;
+}
+
+entity pending_container_limits {
+    key proposal;
+    key container;
+    max_blockchains: integer;
+    cpu: integer;
+    ram: integer;
+    storage: integer;
+    io_read: integer;
+    io_write: integer;
+}
+
+entity pending_cluster_limits {
+    key proposal;
+    key cluster;
+    max_containers: integer;
+    default_container_max_blockchains: integer;
+    default_container_cpu: integer;
+    default_container_ram: integer;
+    default_container_storage: integer;
+    default_container_io_read: integer;
+    default_container_io_write: integer;
+}
+
+entity pending_cluster_provider {
+    key proposal;
+    key cluster;
+    provider;
+    add: boolean;
+}
+
+entity pending_remove_cluster {
+    key proposal;
+    key cluster;
+}
+
+entity pending_voter_set_governor{
+    key proposal;
+    key voter_set;
+    governor: voter_set;
+}
+
+entity pending_voter_set_provider {
+    key proposal;
+    key voter_set;
+    provider;
+    add: boolean;
+}
+
+entity pending_blockchain_action {
+    key proposal;
+    key blockchain;
+    action: blockchain_action;
+}
+
+// Proposed bc:s are put here while waiting for enough positive votes.
+entity pending_blockchain {
+    key proposal;
+    name;
+    data: byte_array;
+    container;
+}
+
+// Proposed enabling/disabling of providers are put here while waiting for enough positive votes.
+entity pending_provider_state {
+    key proposal;
+    provider;
+    active: boolean;
+}
+
+// Proposed promotion/demotion of provider to/from being system provider
+entity pending_provider_is_system {
+    key proposal;
+    provider;
+    system: boolean;
+}
+
+entity pending_provider_quota {
+    key proposal;
+    provider_tier;
+    provider_quota_type;
+    value: integer;
+}
+
+entity pending_cluster_anchoring_configuration {
+    key proposal;
+    data: byte_array;  // map<string, gtv>
+}
+
+entity pending_provider_batch {
+    key proposal;
+    provider_infos: byte_array; // list<provider_info>.to_gtv().to_bytes()
+    provider_tier;
+    system: boolean;
+    active: boolean;
+}
+
+entity pending_remove_provider {
+    key proposal;
+    provider;
+}
+
+operation revoke_proposal(my_pubkey: pubkey, proposal_rowid: rowid) {
+    val me = require_is_provider_with_rl(my_pubkey);
+    require_provider_auth_with_rl(me);
+    val prop = proposal @? { proposal_rowid };
+    require(exists(prop), "Proposal not found: %d".format(proposal_rowid));
+    require(prop!!.proposed_by == me, "It is only allowed to revoke own proposals");
+    delete_proposal(prop);
+}
+
+function delete_proposal(prop: proposal) {
+    when (prop.proposal_type) {
+        other                           -> delete_other_proposal(prop);
+        configuration_at                -> delete pending_configuration_at @ { prop };
+        configuration                   -> delete pending_configuration @ { prop };
+        bc                              -> delete pending_blockchain @ { prop };
+        container_limits                -> delete pending_container_limits @ { prop };
+        cluster_limits                  -> delete pending_cluster_limits @ { prop };
+        cluster_provider                -> delete pending_cluster_provider @ { prop };
+        cluster_remove                  -> delete pending_remove_cluster @? { prop };
+        provider_state                  -> delete pending_provider_state @ { prop };
+        provider_is_system              -> delete pending_provider_is_system @ { prop };
+        provider_quota                  -> delete pending_provider_quota @ { prop };
+        provider_batch                  -> delete pending_provider_batch @ { prop };
+        provider_remove                 -> delete pending_remove_provider @? { prop };
+        blockchain_action               -> delete pending_blockchain_action @? { prop };
+        cluster_anchoring_configuration -> delete pending_cluster_anchoring_configuration @? { prop };
+        else -> delete_proposal_handlers()[prop.proposal_type.name](prop);
+    }
+    delete vote @* { .proposal == prop };
+    delete proposal @ { .rowid == prop.rowid };
+}
+
+@extendable function delete_other_proposal(proposal) { /* Should be extended */ }
+
+@extendable function delete_proposal_handlers(): map<text, (proposal) -> unit>;

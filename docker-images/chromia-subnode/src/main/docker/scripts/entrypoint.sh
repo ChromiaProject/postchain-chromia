@@ -11,4 +11,4 @@ echo "Configuring and starting Postgres"
 bash postgres-entrypoint.sh postgres
 
 echo "Starting Postchain node"
-exec java -XX:+CrashOnOutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -Dlog4j2.configurationFile="$POSTCHAIN_LOG4J2" -classpath "$POSTCHAIN_DIR/lib/*" net.postchain.AppKt run-server
+exec java -XX:+CrashOnOutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/lib/*" net.postchain.AppKt run-subnode

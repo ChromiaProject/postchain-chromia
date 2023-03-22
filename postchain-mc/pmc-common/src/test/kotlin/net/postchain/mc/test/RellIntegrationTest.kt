@@ -4,15 +4,16 @@ import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
+import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.core.*
-import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -71,13 +72,13 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
      */
     protected abstract fun chainConfSnippet(): String
 
-    protected fun cliConf(keyIndex: Int): PostchainClientConfig {
+    protected fun cliConf(keyIndex: Int, blockchainRid: BlockchainRid? = null): PostchainClientConfig {
         return PostchainClientConfig(
-            nodes[0].getBlockchainRid(0)!!,
-            EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
-            listOf(
-                KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
-            )
+                blockchainRid ?: nodes[0].getBlockchainRid(0)!!,
+                EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
+                listOf(
+                        KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
+                )
         )
     }
 
@@ -128,9 +129,9 @@ abstract class RellIntegrationTest : IntegrationTestSetup() {
 
 @Suppress("UNUSED_PARAMETER")
 class SmartOnDemandBlockBuildingStrategy(
-    configData: BaseBlockBuildingStrategyConfigurationData,
-    blockQueries: BlockQueries,
-    val txQueue: TransactionQueue
+        configData: BaseBlockBuildingStrategyConfigurationData,
+        blockQueries: BlockQueries,
+        val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()
@@ -153,6 +154,9 @@ class SmartOnDemandBlockBuildingStrategy(
     override fun blockCommitted(blockData: BlockData) {
         committedHeight++
         blocks.add(blockData)
+    }
+
+    override fun blockFailed() {
     }
 
     fun awaitCommitted(height: Int) {

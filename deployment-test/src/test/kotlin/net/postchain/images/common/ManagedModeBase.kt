@@ -7,7 +7,6 @@ import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.PostchainContainer.Companion.MOUNT_DIR
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -45,6 +44,8 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
 
+    fun nodes() = arrayOf(node1, node2, node3)
+
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
         return PostchainContainer(
@@ -65,7 +66,7 @@ open class ManagedModeBase(rellFolder: String) {
     }
 
     var chain0Config: File
-    lateinit var brid: BlockchainRid
+    lateinit var chain0Brid: BlockchainRid
 
     init {
         val runConf = this::class.java.getResource("run.xml")!!
@@ -80,9 +81,6 @@ open class ManagedModeBase(rellFolder: String) {
         val gtvFile = kotlin.io.path.createTempFile(suffix = ".gtv")
         configFiles["blockchains/0/0.gtv"]!!.write(gtvFile.toFile())
         chain0Config = gtvFile.toFile()
-        if (!File(MOUNT_DIR).deleteRecursively()) {
-            testLogger.error("Unable to clear mount directory")
-        }
     }
 
     lateinit var node1Db: ChainDatabaseCommunicator
@@ -97,30 +95,37 @@ open class ManagedModeBase(rellFolder: String) {
         if (::channel1.isInitialized) channel1.shutdownNow()
         if (::channel2.isInitialized) channel2.shutdownNow()
         if (::channel3.isInitialized) channel3.shutdownNow()
-        stopContainers(node1, node2, node3)
+        stopContainers(*nodes())
         postgres.stop()
     }
 
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
         postgres.start()
-        startContainers(node1, node2, node3)
+        startContainers(*nodes())
 
+        // node1
         channel1 = createChannel(node1).usePlaintext().build()
-        channel2 = createChannel(node2).usePlaintext().build()
-        channel3 = createChannel(node3).usePlaintext().build()
-        addPeer(channel2, node1)
-        addPeer(channel3, node1)
-        brid = startBlockchain(
-                channel1,
-                chain0Config
-        ).let { BlockchainRid.buildFromHex(it) }
-        startBlockchain(channel2, chain0Config)
-        startBlockchain(channel3, chain0Config)
-
+        chain0Brid = startBlockchain(channel1, chain0Config)
+                .let { BlockchainRid.buildFromHex(it) }
+        testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
         node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
-        node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
-        node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
+
+        // node2
+        if (::node2.isInitialized) {
+            channel2 = createChannel(node2).usePlaintext().build()
+            addPeer(channel2, node1)
+            startBlockchain(channel2, chain0Config)
+            node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
+        }
+
+        // node3
+        if (::node3.isInitialized) {
+            channel3 = createChannel(node3).usePlaintext().build()
+            addPeer(channel3, node1)
+            startBlockchain(channel3, chain0Config)
+            node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
+        }
     }
 
     private fun createChannel(target: PostchainContainer) =
@@ -147,17 +152,21 @@ open class ManagedModeBase(rellFolder: String) {
                 ).brid
     }
 
-    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null): RellPostAppCliConfig {
+    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null, runXmlFile: String = "run.xml"): RellPostAppCliConfig {
         val dappSources = this::class.java.classLoader.getResource(dappName)!!
         val applicationFolder = if (additionalSources != null) {
-            File(dappSources.toURI()).copyRecursively(additionalSources)
+            File(dappSources.toURI()).copyRecursively(additionalSources, true)
             additionalSources
         } else {
             File(dappSources.toURI())
         }
-        val runConf = this::class.java.classLoader.getResource("$dappName/run.xml")!!
+        return compileChain("$dappName/$runXmlFile", applicationFolder)
+    }
+
+    fun compileChain(runXmlFile: String, rellSources: File): RellPostAppCliConfig {
+        val runConf = requireNotNull(this::class.java.classLoader.getResource(runXmlFile))
         return RellRunConfigGenerator.generateCli(
-                applicationFolder,
+                rellSources,
                 File(runConf.toURI()),
                 RellVersions.VERSION,
                 false

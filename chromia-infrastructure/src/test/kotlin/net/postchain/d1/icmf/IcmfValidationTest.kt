@@ -11,7 +11,7 @@ import net.postchain.core.BlockRid
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.TopicHeaderData
-import net.postchain.d1.anchoring.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -35,6 +35,7 @@ class IcmfValidationTest {
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val chainID: Long = 1
     private val spilledMessage = gtv("hej")
+    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(listOf(topic), null), null, null)
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
@@ -319,10 +320,7 @@ class IcmfValidationTest {
 
     @Test
     fun successWithoutAnchoring() {
-        val icmfReceiverSpecialTxExtension = createTxExt()
-        icmfReceiverSpecialTxExtension.intraClusterOrigins = setOf(
-                topic to blockchainRID
-        )
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic)), null))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -338,8 +336,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredOrigin() {
-        val icmfReceiverSpecialTxExtension = createTxExt()
-        icmfReceiverSpecialTxExtension.intraClusterOrigins = setOf()
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -353,9 +350,40 @@ class IcmfValidationTest {
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
     }
 
-    private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
+    @Test
+    fun nonConfiguredTopic() {
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(listOf("another-topic"), null), null, null))
+
+        val ops = createOpData(
+                listOf(gtv("hej")),
+                -1,
+                IcmfTestClusterManagement.keyPair,
+                IcmfTestClusterManagement.keyPair,
+                -1
+        )
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
+    @Test
+    fun nonConfiguredSender() {
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic))), null, null))
+
+        val ops = createOpData(
+                listOf(gtv("hej")),
+                -1,
+                IcmfTestClusterManagement.keyPair,
+                IcmfTestClusterManagement.keyPair,
+                -1
+        )
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
+    private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock, icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         clusterManagement = IcmfTestClusterManagement()
+        icmfReceiverBlockchainConfigData = icmfConfig
     }
 
     private fun createOpData(

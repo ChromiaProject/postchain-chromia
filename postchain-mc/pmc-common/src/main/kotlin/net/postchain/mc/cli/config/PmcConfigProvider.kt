@@ -22,6 +22,7 @@ object PmcConfigProvider {
 
     fun collectConfiguration(extraFile: File): Configuration {
         val config = PropertiesConfiguration()
+        config.setProperty("status.poll-interval", 2000)
         loadFromFileIfExists(globalConfigurationFile(), config)
         loadFromFileIfExists(localConfigurationFile(), config)
         loadFromFileIfExists(extraFile, config)

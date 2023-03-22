@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-mc</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.8.0</version>
+        <version>3.9.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -131,7 +131,7 @@
                         <configuration>
                             <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
-                            <mainModule>directory1</mainModule>
+                            <mainModule>management_chain_directory1</mainModule>
                         </configuration>
                     </execution>
                 </executions>

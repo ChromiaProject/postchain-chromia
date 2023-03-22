@@ -25,4 +25,21 @@
       <cve>CVE-2014-125070</cve>
    </suppress>
 
+    <suppress>
+        <notes><![CDATA[
+        False positive. This is actually a problem with json-java which we do not use.
+        file name: jackson-core-2.14.0.jar
+        ]]></notes>
+        <cve>CVE-2022-45688</cve>
+    </suppress>
+
+    <suppress>
+        <notes><![CDATA[
+        Vulnerability in Guava if using com.google.common.io.Files.createTempDir. No version exists
+        without this vulnerability but the function is marked as deprecated in version 30+
+        We do not use this function in the code so handled as false positive.
+        file name: guava-31.1-jre.jar
+        ]]></notes>
+        <cve>CVE-2020-8908</cve>
+    </suppress>
 </suppressions>

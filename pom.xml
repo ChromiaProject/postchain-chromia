@@ -6,7 +6,7 @@
 
     <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.8.0</version>
+    <version>3.9.0</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
     <url>https://docs.chromia.com/</url>
@@ -25,12 +25,12 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.8.0</postchain.version>
-        <rellr.version>0.11.0</rellr.version>
-        <kotlin.version>1.6.21</kotlin.version>
+        <postchain.version>3.9.0</postchain.version>
+        <rellr.version>0.12.0</rellr.version>
+        <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1676906605</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1679489088</project.build.outputTimestamp>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
@@ -135,6 +135,11 @@
                 <artifactId>java-diff-utils</artifactId>
                 <version>4.12</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.tomakehurst</groupId>
+                <artifactId>wiremock-jre8</artifactId>
+                <version>2.35.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -232,7 +237,7 @@
                 <plugin>
                     <groupId>net.postchain.rell</groupId>
                     <artifactId>rell-maven-plugin</artifactId>
-                    <version>0.7.2</version>
+                    <version>0.8.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
