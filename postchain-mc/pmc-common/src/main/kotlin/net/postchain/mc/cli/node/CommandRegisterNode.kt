@@ -2,10 +2,14 @@ package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.types.enum
 import net.postchain.chain0.common.registerNodeOperation
+import net.postchain.chain0.common.updateNodeCapabilityOperation
+import net.postchain.chain0.model.NodeCapabilityType
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.hostOption
@@ -33,9 +37,13 @@ class CommandRegisterNode : CliktCommand(
             help = "comma delimited list of clusters this node belongs to"
     ).split(",").default(emptyList())
 
+    private val capability by option(help = "Node capability").enum<NodeCapabilityType>().multiple()
     override fun run() {
         client.transactionBuilder()
                 .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
+                .apply {
+                    if (capability.isNotEmpty()) capability.forEach { updateNodeCapabilityOperation(client.pubkey, key.data, it, true) }
+                }
                 .postAwaitConfirmation()
                 .printResult(
                         "Node registered",
