@@ -9,7 +9,6 @@ import net.postchain.chain0.proposal.GetProposalResult
 import net.postchain.chain0.proposal.ProposalType
 import net.postchain.chain0.proposal.getBlockchainActionProposal
 import net.postchain.chain0.proposal.getBlockchainProposal
-import net.postchain.chain0.proposal.getClusterAnchoringConfigurationProposal
 import net.postchain.chain0.proposal.getClusterLimitsProposal
 import net.postchain.chain0.proposal.getClusterProviderProposal
 import net.postchain.chain0.proposal.getClusterRemoveProposal
@@ -23,6 +22,7 @@ import net.postchain.chain0.proposal.getProviderQuotaProposal
 import net.postchain.chain0.proposal.getProviderRemoveProposal
 import net.postchain.chain0.proposal.getProviderStateProposal
 import net.postchain.chain0.proposal.getSystemProviderProposal
+import net.postchain.chain0.proposal_cluster_anchoring.getClusterAnchoringConfigurationProposal
 import net.postchain.chain0.proposal_voter_set.getVoterSetUpdateProposal
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.types.RowId
