@@ -1,0 +1,110 @@
+module;
+
+import ^^.model.*;
+import ^^.common.*;
+
+/*
+ * Deprecated
+ * Anchoring without use of ICMF
+ */
+entity anchored_block {
+    key blockchain, height: integer;
+    key block_rid: byte_array;
+}
+
+// Deprecated
+entity anchored_block_signer { key anchored_block, node; }
+
+// Deprecated
+struct base_block_header {
+    blockchain_rid: byte_array;
+    prev_block_rid: byte_array;
+    merkle_root_hash: byte_array;
+    timestamp: timestamp;
+    height: integer;
+    dependencies: gtv;
+    extra: map<text, gtv>;
+}
+
+/*function get_last_height(blockchain): integer {
+    if (blockchain.rid == chain_context.blockchain_rid) {
+        return op_context.block_height;
+    } else {
+        return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
+    }
+}*/
+
+@extend(get_last_anchored_height) function(blockchain_rid: byte_array) {
+        return [(anchored_block @? { .blockchain.rid == blockchain_rid } (@sort_desc .height) limit 1) ?: -1];
+}
+
+struct legacy_anchored_block {
+    height: integer;
+    block_rid: byte_array;
+}
+
+@extend(apply_pending_configuration) function apply_configuration_legacy(pc: pending_configuration) {
+    val is_chain0 = pc.blockchain.rid == chain_context.blockchain_rid;
+    if (is_chain0 or pcu_enabled()) return;
+    val apply_at_height = get_last_height(pc.blockchain) + 10;
+    log("Base configuration update without PCU for chain %s at height %d".format(pc.blockchain.rid, apply_at_height));
+    require(empty(blockchain_configuration @? { pc.blockchain, apply_at_height }), "Configuration at height %d already exists".format(apply_at_height));
+    create blockchain_configuration(pc.blockchain, apply_at_height, pc.data);
+    add_dependencies(pc.data, pc.blockchain.rid, apply_at_height);
+}
+
+@extend(update_configuration_signers_for_blockchain) function update_configuration_signers_legacy(blockchain, signers: list<pubkey>) {
+    val height = get_last_height(blockchain) + 5;
+    log("Signers update without PCU for chain %s at height %d: %s".format(blockchain.rid, height, signers));
+    val bc_signers = blockchain_configuration_signers @? { blockchain, height };
+    if (bc_signers == null) {
+        create blockchain_configuration_signers(blockchain, height, signers.to_gtv().to_bytes());
+    } else {
+        bc_signers.signers = signers.to_gtv().to_bytes();
+    }
+}
+
+// Deprecated
+operation anchor_block(header: base_block_header, signers: list<pubkey>, signatures: list<byte_array>) {
+    val blockchain = blockchain @ { header.blockchain_rid };
+    val existing_ab = anchored_block @? { blockchain, header.height };
+    if (exists(existing_ab)) {
+        log("Block %d of blockchain %s is already anchored".format(header.height, header.blockchain_rid));
+        return;
+    }
+
+    val all_signers = set<pubkey>.from_gtv(
+        get_signers_for_configuration(blockchain, header.height)
+    );
+
+    val block_rid = header.hash();
+
+    for (i in range(0, signers.size())) {
+        require(all_signers.contains(signers[i]),
+            "Can't anchor block %d of blockchain %s, unknown signer %s detected"
+                .format(header.height, header.blockchain_rid, signers[i])
+        );
+        require(verify_signature(block_rid, signers[i], signatures[i]),
+            "Can't anchor block %d of blockchain %s, invalid signature of signer %s detected: %s"
+                .format(header.height, header.blockchain_rid, signers[i], signatures[i])
+        );
+    }
+
+    val block = create anchored_block ( blockchain, header.height, block_rid );
+    for (signer in signers) {
+        create anchored_block_signer(block, node @ { signer });
+    }
+}
+
+query get_last_legacy_anchored_block(blockchain_rid: byte_array): legacy_anchored_block? {
+    val blockchain = blockchain @ { blockchain_rid };
+    return anchored_block @? { blockchain } (@omit @sort_desc .height, legacy_anchored_block(.height, .block_rid)) limit 1;
+}
+
+@extend (before_delete_blockchain) function remove_anchored_blocks(blockchain) {
+    val blocks = anchored_block @* { blockchain };
+    for (block in blocks) {
+        delete anchored_block_signer @* { block };
+    }
+    delete blocks;
+}

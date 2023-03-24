@@ -33,11 +33,12 @@ function require_no_dependencies_on_me(blockchain) {
 }
 
 function get_last_height(blockchain): integer {
-    if (blockchain.rid == chain_context.blockchain_rid) {
-        return op_context.block_height;
-    } else {
-        return (anchored_block @? { blockchain } (@sort_desc .height) limit 1) ?: -1;
-    }
+    return get_last_anchored_height(blockchain.rid) @ {} (@sort $) limit 1;
+}
+
+@extendable function get_last_anchored_height(blockchain_rid: byte_array): list<integer> {
+    if (chain_context.blockchain_rid == blockchain_rid) return [op_context.block_height];
+    return [-1];
 }
 
 operation add_blockchain_replica(my_pubkey: pubkey, blockchain_rid: byte_array, node_pubkey: byte_array) {

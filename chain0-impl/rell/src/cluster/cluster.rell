@@ -82,16 +82,18 @@ function update_configuration_signers(cluster) {
         // do not write new configuration when size is 0 since it's impossible to recover from that
         require(signers.size() > 0);
 
-        val is_chain0 = blockchain.rid == chain_context.blockchain_rid;
-
-        if (is_chain0) {
-            update_configuration_signers_chain0(blockchain, signers);
-        } else if (pcu_enabled()) {
-            update_configuration_signers_pcu(blockchain, signers);
-        } else {
-            update_configuration_signers_legacy(blockchain, signers);
-        }
+        update_configuration_signers_for_blockchain(blockchain, signers);
     }
+}
+
+@extendable function update_configuration_signers_for_blockchain(blockchain, signers: list<pubkey>) {
+    val is_chain0 = blockchain.rid == chain_context.blockchain_rid;
+
+    if (is_chain0) {
+        update_configuration_signers_chain0(blockchain, signers);
+    } else if (pcu_enabled()) {
+        update_configuration_signers_pcu(blockchain, signers);
+    } 
 }
 
 function update_configuration_signers_chain0(blockchain, signers: list<pubkey>) {
@@ -126,16 +128,7 @@ function update_configuration_signers_pcu(blockchain, signers: list<pubkey>) {
     );
 }
 
-function update_configuration_signers_legacy(blockchain, signers: list<pubkey>) {
-    val height = get_last_height(blockchain) + 5;
-    log("Signers update without PCU for chain %s at height %d: %s".format(blockchain.rid, height, signers));
-    val bc_signers = blockchain_configuration_signers @? { blockchain, height };
-    if (bc_signers == null) {
-        create blockchain_configuration_signers(blockchain, height, signers.to_gtv().to_bytes());
-    } else {
-        bc_signers.signers = signers.to_gtv().to_bytes();
-    }
-}
+
 
 function require_cluster_available_for_removal(cluster) {
     require(cluster.name != clusters.system, "System cluster can't be deleted");
