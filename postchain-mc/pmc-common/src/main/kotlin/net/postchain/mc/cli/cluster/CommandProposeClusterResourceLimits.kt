@@ -27,8 +27,8 @@ import net.postchain.mc.cli.util.storageOptionHelp
 
 class CommandProposeClusterResourceLimits : CliktCommand(
         name = "limits",
-        help = "Propose new resource limits for given cluster. There are three types of limits. " +
-                "Proposal can contain one, two, or all three types."
+        help = "Propose new resource limits for given cluster. There are multiple types of limits. " +
+                "Proposal can contain all types of limits or a subset of them."
 ) {
     companion object {
         fun <K> MutableMap<K, Long>.setIfNotNull(key: K, value: Long?) {
