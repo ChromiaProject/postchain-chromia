@@ -3,7 +3,6 @@ package net.postchain.postgres
 import net.postchain.base.BaseEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
-import net.postchain.base.data.PostgreSQLDatabaseAccess
 import org.apache.commons.dbcp2.BasicDataSource
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
@@ -21,7 +20,6 @@ class ChainDatabaseCommunicator(chainIId: Long, schema: String, dbConfig: Databa
         maxTotal = 5
         defaultReadOnly = true
     }
-    val db = PostgreSQLDatabaseAccess()
 
     private val eContext = BaseEContext(dataSource.connection, chainIId, dbAccess)
 
