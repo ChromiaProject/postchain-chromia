@@ -261,6 +261,20 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
         assertChainSigners(systemAnchoringBrid, node1, node2)
+
+        // Asserting both anchoring chains build blocks
+        val clusterAnchoringHeight2 = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
+            assertTrue(current > clusterAnchoringHeight2)
+        }
+        val systemAnchoringHeight2 = node1.client(systemAnchoringBrid).currentBlockHeight()
+        awaitUntilAsserted {
+            val current = node1.client(systemAnchoringBrid).currentBlockHeight()
+            assertTrue(current > systemAnchoringHeight2)
+        }
+
+
     }
 
     @Test
@@ -322,8 +336,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-//    @Test
-//    @Order(7)
+    @Test
+    @Order(7)
     fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
