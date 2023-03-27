@@ -13,11 +13,11 @@ import net.postchain.chain0.proposal.getClusterRemoveProposal
 import net.postchain.chain0.proposal.getContainerLimitsProposal
 import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalVotingResults
-import net.postchain.chain0.proposal.getProviderBatchProposal
-import net.postchain.chain0.proposal.getProviderQuotaProposal
-import net.postchain.chain0.proposal.getProviderRemoveProposal
-import net.postchain.chain0.proposal.getProviderStateProposal
-import net.postchain.chain0.proposal.getSystemProviderProposal
+import net.postchain.chain0.proposal_provider.getProviderBatchProposal
+import net.postchain.chain0.proposal_provider.getProviderQuotaProposal
+import net.postchain.chain0.proposal_provider.getProviderRemoveProposal
+import net.postchain.chain0.proposal_provider.getProviderStateProposal
+import net.postchain.chain0.proposal_provider.getSystemProviderProposal
 import net.postchain.chain0.proposal_blockchain.getBlockchainActionProposal
 import net.postchain.chain0.proposal_blockchain.getBlockchainProposal
 import net.postchain.chain0.proposal_blockchain.getConfigurationProposal
