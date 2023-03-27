@@ -29,12 +29,12 @@ import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.chain0.proposal.ProposalType
 import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalsSince
-import net.postchain.chain0.proposal.proposeBlockchainActionOperation
-import net.postchain.chain0.proposal.proposeBlockchainOperation
 import net.postchain.chain0.proposal.proposeClusterProviderOperation
-import net.postchain.chain0.proposal.proposeConfigurationAtOperation
 import net.postchain.chain0.proposal.proposeProviderIsSystemOperation
 import net.postchain.chain0.proposal.proposeProviderStateOperation
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationAtOperation
 import net.postchain.chain0.proposal_voter_set.proposeUpdateVoterSetOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
@@ -324,7 +324,7 @@ class Directory1IT : ManagedModeTest() {
 
         // Add node1 to system cluster
         addNode(prov2Client, node1Pubkey, node1Host, node1Port, clusterName = systemClusterName)
-        
+
         // Try to send tnx to api end point after the blockchain was re-configuration with new block signer
         assertThrows<ConditionTimeoutException> {
             Awaitility.await().atMost(Duration.ONE_SECOND).until {

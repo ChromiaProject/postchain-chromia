@@ -25,6 +25,8 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.*
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -105,10 +107,10 @@ abstract class Directory1DeploymentBase {
 
             if (testBreakdownCommand != null) {
                 ProcessBuilder(testBreakdownCommand)
-                    .redirectOutput(Redirect.INHERIT)
-                    .redirectError(Redirect.INHERIT)
-                    .start()
-                    .waitFor()
+                        .redirectOutput(Redirect.INHERIT)
+                        .redirectError(Redirect.INHERIT)
+                        .start()
+                        .waitFor()
             }
 
             if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
