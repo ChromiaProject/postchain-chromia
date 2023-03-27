@@ -30,8 +30,8 @@ import net.postchain.chain0.proposal.ProposalType
 import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalsSince
 import net.postchain.chain0.proposal.proposeClusterProviderOperation
-import net.postchain.chain0.proposal.proposeProviderIsSystemOperation
-import net.postchain.chain0.proposal.proposeProviderStateOperation
+import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
+import net.postchain.chain0.proposal_provider.proposeProviderStateOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationAtOperation

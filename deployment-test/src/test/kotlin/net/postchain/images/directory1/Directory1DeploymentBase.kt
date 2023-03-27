@@ -25,6 +25,7 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.*
+import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.client.config.FailOverConfig
