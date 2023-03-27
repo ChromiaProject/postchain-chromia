@@ -12,7 +12,7 @@ import net.postchain.chain0.model.ClusterResourceLimitType.default_container_max
 import net.postchain.chain0.model.ClusterResourceLimitType.default_container_ram
 import net.postchain.chain0.model.ClusterResourceLimitType.default_container_storage
 import net.postchain.chain0.model.ClusterResourceLimitType.max_containers
-import net.postchain.chain0.proposal.proposeClusterLimitsOperation
+import net.postchain.chain0.proposal_cluster.proposeClusterLimitsOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.cpuOptionHelp
