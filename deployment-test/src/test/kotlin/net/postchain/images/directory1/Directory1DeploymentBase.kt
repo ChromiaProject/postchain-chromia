@@ -261,20 +261,6 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
         assertChainSigners(systemAnchoringBrid, node1, node2)
-
-        // Asserting both anchoring chains build blocks
-        val clusterAnchoringHeight2 = node1.client(clusterAnchoringBrid).currentBlockHeight()
-        awaitUntilAsserted {
-            val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
-            assertTrue(current > clusterAnchoringHeight2)
-        }
-        val systemAnchoringHeight2 = node1.client(systemAnchoringBrid).currentBlockHeight()
-        awaitUntilAsserted {
-            val current = node1.client(systemAnchoringBrid).currentBlockHeight()
-            assertTrue(current > systemAnchoringHeight2)
-        }
-
-
     }
 
     @Test
@@ -282,6 +268,7 @@ abstract class Directory1DeploymentBase {
     fun `Add node3 as signer to c0`() {
         testLogger.info("Adding node3 to the cluster")
         testLogger.info("Registering provider3")
+
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
                 .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true, "")
@@ -301,12 +288,12 @@ abstract class Directory1DeploymentBase {
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
+        assertAnchoringChainsFunctional()
+
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
-
-        assertAnchoringChainsFunctional()
     }
 
     private fun assertAnchoringChainsFunctional() {
