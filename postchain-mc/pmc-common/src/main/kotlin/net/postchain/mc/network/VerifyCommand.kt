@@ -10,6 +10,7 @@ class VerifyCommand : CliktCommand(help = "Verify that all nodes are accessible"
     val client by clientOption()
 
     override fun run() {
+        client.requireApiVersion(2)
         val nodeVerifyer = NodeVerifyer(client.config)
         table {
             header("Node", "Network address ok", "Api accessible", "Management chain Height")
