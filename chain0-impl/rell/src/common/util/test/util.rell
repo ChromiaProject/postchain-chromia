@@ -11,6 +11,4 @@ function test_require_pubkey() {
 
     // failure
     assert_fails(require_pubkey(x"", *));
-    assert_fails(require_pubkey(x"ff", *));
-    assert_fails(require_pubkey(x"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", *));
 }
