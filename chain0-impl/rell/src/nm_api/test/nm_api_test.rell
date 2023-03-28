@@ -7,6 +7,7 @@ import ^^^.common.test.setup.*;
 import ^^^.common.test.util.*;
 import ^^^.direct_cluster.*;
 import ^^^.proposal.*;
+import ^^^.proposal_blockchain.*;
 import ^^^.proposal_container.*;
 import ^^^.proposal_provider.*;
 import ^^^.model.util.constants.*;

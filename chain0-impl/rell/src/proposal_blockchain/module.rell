@@ -3,3 +3,7 @@ module;
 import ^.proposal.*;
 import ^.model.*;
 import .util.*;
+
+@extend(require_container_available_for_removal) function(container) {
+    require(empty(pending_blockchain @* { container }), "Container %s has pending proposals and can't be deleted. Resolve proposals first".format(container.name));
+}

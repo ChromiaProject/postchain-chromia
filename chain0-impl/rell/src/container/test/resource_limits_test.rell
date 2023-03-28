@@ -2,6 +2,7 @@
 
 import ^^^.common.test.setup.*;
 import ^^^.proposal_container.*;
+import ^^^.proposal_blockchain.*;
 
 function test_container_resource_limits() {
     setup_module();

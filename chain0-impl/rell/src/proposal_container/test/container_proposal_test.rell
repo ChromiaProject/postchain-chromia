@@ -1,8 +1,10 @@
 @test module;
 
+import ^^.*;
 import ^^^.common.test.setup.*;
 import ^^^.common.test.util.*;
 import ^^^.model.util.constants.*;
+import ^^^.proposal_blockchain.*;
 import ^^^.proposal_cluster.*;
 import ^^^.proposal_provider.*;
 
