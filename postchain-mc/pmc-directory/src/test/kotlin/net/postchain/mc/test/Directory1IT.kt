@@ -3,7 +3,6 @@ package net.postchain.mc.test
 import assertk.assert
 import assertk.assertions.isEqualTo
 import mu.KLogging
-import net.postchain.chain0.cluster.cluster_op.createClusterOperation
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.getBlockchain
 import net.postchain.chain0.common.queries.getBlockchainSigners
@@ -19,7 +18,8 @@ import net.postchain.chain0.common.voting.getVoterSetGovernor
 import net.postchain.chain0.common.voting.getVoterSetMembers
 import net.postchain.chain0.common.voting.getVoterSets
 import net.postchain.chain0.common.voting.makeVoteOperation
-import net.postchain.chain0.container.container_op.createContainerFromOperation
+import net.postchain.chain0.direct_cluster.createClusterOperation
+import net.postchain.chain0.direct_container.createContainerFromOperation
 import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
