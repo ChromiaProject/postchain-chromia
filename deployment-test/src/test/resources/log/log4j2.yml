@@ -1,0 +1,37 @@
+Configuration:
+  name: Default
+  monitorInterval: 30 # sec.
+
+  Appenders:
+    Console:
+      name: ConsoleAppender
+      target: SYSTEM_OUT
+      PatternLayout:
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+
+  Loggers:
+
+    Root:
+      level: warn
+      AppenderRef:
+      - ref: ConsoleAppender
+
+    Logger:
+
+    - name: net.postchain
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+
+    - name: net.postchain.base.BaseBlockchainProcessManager
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+
+    - name: net.postchain.network.x.DefaultXCommunicationManager
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
