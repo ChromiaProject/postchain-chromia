@@ -18,24 +18,24 @@
 | replace_node               | node provider (owner)                   | actions    |                                                                                                  |
 | disable_node               | node provider: (SP, NP, SP > NP)        | actions    | SP can disable NP's node                                                                         |
 | remove_node                | node provider                           | actions    |                                                                                                  |
-| update_node                | node provider                           | actions    ||
+| update_node                | node provider                           | actions    |                                                                                                  |
 | promote_node_provider      | system provider                         | actions    | Only SP can promote CNP                                                                          |
-| add_node_to_cluster        | cluster provider                        | actions    ||
-| create_cluster             | node provider                           | actions    ||
+| add_node_to_cluster        | cluster provider                        | actions    |                                                                                                  |
+| create_cluster             | node provider                           | actions    |                                                                                                  |
 | add_blockchain_replica     | node provider                           | actions    | TODO: should be CNP but with a max limit                                                         |
-| remove_blockchain_replica  | node provider                           | actions    ||
-| make_vote                  | voter set member                        | no         ||
-| retract_vote               | voter set member                        | no         ||
-| propose_cluster_provider   | cluster governor                        | actions    ||
+| remove_blockchain_replica  | node provider                           | actions    |                                                                                                  |
+| make_vote                  | voter set member                        | no         |                                                                                                  |
+| retract_vote               | voter set member                        | no         |                                                                                                  |
+| propose_cluster_provider   | cluster governor                        | actions    |                                                                                                  |
 | propose_provider_state     | SP > [SP, NP, CNP], NP > CNP            | actions    | NP can enable/disable CNP without voting.                                                        |
 | propose_provider_is_system | any                                     | actions    | can also demote                                                                                  |
 | propose_container          | cluster governor                        | actions    |                                                                                                  |
-| propose_container_limits   | cluster governor                        | actions    ||
-| propose_remove_container   | cluster governor AND empty container    | actions    ||
-| propose_cluster_limits     | cluster governor                        | actions    ||
-| propose_remove_cluster     | cluster governor AND empty cluster      | actions    ||
-| propose_blockchain         | container deployer                      | actions    ||
-| propose_configuration      | container deployer                      | actions    ||
+| propose_container_limits   | cluster governor                        | actions    |                                                                                                  |
+| propose_remove_container   | cluster governor AND empty container    | actions    |                                                                                                  |
+| propose_cluster_limits     | cluster governor                        | actions    |                                                                                                  |
+| propose_remove_cluster     | cluster governor AND empty cluster      | actions    |                                                                                                  |
+| propose_blockchain         | container deployer                      | actions    |                                                                                                  |
+| propose_configuration      | container deployer                      | actions    |                                                                                                  |
 | propose_blockchain_action  | container deployer                      | actions    | Note: Provider can propose to stop other blockchains in the container                            |
 | propose_update_voter_set   | voter set governor                      | actions    |                                                                                                  |
 | anchor_block               | no                                      | no         | Old anchoring implementation. Attack vector? Hard to make but perhaps we need some verification? |
