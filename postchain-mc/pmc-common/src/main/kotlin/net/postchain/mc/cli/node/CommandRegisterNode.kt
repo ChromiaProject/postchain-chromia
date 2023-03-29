@@ -1,6 +1,7 @@
 package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
@@ -16,6 +17,7 @@ import net.postchain.mc.cli.hostOption
 import net.postchain.mc.cli.portOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
+import net.postchain.mc.network.NodeVerifyer
 
 class CommandRegisterNode : CliktCommand(
         name = "register",
@@ -39,6 +41,9 @@ class CommandRegisterNode : CliktCommand(
 
     private val capability by option(help = "Node capability").enum<NodeCapabilityType>().multiple()
     override fun run() {
+        val verifier = NodeVerifyer(client.config)
+        if (!verifier.verifyApi(apiUrl).first) throw CliktError("Api url is not accessible for host")
+        if (!verifier.verifyHost(host, port)) throw CliktError("Node is not accessible")
         client.transactionBuilder()
                 .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
                 .apply {
