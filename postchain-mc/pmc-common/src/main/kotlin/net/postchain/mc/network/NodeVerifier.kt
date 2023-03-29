@@ -6,7 +6,7 @@ import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.request.EndpointPool
 import java.net.InetSocketAddress
 
-class NodeVerifyer(private val configTemplate: PostchainClientConfig) {
+class NodeVerifier(private val configTemplate: PostchainClientConfig) {
 
     fun verifyHost(node: NodeInfo): Boolean {
         return verifyHost(node.host, node.port.toInt())
