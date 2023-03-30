@@ -11,9 +11,9 @@ import net.postchain.d1.rell.icmf.icmfGetMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 
 class IntraClusterTopicPipe(
-    private val queryProvider: ChromiaQueryProvider,
-    override val route: TopicRoute,
-    override val id: BlockchainRid
+        private val queryProvider: ChromiaQueryProvider,
+        override val route: TopicRoute,
+        override val id: BlockchainRid
 ) : IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid> {
     companion object : KLogging()
 
@@ -47,15 +47,17 @@ class IntraClusterTopicPipe(
 
             val decodedHeader = BlockHeaderData.fromBinary(block.header.data)
             val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-            if (icmfHeaderData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${block.rid.toHex()} for blockchain-rid: ${blockchainRid.toHex()} at height: $height")
+            val icmfLocalHeaderData = decodedHeader.getExtra()[ICMF_LOCAL_BLOCK_HEADER_EXTRA]
+            if (icmfHeaderData == null && icmfLocalHeaderData == null) {
+                logger.warn("$ICMF_BLOCK_HEADER_EXTRA and $ICMF_LOCAL_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${block.rid.toHex()} for blockchain-rid: ${blockchainRid.toHex()} at height: $height")
                 return null
             }
 
-            val topicData = icmfHeaderData[route.topic]?.let { TopicHeaderData.fromGtv(it) }
-            if (topicData == null) {
+            val topicData = icmfHeaderData?.let { icmfHeaderData[route.topic]?.let { TopicHeaderData.fromGtv(it) } }
+            val localTopicData = icmfLocalHeaderData?.let { icmfLocalHeaderData[route.topic]?.let { TopicHeaderData.fromGtv(it) } }
+            if (topicData == null && localTopicData == null) {
                 logger.warn(
-                        "$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${block.rid.toHex()} for blockchain-rid: ${
+                        "$ICMF_BLOCK_HEADER_EXTRA and $ICMF_LOCAL_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${block.rid.toHex()} for blockchain-rid: ${
                             blockchainRid.toHex()
                         } at height: $height"
                 )
@@ -70,7 +72,8 @@ class IntraClusterTopicPipe(
                             blockRid = block.rid.data,
                             rawHeader = block.header.data,
                             rawWitness = block.witness.data,
-                            prevMessageBlockHeight = topicData.previousBlockHeight,
+                            prevMessageBlockHeight = topicData?.previousBlockHeight
+                                    ?: localTopicData?.previousBlockHeight ?: -1L,
                             messages = messages
                     )
             )
