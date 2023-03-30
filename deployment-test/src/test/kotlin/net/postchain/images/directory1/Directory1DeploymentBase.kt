@@ -16,8 +16,7 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.registerNodeOperation
 import net.postchain.chain0.common.registerProviderOperation
-import net.postchain.chain0.common.voting.makeVoteOperation
-import net.postchain.chain0.container.container_op.createContainerOperation
+import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
@@ -25,10 +24,11 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.*
-import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
+import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
+import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl

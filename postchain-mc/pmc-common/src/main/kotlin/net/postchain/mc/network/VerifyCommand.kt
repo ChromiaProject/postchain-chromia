@@ -11,14 +11,14 @@ class VerifyCommand : CliktCommand(help = "Verify that all nodes are accessible"
 
     override fun run() {
         client.requireApiVersion(2)
-        val nodeVerifyer = NodeVerifyer(client.config)
+        val nodeVerifier = NodeVerifier(client.config)
         table {
             header("Node", "Network address ok", "Api accessible", "Management chain Height")
             client.getAllNodes(false).forEach { node ->
-                val (apiAccessible, height) = nodeVerifyer.verifyApi(node.info)
+                val (apiAccessible, height) = nodeVerifier.verifyApi(node.info)
                 row(
                         node.info.pubkey.toHex(),
-                        nodeVerifyer.verifyHost(node.info).toString(),
+                        nodeVerifier.verifyHost(node.info).toString(),
                         apiAccessible.toString(),
                         height?.toString() ?: ""
                 )

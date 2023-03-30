@@ -9,9 +9,9 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.long
 import de.m3y.kformat.Table
 import de.m3y.kformat.table
-import net.postchain.chain0.common.voting.getProviderVotes
 import net.postchain.chain0.proposal.getProposalsSince
 import net.postchain.chain0.proposal.getRelevantProposals
+import net.postchain.chain0.proposal.voting.getProviderVotes
 import net.postchain.common.types.RowId
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nopClientOption
