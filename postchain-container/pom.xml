@@ -25,6 +25,10 @@
             <artifactId>postchain-base</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-server</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.mandas</groupId>
             <artifactId>docker-client</artifactId>
         </dependency>
