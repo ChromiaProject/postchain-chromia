@@ -1,7 +1,7 @@
 package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.chain0.common.enableNodeOperation
+import net.postchain.chain0.common.operations.enableNodeOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.requiredPubkeyOption

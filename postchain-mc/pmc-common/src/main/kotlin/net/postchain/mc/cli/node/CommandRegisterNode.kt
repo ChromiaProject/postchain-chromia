@@ -8,8 +8,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.enum
-import net.postchain.chain0.common.registerNodeOperation
-import net.postchain.chain0.common.updateNodeCapabilityOperation
+import net.postchain.chain0.common.operations.registerNodeOperation
+import net.postchain.chain0.common.operations.updateNodeCapabilityOperation
 import net.postchain.chain0.model.NodeCapabilityType
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
