@@ -85,7 +85,7 @@ class Directory1IT : ManagedModeTest() {
                                     </array>
                                 </arg>
                             </args>
-                        <args module="config">
+                        <args module="common">
                             <arg key="enable_pcu"><int>1</int></arg>
                         </args>
                         </app>
