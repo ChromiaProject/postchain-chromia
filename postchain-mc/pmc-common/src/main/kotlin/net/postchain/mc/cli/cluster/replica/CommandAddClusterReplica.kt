@@ -3,7 +3,7 @@ package net.postchain.mc.cli.cluster.replica
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.validate
-import net.postchain.chain0.cluster.addReplicaNodeToClusterOperation
+import net.postchain.chain0.common.operations.addReplicaNodeToClusterOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption
