@@ -24,11 +24,11 @@ query icmf_get_messages_at_height(topic: text, height: integer): list<gtv> {
 }
 
 function send_message(topic: text, body: gtv) {
-    send_message_impl(topic, gtv, "icmf_message")
+    send_message_impl(topic, body, "icmf_message");
 }
 
 function send_local_message(topic: text, body: gtv) {
-    send_message_impl(topic, gtv, "icmf_local_message")
+    send_message_impl(topic, body, "icmf_local_message");
 }
 
 function send_message_impl(topic: text, body: gtv, eventType: text) {
