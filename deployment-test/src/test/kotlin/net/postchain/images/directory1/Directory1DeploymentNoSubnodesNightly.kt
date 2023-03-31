@@ -15,13 +15,10 @@ class Directory1DeploymentNoSubnodesNightly : Directory1DeploymentBase() {
                     KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
                     "config-no-subnodes")
                     .withEnv("POSTCHAIN_PCU", true.toString())
-/*
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
                     "config-no-subnodes")
                     .withEnv("POSTCHAIN_PCU", true.toString())
-
- */
 
             removeSubnodeContainers()
             startNodesAndChain0()

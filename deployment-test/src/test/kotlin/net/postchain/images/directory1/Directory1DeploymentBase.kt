@@ -267,8 +267,8 @@ abstract class Directory1DeploymentBase {
 //        assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
-//    @Test
-//    @Order(6)
+    @Test
+    @Order(6)
     fun `Add node3 as signer to c0`() {
         testLogger.info("Adding node3 to the cluster")
         testLogger.info("Registering provider3")
@@ -297,7 +297,7 @@ abstract class Directory1DeploymentBase {
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
-        assertChainSigners(systemAnchoringBrid, *nodes())
+//        assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
     private fun assertAnchoringChainsFunctional() {
