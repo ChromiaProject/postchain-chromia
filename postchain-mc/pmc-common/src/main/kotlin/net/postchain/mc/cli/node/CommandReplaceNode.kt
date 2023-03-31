@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.replaceNodeOperation
+import net.postchain.chain0.common.operations.replaceNodeOperation
 import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey

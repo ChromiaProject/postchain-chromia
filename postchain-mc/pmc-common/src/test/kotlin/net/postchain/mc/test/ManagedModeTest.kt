@@ -11,7 +11,7 @@ import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.chain0.common.queries.listClustersOfNode
-import net.postchain.chain0.common.registerNodeOperation
+import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetPendingBlockchainConfiguration
