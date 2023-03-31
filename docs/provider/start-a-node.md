@@ -1,12 +1,14 @@
 # Start a node
 
-Before you start a node, postgres must be installed. See official [postgres](https://www.postgresql.org/download/) documentation or start a postgres instance using docker:
+Before you start a node, postgres must be installed. See official [postgres](https://www.postgresql.org/download/) 
+documentation or start a postgres instance using docker:
 
 ```shell
 docker run --name postgres -e POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8" -e POSTGRES_PASSWORD=<postgres-user> -e POSTGRES_USER=<postgres-pw> -p 5432:5432 -d postgres
 ```
 
-A node running Chromia can be started as a docker container or as a native process. A node configuration file is needed. See this sample file:
+A node running Chromia can be started as a docker container or as a native process. A node configuration file is 
+needed. See this sample file:
 
 ```properties
 # Node configuration
@@ -61,9 +63,10 @@ volume. The subnode mount path must have write access and the others can be read
 the api port and the subnode port must be exposed. The container will run as the current user/group, and subnode containers 
 will be run as the same user/group. It needs the `docker` group to be able to talk to the docker daemon.
 
-You should also ensure that your machine does not run out of memory. Consider how much dedicated memory you have left after subtracting the memory that is dedicated to dapp-containers.
-Also consider the memory consumption of postgres (and any other applications you may have running on your machine).
-You can limit memory usage by setting JVM flags via `JAVA_TOOL_OPTIONS` environment variables.
+You should also ensure that your machine does not run out of memory. Consider how much dedicated memory you have 
+left after subtracting the memory that is dedicated to dapp-containers. Also consider the memory consumption of 
+postgres (and any other applications you may have running on your machine). You can limit memory usage by setting 
+JVM flags via `JAVA_TOOL_OPTIONS` environment variables.
 
 Example:
 ```shell
@@ -89,8 +92,8 @@ docker run -d --name postchain \
 
 ## Native background process
 
-The node can be started as a background process using for example `screen`. You can add JVM flags by setting environment variable `JAVA_TOOL_OPTIONS`.
-Ensure that the process is restarted on crash.
+The node can be started as a background process using for example `screen`. You can add JVM flags by setting 
+environment variable `JAVA_TOOL_OPTIONS`. Ensure that the process is restarted on crash.
 
 ```shell
 $ screen -S n0

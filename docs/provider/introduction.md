@@ -1,6 +1,7 @@
 # Introduction
 
-Welcome to the provider portal. On this site you will find everything you need as a provider, from starting a node to how to interact with the network.
+Welcome to the provider portal. On this site you will find everything you need as a provider, from starting a node 
+to how to interact with the network.
 
 ## Provider Types
 
@@ -33,11 +34,18 @@ There are three roles on the network
 
 ## Node Management API
 
-When postchain is run in managed mode (as it always does with a management chain), it requires that the module in chain 0, bc0, fulfills a certain API. This API is responsible for providing postchain with information about which blockchains to run, blockchain configurations and node configurations.
+When postchain is run in managed mode (as it always does with a management chain), it requires that the module in 
+chain 0, bc0, fulfills a certain API. This API is responsible for providing postchain with information about which 
+blockchains to run, blockchain configurations and node configurations.
 
-Any postchain module that fulfills this API may serve as bc0. It is totally up to the module to decide how to answer these queries. The module is typically written in Rell where blockchains and nodes are managed through consensus voting, for example >50% of bc0 signers must agree on a new blockchain before it gets visible through nm_api. Another valid approach might be to have a designated admin that adds blockchains and configurations, but that comes with some centralization, of course.
+Any postchain module that fulfills this API may serve as bc0. It is totally up to the module to decide how to answer 
+these queries. The module is typically written in Rell where blockchains and nodes are managed through consensus 
+voting, for example >50% of bc0 signers must agree on a new blockchain before it gets visible through nm_api. 
+Another valid approach might be to have a designated admin that adds blockchains and configurations, but that comes 
+with some centralization, of course.
 
-This document tries to refrain from explaining individual chain0 modules. We focus instead on the general process of setting up a cluster in managed mode, which doesn't depend on which chain0 module is used.
+This document tries to refrain from explaining individual chain0 modules. We focus instead on the general process of 
+setting up a cluster in managed mode, which doesn't depend on which chain0 module is used.
 
 Postchain in managed mode expects that bc0 provides the following queries:
 
@@ -49,4 +57,3 @@ Postchain in managed mode expects that bc0 provides the following queries:
 | nm_get_blockchain_configuration    | Return the effective configuration, as a byte array, of a blockchain with RID brid at the provided height.                                                                                                              |
 | nm_find_next_configuration_height  | Return the height at which the next configuration change takes place. If no future configuration changes are planned, or if brid doesn't exist, null is returned. The returned integer is strictly greater than height. |
 | nm_get_blockchain_replica_node_map | Returns all replicas for each blockchain, thus a map from brid to replica node's pubkey.                                                                                                                                |
-
