@@ -7,7 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.rell.icmf.icmfGetMessagesAfterHeight
+import net.postchain.d1.rell.messaging.icmf.icmfGetMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 
 class IntraClusterTopicPipe(
