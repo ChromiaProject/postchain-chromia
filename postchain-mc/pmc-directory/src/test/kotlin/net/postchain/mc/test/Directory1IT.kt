@@ -18,7 +18,6 @@ import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerFromOperation
-import net.postchain.chain0.model.BlockchainAction
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
@@ -29,6 +28,7 @@ import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalsSince
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal.voting.makeVoteOperation
+import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationAtOperation
