@@ -11,7 +11,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.chain0.proposal_provider.proposeProviderStateOperation

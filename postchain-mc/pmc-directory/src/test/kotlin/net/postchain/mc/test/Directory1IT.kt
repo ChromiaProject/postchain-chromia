@@ -14,8 +14,8 @@ import net.postchain.chain0.common.queries.getProviderClusters
 import net.postchain.chain0.common.queries.getVoterSetGovernor
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.common.registerProviderOperation
-import net.postchain.chain0.common.updateNodeOperation
+import net.postchain.chain0.common.operations.registerProviderOperation
+import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerFromOperation
 import net.postchain.chain0.model.BlockchainAction
@@ -85,7 +85,7 @@ class Directory1IT : ManagedModeTest() {
                                     </array>
                                 </arg>
                             </args>
-                        <args module="config">
+                        <args module="common">
                             <arg key="enable_pcu"><int>1</int></arg>
                         </args>
                         </app>

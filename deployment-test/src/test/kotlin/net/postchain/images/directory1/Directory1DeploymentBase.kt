@@ -14,8 +14,8 @@ import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.*
-import net.postchain.chain0.common.registerNodeOperation
-import net.postchain.chain0.common.registerProviderOperation
+import net.postchain.chain0.common.operations.registerNodeOperation
+import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
@@ -23,7 +23,7 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.proposal.*
+import net.postchain.chain0.proposal.getProposalsSince
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation

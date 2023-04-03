@@ -14,8 +14,8 @@ See [Start a node](start-a-node.md) for instructions on how to start the first n
 
 ## Configure the Management Console
 
-If the management console has never been used, you can use `pmc setup --global` to create a new keypair and configuration file.
-Otherwise use `pmc config --global` to edit the global configuration.
+If the management console has never been used, you can use `pmc setup --global` to create a new keypair and 
+configuration file. Otherwise, use `pmc config --global` to edit the global configuration.
 Your configuration must contain at least a keypair, api.url and brid properties.
 Example:
 ```properties
@@ -53,8 +53,9 @@ pmc provider promote --pubkey <pubkey> --system
 
 ## Add node N+1
 
-The newly added provider can now start their node by configuring its genesis node to be node 1. See [Start a Node](start-a-node.md) for more information.
-They can then add the node to the system cluster by making the following commands towards node 1:
+The newly added provider can now start their node by configuring its genesis node to be node 1. See [Start a Node]
+(start-a-node.md) for more information. They can then add the node to the system cluster by making the following 
+commands towards node 1:
 ```shell
 pmc node add --pubkey <node-pubkey> --host <ip> --port <node-messaging-port> --api-url <api-url> --cluster system
 ```
