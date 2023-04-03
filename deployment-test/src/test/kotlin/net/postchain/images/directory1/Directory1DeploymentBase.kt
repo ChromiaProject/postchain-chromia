@@ -329,7 +329,7 @@ abstract class Directory1DeploymentBase {
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpIcmfSources.resolve("icmf"))
+        File("../chain0-impl/rell/src/messaging/icmf.rell").copyTo(tmpIcmfSources.resolve("icmf.rell"))
         deployDapp("test-dapp", systemContainer, tmpIcmfSources)
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
         deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
