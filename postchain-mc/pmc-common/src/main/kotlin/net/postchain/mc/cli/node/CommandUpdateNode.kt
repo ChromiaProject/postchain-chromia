@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.enum
-import net.postchain.chain0.cluster.addNodeToClusterOperation
+import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.updateNodeCapabilityOperation
 import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.model.NodeCapabilityType
