@@ -30,7 +30,14 @@ class IntraClusterAnchoredTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
         val anchorQuery = queryProvider.getClusterAnchoringQuery()
         if (anchorQuery == null) {
             logger.warn("Anchor chain does not exist!")

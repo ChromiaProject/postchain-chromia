@@ -21,7 +21,14 @@ class IntraClusterTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
         val query = queryProvider.getQuery(blockchainRid)
         if (query == null) {
             logger.warn("Unable to query blockchain-rid: ${blockchainRid.toHex()}")
