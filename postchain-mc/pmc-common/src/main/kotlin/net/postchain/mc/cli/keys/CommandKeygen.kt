@@ -68,7 +68,7 @@ private fun generateSecp256k1KeyPairWithMnemonic(wordList: String): Pair<KeyPair
 }
 
 private fun saveSecp256k1KeyPair(keyPair: KeyPair, file: File) {
-    if (!file.parentFile.exists()) file.parentFile.mkdirs()
+    if (file.parentFile != null && !file.parentFile.exists()) file.parentFile.mkdirs()
     val properties = Properties()
     properties["privkey"] = keyPair.privKey.data.toHex()
     properties["pubkey"] = keyPair.pubKey.data.toHex()
