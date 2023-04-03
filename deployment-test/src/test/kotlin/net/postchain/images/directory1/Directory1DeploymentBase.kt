@@ -296,12 +296,12 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun assertAnchoringChainsFunctional() {
-        val clusterAnchoringHeight = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        val clusterAnchoringHeight = awaitQueryResult { node1.client(clusterAnchoringBrid).currentBlockHeight() }!!
         awaitUntilAsserted {
             val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
             assertTrue(current > clusterAnchoringHeight)
         }
-        val systemAnchoringHeight = node1.client(systemAnchoringBrid).currentBlockHeight()
+        val systemAnchoringHeight = awaitQueryResult { node1.client(systemAnchoringBrid).currentBlockHeight() }!!
         awaitUntilAsserted {
             val current = node1.client(systemAnchoringBrid).currentBlockHeight()
             assertTrue(current > systemAnchoringHeight)
