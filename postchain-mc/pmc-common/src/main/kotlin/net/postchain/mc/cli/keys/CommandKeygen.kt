@@ -2,6 +2,7 @@ package net.postchain.mc.cli.keys
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.common.toHex
@@ -29,6 +30,8 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
     private val file by option("-s", "--save", help = "File to save the generated keypair in")
             .file(canBeDir = false)
 
+    private val nodeFormat by option("-n", "--node", help = "Save the generated keypair in format to be included in node properties file").flag()
+
     /**
      * Cryptographic key generator. Will generate a pair of public and private keys and print to stdout.
      */
@@ -36,7 +39,7 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
         val (keyPair, mnemonic) = generateSecp256k1KeyPairWithMnemonic(wordList)
 
         file?.let {
-            saveSecp256k1KeyPair(keyPair, it)
+            saveSecp256k1KeyPair(keyPair, it, nodeFormat)
         }
         println(
                 """
@@ -67,11 +70,12 @@ private fun generateSecp256k1KeyPairWithMnemonic(wordList: String): Pair<KeyPair
     return keyPair to mnemonic
 }
 
-private fun saveSecp256k1KeyPair(keyPair: KeyPair, file: File) {
+private fun saveSecp256k1KeyPair(keyPair: KeyPair, file: File, nodeFormat: Boolean) {
     if (file.parentFile != null && !file.parentFile.exists()) file.parentFile.mkdirs()
+    val prefix = if (nodeFormat) "messaging." else ""
     val properties = Properties()
-    properties["privkey"] = keyPair.privKey.data.toHex()
-    properties["pubkey"] = keyPair.pubKey.data.toHex()
+    properties["${prefix}privkey"] = keyPair.privKey.data.toHex()
+    properties["${prefix}pubkey"] = keyPair.pubKey.data.toHex()
 
     FileOutputStream(file).use { fs ->
         properties.store(fs, "Keypair generated using secp256k1")
