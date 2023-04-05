@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -22,7 +23,6 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
-import net.postchain.concurrent.util.get
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
@@ -37,7 +37,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
-        val rellCode = File(RELL_SOURCE_PATH, "icmf/module.rell").readText() +
+        val rellCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());
@@ -79,7 +79,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
 
-        val rellCode = File(RELL_SOURCE_PATH, "icmf/module.rell").readText() +
+        val rellCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());

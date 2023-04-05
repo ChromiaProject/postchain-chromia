@@ -128,7 +128,6 @@
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
                                 <mainModule>anchoring_chain_cluster</mainModule>
-                                <mainModule>icmf</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

@@ -67,6 +67,12 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="anchoring_chain_cluster/module.rell">
                                 <param key="anchoring_chain_cluster" type="string"/>
                             </entry>
+                            <entry key="messaging/icmf.rell">
+                                <param key="messaging.icmf" type="string"/>
+                            </entry>
+                            <entry key="messaging/configuration_update_message.rell">
+                                <param key="messaging.configuration_update_message" type="string"/>
+                            </entry>
                         </dict>
                     </entry>
                     <entry key="version">

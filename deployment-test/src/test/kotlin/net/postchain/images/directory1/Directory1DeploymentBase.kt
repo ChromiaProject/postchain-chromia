@@ -301,13 +301,13 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun assertAnchoringChainsFunctional() {
-        val clusterAnchoringHeight = node1.client(clusterAnchoringBrid).currentBlockHeight()
+        val clusterAnchoringHeight = awaitQueryResult { node1.client(clusterAnchoringBrid).currentBlockHeight() }!!
         awaitUntilAsserted {
             val current = node1.client(clusterAnchoringBrid).currentBlockHeight()
             assertTrue(current > clusterAnchoringHeight)
         }
         /*
-        val systemAnchoringHeight = node1.client(systemAnchoringBrid).currentBlockHeight()
+        val systemAnchoringHeight = awaitQueryResult { node1.client(systemAnchoringBrid).currentBlockHeight() }!!
         awaitUntilAsserted {
             val current = node1.client(systemAnchoringBrid).currentBlockHeight()
             assertTrue(current > systemAnchoringHeight)
@@ -336,7 +336,7 @@ abstract class Directory1DeploymentBase {
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        File("../chain0-impl/rell/src/icmf").copyRecursively(tmpIcmfSources.resolve("icmf"))
+        File("../chain0-impl/rell/src/messaging/icmf.rell").copyTo(tmpIcmfSources.resolve("icmf.rell"))
         deployDapp("test-dapp", systemContainer, tmpIcmfSources)
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
         deployDapp("test-dapp2", foobarContainer, tmpIccfSources)

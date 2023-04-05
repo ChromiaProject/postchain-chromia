@@ -7,7 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.rell.icmf.icmfGetMessagesAfterHeight
+import net.postchain.d1.rell.messaging.icmf.icmfGetMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 
 class IntraClusterTopicPipe(
@@ -21,7 +21,14 @@ class IntraClusterTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
         val query = queryProvider.getQuery(blockchainRid)
         if (query == null) {
             logger.warn("Unable to query blockchain-rid: ${blockchainRid.toHex()}")

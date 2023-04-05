@@ -4,7 +4,9 @@ import net.postchain.chain0.model.NodeInfo
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.request.EndpointPool
+import java.io.IOException
 import java.net.InetSocketAddress
+import java.net.Socket
 
 class NodeVerifier(private val configTemplate: PostchainClientConfig) {
 
@@ -14,9 +16,11 @@ class NodeVerifier(private val configTemplate: PostchainClientConfig) {
 
     fun verifyHost(host: String, port: Int): Boolean {
         return try {
-            val socketAddress = InetSocketAddress(host, port)
-            socketAddress.address.isReachable(1000)
-        } catch (e: Exception) {
+            val socket = Socket()
+            socket.connect(InetSocketAddress(host, port), 5000)
+            socket.close()
+            true
+        } catch (e: IOException) {
             println(e)
             false
         }

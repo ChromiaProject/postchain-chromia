@@ -12,7 +12,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
-import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
+import net.postchain.d1.rell.messaging.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -30,7 +30,14 @@ class IntraClusterAnchoredTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
         val anchorQuery = queryProvider.getClusterAnchoringQuery()
         if (anchorQuery == null) {
             logger.warn("Anchor chain does not exist!")
