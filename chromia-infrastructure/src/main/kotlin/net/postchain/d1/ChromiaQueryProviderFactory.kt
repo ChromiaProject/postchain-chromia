@@ -17,7 +17,6 @@ object ChromiaQueryProviderFactory {
         return if (connectionManager is SubConnectionManager) {
             MasterSubQueryProvider(
                     configuration.blockchainRid,
-                    configuration.chainID,
                     connectionManager,
                     clusterManagement,
                     blockQueriesProvider
