@@ -160,7 +160,7 @@ class IcmfSenderIT : ManagedModeTest() {
     class IcmfTestTransaction(id: Int, private val op: Transactor, good: Boolean = true, correct: Boolean = true) :
             TestTransaction(id, good, correct) {
         override fun apply(ctx: TxEContext): Boolean {
-            op.isCorrect()
+            op.checkCorrectness()
             op.apply(ctx)
             return true
         }

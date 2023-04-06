@@ -52,9 +52,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
 }
 
 class IcmfMessageOp(@Suppress("UNUSED_PARAMETER") u: Unit, private val opdata: ExtOpData) : GTXOperation(opdata) {
-    override fun isCorrect(): Boolean {
-        return true
-    }
+    override fun checkCorrectness() { }
 
     override fun apply(ctx: TxEContext): Boolean {
         DatabaseAccess.of(ctx).apply {

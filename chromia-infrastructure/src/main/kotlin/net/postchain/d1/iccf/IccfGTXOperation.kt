@@ -38,9 +38,9 @@ class IccfGTXOperation(
 
     override fun apply(ctx: TxEContext) = true
 
-    override fun isCorrect(): Boolean {
+    override fun checkCorrectness() {
         val args = data.args
-        return when (args.size) {
+        when (args.size) {
             3 -> verifyIntraClusterIccf(args)
             6 -> verifyIntraNetworkIccf(args)
             else -> {
@@ -49,15 +49,14 @@ class IccfGTXOperation(
         }
     }
 
-    private fun verifyIntraClusterIccf(args: Array<out Gtv>): Boolean {
+    private fun verifyIntraClusterIccf(args: Array<out Gtv>) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
         verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid)
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
         verifySourceBlockAnchoredInClusterAnchoringChain(sourceBlockchainRid, sourceBlockRid)
-        return true
     }
 
-    private fun verifyIntraNetworkIccf(args: Array<out Gtv>): Boolean {
+    private fun verifyIntraNetworkIccf(args: Array<out Gtv>) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
 
@@ -76,8 +75,6 @@ class IccfGTXOperation(
 
         verifyWitnessesAndMerkleProofTree(clusterAnchoringTxConfirmationProof, clusterAnchoringTx.gtxBody.blockchainRid, clusterAnchoringBlockRid, clusterAnchoringTxHash)
         verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringTx, clusterAnchoringBlockRid)
-
-        return true
     }
 
     private fun verifyWitnessesAndMerkleProofTree(confirmationProof: ConfirmationProof, blockchainRid: BlockchainRid, blockRid: Hash, txHash: ByteArray) {

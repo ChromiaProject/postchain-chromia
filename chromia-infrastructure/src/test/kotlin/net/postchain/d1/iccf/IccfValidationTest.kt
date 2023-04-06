@@ -1,7 +1,5 @@
 package net.postchain.d1.iccf
 
-import assertk.assert
-import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.gtv.BlockHeaderData
@@ -28,6 +26,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
@@ -124,7 +123,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
         verify(chromiaQueryProvider).getClusterAnchoringQuery()
     }
 
@@ -146,7 +147,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
         verify(chromiaQueryProvider, never()).getClusterAnchoringQuery()
     }
 
@@ -169,7 +172,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -199,7 +202,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -238,7 +241,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -277,7 +280,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -307,7 +310,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -339,7 +342,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
     }
 
     @Test
@@ -376,7 +381,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -414,7 +419,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -447,7 +452,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -464,7 +469,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -481,7 +486,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 }
