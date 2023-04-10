@@ -16,28 +16,28 @@ class IcmfReceiverGTXModule : SimpleGTXModule<Unit>(
                 AnchorHeaderOp.OP_NAME to { _, _ ->
                     object : Transactor {
                         override fun isSpecial() = true
-                        override fun isCorrect() = true
+                        override fun checkCorrectness() {}
                         override fun apply(ctx: TxEContext) = true
                     }
                 },
                 AnchoredHeaderOp.OP_NAME to { _, _ ->
                     object : Transactor {
                         override fun isSpecial() = true
-                        override fun isCorrect() = true
+                        override fun checkCorrectness() {}
                         override fun apply(ctx: TxEContext) = true
                     }
                 },
                 NonAnchoredHeaderOp.OP_NAME to { _, _ ->
                     object : Transactor {
                         override fun isSpecial() = true
-                        override fun isCorrect() = true
+                        override fun checkCorrectness() {}
                         override fun apply(ctx: TxEContext) = true
                     }
                 },
                 MessageHashOp.OP_NAME to { _, _ ->
                     object : Transactor {
                         override fun isSpecial() = true
-                        override fun isCorrect() = true
+                        override fun checkCorrectness() {}
                         override fun apply(ctx: TxEContext) = true
                     }
                 }

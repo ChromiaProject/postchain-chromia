@@ -10,24 +10,23 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class MasterSubQueryProvider(
         private val myBlockchainRid: BlockchainRid,
-        private val myChainId: Long,
         private val subConnectionManager: SubConnectionManager,
         private val clusterManagement: ClusterManagement,
         private val blockQueriesProvider: BlockQueriesProvider
 ) : ChromiaQueryProvider {
 
-    override fun getChain0Query(): PostchainQuery = Chain0MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager)
+    override fun getChain0Query(): PostchainQuery = Chain0MasterClient(subConnectionManager.masterSubQueryManager)
 
     override fun getSystemAnchoringQuery(): PostchainBlockClient? {
         return clusterManagement.getSystemAnchoringChain()?.let {
-            MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager, it)
+            MasterClient(subConnectionManager.masterSubQueryManager, it)
         }
     }
 
     override fun getClusterAnchoringQuery(): PostchainBlockClient {
         val cluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
         val info = clusterManagement.getClusterInfo(cluster)
-        return MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager, info.anchoringChain)
+        return MasterClient(subConnectionManager.masterSubQueryManager, info.anchoringChain)
     }
 
     override fun getQuery(targetBlockchainRid: BlockchainRid): PostchainBlockClient? {
@@ -39,7 +38,7 @@ class MasterSubQueryProvider(
                 BlockQueriesAdapter(it)
             }
         } else {
-            MasterClient(myBlockchainRid, myChainId, subConnectionManager.masterSubQueryManager, targetBlockchainRid)
+            MasterClient(subConnectionManager.masterSubQueryManager, targetBlockchainRid)
         }
     }
 }
