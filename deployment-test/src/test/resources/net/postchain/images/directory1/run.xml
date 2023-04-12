@@ -21,6 +21,7 @@
                 <gtv path="icmf/receiver/anchoring/topics">
                     <array>
                         <string>G_configuration_updated</string>
+                        <string>G_configuration_failed</string>
                     </array>
                 </gtv>
                 <app module="management_chain_directory1">
