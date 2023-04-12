@@ -16,7 +16,7 @@ import net.postchain.gtv.merkleHash
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(private val isSystemChain: Boolean) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
@@ -30,8 +30,15 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         val message = SentIcmfMessage.fromGtv(data)
-        logger.info("ICMF message sent in topic ${message.topic}")
-        queuedEvents.add(message)
+
+        if (!message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
+            logger.info("ICMF message with invalid topic ${message.topic} will not be sent")
+        } else if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
+            logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
+        } else {
+            logger.info("ICMF message sent in topic ${message.topic}")
+            queuedEvents.add(message)
+        }
     }
 
     /**
@@ -41,15 +48,19 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
      */
     override fun finalize(): Map<String, Gtv> {
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-        val hashesByTopic = queuedEvents
-                .groupBy { it.topic }
-        val hashByTopic = hashesByTopic
-                .mapValues {
-                    TopicHeaderData(gtv(
-                            it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
-                            it.value.first().previousMessageBlockHeight
-                    ).toGtv()
-                }
-        return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
+        return if (queuedEvents.isNotEmpty()) {
+            val hashesByTopic = queuedEvents
+                    .groupBy { it.topic }
+            val hashByTopic = hashesByTopic
+                    .mapValues {
+                        TopicHeaderData(gtv(
+                                it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                it.value.first().previousMessageBlockHeight
+                        ).toGtv()
+                    }
+            mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
+        } else {
+            mapOf()
+        }
     }
 }

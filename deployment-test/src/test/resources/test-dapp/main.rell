@@ -6,7 +6,7 @@ entity city { key name; }
 
 operation add_city (name) {
     create city (name);
-    send_message("city", name.to_gtv());
+    send_message("L_city", name.to_gtv());
 }
 
 query get_cities () { return city @* {} ( .name ); }
