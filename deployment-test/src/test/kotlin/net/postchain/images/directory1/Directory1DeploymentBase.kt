@@ -13,9 +13,9 @@ import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
-import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
+import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
@@ -332,7 +332,7 @@ abstract class Directory1DeploymentBase {
         File("../chain0-impl/rell/src/messaging/icmf.rell").copyTo(tmpIcmfSources.resolve("icmf.rell"))
         deployDapp("test-dapp", systemContainer, tmpIcmfSources)
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        deployDapp("test-dapp2", foobarContainer, tmpIccfSources)
+        deployDapp("test-dapp2", foobarContainer, tmpIccfSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
@@ -340,10 +340,10 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null) {
+    private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null, runFileOverrides: Map<String, String> = mapOf()) {
         testLogger.info("Deploy new dapp $dappName")
 
-        val rellConfig = compileDapp(dappName, additionalSources)
+        val rellConfig = compileDapp(dappName, additionalSources, runFileOverrides)
 
         var blockchainRid: BlockchainRid? = null
         rellConfig.config.chains.forEach { chain ->

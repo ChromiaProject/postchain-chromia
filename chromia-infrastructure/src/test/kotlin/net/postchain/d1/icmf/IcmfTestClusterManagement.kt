@@ -28,7 +28,7 @@ class IcmfTestClusterManagement : ClusterManagement {
     override fun getClusterNames() = listOf(senderCluster, receiverCluster)
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long) =
-        peers.map { it.pubkey }
+            peers.map { it.pubkey }
 
     override fun getClusterInfo(clusterName: String) = when (clusterName) {
         senderCluster -> D1ClusterInfo(clusterName, clusterAnchoringChainRid, peers)
@@ -41,18 +41,14 @@ class IcmfTestClusterManagement : ClusterManagement {
     }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
-        listOf(systemAnchoringChainRid, clusterAnchoringChainRid, senderOneChainRid, senderTwoChainRid)
+            listOf(systemAnchoringChainRid, clusterAnchoringChainRid, senderOneChainRid, senderTwoChainRid)
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String = when (blockchainRid) {
         systemAnchoringChainRid, clusterAnchoringChainRid, senderOneChainRid -> senderCluster
         else -> receiverCluster
     }
 
-    override fun getClusterAnchoringChains(): Collection<BlockchainRid> {
-        throw NotImplementedError("Not yet implemented")
-    }
+    override fun getClusterAnchoringChains(): Collection<BlockchainRid> = listOf(clusterAnchoringChainRid)
 
-    override fun getSystemAnchoringChain(): BlockchainRid {
-        return systemAnchoringChainRid
-    }
+    override fun getSystemAnchoringChain(): BlockchainRid = systemAnchoringChainRid
 }

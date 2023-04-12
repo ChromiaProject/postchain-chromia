@@ -91,7 +91,7 @@ class AnchoringIT : ManagedModeTest() {
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
         val blockHeaderData = BlockHeaderData.fromBinary(blockDataFull.header.rawData)
         val anchorHeaderExtra = blockHeaderData.getExtra()[ICMF_ANCHOR_HEADERS_EXTRA]!!
-        val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["my-topic"]!!)
+        val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["G_my-topic"]!!)
 
         assertEquals(-1L, topicHeaderData.previousBlockHeight)
 
@@ -127,7 +127,7 @@ class AnchoringIT : ManagedModeTest() {
                             "icmf_get_headers_with_messages_after_height",
                             gtv(
                                     mapOf(
-                                            "topic" to gtv("my-topic"),
+                                            "topic" to gtv("G_my-topic"),
                                             "from_anchor_height" to gtv(-1)
                                     )
                             ),
@@ -139,7 +139,7 @@ class AnchoringIT : ManagedModeTest() {
                 val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
                 assertContentEquals(blockchainRID.data, decodedHeader.getBlockchainRid())
                 assertEquals(index.toLong(), decodedHeader.getHeight())
-                assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["my-topic"]!!["hash"]!!.asByteArray())
+                assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["G_my-topic"]!!["hash"]!!.asByteArray())
 
                 val witness = BaseBlockWitness.fromBytes(header["witness"]!!.asByteArray())
                 val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
