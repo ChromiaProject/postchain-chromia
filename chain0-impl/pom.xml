@@ -21,7 +21,6 @@
 
     <properties>
         <rell.directory>${project.parent.basedir}/rell</rell.directory>
-        <rellCompileModules>management_chain_testnet,anchoring_chain_system,anchoring_chain_cluster,iccf</rellCompileModules>
     </properties>
 
     <build>
@@ -30,18 +29,12 @@
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <inherited>false</inherited>
-                <configuration>
-                    <source>${project.basedir}/rell/src</source>
-                </configuration>
                 <executions>
                     <execution>
                         <id>rell-compile</id>
                         <goals>
                             <goal>rell-compile</goal>
                         </goals>
-                        <configuration>
-                            <mainModule>${rellCompileModules}</mainModule>
-                        </configuration>
                     </execution>
                     <execution>
                         <id>rell-integration-test</id>
