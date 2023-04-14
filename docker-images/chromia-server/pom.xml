@@ -20,7 +20,7 @@
         <!-- Docker image dependencies -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
+            <artifactId>postchain-server-cli</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain.rell</groupId>
