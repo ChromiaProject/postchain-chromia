@@ -92,7 +92,7 @@
                                 </execution>
                                 <execution>
                                     <id>build-image</id>
-                                    <phase>package</phase>
+                                    <phase>deploy</phase>
                                     <goals>
                                         <goal>exec</goal>
                                     </goals>
@@ -104,8 +104,9 @@
                                             <argument>--platform</argument>
                                             <argument>${image.platforms}</argument>
                                             <argument>--tag</argument>
-                                            <argument>${gitlab.registry}/${image.name}:${project.version}
-                                            </argument>
+                                            <argument>${gitlab.registry}/${image.name}:${project.version}</argument>
+                                            <argument>--tag</argument>
+                                            <argument>${gitlab.registry}/${image.name}:${latest.tag}</argument>
                                             <argument>${project.basedir}/.</argument>
                                             <argument>--push</argument>
                                         </arguments>
