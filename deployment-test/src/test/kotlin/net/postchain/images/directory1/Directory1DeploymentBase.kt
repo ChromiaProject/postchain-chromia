@@ -11,6 +11,7 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
+import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
@@ -145,9 +146,9 @@ abstract class Directory1DeploymentBase {
             val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
 
             // compile system anchoring dapp
-//            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
-//            val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
-            val systemAnchoringGtvConfig = gtv(mapOf())
+            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
+            val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
+//            val systemAnchoringGtvConfig = gtv(mapOf())
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
@@ -165,8 +166,8 @@ abstract class Directory1DeploymentBase {
     private fun assertAnchoringChainProperties() {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
                 .filter { it.system }.map { BlockchainRid(it.rid) }
-//        assertEquals(3, systemChains.size)
-        assertEquals(2, systemChains.size)
+        assertEquals(3, systemChains.size)
+//        assertEquals(2, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
@@ -174,11 +175,9 @@ abstract class Directory1DeploymentBase {
         assert(systemChains.map { it }).contains(clusterAnchoringBrid)
         testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
-        /*
         systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
         assert(systemChains.map { it }).contains(systemAnchoringBrid)
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
-         */
     }
 
     //    @Test
@@ -263,11 +262,11 @@ abstract class Directory1DeploymentBase {
         // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
-//        assertChainSigners(systemAnchoringBrid, node1, node2)
+        assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
-    @Test
-    @Order(6)
+//    @Test
+//    @Order(6)
     fun `Add node3 as signer to c0`() {
         testLogger.info("Adding node3 to the cluster")
         testLogger.info("Registering provider3")
@@ -302,7 +301,7 @@ abstract class Directory1DeploymentBase {
     private fun assertAnchoringChainsFunctional() {
         assertChainFunctional(chain0Brid)
         assertChainFunctional(clusterAnchoringBrid)
-//        assertChainFunctional(systemAnchoringBrid)
+        assertChainFunctional(systemAnchoringBrid)
     }
 
     private fun assertChainFunctional(blockchainRid: BlockchainRid) {
