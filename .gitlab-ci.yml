@@ -27,19 +27,35 @@ image: maven:3.8.4-jdk-11
 stages:
   - build
   - nightly-tests
-  - deploy
+  - deploy-snapshot
+  - deploy-release
+  - deploy-patch
   - dependency-check
   - release
 
-deploy:
+deploy-snapshot:
   extends: .setup
-  stage: deploy
+  stage: deploy-snapshot
   only:
     - dev
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest-snapshot deploy
+
+deploy-release:
+  extends: .setup
+  stage: deploy-release
+  only:
     - master
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest deploy
+
+deploy-patch:
+  extends: .setup
+  stage: deploy-patch
+  only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest-patch deploy
 
 build:
   extends: .setup
@@ -89,11 +105,10 @@ container-scanning:
     - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
-      - IMAGE: [ chromaway/postchain-admin-client,
-                 chromaway/postchain-mc,
+      - IMAGE: [ chromaway/postchain-mc,
                  chromaway/chromia-subnode,
                  chromaway/chromia-server ]
-        VERSION: [ 3.8.0, 3.9.0-SNAPSHOT ]
+        VERSION: [ 3.9.0, 3.10.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"

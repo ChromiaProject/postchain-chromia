@@ -14,4 +14,4 @@ ENV LOG4J_CONFIGURATION_FILE=/opt/chromaway/postchain/log/log4j2.yml
 WORKDIR $postchain_dir
 ENTRYPOINT ["/usr/bin/java", "-XX:+CrashOnOutOfMemoryError" \
 , "-classpath", "/opt/chromaway/postchain/lib/*" \
-, "net.postchain.AppKt" ]
+, "net.postchain.server.AppKt" ]

@@ -98,7 +98,7 @@ pipeline {
             sed -i 's/<name>.*<\\/name>/<name>Private-Token<\\/name>/' .gitlab-settings.xml
             sed -i 's/<value>.*<\\/value>/<value>$GITLAB_PAT_STRING<\\/value>/' .gitlab-settings.xml
 
-            mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly clean deploy
+            mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest-snapshot clean deploy
           """
         }
       }
