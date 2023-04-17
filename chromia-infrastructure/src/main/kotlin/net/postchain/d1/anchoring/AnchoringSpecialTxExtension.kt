@@ -13,8 +13,10 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.BlockchainConfigProvider
 import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.nm_api.NodeManagement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
@@ -40,6 +42,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
+    lateinit var nodeManagement: NodeManagement
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
@@ -164,7 +167,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
             }
 
             val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
-            val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
+            val peers = BlockchainConfigProvider.getRelevantPeers(nodeManagement, headerData)
             try {
                 Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
             } catch (e: UserMistake) {
