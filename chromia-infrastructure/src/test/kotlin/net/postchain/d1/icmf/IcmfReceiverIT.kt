@@ -101,7 +101,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         MockPostchainRestApi.addMockClient(senderOneChainRid, mock {
             on {
                 query(
-                        "icmf_get_messages_at_height", gtv(
+                        QUERY_ICMF_GET_MESSAGES_AT_HEIGHT, gtv(
                         mapOf(
                                 "topic" to gtv("my-topic"),
                                 "height" to gtv(0)
@@ -135,7 +135,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             override fun blockAtHeight(height: Long) = throw NotImplementedError()
 
             override fun query(name: String, args: Gtv) =
-                    if (name == "icmf_get_messages_at_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(0))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AT_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(0))
                         gtv(listOf(senderTwoMessageBody))
                     else
                         GtvNull
@@ -150,7 +150,7 @@ class IcmfReceiverIT : ManagedModeTest() {
                     if (height == 0L) createBlockDetail(senderTwoChainRid, listOf(senderTwoMessageBody)) else null
 
             override fun query(name: String, args: Gtv) =
-                    if (name == "icmf_get_messages_after_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
                         gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
@@ -325,7 +325,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             override fun blockAtHeight(height: Long) = createBlockDetail(clusterAnchoringChain, listOf(senderOneMessageBody))
 
             override fun query(name: String, args: Gtv) =
-                    if (name == "icmf_get_messages_after_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
                         gtv(listOf(gtv(mapOf("body" to senderOneMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
@@ -335,7 +335,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             override fun blockAtHeight(height: Long) = createBlockDetail(systemAnchoringChain, listOf(senderTwoMessageBody))
 
             override fun query(name: String, args: Gtv) =
-                    if (name == "icmf_get_messages_after_height" && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
                         gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
