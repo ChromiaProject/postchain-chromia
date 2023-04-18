@@ -40,6 +40,7 @@ import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -53,7 +54,6 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import net.postchain.mc.cli.base.cryptoSystem
 import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
@@ -129,6 +129,8 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
+
+    val cryptoSystem = Secp256K1CryptoSystem()
 
     abstract val numberOfMasterNodes: Int
 
