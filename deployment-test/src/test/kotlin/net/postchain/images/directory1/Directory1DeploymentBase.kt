@@ -150,7 +150,6 @@ abstract class Directory1DeploymentBase {
             // compile system anchoring dapp
             val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
             val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
-//            val systemAnchoringGtvConfig = gtv(mapOf())
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
@@ -182,8 +181,8 @@ abstract class Directory1DeploymentBase {
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
-    //    @Test
-//    @Order(3)
+    @Test
+    @Order(3)
     fun `Add new container`() {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
@@ -208,8 +207,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(4)
+    @Test
+    @Order(4)
     fun `Add container resource limits`() {
         // Asserting that resource limits are defaults
         val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L), IoRead(-1), IoWrite(-1))
@@ -267,8 +266,8 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(systemAnchoringBrid, node1, node2)
     }
 
-//    @Test
-//    @Order(6)
+    @Test
+    @Order(6)
     fun `Add node3 as signer to c0`() {
         testLogger.info("Adding node3 to the cluster")
         testLogger.info("Registering provider3")
@@ -297,7 +296,7 @@ abstract class Directory1DeploymentBase {
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
-//        assertChainSigners(systemAnchoringBrid, *nodes())
+        assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
     private fun assertAnchoringChainsFunctional() {
@@ -327,8 +326,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(7)
+    @Test
+    @Order(7)
     fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
@@ -377,8 +376,8 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(blockchainRid!!, *nodes())
     }
 
-    //    @Test
-//    @Order(8)
+    @Test
+    @Order(8)
     fun `Subnode container has been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
@@ -388,8 +387,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(9)
+    @Test
+    @Order(9)
     fun `Subnode container has resource limits`() {
         testLogger.info("Asserting container resource limits")
 
@@ -405,14 +404,14 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(10)
+    @Test
+    @Order(10)
     fun `Transactions can be sent to test-dapp`() {
         assertThatDappProcessesTx(dapps["test-dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
-    //    @Test
-//    @Order(11)
+    @Test
+    @Order(11)
     fun `Transactions can be sent to test-dapp2`() {
         assertThatDappProcessesTx(dapps["test-dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
@@ -429,8 +428,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(12)
+    @Test
+    @Order(12)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
 
         fun getAssertingParam(): Long {
@@ -467,8 +466,8 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("Propose $dappName config")
     }
 
-    //    @Test
-//    @Order(13)
+    @Test
+    @Order(13)
     fun `Legacy anchoring can anchor blocks`() {
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
@@ -492,15 +491,15 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(14)
+    @Test
+    @Order(14)
     fun `Blocks can be anchored`() {
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp"]!!)
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp2"]!!)
     }
 
-    //    @Test
-//    @Order(15)
+    @Test
+    @Order(15)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
         assertThatBlocksAreAnchored(systemAnchoringBrid, clusterAnchoringBrid)
     }
@@ -533,8 +532,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(16)
+    @Test
+    @Order(16)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
@@ -546,8 +545,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    //    @Test
-//    @Order(17)
+    @Test
+    @Order(17)
     fun `ICCF transfers are validated`() {
         val sourceDapp = dapps["test-dapp"]!!
         val targetDapp = dapps["test-dapp2"]!!
