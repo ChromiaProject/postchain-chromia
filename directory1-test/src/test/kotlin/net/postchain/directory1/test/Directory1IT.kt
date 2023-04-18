@@ -1,4 +1,4 @@
-package net.postchain.mc.test
+package net.postchain.directory1.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
@@ -49,7 +49,6 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
-import net.postchain.mc.cli.util.BlockchainConfig
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
@@ -107,7 +106,7 @@ class Directory1IT : ManagedModeTest() {
     * */
     @BeforeEach
     fun setup() {
-        blockchain0ConfigGtv = run(runXmlFile(), File("../../chain0-impl/rell/src"))
+        blockchain0ConfigGtv = run(runXmlFile(), File("../chain0-impl/rell/src"))
         doAndBuildBlocks(provClient.transactionBuilder().initOperation(null, null))
     }
 
@@ -174,7 +173,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(voterSetSystemP, provClient.getVoterSetGovernor(voterSetName))
 
         var members = provClient.getVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
+        assertEquals(listOf(provConfig.pubkey().hex(), prov2Config.pubkey().hex()), members.map { it.toHex() })
 
         //remove prov2 from Ellen. Note that with two providers in governance set, both must be OK with the member update.
         val tx1 = provClient.transactionBuilder().addNop()
@@ -192,7 +191,7 @@ class Directory1IT : ManagedModeTest() {
         val tx0 = prov2Client.transactionBuilder().addNop().makeVoteOperation(pubKeyOf(prov2Client.config), id, true)
         doAndBuildBlocks(tx0)
         members = provClient.getVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey()), members.map { it.toHex() })
+        assertEquals(listOf(provConfig.pubkey().hex()), members.map { it.toHex() })
 
         //Make Ellen her own governor.
         val tx2 = provClient.transactionBuilder().addNop().proposeUpdateVoterSetOperation(
@@ -216,7 +215,7 @@ class Directory1IT : ManagedModeTest() {
                 )
         doAndBuildBlocks(tx4)
         members = provClient.getVoterSetMembers(voterSetName)
-        assertEquals(listOf(provConfig.pubkey(), prov2Config.pubkey()), members.map { it.toHex() })
+        assertEquals(listOf(provConfig.pubkey().hex(), prov2Config.pubkey().hex()), members.map { it.toHex() })
     }
 
     @Test
@@ -264,7 +263,7 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(tx)
         assertAdded("get_cluster", "name", GtvString(newClusterName))
 
-        var clusters = provClient.getProviderClusters(PubKey(provConfig.pubkey()))
+        var clusters = provClient.getProviderClusters(provConfig.pubkey())
         assertEquals(listOf(systemClusterName, newClusterName), clusters)
 
         doAndBuildBlocks(registerProvider(provClient, prov2Config.pubkey(), true))
@@ -274,24 +273,24 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(tx2)
 
         val tx3 = provClient.transactionBuilder().addNop().proposeClusterProviderOperation(
-                pubKeyOf(provClient.config), newClusterName, prov2Config.pubkey().hexStringToByteArray(), true, ""
+                pubKeyOf(provClient.config), newClusterName, prov2Config.pubkey().data, true, ""
         )
         doAndBuildBlocks(tx3)
-        clusters = provClient.getProviderClusters(PubKey(prov2Config.pubkey()))
+        clusters = provClient.getProviderClusters(prov2Config.pubkey())
         assertEquals(listOf(newClusterName), clusters)
 
         val tx4 = provClient.transactionBuilder().addNop().proposeClusterProviderOperation(
-                pubKeyOf(provClient.config), newClusterName, prov2Config.pubkey().hexStringToByteArray(), false, ""
+                pubKeyOf(provClient.config), newClusterName, prov2Config.pubkey().data, false, ""
         )
         doAndBuildBlocks(tx4)
-        clusters = provClient.getProviderClusters(PubKey(prov2Config.pubkey()))
+        clusters = provClient.getProviderClusters(prov2Config.pubkey())
         assertEquals(listOf(), clusters)
 
         // cluster providers
         val clusterProviders = provClient.getClusterProviders(newClusterName)
         println(clusterProviders.toTypedArray().contentToString())
         assert(clusterProviders.size).isEqualTo(1)
-        assert(clusterProviders.first().pubkey.toHex()).isEqualTo(provConfig.pubkey())
+        assert(clusterProviders.first().pubkey).isEqualTo(provConfig.pubkey().wData)
         // UNKNOWN cluster providers
         assertThrows<UserMistake> {
             provClient.getClusterProviders("unknown cluster name")
@@ -412,7 +411,7 @@ class Directory1IT : ManagedModeTest() {
         assertEquals(1, providerNodes.size)
 
         val nodeList = provClient.getNodesWithProvider()
-        assertNodeInfo(nodeList[0], node0Host, node0Port, nodes[0].pubKey, provConfig.pubkey(), true)
+        assertNodeInfo(nodeList[0], node0Host, node0Port, PubKey(nodes[0].pubKey), provConfig.pubkey(), true)
     }
 
     @Test
@@ -444,9 +443,9 @@ class Directory1IT : ManagedModeTest() {
         val actualType = proposal.type
         val propid = proposal.id
         val timestamp = proposal.timestamp
-        val proposedBy = proposal.proposedBy.toHex()
+        val proposedBy = proposal.proposedBy
 
-        assertEquals(provConfig.pubkey(), proposedBy, "wrong proposed_by")
+        assertEquals(provConfig.pubkey().wData, proposedBy, "wrong proposed_by")
         assertEquals(id, propid, "wrong idx")
         assertEquals(ProposalType.provider_is_system, actualType, "Wrong proposal type")
         assertNotEquals(0, timestamp, "timestamp is 0")
@@ -490,10 +489,10 @@ class Directory1IT : ManagedModeTest() {
         return listBlockChainContainerPair
     }
 
-    private fun registerProvider(client: PostchainClient, key: String, nodeProvider: Boolean): TransactionBuilder {
+    private fun registerProvider(client: PostchainClient, key: PubKey, nodeProvider: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().registerProviderOperation(
                 pubKeyOf(client.config),
-                PubKey(key),
+                key,
                 if (nodeProvider) ProviderTier.NODE_PROVIDER else ProviderTier.COMMUNITY_NODE_PROVIDER
         )
     }
@@ -503,9 +502,9 @@ class Directory1IT : ManagedModeTest() {
                 pubKeyOf(client.config), containerName, clusterName, 1, deployerName)
     }
 
-    private fun proposeProviderIsSystem(client: PostchainClient, pubKey: String, isSystem: Boolean): TransactionBuilder {
+    private fun proposeProviderIsSystem(client: PostchainClient, pubKey: PubKey, isSystem: Boolean): TransactionBuilder {
         return client.transactionBuilder().addNop().proposeProviderIsSystemOperation(
-                pubKeyOf(client.config), pubKey.hexStringToByteArray(), isSystem, ""
+                pubKeyOf(client.config), pubKey.data, isSystem, ""
         )
     }
 

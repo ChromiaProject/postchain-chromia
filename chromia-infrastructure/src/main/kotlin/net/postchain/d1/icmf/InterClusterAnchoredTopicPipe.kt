@@ -22,7 +22,6 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
-import net.postchain.d1.rell.messaging.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -239,7 +238,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
         while (true) {
             logger.info("Fetching messages from ${blockchainRid.toHex()} at height $height")
             val bodies = try {
-                client.icmfGetMessagesAtHeight(route.topic, height)
+                client.query(QUERY_ICMF_GET_MESSAGES_AT_HEIGHT, gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(height)))).asArray()
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {

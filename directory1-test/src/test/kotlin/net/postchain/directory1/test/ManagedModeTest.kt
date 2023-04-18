@@ -1,4 +1,4 @@
-package net.postchain.mc.test
+package net.postchain.directory1.test
 
 import assertk.assert
 import assertk.assertions.isEqualTo
@@ -14,7 +14,6 @@ import net.postchain.chain0.common.queries.listClustersOfNode
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
-import net.postchain.chain0.nm_api.nmGetPendingBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.impl.PostchainClientProviderImpl
@@ -26,15 +25,13 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.mc.cli.base.ClientUtil
-import net.postchain.mc.cli.base.pubkey
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-fun PostchainClientConfig.pubkey() = signers.first().pubKey.hex()
+val PostchainClient.pubkey get() = config.pubkey().data
+fun PostchainClientConfig.pubkey() = signers.first().pubKey
 fun PostchainClientConfig.privkey() = signers.first().privKey
 
 abstract class ManagedModeTest : RellIntegrationTest() {
@@ -57,8 +54,8 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     val clientConfig by lazy { cliConf(adminKey) }
     val provConfig by lazy { cliConf(providerKey) }
     val prov2Config by lazy { cliConf(providerKey2) }
-    open val provClient by lazy { ClientUtil.fromConfig(provConfig) }
-    open val prov2Client by lazy { ClientUtil.fromConfig(prov2Config) }
+    open val provClient by lazy { fromConfig(provConfig) }
+    open val prov2Client by lazy { fromConfig(prov2Config) }
     lateinit var blockchain0ConfigGtv: Gtv
 
     // Voter sets SYSTEM and SYSTEM_P are created during initialization.
@@ -84,20 +81,20 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         return PostchainClientProviderImpl().createClient(appConfig)
     }
 
-    protected fun assertProviderData(provPubkey: String, name: String, isActive: Boolean?) {
-        val data = provClient.getProviderData(PubKey(provPubkey))
-        assertArrayEquals(data.pubkey.data, provPubkey.hexStringToByteArray())
+    protected fun assertProviderData(provPubkey: PubKey, name: String, isActive: Boolean?) {
+        val data = provClient.getProviderData(provPubkey)
+        assertArrayEquals(data.pubkey.data, provPubkey.data)
         assert(data.name).isEqualTo(name)
         assert(data.active).isEqualTo(isActive)
     }
 
-    protected fun assertProviderEnabled(providerPublicKey: String) {
-        val data = provClient.getProviderData(PubKey(providerPublicKey))
+    protected fun assertProviderEnabled(providerPublicKey: PubKey) {
+        val data = provClient.getProviderData(providerPublicKey)
         assert(data.active).isEqualTo(true)
     }
 
-    protected fun assertProviderDisabled(providerPublicKey: String) {
-        val data = provClient.getProviderData(PubKey(providerPublicKey))
+    protected fun assertProviderDisabled(providerPublicKey: PubKey) {
+        val data = provClient.getProviderData(providerPublicKey)
         assert(data.active).isEqualTo(false)
         val listReplicas = provClient.getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(0, listReplicas.size)
@@ -165,15 +162,15 @@ abstract class ManagedModeTest : RellIntegrationTest() {
             n: GetNodesWithProviderResult,
             nodeHost: String,
             nodePort: Long,
-            nodePubkey: String,
-            providerPubkey: String,
+            nodePubkey: PubKey,
+            providerPubkey: PubKey,
             b: Boolean
     ) {
         assertEquals(nodeHost, n.host)
         assertEquals(nodePort, n.port)
-        assertEquals(nodePubkey, n.pubkey.toHex())
+        assertEquals(nodePubkey.wData, n.pubkey)
 
-        assertEquals(providerPubkey, n.provider.toHex())
+        assertEquals(providerPubkey.wData, n.provider)
         assertEquals(b, n.providerActive)
     }
 
@@ -196,5 +193,9 @@ abstract class ManagedModeTest : RellIntegrationTest() {
     fun doAndBuildBlocks(txBuilder: TransactionBuilder, nBlocks: Int = 1) {
         txBuilder.post()
         buildAndAwaitBlocks(nBlocks)
+    }
+
+    private fun fromConfig(config: PostchainClientConfig): PostchainClient {
+        return PostchainClientProviderImpl().createClient(config)
     }
 }

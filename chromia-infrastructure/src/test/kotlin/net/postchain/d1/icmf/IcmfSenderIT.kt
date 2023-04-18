@@ -4,7 +4,6 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.concurrent.util.get
-import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.d1.RELL_SOURCE_PATH
@@ -180,15 +179,15 @@ class IcmfSenderIT : ManagedModeTest() {
 
                 assertEquals(expectedPreviousMessageBlockHeight, topicHeader.previousBlockHeight)
 
-                val allMessages =
-                        query(node, it, dappChain, "icmf_get_messages_after_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(-1)))).asArray()
+                val dbOps = IcmfDatabaseOperationsImpl()
+
+                val allMessages = dbOps.getSentMessagesAfterHeight(it, topic, -1)
                 assertEquals(expectedAllMessages.size, allMessages.size)
                 expectedAllMessages.forEachIndexed { index, expectedMessage ->
-                    assertEquals(expectedMessage, allMessages[index]["body"]!!.asString())
+                    assertEquals(expectedMessage, allMessages[index].body.asString())
                 }
 
-                val messages =
-                        query(node, it, dappChain, "icmf_get_messages_at_height", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))).asArray()
+                val messages = dbOps.getSentMessagesAtHeight(it, topic, height)
                 assertEquals(expectedMessages.size, messages.size)
                 expectedMessages.forEachIndexed { index, expectedMessage ->
                     assertEquals(expectedMessage, messages[index].asString())
@@ -209,19 +208,16 @@ class IcmfSenderIT : ManagedModeTest() {
         }
     }
 
-    private fun query(node: PostchainTestNode, ctxt: EContext, chainId: Long, name: String, args: Gtv): Gtv =
-            node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.query(ctxt, name, args)
-
     private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp) =
             IcmfTestTransaction(
                     id,
                     {
                         node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
-                            ExtOpData.build(
-                                    op,
-                                    0,
-                                    GtxBody(ChainUtil.ridOf(chainId), arrayOf(op), arrayOf())
-                            )
+                                ExtOpData.build(
+                                        op,
+                                        0,
+                                        GtxBody(ChainUtil.ridOf(chainId), arrayOf(op), arrayOf())
+                                )
                         )
                     }
             )
