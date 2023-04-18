@@ -9,6 +9,7 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -16,12 +17,12 @@ import net.postchain.gtv.merkleHash
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension(private val isSystemChain: Boolean) : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val dbOperations: IcmfDatabaseOperations) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
 
-    private val queuedEvents = mutableListOf<SentIcmfMessage>()
+    private val queuedEvents = mutableListOf<SentIcmfMessageItem>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         cryptoSystem = baseBB.cryptoSystem
@@ -37,7 +38,9 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean) : BaseBlockB
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
         } else {
             logger.info("ICMF message sent in topic ${message.topic}")
-            queuedEvents.add(message)
+            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, message.blockHeight, GtvEncoder.encodeGtv(message.body))
+            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, message.blockHeight)
+            queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
         }
     }
 
@@ -63,4 +66,10 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean) : BaseBlockB
             mapOf()
         }
     }
+
+    private data class SentIcmfMessageItem(
+            val topic: String, // Topic of message
+            val body: Gtv,
+            val previousMessageBlockHeight: Long
+    )
 }

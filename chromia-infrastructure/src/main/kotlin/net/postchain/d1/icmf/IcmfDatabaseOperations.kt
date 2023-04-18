@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
+import net.postchain.gtv.Gtv
 
 interface IcmfDatabaseOperations {
     fun initialize(ctx: EContext)
@@ -15,6 +16,10 @@ interface IcmfDatabaseOperations {
     fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int>
     fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray)
     fun imprecateSpilledMessage(ctx: EContext, serial: Long)
+    fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray)
+    fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long
+    fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long): List<IcmfMessageAtHeight>
+    fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv>
 }
 
 data class AnchorHeight(
@@ -34,4 +39,9 @@ data class SpilledMessage(
         val hash: ByteArray,
         val cluster: String,
         val anchorHeight: Long
+)
+
+data class IcmfMessageAtHeight(
+        val height: Long,
+        val body: Gtv
 )

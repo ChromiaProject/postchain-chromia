@@ -5,11 +5,11 @@ import net.postchain.gtv.Gtv
 data class SentIcmfMessage(
         val topic: String, // Topic of message
         val body: Gtv,
-        val previousMessageBlockHeight: Long
+        val blockHeight: Long
 ) {
 
     companion object {
         fun fromGtv(gtv: Gtv): SentIcmfMessage =
-                SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!, gtv["previous_message_block_height"]!!.asInteger())
+                SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!, gtv["block_height"]!!.asInteger())
     }
 }
