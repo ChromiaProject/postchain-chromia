@@ -20,7 +20,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.nm_api.NodeManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.d1.rell.messaging.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
@@ -41,7 +41,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                                     lastAnchorHeight: Long,
                                     private val clientProvider: ChromiaClientProvider,
                                     private val clusterManagement: ClusterManagement,
-                                    private val nodeManagement: NodeManagement,
+                                    private val blockchainConfigProvider: BlockchainConfigProvider,
                                     _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
@@ -131,7 +131,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header.data)
             val blockRid = decodedAnchorHeader.toGtv().merkleHash(merkleHashCalculator)
 
-            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header.data, anchorBlock.witness.data, blockRid, cryptoSystem, nodeManagement, ICMF_ANCHOR_HEADERS_EXTRA)
+            val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header.data, anchorBlock.witness.data, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_ANCHOR_HEADERS_EXTRA)
                     ?: return
 
             val anchorHeaderData = anchorExtraData[route.topic]
@@ -158,7 +158,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                     continue // we only read from specific chains
                 }
 
-                val topicHeaderData = TopicHeaderData.extractTopicHeaderData(header.decodedHeader, header.blockHeader, header.witness, header.blockRid, cryptoSystem, nodeManagement, ICMF_BLOCK_HEADER_EXTRA)
+                val topicHeaderData = TopicHeaderData.extractTopicHeaderData(header.decodedHeader, header.blockHeader, header.witness, header.blockRid, cryptoSystem, blockchainConfigProvider, ICMF_BLOCK_HEADER_EXTRA)
                         ?: return
 
                 val topicData = topicHeaderData[route.topic]

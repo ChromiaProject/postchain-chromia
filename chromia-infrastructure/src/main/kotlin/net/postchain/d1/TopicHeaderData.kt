@@ -6,23 +6,25 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.nm_api.NodeManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 
 class TopicHeaderData(val hash: ByteArray, val previousBlockHeight: Long) {
+
     companion object : KLogging() {
+
         fun extractTopicHeaderData(
                 header: BlockHeaderData,
                 rawHeader: ByteArray,
                 rawWitness: ByteArray,
                 blockRid: ByteArray,
                 cryptoSystem: CryptoSystem,
-                nodeManagement: NodeManagement,
+                blockchainConfigProvider: BlockchainConfigProvider,
                 extraField: String
         ): Map<String, TopicHeaderData>? {
             val witness = BaseBlockWitness.fromBytes(rawWitness)
-            val peers = BlockchainConfigProvider.getRelevantPeers(nodeManagement, header)
+            val peers = blockchainConfigProvider.getRelevantPeers(header)
 
             try {
                 Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, peers, witness)

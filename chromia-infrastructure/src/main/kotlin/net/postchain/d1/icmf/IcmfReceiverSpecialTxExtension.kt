@@ -10,8 +10,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
-import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.nm_api.NodeManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -27,8 +26,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     val globalTopicReceivers: MutableList<GlobalTopicIcmfReceiver> = mutableListOf()
     val intraClusterReceivers: MutableList<IntraClusterTopicIcmfReceiver> = mutableListOf()
     val anchoringReceivers: MutableList<AnchoringIcmfReceiver> = mutableListOf()
-    lateinit var clusterManagement: ClusterManagement
-    lateinit var nodeManagement: NodeManagement
+    lateinit var blockchainConfigProvider: BlockchainConfigProvider
     lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
     var maxBlockSize: Long = -1
 
@@ -207,7 +205,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     val decodedHeader = BlockHeaderData.fromBinary(anchorHeaderOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
 
-                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorHeaderOp.rawHeader, anchorHeaderOp.rawWitness, blockRid, cryptoSystem, nodeManagement, ICMF_ANCHOR_HEADERS_EXTRA)
+                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorHeaderOp.rawHeader, anchorHeaderOp.rawWitness, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_ANCHOR_HEADERS_EXTRA)
                             ?: return false
 
                     currentAnchorHeaderData = AnchorHeaderValidationInfo(
@@ -229,7 +227,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
-                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, nodeManagement, ICMF_BLOCK_HEADER_EXTRA)
+                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_BLOCK_HEADER_EXTRA)
                             ?: return false
 
                     for (topic in topicData.keys) {

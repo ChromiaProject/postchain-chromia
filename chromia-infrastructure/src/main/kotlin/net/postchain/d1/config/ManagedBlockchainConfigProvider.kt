@@ -1,4 +1,4 @@
-package net.postchain.d1
+package net.postchain.d1.config
 
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
@@ -8,9 +8,11 @@ import net.postchain.common.wrap
 import net.postchain.crypto.PubKey
 import net.postchain.d1.nm_api.NodeManagement
 
-object BlockchainConfigProvider : KLogging() {
+class ManagedBlockchainConfigProvider(private val nodeManagement: NodeManagement) : BlockchainConfigProvider {
 
-    fun getRelevantPeers(nodeManagement: NodeManagement, headerData: BlockHeaderData): List<PubKey> {
+    companion object : KLogging()
+
+    override fun getRelevantPeers(headerData: BlockHeaderData): List<PubKey> {
         val blockchainRid = BlockchainRid(headerData.getBlockchainRid())
         val height = headerData.getHeight()
         val logPrefix = "getRelevantPeers(brid: ${blockchainRid.toShortHex()}, height: $height)"

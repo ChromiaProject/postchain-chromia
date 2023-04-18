@@ -11,7 +11,8 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.nm_api.NodeManagement
+import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.config.ManagedBlockchainConfigProvider
 import net.postchain.d1.nm_api.NodeManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
@@ -38,7 +39,7 @@ open class AnchoringProcessManagerExtension(
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 it.clusterManagement = createClusterManagement(cfg)
-                it.nodeManagement = createNodeManagement(cfg)
+                it.blockchainConfigProvider = createBlockchainConfigProvider(cfg)
 
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
@@ -63,8 +64,10 @@ open class AnchoringProcessManagerExtension(
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
             ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
 
-    open fun createNodeManagement(configuration: ManagedDataSourceAware): NodeManagement =
-            NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
+    open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware): BlockchainConfigProvider =
+            ManagedBlockchainConfigProvider(
+                    NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
+            )
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
