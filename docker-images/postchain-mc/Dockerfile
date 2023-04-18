@@ -1,5 +1,5 @@
 # Copyright (c) 2022 ChromaWay Inc. See README for license information.
-FROM gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8
+FROM gcr.io/distroless/java17-debian11:latest@sha256:6e135f309fb112dcf820fc64b4465772bc045d7bf9fb75fd4cf7e6cf8eed5e47
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
