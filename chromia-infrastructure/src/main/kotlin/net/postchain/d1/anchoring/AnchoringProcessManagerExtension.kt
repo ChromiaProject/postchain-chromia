@@ -39,7 +39,7 @@ open class AnchoringProcessManagerExtension(
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 it.clusterManagement = createClusterManagement(cfg)
-                it.blockchainConfigProvider = createBlockchainConfigProvider(cfg)
+                it.blockchainConfigProvider = createBlockchainConfigProvider(cfg, it.clusterManagement)
 
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
@@ -64,9 +64,10 @@ open class AnchoringProcessManagerExtension(
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
             ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
 
-    open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware): BlockchainConfigProvider =
+    open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
             ManagedBlockchainConfigProvider(
-                    NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
+                    NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
+                    clusterManagement
             )
 
     @Synchronized

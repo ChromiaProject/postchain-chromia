@@ -4,5 +4,5 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.crypto.PubKey
 
 fun interface BlockchainConfigProvider {
-    fun getRelevantPeers(headerData: BlockHeaderData): List<PubKey>
+    fun getRelevantPeers(headerData: BlockHeaderData): Collection<PubKey>
 }
