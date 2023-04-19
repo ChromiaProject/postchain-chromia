@@ -168,7 +168,6 @@ abstract class Directory1DeploymentBase {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
                 .filter { it.system }.map { BlockchainRid(it.rid) }
         assertEquals(3, systemChains.size)
-//        assertEquals(2, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
