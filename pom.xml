@@ -14,6 +14,7 @@
     <modules>
         <module>chain0-impl</module>
         <module>chromia-client</module>
+        <module>directory1-test</module>
         <module>deployment-test</module>
         <module>postchain-mc</module>
         <module>chromia-core</module>

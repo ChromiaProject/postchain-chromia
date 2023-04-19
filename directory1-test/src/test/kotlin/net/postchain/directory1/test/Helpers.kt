@@ -1,4 +1,4 @@
-package net.postchain.mc.test
+package net.postchain.directory1.test
 
 import org.awaitility.Duration
 import org.awaitility.kotlin.await

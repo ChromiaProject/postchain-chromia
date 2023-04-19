@@ -3,15 +3,28 @@ package net.postchain.d1.icmf
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import org.jooq.Field
 import org.jooq.SQLDialect
-import org.jooq.impl.DSL.*
+import org.jooq.impl.DSL.constraint
+import org.jooq.impl.DSL.count
+import org.jooq.impl.DSL.field
+import org.jooq.impl.DSL.max
+import org.jooq.impl.DSL.table
+import org.jooq.impl.DSL.using
 import org.jooq.util.postgres.PostgresDataType
 
 class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
     companion object {
+        const val PRIMARY_KEY_PREFIX: String = "PK_"
+        const val FOREIGN_KEY_SUFFIX: String = "_FK"
+        const val INDEX_PREFIX: String = "IDX_"
+
         const val PREFIX: String = "sys.x.icmf" // This name should not clash with Rell
+
+        const val TABLE_NAME_SENT_ICMF_MESSAGE = "${PREFIX}.sent_icmf_message"
 
         val COLUMN_CLUSTER: Field<String> = field("cluster", PostgresDataType.TEXT.nullable(false))
         val COLUMN_SENDER: Field<ByteArray> = field("sender", PostgresDataType.BYTEA.nullable(false))
@@ -20,11 +33,15 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         val COLUMN_SERIAL: Field<Long> = field("serial", PostgresDataType.BIGSERIAL.nullable(false))
         val COLUMN_ANCHOR_HEIGHT: Field<Long> = field("anchor_height", PostgresDataType.BIGINT.nullable(false))
         val COLUMN_MESSAGE_HASH: Field<ByteArray> = field("message_hash", PostgresDataType.BYTEA.nullable(false))
+        val COLUMN_ID: Field<Long> = field("id", PostgresDataType.BIGSERIAL.nullable(false))
+        val COLUMN_TRANSACTION: Field<Long> = field("transaction", PostgresDataType.BIGINT.nullable(false))
+        val COLUMN_BODY: Field<ByteArray> = field("body", PostgresDataType.BYTEA.nullable(false))
     }
 
     private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
     private fun DatabaseAccess.tableMessageHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.message_height")
     private fun DatabaseAccess.tableSpilledMessage(ctx: EContext) = tableName(ctx, "${PREFIX}.spilled_message")
+    private fun DatabaseAccess.tableSentIcmfMessage(ctx: EContext) = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE)
 
     override fun initialize(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
@@ -35,7 +52,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .column(COLUMN_CLUSTER)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_HEIGHT)
-                    .constraint(constraint("PK_${anchorTable}").primaryKey("cluster", "topic"))
+                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${anchorTable}").primaryKey(COLUMN_CLUSTER.name, COLUMN_TOPIC.name))
                     .execute()
 
             val messageTable = table(tableMessageHeight(ctx))
@@ -43,7 +60,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .column(COLUMN_SENDER)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_HEIGHT)
-                    .constraint(constraint("PK_${messageTable}").primaryKey("sender", "topic"))
+                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${messageTable}").primaryKey(COLUMN_SENDER.name, COLUMN_TOPIC.name))
                     .execute()
 
             val spilledMessageTable = table(tableSpilledMessage(ctx))
@@ -54,7 +71,25 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .column(COLUMN_SENDER)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_MESSAGE_HASH)
-                    .constraint(constraint("PK_${spilledMessageTable}").primaryKey("serial"))
+                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${spilledMessageTable}").primaryKey(COLUMN_SERIAL.name))
+                    .execute()
+
+            val simTableName = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE).replace("\"", "")
+            jooq.createTableIfNotExists(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+                    .column(COLUMN_ID)
+                    .column(COLUMN_TRANSACTION)
+                    .column(COLUMN_TOPIC)
+                    .column(COLUMN_HEIGHT)
+                    .column(COLUMN_BODY)
+                    .constraints(
+                            constraint("${PRIMARY_KEY_PREFIX}$simTableName").primaryKey(COLUMN_ID.name),
+                            constraint("${simTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
+                                    .foreignKey(COLUMN_TRANSACTION.name)
+                                    .references(tableName(ctx, "transactions").replace("\"", ""), "tx_iid")
+                    )
+                    .execute()
+            jooq.createIndexIfNotExists("${INDEX_PREFIX}${simTableName}_0")
+                    .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
                     .execute()
         }
     }
@@ -153,6 +188,47 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .where(COLUMN_SERIAL.eq(serial))
                     .execute()
         }
+    }
+
+    override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray) {
+        DatabaseAccess.of(ctx).run {
+            createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
+                    .set(COLUMN_TRANSACTION, transactionIid)
+                    .set(COLUMN_TOPIC, topic)
+                    .set(COLUMN_HEIGHT, height)
+                    .set(COLUMN_BODY, body)
+                    .execute()
+        }
+    }
+
+    override fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(max(COLUMN_HEIGHT))
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_TOPIC.eq(topic))
+                .and(COLUMN_HEIGHT.lessThan(blockHeight))
+                .fetchOne()?.value1()
+    } ?: -1
+
+    override fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long): List<IcmfMessageAtHeight> = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_HEIGHT, COLUMN_BODY)
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_TOPIC.eq(topic))
+                .and(COLUMN_HEIGHT.gt(blockHeight))
+                .orderBy(COLUMN_ID)
+                .fetch()
+    }.map {
+        IcmfMessageAtHeight(it[COLUMN_HEIGHT], GtvDecoder.decodeGtv(it[COLUMN_BODY]))
+    }
+
+    override fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv> = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_BODY)
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_TOPIC.eq(topic))
+                .and(COLUMN_HEIGHT.eq(blockHeight))
+                .orderBy(COLUMN_ID)
+                .fetch()
+    }.map {
+        GtvDecoder.decodeGtv(it[COLUMN_BODY])
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
