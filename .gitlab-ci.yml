@@ -149,12 +149,23 @@ variables:
   CHR_DB_URL: jdbc:postgresql://postgres/postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
   POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
+  # Instruct Testcontainers to use the daemon of DinD.
+  DOCKER_HOST: tcp://docker:2375
+  # Instruct Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # Improve performance with overlayfs.
+  DOCKER_DRIVER: overlay2
+  DOCKER_CLI_EXPERIMENTAL: enabled
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
   - postgres
+  - name: docker:23.0.4-dind
+    alias: docker
+    # explicitly disable tls to avoid docker startup interruption
+    command: [ "--tls=false" , "--experimental" ]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
