@@ -2,10 +2,6 @@ image: maven:3.8.4-jdk-11
 
 .setup:
   before_script:
-    - apt-get -q update && apt-get -q install -y docker.io
-    - mkdir -p $HOME/.docker/cli-plugins/
-    - wget --no-verbose -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
-    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
   artifacts:
@@ -153,24 +149,12 @@ variables:
   CHR_DB_URL: jdbc:postgresql://postgres/postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
   POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
-  # Instruct Testcontainers to use the daemon of DinD.
-  DOCKER_HOST: tcp://docker:2375
-  # Instruct Docker not to start over TLS.
-  DOCKER_TLS_CERTDIR: ""
-  # Improve performance with overlayfs.
-  DOCKER_DRIVER: overlay2
-  DOCKER_CLI_EXPERIMENTAL: enabled
-  BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
   - postgres
-  - name: docker:23.0.4-dind
-    alias: docker
-    # explicitly disable tls to avoid docker startup interruption
-    command: [ "--tls=false" , "--experimental" ]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
