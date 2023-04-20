@@ -16,6 +16,7 @@ import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.query.ChromiaQueryProvider
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -29,6 +30,7 @@ class GlobalTopicIcmfReceiver(
         private val myChainId: Long,
         private val myBlockchainRid: BlockchainRid,
         private val clusterManagement: ClusterManagement,
+        private val blockchainConfigProvider: BlockchainConfigProvider,
         private val clientProvider: ChromiaClientProvider,
         private val dbOperations: IcmfDatabaseOperations
 ) : IcmfReceiver<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
@@ -106,7 +108,7 @@ class GlobalTopicIcmfReceiver(
 
             InterClusterAnchoredTopicPipe(
                     route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
-                    clusterManagement, lastMessageHeights
+                    clusterManagement, blockchainConfigProvider, lastMessageHeights
             )
         }
     }
