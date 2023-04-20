@@ -456,7 +456,7 @@ abstract class Directory1DeploymentBase {
     private fun updateDapp(dappName: String, additionalSources: File? = null) {
         testLogger.info("Update dapp $dappName")
 
-        val rellConfig = compileDapp("$dappName-update", additionalSources)
+        val rellConfig = compileDapp("$dappName-update", additionalSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
                 .config.chains.first().configs.entries.first().value
         val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
 
