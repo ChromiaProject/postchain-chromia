@@ -6,7 +6,7 @@ import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 
-class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:14.1-alpine")) : JdbcDatabaseContainer<ChromaWayPostgresContainer>(dockerImageName) {
+class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:14.7-alpine3.17")) : JdbcDatabaseContainer<ChromaWayPostgresContainer>(dockerImageName) {
 
     companion object {
         const val POSTGRESQL_PORT = 5432
