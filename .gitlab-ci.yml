@@ -2,6 +2,10 @@ image: maven:3.8.4-jdk-11
 
 .setup:
   before_script:
+    - apt-get -q update && apt-get -q install -y docker.io
+    - mkdir -p $HOME/.docker/cli-plugins/
+    - wget --no-verbose -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
+    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
   artifacts:
@@ -163,7 +167,7 @@ variables:
 
 services:
   - postgres
-  - name: docker:20.10.16-dind
+  - name: docker:23.0.4-dind
     alias: docker
     # explicitly disable tls to avoid docker startup interruption
     command: [ "--tls=false" , "--experimental" ]
