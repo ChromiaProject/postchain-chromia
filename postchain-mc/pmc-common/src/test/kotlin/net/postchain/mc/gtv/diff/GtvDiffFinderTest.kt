@@ -9,10 +9,10 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvBigInteger
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import java.math.BigInteger
 
 internal class GtvDiffFinderTest {
 
@@ -52,8 +52,8 @@ internal class GtvDiffFinderTest {
                 arrayOf(GtvNull, gtv(1), false),
                 arrayOf(gtv(true), gtv(true), true),
                 arrayOf(gtv(true), gtv(false), false),
-                arrayOf(GtvBigInteger(12), GtvBigInteger(12), true),
-                arrayOf(GtvBigInteger(1), GtvBigInteger(2), false),
+                arrayOf(GtvBigInteger(BigInteger.valueOf(12)), GtvBigInteger(BigInteger.valueOf(12)), true),
+                arrayOf(GtvBigInteger(BigInteger.valueOf(1)), GtvBigInteger(BigInteger.valueOf(2)), false),
                 arrayOf(gtv("AA".hexStringToByteArray()), gtv("AA".hexStringToByteArray()), true),
                 arrayOf(gtv("AA".hexStringToByteArray()), gtv("AB".hexStringToByteArray()), false),
                 arrayOf(gtv("a"), gtv("a"), true),
