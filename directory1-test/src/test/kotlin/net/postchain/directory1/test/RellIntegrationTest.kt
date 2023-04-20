@@ -140,7 +140,7 @@ class SmartOnDemandBlockBuildingStrategy(
     var upToHeight: Long = -1
 
     @Volatile
-    var committedHeight = blockQueries.getBestHeight().get().toInt()
+    var committedHeight = blockQueries.getLastBlockHeight().get().toInt()
     val blocks = LinkedBlockingQueue<BlockData>()
 
     override fun shouldBuildBlock(): Boolean {
