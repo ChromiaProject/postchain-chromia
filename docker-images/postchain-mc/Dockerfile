@@ -3,7 +3,7 @@ FROM gcr.io/distroless/java17-debian11:latest@sha256:6e135f309fb112dcf820fc64b44
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
-COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
+COPY src/main/jib/opt/chromaway/postchain/log4j2.yml $postchain_dir/log/log4j2.yml
 ENV LOG4J_CONFIGURATION_FILE=/opt/chromaway/postchain/log/log4j2.yml
 
 WORKDIR $postchain_dir
