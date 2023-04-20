@@ -5,7 +5,7 @@ RUN apk update && apk add openjdk17 quota-tools && rm -rf /var/cache/apk/*
 
 ARG postchain_dir=/opt/chromaway/postchain
 COPY target/lib $postchain_dir/lib
-COPY src/main/resources/log4j2.yml $postchain_dir/log/log4j2.yml
+COPY src/main/jib/opt/chromaway/postchain/log4j2.yml $postchain_dir/log/log4j2.yml
 
 ENV POSTCHAIN_DEBUG=false
 ENV POSTCHAIN_RUNNING_IN_CONTAINER=true
