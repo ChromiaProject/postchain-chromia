@@ -3,30 +3,31 @@ package net.postchain.d1
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 
 class TopicHeaderData(val hash: ByteArray, val previousBlockHeight: Long) {
+
     companion object : KLogging() {
+
         fun extractTopicHeaderData(
                 header: BlockHeaderData,
                 rawHeader: ByteArray,
                 rawWitness: ByteArray,
                 blockRid: ByteArray,
                 cryptoSystem: CryptoSystem,
-                clusterManagement: ClusterManagement,
+                blockchainConfigProvider: BlockchainConfigProvider,
                 extraField: String
         ): Map<String, TopicHeaderData>? {
-            val chainPeers = clusterManagement.getBlockchainPeers(BlockchainRid(header.getBlockchainRid()), header.getHeight())
             val witness = BaseBlockWitness.fromBytes(rawWitness)
+            val peers = blockchainConfigProvider.getRelevantPeers(header)
 
             try {
-                Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, chainPeers, witness)
+                Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, peers, witness)
             } catch (e: UserMistake) {
                 logger.warn("Invalid block header signature when extracting data from extra data '$extraField' for block-rid: ${blockRid.toHex()} in blockchain: ${header.getBlockchainRid().toHex()} at height: ${header.getHeight()}: ${e.message}")
                 return null

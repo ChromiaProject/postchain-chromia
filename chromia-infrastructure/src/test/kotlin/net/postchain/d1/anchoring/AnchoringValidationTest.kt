@@ -7,7 +7,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -32,8 +32,8 @@ class AnchoringValidationTest {
     private val chainID: Long = 1
     private val blockchainRID = BlockchainRid.buildRepeat(1)
     private val signer = cryptoSystem.generateKeyPair()
-    private val clusterManagement: ClusterManagement = mock {
-        on { getBlockchainPeers(eq(blockchainRID), any()) }.doReturn(listOf(signer.pubKey))
+    private val blockchainConfigProvider: BlockchainConfigProvider = mock {
+        on { getRelevantPeers(any()) } doReturn listOf(signer.pubKey)
     }
 
     @Test
@@ -241,7 +241,7 @@ class AnchoringValidationTest {
     private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
         val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
-        txExtension.clusterManagement = clusterManagement
+        txExtension.blockchainConfigProvider = blockchainConfigProvider
         txExtension.anchoringReceiver = mock {
             on { getRelevantChains() } doReturn setOf(blockchainRID)
         }

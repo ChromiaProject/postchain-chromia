@@ -62,6 +62,7 @@ open class ManagedModeBase(rellFolder: String) {
                 .withExposedPorts(50051, appConfig.getInt("api.port"))
                 .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping(this::class.java.getResource("/log")!!.path.substringAfter("test-classes/"), "/opt/chromaway/postchain/log", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_DEBUG", "true")
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
