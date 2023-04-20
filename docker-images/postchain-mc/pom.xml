@@ -41,8 +41,6 @@
                         <workingDirectory>/opt/chromaway/postchain</workingDirectory>
                         <mainClass>${main.class}</mainClass>
                         <environment>
-                            <POSTCHAIN_DEBUG>false</POSTCHAIN_DEBUG>
-                            <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>
                             <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log4j2.yml</LOG4J_CONFIGURATION_FILE>
                         </environment>
                     </container>
