@@ -1,7 +1,7 @@
 # Copyright (c) 2019 ChromaWay Inc. See README for license information.
 # Postchain Node Docker file with postgres
 # --- INTERNAL POSTGRES DB ---
-FROM postgres:11.19-alpine3.17@sha256:d733042ebc13cfb92c14f516ea1e5ceb95a1644e95fc9b02faea2f1c7567cf06
+FROM postgres:14.7-alpine3.17@sha256:446abaf8831c54f57212c0ae52f5df84e69eeb2767e2376d07bed9c9742b1243
 
 RUN apk update && apk add openjdk17 bash libc6-compat gcompat su-exec
 

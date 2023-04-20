@@ -6,7 +6,7 @@ object DockerImages {
 
     fun postgresImage(): DockerImageName {
         val imageName = System.getenv("POSTCHAIN_TEST_DOCKER_IMAGE_POSTGRES")
-                ?: "postgres:14.1-alpine"
+                ?: "postgres:14.7-alpine3.17"
 
         return DockerImageName.parse(imageName)
     }
