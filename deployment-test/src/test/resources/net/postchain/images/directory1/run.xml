@@ -37,7 +37,7 @@
                         </arg>
                     </args>
                     <args module="common">
-                        <arg key="enable_pcu"><int>0</int></arg>
+                        <arg key="enable_pcu"><int>1</int></arg>
                     </args>
                 </app>
                 <gtv path="signers">

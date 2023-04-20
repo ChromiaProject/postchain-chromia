@@ -11,6 +11,9 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.config.ManagedBlockchainConfigProvider
+import net.postchain.d1.nm_api.NodeManagementImpl
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
@@ -35,8 +38,8 @@ open class AnchoringProcessManagerExtension(
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
-                val clusterManagement = createClusterManagement(cfg)
-                it.clusterManagement = clusterManagement
+                it.clusterManagement = createClusterManagement(cfg)
+                it.blockchainConfigProvider = createBlockchainConfigProvider(cfg, it.clusterManagement)
 
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
@@ -59,20 +62,26 @@ open class AnchoringProcessManagerExtension(
     }
 
     open fun createClusterManagement(configuration: ManagedDataSourceAware): ClusterManagement =
-        ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
+            ClusterManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) }
+
+    open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
+            ManagedBlockchainConfigProvider(
+                    NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
+                    clusterManagement
+            )
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
         localDispatcher.disconnectChain(
-            process.blockchainEngine.getConfiguration().chainID
+                process.blockchainEngine.getConfiguration().chainID
         )
     }
 
     @Synchronized
     override fun afterCommit(process: BlockchainProcess, height: Long) {
         localDispatcher.afterCommit(
-            process.blockchainEngine.getConfiguration().chainID,
-            height
+                process.blockchainEngine.getConfiguration().chainID,
+                height
         )
     }
 
@@ -94,7 +103,7 @@ open class AnchoringProcessManagerExtension(
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId
         localDispatcher.connectSubnodeChain(
-            process.chainId, process.blockchainRid, process.restApiUrl
+                process.chainId, process.blockchainRid, process.restApiUrl
         )
     }
 
