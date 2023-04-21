@@ -66,7 +66,7 @@ build:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
   script:
-    - mvn $MAVEN_CLI_OPTS verify -pl :chromia-server -am -DskipTests -Djib.dockerClient.environment=DOCKER_HOST=$DOCKER_HOST
+    - mvn $MAVEN_CLI_OPTS verify -pl :chromia-server -am -DskipTests
 
 nightly-tests:
   extends: .setup
