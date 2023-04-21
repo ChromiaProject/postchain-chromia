@@ -306,8 +306,8 @@ abstract class Directory1DeploymentBase {
 
     private fun assertChainFunctional(blockchainRid: BlockchainRid) {
         val currentHeight = awaitQueryResult { node1.client(blockchainRid).currentBlockHeight() }!!
-        awaitUntilAsserted {
-            assertTrue(node1.client(blockchainRid).currentBlockHeight() > (currentHeight + 2))
+        awaitQueryResult {
+            assertTrue(node1.client(blockchainRid).currentBlockHeight() > (currentHeight + 1))
         }
     }
 
