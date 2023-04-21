@@ -78,6 +78,7 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
+  allow_failure: false
 
 dependency-check:
   extends: .setup
