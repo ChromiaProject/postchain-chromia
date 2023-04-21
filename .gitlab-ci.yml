@@ -167,7 +167,7 @@ variables:
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
-  - postgres
+  - postgres:14.7
   - name: docker:20-dind
     alias: docker
     # explicitly disable tls to avoid docker startup interruption
