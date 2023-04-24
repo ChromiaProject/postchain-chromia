@@ -1,6 +1,8 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.0
 
 .setup:
+  tags:
+    - saas-linux-large-amd64
   before_script:
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
@@ -33,7 +35,7 @@ deploy-snapshot:
   only:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest-snapshot deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
 
 deploy-release:
   extends: .setup
@@ -41,7 +43,7 @@ deploy-release:
   only:
     - master
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest deploy
 
 deploy-patch:
   extends: .setup
@@ -49,7 +51,7 @@ deploy-patch:
   only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Dlatest.tag=latest-patch deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-patch deploy
 
 build:
   extends: .setup

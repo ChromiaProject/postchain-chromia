@@ -35,16 +35,19 @@
                     <groupId>com.google.cloud.tools</groupId>
                     <artifactId>jib-maven-plugin</artifactId>
                     <configuration>
-                        <to>
-                            <image>${image.name}</image>
-                        </to>
                     </configuration>
                     <executions>
                         <execution>
+                            <id>docker-build</id>
                             <phase>package</phase>
                             <goals>
                                 <goal>dockerBuild</goal>
                             </goals>
+                            <configuration>
+                                <to>
+                                    <image>${image.name}</image>
+                                </to>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
@@ -67,16 +70,21 @@
                         <plugin>
                             <groupId>com.google.cloud.tools</groupId>
                             <artifactId>jib-maven-plugin</artifactId>
-                           <configuration>
-                               <from>
-                                   <platforms>
-                                        <platform>
-                                            <os>linux</os>
-                                            <architecture>arm64</architecture>
-                                        </platform>
-                                   </platforms>
-                               </from>
-                           </configuration>
+                            <executions>
+                                <execution>
+                                    <id>docker-build</id>
+                                    <configuration>
+                                       <from>
+                                           <platforms>
+                                                <platform>
+                                                    <os>linux</os>
+                                                    <architecture>arm64</architecture>
+                                                </platform>
+                                           </platforms>
+                                       </from>
+                                    </configuration>
+                                </execution>
+                            </executions>
                         </plugin>
                     </plugins>
                 </pluginManagement>
@@ -90,36 +98,37 @@
                         <plugin>
                             <groupId>com.google.cloud.tools</groupId>
                             <artifactId>jib-maven-plugin</artifactId>
-                            <configuration>
-                                <from>
-                                    <platforms>
-                                        <platform>
-                                            <architecture>amd64</architecture>
-                                            <os>linux</os>
-                                        </platform>
-                                        <platform>
-                                            <architecture>arm64</architecture>
-                                            <os>linux</os>
-                                        </platform>
-                                    </platforms>
-                                </from>
-                                <to>
-                                    <image>${gitlab.registry}/${image.name}:${project.version}</image>
-                                    <auth>
-                                        <username>${env.CI_REGISTRY_USER}</username>
-                                        <password>${env.CI_REGISTRY_PASSWORD}</password>
-                                    </auth>
-                                    <tags>
-                                        <tag>${latest.tag}</tag>
-                                    </tags>
-                                </to>
-                            </configuration>
                             <executions>
                                 <execution>
+                                    <id>docker-push</id>
                                     <phase>deploy</phase>
                                     <goals>
                                         <goal>build</goal>
                                     </goals>
+                                    <configuration>
+                                        <from>
+                                            <platforms>
+                                                <platform>
+                                                    <architecture>amd64</architecture>
+                                                    <os>linux</os>
+                                                </platform>
+                                                <platform>
+                                                    <architecture>arm64</architecture>
+                                                    <os>linux</os>
+                                                </platform>
+                                            </platforms>
+                                        </from>
+                                        <to>
+                                            <image>${gitlab.registry}/${image.name}:${project.version}</image>
+                                            <auth>
+                                                <username>${env.CI_REGISTRY_USER}</username>
+                                                <password>${env.CI_REGISTRY_PASSWORD}</password>
+                                            </auth>
+                                            <tags>
+                                                <tag>${latest.tag}</tag>
+                                            </tags>
+                                        </to>
+                                    </configuration>
                                 </execution>
                             </executions>
                         </plugin>

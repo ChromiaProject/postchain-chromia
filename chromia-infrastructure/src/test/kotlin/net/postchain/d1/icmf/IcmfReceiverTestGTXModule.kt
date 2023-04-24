@@ -1,6 +1,7 @@
 package net.postchain.d1.icmf
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
@@ -55,12 +56,16 @@ class IcmfMessageOp(@Suppress("UNUSED_PARAMETER") u: Unit, private val opdata: E
     override fun checkCorrectness() { }
 
     override fun apply(ctx: TxEContext): Boolean {
+        val sender = opdata.args[0].asByteArray()
+        val topic = opdata.args[1].asString()
+        val body = opdata.args[2]
+        if (topic == "failing-topic") throw UserMistake("I am failing")
         DatabaseAccess.of(ctx).apply {
             val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
             jooq.insertInto(table(tableName(ctx, testMessageTable)))
-                    .set(COLUMN_SENDER, opdata.args[0].asByteArray())
-                    .set(COLUMN_TOPIC, opdata.args[1].asString())
-                    .set(COLUMN_BODY, GtvEncoder.encodeGtv(opdata.args[2]))
+                    .set(COLUMN_SENDER, sender)
+                    .set(COLUMN_TOPIC, topic)
+                    .set(COLUMN_BODY, GtvEncoder.encodeGtv(body))
                     .set(COLUMN_HEIGHT, ctx.height)
                     .execute()
         }
