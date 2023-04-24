@@ -56,16 +56,14 @@ build:
   extends: .setup
   stage: build
   interruptible: true
-  except:
-    refs:
-      - dev
-      - master
-      - tags
-      - /^support\/.*$/
-    variables:
-      - $RUN_DEPENDENCY_CHECK == "true"
+  allow_failure: false
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*"
+
 
 nightly-tests:
   extends: .setup
@@ -73,17 +71,10 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
-  allow_failure: true
+  allow_failure: false
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "manual"'
-      when: always
-      allow_failure: false
-      changes:
-        - "**/*"
-    - if: '$CI_PIPELINE_SOURCE != "manual" && ($CI_COMMIT_BRANCH !~ /^(dev|master|tags|support).*/)'
+    - if: '$CI_PIPELINE_SOURCE != "manual"'
       allow_failure: true
-      changes:
-        - "**/*"
 
 dependency-check:
   extends: .setup
