@@ -21,7 +21,6 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
 
 stages:
   - build
-  - nightly-tests
   - deploy-snapshot
   - deploy-release
   - deploy-patch
@@ -67,7 +66,7 @@ build:
 
 nightly-tests:
   extends: .setup
-  stage: nightly-tests
+  stage: build
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify -pl :deployment-test -am -Dtest=*Nightly
   when: manual
