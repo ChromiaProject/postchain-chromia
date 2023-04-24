@@ -70,7 +70,7 @@ nightly-tests:
   extends: .setup
   stage: build
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify -pl :deployment-test -am -Dtest=*Nightly
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify -pl :deployment-test -am -Dtest=*Nightly -DfailIfNoTests=false
   when: manual
   allow_failure: false
   rules:
