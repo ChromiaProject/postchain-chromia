@@ -27,7 +27,7 @@
 
     <properties>
         <postchain.version>3.10.0-SNAPSHOT</postchain.version>
-        <rellr.version>0.12.0</rellr.version>
+        <rellr.version>0.12.1</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -238,7 +238,7 @@
                 <plugin>
                     <groupId>net.postchain.rell</groupId>
                     <artifactId>rell-maven-plugin</artifactId>
-                    <version>0.9.4</version>
+                    <version>0.9.5</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
