@@ -18,6 +18,8 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
@@ -32,6 +34,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, AnchoredHeaderOp.OP_NAME, NonAnchoredHeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
+
+    private val blockedPipes = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -55,6 +59,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         }.let { size ->
             createAnchoredOperations(bctx, hashCalculator, allOps, globalTopicReceivers.flatMap { it.getRelevantPipes() }, size)
         }
+        blockedPipes.clear()
         return allOps
     }
 
@@ -63,7 +68,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         var currentSize = initialSize
         var hasSpilledMessages = false
         for (pipe in pipes) {
-            if (pipe.mightHaveNewPackets() && !hasSpilledMessages) {
+            if (pipe.mightHaveNewPackets() && !hasSpilledMessages && pipe.route.topic !in blockedPipes) {
                 val blockchainRid = pipe.id
 
                 var currentHeight: Long = dbOperations.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
@@ -97,7 +102,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         var currentSize = initialSize
         var hasSpilledMessages = false
         for (pipe in pipes) {
-            if (pipe.mightHaveNewPackets() && !hasSpilledMessages) {
+            if (pipe.mightHaveNewPackets() && !hasSpilledMessages && pipe.route.topic !in blockedPipes) {
                 val clusterName = pipe.id
                 val lastAnchoredHeight = lastAnchoredHeights[clusterName to pipe.route.topic] ?: -1
                 // Clean up packets that are no longer relevant
@@ -473,6 +478,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         return true
     }
 
+    fun blockPipe(topic: String) {
+        blockedPipes += topic
+    }
+
     data class AnchorHeaderValidationInfo(
             val height: Long,
             val cluster: String,
@@ -609,15 +618,17 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
             const val OP_NAME = "__icmf_message"
 
-            fun fromOpData(opData: OpData): MessageOp? {
-                if (opData.opName != OP_NAME) return null
-                if (opData.args.size != 3) {
-                    logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
+            fun fromOpData(opData: OpData): MessageOp? = fromOpNameAndArgs(opData.opName, opData.args)
+
+            fun fromOpNameAndArgs(opName: String, args: Array<out Gtv>): MessageOp? {
+                if (opName != OP_NAME) return null
+                if (args.size != 3) {
+                    logger.warn("Got $OP_NAME operation with wrong number of arguments: ${args.size}")
                     return null
                 }
 
                 return try {
-                    MessageOp(BlockchainRid(opData.args[0].asByteArray()), opData.args[1].asString(), opData.args[2])
+                    MessageOp(BlockchainRid(args[0].asByteArray()), args[1].asString(), args[2])
                 } catch (e: UserMistake) {
                     logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
                     null
