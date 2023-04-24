@@ -78,7 +78,7 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
-  allow_failure: false
+  allow_failure: true
 
 dependency-check:
   extends: .setup
@@ -134,6 +134,15 @@ release:
   only:
     - dev
   when: manual
+
+rules:
+  - if: '$CI_PIPELINE_SOURCE == "manual"'
+    when: always
+    allow_failure: false
+    changes:
+      - "**/*"
+    script:
+      - echo "This pipeline was manually triggered, allowing the manual job to fail is not allowed."
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
