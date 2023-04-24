@@ -1,6 +1,8 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.0
 
 .setup:
+  tags:
+    - saas-linux-large-amd64
   before_script:
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
