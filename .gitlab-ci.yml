@@ -13,6 +13,12 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
         - "**/target/surefire-reports/TEST-*.xml"
         - "**/target/failsafe-reports/TEST-*.xml"
     expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "manual"'
+      when: always
+      allow_failure: false
+      changes:
+        - "**/*"
 
 .git_template: &git_setup |
   git remote set-url --push origin "https://oauth2:${BUILD_USER_GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
@@ -134,15 +140,6 @@ release:
   only:
     - dev
   when: manual
-
-rules:
-  - if: '$CI_PIPELINE_SOURCE == "manual"'
-    when: always
-    allow_failure: false
-    changes:
-      - "**/*"
-    script:
-      - echo "This pipeline was manually triggered, allowing the manual job to fail is not allowed."
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
