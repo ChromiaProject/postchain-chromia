@@ -14,9 +14,7 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.client.config.FailOverConfig
@@ -30,7 +28,6 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -44,8 +41,6 @@ import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 private const val systemRellSource = "../chain0-impl/rell/src"
 
@@ -292,39 +287,19 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(12)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
+        val node1Db = postgres.createChainDatabaseCommunicator(node1Db.getChainId(dapps["test-dapp2"]!!), node1.appConfig.databaseSchema)
 
-        fun getAssertingParam(): Long {
-            val brid = dapps["test-dapp2"]!!
-            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
-            assertTrue(height > 0)
-            val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
-            assertNotNull(config0)
-            return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
-        }
-
-        // initial value
-        assertEquals(500L, getAssertingParam())
+        // initial value 500L
+        assertEquals(setOf(500L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
 
         // reconfiguring test-dapp2
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        updateDapp("test-dapp2", tmpIccfSources)
+        updateDapp("test-dapp2", tmpIccfSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
 
-        // new value
+        // new value 1000L
         awaitUntilAsserted {
-            assertEquals(1000L, getAssertingParam())
+            assertEquals(setOf(500L, 1000L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
         }
-    }
-
-    private fun updateDapp(dappName: String, additionalSources: File? = null) {
-        testLogger.info("Update dapp $dappName")
-
-        val rellConfig = compileDapp("$dappName-update", additionalSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
-                .config.chains.first().configs.entries.first().value
-        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
-
-        node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
-                .postTransactionUntilConfirmed("Propose $dappName config")
     }
 
     @Test

@@ -14,6 +14,7 @@ import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.proposal.getProposalsSince
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
 import net.postchain.containers.bpm.docker.DockerClientFactory
@@ -354,4 +355,21 @@ open class ManagedModeBase(rellFolder: String) {
                     .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
         }
     }
+
+    fun updateDapp(dappName: String, additionalSources: File? = null, runXmlFileOverrides: Map<String, String> = mapOf()) {
+        testLogger.info("Update dapp $dappName")
+
+        val rellConfig = compileDapp("$dappName-update", additionalSources, runXmlFileOverrides)
+                .config.chains.first().configs.entries.first().value
+        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
+                .postTransactionUntilConfirmed("Propose $dappName config")
+    }
+
+    fun getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(dbCommunicator: ChainDatabaseCommunicator) =
+            dbCommunicator.getGtvConfigurationsUsedForBlockBuildingBeforeHeight(dbCommunicator.getHeight())
+                    .map { it["blockstrategy"]!!["maxblocktransactions"]!!.asInteger() }.toSet()
+
 }

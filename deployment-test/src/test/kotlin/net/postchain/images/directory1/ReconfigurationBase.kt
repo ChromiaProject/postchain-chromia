@@ -96,7 +96,7 @@ abstract class ReconfigurationBase {
             assert(it.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        deployDapp("test-dapp3", foobarContainer, expectedSigners = listOf(node1))
+        deployDapp("test-dapp3", foobarContainer, expectedSigners = listOf(node1), runFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "500"))
 
         // Asserting that blockchain is added
         nodes().forEach {
@@ -104,4 +104,21 @@ abstract class ReconfigurationBase {
         }
     }
 
+    @Test
+    @Order(3)
+    fun `Reconfigure dapp by two configs in a row`() {
+        val node1Db = postgres.createChainDatabaseCommunicator(node1Db.getChainId(dapps["test-dapp3"]!!), node1.appConfig.databaseSchema)
+
+        // initial value 500
+        assertEquals(setOf(500L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
+
+        // reconfiguring test-dapp3
+        updateDapp("test-dapp3", runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "1000"))
+        updateDapp("test-dapp3", runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "2000"))
+
+        // new values: 1000, 2000
+        awaitUntilAsserted {
+            assertEquals(setOf(500L, 1000L, 2000L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
+        }
+    }
 }
