@@ -14,6 +14,7 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
@@ -28,6 +29,7 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -35,6 +37,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
@@ -292,18 +295,26 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(12)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
-        val node1Db = postgres.createChainDatabaseCommunicator(node1Db.getChainId(dapps["test-dapp2"]!!), node1.appConfig.databaseSchema)
 
-        // initial value 500L
-        assertEquals(setOf(500L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
+        fun getAssertingParam(): Long {
+            val brid = dapps["test-dapp2"]!!
+            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
+            assertTrue(height > 0)
+            val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
+            assertNotNull(config0)
+            return GtvDecoder.decodeGtv(config0!!).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
+        }
+
+        // initial value
+        assertEquals(500L, getAssertingParam())
 
         // reconfiguring test-dapp2
         File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
         updateDapp("test-dapp2", tmpIccfSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
 
-        // new value 1000L
+        // new value
         awaitUntilAsserted {
-            assertEquals(setOf(500L, 1000L), getMaxblocktransactionsOfBlockchainConfigUsedForBlockBuilding(node1Db))
+            assertEquals(1000L, getAssertingParam())
         }
     }
 
