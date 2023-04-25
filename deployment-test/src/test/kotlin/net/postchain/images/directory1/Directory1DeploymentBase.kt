@@ -92,6 +92,7 @@ abstract class Directory1DeploymentBase {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
+            // compile cluster anchoring dapp
             val clusterAnchoringDapp = compileChain("anchoring/blockchain_config_cluster_anchoring.run.xml", File(systemRellSource))
             val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
 
@@ -506,6 +507,4 @@ abstract class Directory1DeploymentBase {
             assertEquals(expected, actual)
         }
     }
-
-    val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }

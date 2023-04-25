@@ -134,6 +134,8 @@ open class ManagedModeBase(rellFolder: String) {
 
     val PostchainContainer.c0 get() = client(chain0Brid)
 
+    val PostchainContainer.providerPubkey get() = provider.pubKey.data
+
     init {
         val runConf = this::class.java.getResource("run.xml")!!
         val configFiles = RellRunConfigGenerator.generateCli(
