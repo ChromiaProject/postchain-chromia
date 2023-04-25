@@ -4,14 +4,13 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_container.createContainerOperation
-import net.postchain.common.BlockchainRid
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -30,9 +29,6 @@ private const val systemRellSource = "../chain0-impl/rell/src"
 abstract class ReconfigurationBase {
 
     companion object : ManagedModeBase(systemRellSource) {
-        private val dapps = mutableMapOf<String, BlockchainRid>()
-        private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
-        private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
     }
 
@@ -79,10 +75,33 @@ abstract class ReconfigurationBase {
         }
     }
 
-    /*
+    /**
+    Tests to implement:
+
+    Good configs
     `Reconfigure chain0`
     `Reconfigure cluster anchoring chain`
     `Reconfigure system anchoring chain`
+
+    Faulty configs:
+    `Reconfigure chain0 to a faulty config`
+    `Reconfigure cluster anchoring chain to a faulty config`
+    `Reconfigure system anchoring chain to a faulty config`
      */
+
+    @Test
+    @Order(2)
+    fun `Deploy new dapp`() {
+        nodes().forEach {
+            assert(it.c0.getBlockchains(true).size).isEqualTo(3)
+        }
+
+        deployDapp("test-dapp3", foobarContainer, expectedSigners = listOf(node1))
+
+        // Asserting that blockchain is added
+        nodes().forEach {
+            assert(it.c0.getBlockchains(true).size).isEqualTo(4)
+        }
+    }
 
 }

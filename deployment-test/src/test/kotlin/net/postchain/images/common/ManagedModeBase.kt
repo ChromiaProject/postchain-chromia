@@ -1,21 +1,31 @@
 package net.postchain.images.common
 
 import assertk.assertions.contains
+import assertk.assertions.isNotEmpty
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
+import net.postchain.chain0.proposal.getProposalsSince
+import net.postchain.chain0.proposal.voting.makeVoteOperation
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.RowId
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
+import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.getResolvedDockerHost
@@ -68,6 +78,8 @@ open class ManagedModeBase(rellFolder: String) {
 
     lateinit var clusterAnchoringBrid: BlockchainRid
     lateinit var systemAnchoringBrid: BlockchainRid
+    val systemContainer = "system"
+    val dapps = mutableMapOf<String, BlockchainRid>()
 
     fun nodes() = arrayOf(node1, node2, node3)
 
@@ -286,6 +298,60 @@ open class ManagedModeBase(rellFolder: String) {
             awaitQueryResult {
                 assertTrue(node1.client(it).currentBlockHeight() > (currentHeight + 1))
             }
+        }
+    }
+
+    fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null, runFileOverrides: Map<String, String> = mapOf(), expectedSigners: List<PostchainContainer> = listOf(node1, node2, node3)) {
+        testLogger.info("Deploy new dapp $dappName")
+
+        val rellConfig = compileDapp(dappName, additionalSources, runFileOverrides)
+
+        var blockchainRid: BlockchainRid? = null
+        rellConfig.config.chains.forEach { chain ->
+            testLogger.info { "Adding test dapp $dappName" }
+            chain.configs.forEach { (height, config) ->
+                node3Db.awaitNewBlock()
+
+                val configGtv = getBaseConfig(config)
+                blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
+                dapps[dappName] = blockchainRid!!
+                testLogger.info { "Proposing a blockchain ${blockchainRid?.toHex()} with config at height $height" }
+
+                node1.c0.transactionBuilder()
+                        .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                        .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
+
+                if (containerName == systemContainer) {
+                    voteOnAllProposals(node2.provider)
+                    voteOnAllProposals(node3.provider)
+                }
+            }
+        }
+
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        assertChainSigners(blockchainRid!!, *expectedSigners.toTypedArray())
+    }
+
+    fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
+        awaitQueryResult {
+            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
+            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
+            val expected = nodes.map { it.pubkey }.toSet()
+            assertEquals(expected, actual)
+        }
+    }
+
+    fun voteOnAllProposals(provider: KeyPair) {
+        val proposals = awaitQueryResult {
+            val result = node1.c0.getProposalsSince(RowId(0))
+            assertk.assert(result).isNotEmpty()
+            return@awaitQueryResult result
+        }!!
+
+        proposals.sortedBy { it.rowid.id }.forEach {
+            node1.client(chain0Brid, listOf(provider)).transactionBuilder()
+                    .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
+                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
         }
     }
 }

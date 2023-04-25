@@ -3,12 +3,9 @@ package net.postchain.images.directory1
 import assertk.assert
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
@@ -19,9 +16,6 @@ import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.proposal.getProposalsSince
-import net.postchain.chain0.proposal.voting.makeVoteOperation
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
@@ -30,15 +24,11 @@ import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.common.types.RowId
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.*
-import net.postchain.crypto.KeyPair
-import net.postchain.crypto.PubKey
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
@@ -66,9 +56,7 @@ abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase(systemRellSource) {
 
-        private val dapps = mutableMapOf<String, BlockchainRid>()
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
-        private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -230,23 +218,9 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
-    private fun voteOnAllProposals(provider: KeyPair) {
-        val proposals = awaitQueryResult {
-            val result = node1.c0.getProposalsSince(RowId(0))
-            assert(result).isNotEmpty()
-            return@awaitQueryResult result
-        }!!
-
-        proposals.sortedBy { it.rowid.id }.forEach {
-            node1.client(chain0Brid, listOf(provider)).transactionBuilder()
-                    .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
-                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
-        }
-    }
-
     @Test
     @Order(7)
-    fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
+    fun `Deploy new dapps`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
@@ -261,37 +235,6 @@ abstract class Directory1DeploymentBase {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
-    }
-
-    private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null, runFileOverrides: Map<String, String> = mapOf()) {
-        testLogger.info("Deploy new dapp $dappName")
-
-        val rellConfig = compileDapp(dappName, additionalSources, runFileOverrides)
-
-        var blockchainRid: BlockchainRid? = null
-        rellConfig.config.chains.forEach { chain ->
-            testLogger.info { "Adding test dapp $dappName" }
-            chain.configs.forEach { (height, config) ->
-                node3Db.awaitNewBlock()
-
-                val configGtv = getBaseConfig(config)
-                blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
-                dapps[dappName] = blockchainRid!!
-                testLogger.info { "Proposing a blockchain ${blockchainRid?.toHex()} with config at height $height" }
-
-                node1.c0.transactionBuilder()
-                        .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
-                        .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
-
-                if (containerName == systemContainer) {
-                    voteOnAllProposals(node2.provider)
-                    voteOnAllProposals(node3.provider)
-                }
-            }
-        }
-
-        // Asserting that node1, node2, node3 are signers of newly added blockchain
-        assertChainSigners(blockchainRid!!, *nodes())
     }
 
     @Test
@@ -497,14 +440,5 @@ abstract class Directory1DeploymentBase {
                 .mapNotNull {
                     ResourceLimitFactory.fromPair(it.toPair())
                 }.toTypedArray()
-    }
-
-    private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
-        awaitQueryResult {
-            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
-            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
-            val expected = nodes.map { it.pubkey }.toSet()
-            assertEquals(expected, actual)
-        }
     }
 }
