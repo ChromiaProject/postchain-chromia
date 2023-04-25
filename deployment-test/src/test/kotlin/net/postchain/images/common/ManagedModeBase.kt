@@ -5,10 +5,14 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.images.directory1.getResolvedDockerHost
+import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -20,6 +24,8 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import org.apache.commons.io.FileUtils
+import org.junit.jupiter.api.AfterAll
+import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
@@ -28,6 +34,10 @@ import java.nio.charset.StandardCharsets
 
 // Base class for managed mode tests
 open class ManagedModeBase(rellFolder: String) {
+
+    val cryptoSystem = Secp256K1CryptoSystem()
+    val resolvedDockerHost = getResolvedDockerHost()
+    protected val dockerClient: DockerClient = DockerClientFactory.create()
 
     val testLogger = KotlinLogging.logger("TestLogger")
     val node1Logger = KotlinLogging.logger("Node1Logger")
@@ -47,6 +57,42 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node3: PostchainContainer
 
     fun nodes() = arrayOf(node1, node2, node3)
+
+    @AfterAll
+    fun breakdown() {
+        saveSubnodeLogs(dockerClient)
+        stopNodes()
+        removeSubnodeContainers()
+
+        /*
+            This is used by the CI to run a shell command right before the
+            files in the directory referenced by MOUNT_DIR are removed. It
+            is necessary because the permissions need to be altered, since
+            the files are owned by the root user account.
+        */
+        val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
+
+        if (testBreakdownCommand != null) {
+            ProcessBuilder(testBreakdownCommand)
+                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
+                    .start()
+                    .waitFor()
+        }
+
+        if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
+            testLogger.error("Unable to clear mount directory")
+        }
+    }
+
+    fun removeSubnodeContainers() {
+        dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
+            if (it.image().contains("chromia-subnode")) {
+                dockerClient.stopContainer(it.id(), 0)
+                dockerClient.removeContainer(it.id())
+            }
+        }
+    }
 
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)

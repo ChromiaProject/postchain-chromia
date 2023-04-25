@@ -36,11 +36,9 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -61,7 +59,6 @@ import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
-import java.lang.ProcessBuilder.Redirect
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -74,9 +71,7 @@ const val systemRellSource = "../chain0-impl/rell/src"
 abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase(systemRellSource) {
-        @JvmStatic
-        protected val resolvedDockerHost = getResolvedDockerHost()
-        private val dockerClient: DockerClient = DockerClientFactory.create()
+
         private val dapps = mutableMapOf<String, BlockchainRid>()
         lateinit var clusterAnchoringBrid: BlockchainRid
         lateinit var systemAnchoringBrid: BlockchainRid
@@ -91,46 +86,7 @@ abstract class Directory1DeploymentBase {
                 IoRead(resourceLimitsValues["io_read"] ?: -1),
                 IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
-
-        @JvmStatic
-        @AfterAll
-        fun breakdown() {
-            saveSubnodeLogs(dockerClient)
-            stopNodes()
-            removeSubnodeContainers()
-
-            /*
-                This is used by the CI to run a shell command right before the
-                files in the directory referenced by MOUNT_DIR are removed. It
-                is necessary because the permissions need to be altered, since
-                the files are owned by the root user account.
-            */
-            val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
-
-            if (testBreakdownCommand != null) {
-                ProcessBuilder(testBreakdownCommand)
-                        .redirectOutput(Redirect.INHERIT)
-                        .redirectError(Redirect.INHERIT)
-                        .start()
-                        .waitFor()
-            }
-
-            if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
-                testLogger.error("Unable to clear mount directory")
-            }
-        }
-
-        fun removeSubnodeContainers() {
-            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
-                if (it.image().contains("chromia-subnode")) {
-                    dockerClient.stopContainer(it.id(), 0)
-                    dockerClient.removeContainer(it.id())
-                }
-            }
-        }
     }
-
-    val cryptoSystem = Secp256K1CryptoSystem()
 
     abstract val numberOfMasterNodes: Int
 
