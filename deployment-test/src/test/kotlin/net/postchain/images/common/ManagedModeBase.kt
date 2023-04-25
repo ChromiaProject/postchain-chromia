@@ -1,9 +1,13 @@
 package net.postchain.images.common
 
+import assertk.assertions.contains
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
+import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
+import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
@@ -11,12 +15,16 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
+import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.rell.module.RellVersions
+import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
 import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
 import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import net.postchain.server.grpc.AddPeerRequest
@@ -31,6 +39,8 @@ import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import java.io.File
 import java.nio.charset.StandardCharsets
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 // Base class for managed mode tests
 open class ManagedModeBase(rellFolder: String) {
@@ -55,6 +65,9 @@ open class ManagedModeBase(rellFolder: String) {
     lateinit var node1: PostchainContainer
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
+
+    lateinit var clusterAnchoringBrid: BlockchainRid
+    lateinit var systemAnchoringBrid: BlockchainRid
 
     fun nodes() = arrayOf(node1, node2, node3)
 
@@ -118,6 +131,8 @@ open class ManagedModeBase(rellFolder: String) {
 
     var chain0Config: File
     lateinit var chain0Brid: BlockchainRid
+
+    val PostchainContainer.c0 get() = client(chain0Brid)
 
     init {
         val runConf = this::class.java.getResource("run.xml")!!
@@ -239,5 +254,36 @@ open class ManagedModeBase(rellFolder: String) {
         val dstFile = File.createTempFile("run-file-override-", ".xml")
         FileUtils.writeStringToFile(dstFile, fileContents, StandardCharsets.UTF_8)
         return dstFile
+    }
+
+    fun getBaseConfig(config: RellPostAppChainConfig): Gtv {
+        val fullConfig = config.gtvConfig.asDict().toMutableMap()
+        fullConfig.remove("signers")
+        return GtvFactory.gtv(fullConfig)
+    }
+
+    fun assertAnchoringChainProperties() {
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
+                .filter { it.system }.map { BlockchainRid(it.rid) }
+        assertEquals(3, systemChains.size)
+
+        // Getting cluster anchoring chain for system cluster via CM API
+        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
+        // Asserting cluster anchoring chain is in system_chains list of NP API
+        assertk.assert(systemChains.map { it }).contains(clusterAnchoringBrid)
+        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
+
+        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
+        assertk.assert(systemChains.map { it }).contains(systemAnchoringBrid)
+        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
+    }
+
+    fun assertAnchoringChainsFunctional() {
+        listOf(chain0Brid, clusterAnchoringBrid, systemAnchoringBrid).forEach {
+            val currentHeight = awaitQueryResult { node1.client(it).currentBlockHeight() }!!
+            awaitQueryResult {
+                assertTrue(node1.client(it).currentBlockHeight() > (currentHeight + 1))
+            }
+        }
     }
 }

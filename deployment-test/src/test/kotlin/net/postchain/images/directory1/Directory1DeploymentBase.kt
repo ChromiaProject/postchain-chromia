@@ -1,7 +1,6 @@
 package net.postchain.images.directory1
 
 import assertk.assert
-import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
@@ -9,9 +8,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
-import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
@@ -20,7 +17,6 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.getProposalsSince
@@ -44,7 +40,6 @@ import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -52,7 +47,6 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
@@ -63,7 +57,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-const val systemRellSource = "../chain0-impl/rell/src"
+private const val systemRellSource = "../chain0-impl/rell/src"
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -73,8 +67,6 @@ abstract class Directory1DeploymentBase {
     companion object : ManagedModeBase(systemRellSource) {
 
         private val dapps = mutableMapOf<String, BlockchainRid>()
-        lateinit var clusterAnchoringBrid: BlockchainRid
-        lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
@@ -116,24 +108,7 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-
         assertAnchoringChainsFunctional()
-    }
-
-    private fun assertAnchoringChainProperties() {
-        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
-                .filter { it.system }.map { BlockchainRid(it.rid) }
-        assertEquals(3, systemChains.size)
-
-        // Getting cluster anchoring chain for system cluster via CM API
-        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
-        // Asserting cluster anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it }).contains(clusterAnchoringBrid)
-        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
-
-        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
-        assert(systemChains.map { it }).contains(systemAnchoringBrid)
-        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
     @Test
@@ -252,19 +227,6 @@ abstract class Directory1DeploymentBase {
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
-    }
-
-    private fun assertAnchoringChainsFunctional() {
-        assertChainFunctional(chain0Brid)
-        assertChainFunctional(clusterAnchoringBrid)
-        assertChainFunctional(systemAnchoringBrid)
-    }
-
-    private fun assertChainFunctional(blockchainRid: BlockchainRid) {
-        val currentHeight = awaitQueryResult { node1.client(blockchainRid).currentBlockHeight() }!!
-        awaitQueryResult {
-            assertTrue(node1.client(blockchainRid).currentBlockHeight() > (currentHeight + 1))
-        }
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
@@ -536,12 +498,6 @@ abstract class Directory1DeploymentBase {
                 }.toTypedArray()
     }
 
-    private fun getBaseConfig(config: RellPostAppChainConfig): Gtv {
-        val fullConfig = config.gtvConfig.asDict().toMutableMap()
-        fullConfig.remove("signers")
-        return gtv(fullConfig)
-    }
-
     private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
         awaitQueryResult {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
@@ -550,8 +506,6 @@ abstract class Directory1DeploymentBase {
             assertEquals(expected, actual)
         }
     }
-
-    private val PostchainContainer.c0 get() = client(chain0Brid)
 
     val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }
