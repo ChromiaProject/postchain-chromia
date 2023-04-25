@@ -84,8 +84,7 @@ open class ManagedModeBase(rellFolder: String) {
 
     fun nodes() = arrayOf(node1, node2, node3)
 
-    @AfterAll
-    fun breakdown() {
+    open fun breakdown() {
         saveSubnodeLogs(dockerClient)
         stopNodes()
         removeSubnodeContainers()

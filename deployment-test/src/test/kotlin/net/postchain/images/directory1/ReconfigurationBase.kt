@@ -12,6 +12,7 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.images.common.ManagedModeBase
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -30,6 +31,12 @@ abstract class ReconfigurationBase {
 
     companion object : ManagedModeBase(systemRellSource) {
         private const val foobarContainer = "foobar"
+
+        @JvmStatic
+        @AfterAll
+        override fun breakdown() {
+            super.breakdown()
+        }
     }
 
     abstract val numberOfMasterNodes: Int

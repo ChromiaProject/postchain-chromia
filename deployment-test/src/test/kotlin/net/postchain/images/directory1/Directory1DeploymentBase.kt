@@ -50,7 +50,6 @@ private const val systemRellSource = "../chain0-impl/rell/src"
 abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase(systemRellSource) {
-
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
@@ -61,6 +60,12 @@ abstract class Directory1DeploymentBase {
                 IoRead(resourceLimitsValues["io_read"] ?: -1),
                 IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
+
+        @JvmStatic
+        @AfterAll
+        override fun breakdown() {
+            super.breakdown()
+        }
     }
 
     abstract val numberOfMasterNodes: Int
