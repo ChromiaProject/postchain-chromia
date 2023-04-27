@@ -13,11 +13,12 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
  * We write this module as a complement to the "anchoring" module that is written in Rell.
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
-class SystemAnchoringGTXModule : SimpleGTXModule<Unit>(
+open class SystemAnchoringGTXModule : SimpleGTXModule<Unit>(
         Unit, mapOf(), mapOf()
 ) {
     private val _specialTxExtensions = listOf(
-            AnchoringSpecialTxExtension { clusterManagement, _ -> SystemAnchoringReceiver(clusterManagement) }
+            AnchoringSpecialTxExtension { clusterManagement, _ -> SystemAnchoringReceiver(clusterManagement) },
+            SelfReportFaultyConfigSpecialTxExtension()
     )
 
     override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchoring module creates tables etc
