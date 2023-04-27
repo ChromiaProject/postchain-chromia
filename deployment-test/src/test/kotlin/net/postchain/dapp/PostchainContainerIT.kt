@@ -21,6 +21,7 @@ internal class PostchainContainerIT {
             .withEnv("POSTGRES_DB", "postchain")
             .withEnv("POSTGRES_PASSWORD", "postchain")
             .withEnv("POSTGRES_USER", "postchain")
+            .withEnv("POSTGRES_INITDB_ARGS", "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8")
 
     @Container
     private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/node-config.properties")!!))

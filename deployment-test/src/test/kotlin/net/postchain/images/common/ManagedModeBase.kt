@@ -41,6 +41,7 @@ open class ManagedModeBase(rellFolder: String) {
             .withEnv("POSTGRES_PASSWORD", "postchain")
             .withEnv("POSTGRES_USER", "postchain")
             .withEnv("POSTGRES_DB", "postchain")
+            .withEnv("POSTGRES_INITDB_ARGS", "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8")
 
     lateinit var node1: PostchainContainer
     lateinit var node2: PostchainContainer
