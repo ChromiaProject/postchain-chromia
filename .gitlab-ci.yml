@@ -80,12 +80,15 @@ nightly-tests:
   extends: .setup
   stage: build
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify -pl :deployment-test -am -Dtest=*Nightly -DfailIfNoTests=false
+    - mvn $MAVEN_CLI_OPTS --activate-profiles nightly verify -pl :deployment-test -am
   when: manual
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE != "manual"'
       allow_failure: true
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      allow_failure: false
 
 dependency-check:
   extends: .setup
