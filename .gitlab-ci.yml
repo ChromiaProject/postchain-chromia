@@ -46,7 +46,7 @@ deploy-snapshot:
   only:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
 
 deploy-release:
   extends: .setup

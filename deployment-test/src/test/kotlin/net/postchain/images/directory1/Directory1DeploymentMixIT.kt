@@ -5,7 +5,7 @@ import net.postchain.dapp.PostchainContainer
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 
-class Directory1DeploymentMixNightly : Directory1DeploymentBase() {
+class Directory1DeploymentMixIT : Directory1DeploymentBase() {
 
     companion object {
         init {
