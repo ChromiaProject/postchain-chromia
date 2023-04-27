@@ -4,6 +4,16 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
   tags:
     - saas-linux-large-amd64
   before_script:
+    - docker run
+      --detach
+      --name postgres
+      --env POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
+      --env POSTGRES_PASSWORD=postchain
+      --env POSTGRES_USER=postchain
+      --env PGDATA=/pgtmpfs
+      --tmpfs=/pgtmpfs:size=1000m
+      --publish 5432:5432
+      postgres:14.7
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
   artifacts:
@@ -35,7 +45,7 @@ deploy-snapshot:
   only:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
 
 deploy-release:
   extends: .setup
@@ -140,13 +150,10 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
-  # Configure postgres service (https://hub.docker.com/_/postgres/)
-  POSTGRES_DB: postchain
+  CHR_DB_URL: jdbc:postgresql://docker/postchain
+  POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
-  CHR_DB_URL: jdbc:postgresql://postgres/postchain
-  POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
-  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
   # Instruct Testcontainers to use the daemon of DinD.
   DOCKER_HOST: tcp://docker:2375
   # Instruct Docker not to start over TLS.
@@ -159,7 +166,6 @@ variables:
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
-  - postgres:14.7
   - name: docker:23.0.4-dind
     alias: docker
     # explicitly disable tls to avoid docker startup interruption
