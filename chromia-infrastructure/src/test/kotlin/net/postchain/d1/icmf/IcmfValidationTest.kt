@@ -30,6 +30,7 @@ import org.mockito.kotlin.mock
 class IcmfValidationTest {
     private val cluster = IcmfTestClusterManagement.senderCluster
     private val topic = "my-topic"
+    private val irrelevantTopic = "irrelevant-topic"
     private val anchorBlockchainRID = BlockchainRid.buildRepeat(0)
     private val blockchainRID = BlockchainRid.buildRepeat(1)
     private val cryptoSystem = Secp256K1CryptoSystem()
@@ -43,6 +44,7 @@ class IcmfValidationTest {
     private val dbMock: IcmfDatabaseOperations = mock {
         on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
         on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
+        on { loadLastAnchoredHeight(mockContext, cluster, irrelevantTopic) } doReturn -1L
         on { loadOldestSpilledMessage(mockContext, blockchainRID, topic) } doReturn SpilledMessage(
                 0,
                 spilledMessage.merkleHash(hashCalculator),
@@ -379,6 +381,44 @@ class IcmfValidationTest {
         )
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
+    @Test
+    fun `Topics in header that we dont receive messages ops for should not impact validation`() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val relevantMessageBodies = listOf(gtv("hej"))
+        val irrelevantMessageBodies = listOf(gtv("hej on another topic"))
+        val block = createBlockDetail(relevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(relevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv(),
+                        irrelevantTopic to TopicHeaderData(
+                                gtv(irrelevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                )))
+        )
+
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
+                        ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                                topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv(),
+                                irrelevantTopic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv()
+                        ))
+                ))
+        val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
+        val rawAnchorWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
+        ).getRawData()
+
+        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageOps = createMessageOps(relevantMessageBodies)
+        val ops = listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
     private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock, icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {

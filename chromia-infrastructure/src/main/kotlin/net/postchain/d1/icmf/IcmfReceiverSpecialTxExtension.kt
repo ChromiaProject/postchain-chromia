@@ -202,7 +202,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     if (!validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, hashCalculator, bctx)) return false
                     if (currentAnchorHeaderData != null) {
                         for (topic in headerBlockRidsByTopic.keys) {
-                            dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
+                            if (bodyHashesByTopic.containsKey(topic)) {
+                                dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
+                            }
                         }
                     }
                     headerBlockRidsByTopic.clear()
@@ -324,8 +326,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             }
 
             for (topic in headerBlockRidsByTopic.keys) {
-                // If there is no spill we can save as last anchor height
-                if (bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }) {
+                // If we actually received messages on the topic and there is no spill we can save as last anchor height
+                if (bodyHashesByTopic.containsKey(topic) && bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }) {
                     dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
                 }
             }
@@ -406,12 +408,19 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     ): Boolean {
         if (currentHeaderData != null) {
             if (!validateMessagesHash(bodyHashesByTopic, currentHeaderData)) return false
-            for ((topic, data) in currentHeaderData.icmfHeaderData) {
+            for (topic in bodyHashesByTopic.keys) {
+                val topicData = currentHeaderData.icmfHeaderData[topic]
+                // We should already have validated this when checking hashes, but it does not hurt to do it again
+                if (topicData == null) {
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic")
+                    return false
+                }
+
                 if (!validatePrevMessageHeight(
                                 bctx,
                                 currentHeaderData.sender,
                                 topic,
-                                data.previousBlockHeight,
+                                topicData.previousBlockHeight,
                                 currentHeaderData.height
                         )
                 ) return false
@@ -457,8 +466,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>>,
             headerData: HeaderValidationInfo
     ): Boolean {
-        if (headerData.icmfHeaderData.keys != bodyHashesByTopic.keys) {
-            logger.warn("Header does not contain the same topics as messages received")
+        if (bodyHashesByTopic.isEmpty()) {
+            logger.warn("Received header ops but no message ops")
             return false
         }
         for ((topic, hashes) in bodyHashesByTopic) {
