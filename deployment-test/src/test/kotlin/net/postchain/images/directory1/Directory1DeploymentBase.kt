@@ -596,13 +596,14 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(18)
     fun `Reconfiguration cluster anchoring chain`(@TempDir tmpIccfSources: File) {
-        testLogger.info("Update $clusterAnchoringChain")
+        testLogger.info("Update $clusterAnchoringChain / $clusterAnchoringBrid")
 
         // initial value 500
         nodes().forEach {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
         }
 
+        // 1 proposal per tx
         listOf(2000, 3000, 4000).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(it, it == 3000), "")
@@ -611,10 +612,20 @@ abstract class Directory1DeploymentBase {
             voteOnAllProposals(node3.provider)
         }
 
+        // many proposals per tx
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(5000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(6000, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(7000), "")
+                .postTransactionUntilConfirmed("Propose $clusterAnchoringChain config")
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
+
         // new values: 1000, 2000
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 2000, 4000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+                assertEquals(setOf(500, 2000, 4000, 5000, 7000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
             }
         }
     }
@@ -622,13 +633,14 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(19)
     fun `Reconfiguration system anchoring chain`(@TempDir tmpIccfSources: File) {
-        testLogger.info("Update $systemAnchoringBrid")
+        testLogger.info("Update $systemAnchoringChain / $systemAnchoringBrid")
 
         // initial value 500
         nodes().forEach {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
         }
 
+        // 1 proposal per tx
         listOf(5000, 6000, 7000).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(it, it == 6000), "")
@@ -637,10 +649,19 @@ abstract class Directory1DeploymentBase {
             voteOnAllProposals(node3.provider)
         }
 
+        // many proposals per tx
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(8000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(9000, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(10000), "")
+                .postTransactionUntilConfirmed("Propose $systemAnchoringChain config")
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
         // new values: 5000, 7000
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 5000, 7000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+                assertEquals(setOf(500, 5000, 7000, 8000, 10000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
             }
         }
     }
