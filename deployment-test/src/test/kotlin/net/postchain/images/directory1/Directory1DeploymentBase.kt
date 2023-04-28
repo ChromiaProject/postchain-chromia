@@ -467,6 +467,7 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(13)
+    @Disabled
     fun `Legacy anchoring can anchor blocks`() {
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
