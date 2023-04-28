@@ -24,6 +24,7 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
       junit:
         - "**/target/surefire-reports/TEST-*.xml"
         - "**/target/failsafe-reports/TEST-*.xml"
+        - "**/target/rell-reports/rell-tests.xml"
     expire_in: 1 week
 
 .git_template: &git_setup |
