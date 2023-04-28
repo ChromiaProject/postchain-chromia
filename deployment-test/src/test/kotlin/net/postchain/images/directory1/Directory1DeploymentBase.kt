@@ -21,6 +21,7 @@ import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlo
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
+import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.getProposalsSince
@@ -63,7 +64,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 const val systemRellSource = "../chain0-impl/rell/src"
@@ -78,6 +78,8 @@ abstract class Directory1DeploymentBase {
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
+        private const val clusterAnchoringChain = "cluster_anchoring_foobar"
+        private const val systemAnchoringChain = "system_anchoring"
         lateinit var clusterAnchoringBrid: BlockchainRid
         lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
@@ -160,7 +162,6 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-
         assertAnchoringChainsFunctional()
     }
 
@@ -427,47 +428,9 @@ abstract class Directory1DeploymentBase {
         }
     }
 
+    @Disabled
     @Test
     @Order(12)
-    fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
-
-        fun getAssertingParam(): Long {
-            val brid = dapps["test-dapp2"]!!
-            val height = awaitQueryResult { node1.client(brid).currentBlockHeight() }!!
-            assertTrue(height > 0)
-            val config0 = node1.c0.nmGetBlockchainConfiguration(brid, height)
-            assertNotNull(config0)
-            return GtvDecoder.decodeGtv(config0).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger()
-        }
-
-        // initial value
-        assertEquals(500L, getAssertingParam())
-
-        // reconfiguring test-dapp2
-        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        updateDapp("test-dapp2", tmpIccfSources)
-
-        // new value
-        awaitUntilAsserted {
-            assertEquals(1000L, getAssertingParam())
-        }
-    }
-
-    private fun updateDapp(dappName: String, additionalSources: File? = null) {
-        testLogger.info("Update dapp $dappName")
-
-        val rellConfig = compileDapp("$dappName-update", additionalSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
-                .config.chains.first().configs.entries.first().value
-        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
-
-        node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
-                .postTransactionUntilConfirmed("Propose $dappName config")
-    }
-
-    @Test
-    @Order(13)
-    @Disabled
     fun `Legacy anchoring can anchor blocks`() {
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
@@ -492,14 +455,14 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(14)
+    @Order(13)
     fun `Blocks can be anchored`() {
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp"]!!)
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp2"]!!)
     }
 
     @Test
-    @Order(15)
+    @Order(14)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
         assertThatBlocksAreAnchored(systemAnchoringBrid, clusterAnchoringBrid)
     }
@@ -533,7 +496,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(16)
+    @Order(15)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test-dapp2"]!!
         awaitUntilAsserted {
@@ -546,7 +509,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(17)
+    @Order(16)
     fun `ICCF transfers are validated`() {
         val sourceDapp = dapps["test-dapp"]!!
         val targetDapp = dapps["test-dapp2"]!!
@@ -594,6 +557,136 @@ abstract class Directory1DeploymentBase {
             val expected = nodes.map { it.pubkey }.toSet()
             assertEquals(expected, actual)
         }
+    }
+
+    @Test
+    @Order(17)
+    fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
+        val iccfReceiver = "[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()
+        val dapp2brid = dapps["test-dapp2"]!!
+
+        // initial value 500
+        nodes().forEach {
+            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+        }
+
+        // reconfiguring test-dapp2
+        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
+        updateDapp("test-dapp2",
+                additionalSources = tmpIccfSources,
+                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "1000", iccfReceiver)
+        )
+        updateDapp("test-dapp2",
+                dappDirPostfix = "-faulty-update",       // Faulty config
+                additionalSources = tmpIccfSources,
+                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "2000", iccfReceiver)
+        )
+        updateDapp("test-dapp2",
+                additionalSources = tmpIccfSources,
+                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "3000", iccfReceiver))
+
+        // new values: 1000, 3000
+        awaitUntilAsserted {
+            nodes().forEach {
+                assertEquals(setOf(500, 1000, 3000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+            }
+        }
+    }
+
+    @Test
+    @Order(18)
+    fun `Reconfiguration cluster anchoring chain`(@TempDir tmpIccfSources: File) {
+        testLogger.info("Update $clusterAnchoringChain")
+
+        // initial value 500
+        nodes().forEach {
+            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+        }
+
+        listOf(2000, 3000, 4000).forEach {
+            node1.c0.transactionBuilder()
+                    .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(it, it == 3000), "")
+                    .postTransactionUntilConfirmed("Propose $clusterAnchoringChain config")
+            voteOnAllProposals(node2.provider)
+            voteOnAllProposals(node3.provider)
+        }
+
+        // new values: 1000, 2000
+        awaitUntilAsserted {
+            nodes().forEach {
+                assertEquals(setOf(500, 2000, 4000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+            }
+        }
+    }
+
+    @Test
+    @Order(19)
+    fun `Reconfiguration system anchoring chain`(@TempDir tmpIccfSources: File) {
+        testLogger.info("Update $systemAnchoringBrid")
+
+        // initial value 500
+        nodes().forEach {
+            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+        }
+
+        listOf(5000, 6000, 7000).forEach {
+            node1.c0.transactionBuilder()
+                    .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(it, it == 6000), "")
+                    .postTransactionUntilConfirmed("Propose $systemAnchoringBrid config")
+            voteOnAllProposals(node2.provider)
+            voteOnAllProposals(node3.provider)
+        }
+
+        // new values: 5000, 7000
+        awaitUntilAsserted {
+            nodes().forEach {
+                assertEquals(setOf(500, 5000, 7000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+            }
+        }
+    }
+
+    private fun getClusterAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
+            getAnchoringConfig(
+                    if (faulty) "anchoring/blockchain_config_cluster_anchoring_faulty_update.run.xml"
+                    else "anchoring/blockchain_config_cluster_anchoring_update.run.xml",
+                    maxBlockTransactions
+            )
+
+    private fun getSystemAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
+            getAnchoringConfig(
+                    if (faulty) "anchoring/blockchain_config_system_anchoring_faulty_update.run.xml"
+                    else "anchoring/blockchain_config_system_anchoring_update.run.xml",
+                    maxBlockTransactions
+            )
+
+    private fun getAnchoringConfig(runXml: String, maxBlockTransactions: Int): ByteArray {
+        val rellConfig = compileChain(runXml, File(systemRellSource), mapOf("[MAXBLOCKTRANSACTIONS]" to maxBlockTransactions.toString()))
+        return GtvEncoder.encodeGtv(getBaseConfig(rellConfig.config.chains.first().configs.entries.first().value))
+    }
+
+    private fun updateDapp(dappName: String, dappDirPostfix: String = "-update", additionalSources: File? = null, runXmlFileOverrides: Map<String, String>) {
+        testLogger.info("Update dapp $dappName")
+
+        val rellConfig = compileDapp("$dappName$dappDirPostfix", additionalSources, runXmlFileOverrides)
+                .config.chains.first().configs.entries.first().value
+        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
+                .postTransactionUntilConfirmed("Propose $dappName config")
+    }
+
+    private fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
+        val res = mutableSetOf<Int>()
+        var current: Long? = 0L
+
+        while (current != null) {
+            val config = node.c0.nmGetBlockchainConfiguration(blockchainRid, current) ?: break
+            res.add(GtvDecoder.decodeGtv(config).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger().toInt())
+            current = node.c0.nmFindNextConfigurationHeight(blockchainRid, current)
+        }
+
+        return res
     }
 
     private val PostchainContainer.c0 get() = client(chain0Brid)

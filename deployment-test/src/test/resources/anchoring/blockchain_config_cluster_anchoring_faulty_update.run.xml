@@ -8,11 +8,12 @@
             <config height="0" add-dependencies="false">
                 <gtv path="config_consensus_strategy"><string>HEADER_HASH</string></gtv>
                 <gtv path="blockstrategy/maxblocktime"><int>2000</int></gtv>
-                <gtv path="blockstrategy/maxblocktransactions"><int>500</int></gtv>
+                <gtv path="blockstrategy/maxblocktransactions"><int>[MAXBLOCKTRANSACTIONS]</int></gtv>
                 <gtv path="gtx/modules">
                     <array>
                         <string>net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule</string>
                         <string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>
+                        <string>unknown_module</string>
                     </array>
                 </gtv>
                 <app module="anchoring_chain_cluster">
