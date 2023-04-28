@@ -53,6 +53,7 @@ function set_cluster_anchoring_config(config: byte_array) {
     // feature toggle
     if (config_map.size() > 0) {
         val anchor = cluster_anchoring_chain @ { cluster } (.blockchain);
+        remove_anchored_blocks(anchor);
         delete blockchain_configuration @* { anchor };
         delete blockchain_configuration_signers @* { anchor };
         delete blockchain_added @* { anchor };
