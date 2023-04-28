@@ -19,6 +19,7 @@
                     <array>
                        <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
                        <string>net.postchain.d1.iccf.IccfGTXModule</string>
+                       <string>unknown_module</string>
                     </array>
                 </gtv>
                 <gtv path="sync_ext">
