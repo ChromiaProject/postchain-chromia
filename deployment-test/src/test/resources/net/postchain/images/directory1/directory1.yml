@@ -1,4 +1,32 @@
 blockchains:
+  anchoring_chain_cluster:
+    config:
+      config_consensus_strategy: HEADER_HASH
+      fast_revolt_status_timeout: 1000
+      blockstrategy:
+        maxblocktime: 2000
+      gtx:
+        modules:
+          - net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule
+          - net.postchain.d1.icmf.IcmfSenderGTXModule
+    module: anchoring_chain_cluster
+    moduleArgs:
+      anchoring_chain_common:
+        enable_pcu: true
+  anchoring_chain_system:
+    module: anchoring_chain_system
+    config:
+      config_consensus_strategy: HEADER_HASH
+      fast_revolt_status_timeout: 1000
+      blockstrategy:
+        maxblocktime: 2000
+      gtx:
+        modules:
+          - net.postchain.d1.icmf.IcmfSenderGTXModule
+          - net.postchain.d1.anchoring.system.SystemAnchoringGTXModule
+    moduleArgs:
+      anchoring_chain_common:
+        enable_pcu: true
   manager:
     module: management_chain_directory1
     moduleArgs:

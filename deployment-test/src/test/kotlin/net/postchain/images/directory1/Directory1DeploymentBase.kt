@@ -51,6 +51,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
@@ -146,12 +147,11 @@ abstract class Directory1DeploymentBase {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val clusterAnchoringDapp = compileChain("anchoring/blockchain_config_cluster_anchoring.run.xml", File(systemRellSource))
-            val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
+            var clusterAnchoringConfig: String = this::class.java.getResource("/directory1deployment/anchoring_chain_cluster.xml")!!.readText()
+            val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(clusterAnchoringConfig)
 
-            // compile system anchoring dapp
-            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
-            val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
+            var systemAnchoringConfig: String = this::class.java.getResource("/directory1deployment/anchoring_chain_system.xml")!!.readText()
+            val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(systemAnchoringConfig)
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
