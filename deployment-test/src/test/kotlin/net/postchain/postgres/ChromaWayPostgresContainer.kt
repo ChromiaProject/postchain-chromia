@@ -19,6 +19,8 @@ class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageN
                 .withStartupTimeout(Duration.of(60L, ChronoUnit.SECONDS))
         setCommand("postgres", "-c", "fsync=off")
         addExposedPort(POSTGRESQL_PORT)
+        withTmpFs(mapOf("/pgtmpfs" to "rw,size=1000m"))
+        addEnv("PGDATA", "/pgtmpfs")
         addEnv("POSTGRES_PASSWORD", "postchain")
     }
 
