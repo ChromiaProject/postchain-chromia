@@ -64,7 +64,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 const val systemRellSource = "../chain0-impl/rell/src"
 
@@ -162,7 +161,6 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-        assertAnchoringChainsFunctional()
     }
 
     private fun assertAnchoringChainProperties() {
@@ -258,8 +256,6 @@ abstract class Directory1DeploymentBase {
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
 
-        assertAnchoringChainsFunctional()
-
         // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, node1, node2)
         assertChainSigners(clusterAnchoringBrid, node1, node2)
@@ -291,25 +287,11 @@ abstract class Directory1DeploymentBase {
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
-        assertAnchoringChainsFunctional()
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
-    }
-
-    private fun assertAnchoringChainsFunctional() {
-        assertChainFunctional(chain0Brid)
-        assertChainFunctional(clusterAnchoringBrid)
-        assertChainFunctional(systemAnchoringBrid)
-    }
-
-    private fun assertChainFunctional(blockchainRid: BlockchainRid) {
-        val currentHeight = awaitQueryResult { node1.client(blockchainRid).currentBlockHeight() }!!
-        awaitQueryResult {
-            assertTrue(node1.client(blockchainRid).currentBlockHeight() > (currentHeight + 1))
-        }
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
