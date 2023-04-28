@@ -1,0 +1,30 @@
+// NB: check authority before calling this function
+function internal_vote(provider, proposal, vote: boolean) {
+    require(voter_set_member @? { proposal.voter_set, provider }, provider.pubkey + " must be a member of the voter set");
+    create vote(proposal, provider, vote);
+    log("vote added with value:", if (vote) "Yes" else "False");
+    try_to_apply_proposal(proposal);
+}
+
+function try_to_apply_proposal(prop: proposal) {
+    val prop_str = proposal_str(prop);
+    val results = get_proposal_voting_results(prop.rowid);
+    when (results.voting_result) {
+        pending -> log("proposal is still under discussion:", prop_str);
+        rejected -> {
+            log("proposal rejected:", prop_str);
+            delete_proposal(prop);
+        }
+        approved -> {
+            log("proposal approved:", prop_str);
+            apply_voting_result_handlers()[prop.proposal_type.name](prop);
+            delete_proposal(prop);
+        }
+    }
+}
+
+@extendable function apply_voting_result_handlers(): map<text, (proposal) -> unit>;
+
+function proposal_str(prop: proposal) {
+    return "%s:%d".format(prop.proposal_type, prop.rowid);
+}

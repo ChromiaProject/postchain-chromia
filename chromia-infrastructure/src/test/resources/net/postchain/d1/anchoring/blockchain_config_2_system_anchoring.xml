@@ -36,6 +36,7 @@ This is a Anchor Chain configuration specifically for testing.
                 <array>
                     <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
                     <string>net.postchain.d1.anchoring.system.SystemAnchoringGTXModule</string>
+                    <string>net.postchain.d1.anchoring.SystemAnchoringIcmfSenderTestGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
@@ -66,6 +67,18 @@ This is a Anchor Chain configuration specifically for testing.
                             </entry>
                             <entry key="anchoring_chain_system/module.rell">
                                 <param key="anchoring_chain_system" type="string"/>
+                            </entry>
+                            <entry key="anchoring_chain_system/self_report_configuration_failed.rell">
+                                <param key="self_report_configuration_failed" type="string"/>
+                            </entry>
+                            <entry key="messaging/icmf.rell">
+                                <param key="messaging.icmf" type="string"/>
+                            </entry>
+                            <entry key="messaging/icmf_constants.rell">
+                                <param key="messaging.icmf_constants" type="string"/>
+                            </entry>
+                            <entry key="messaging/configuration_update_message.rell">
+                                <param key="messaging.configuration_update_message" type="string"/>
                             </entry>
                         </dict>
                     </entry>

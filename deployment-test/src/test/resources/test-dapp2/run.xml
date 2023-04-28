@@ -26,9 +26,16 @@
                         <string>net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension</string>
                     </array>
                 </gtv>
-                <gtv path="icmf/receiver/global/topics">
+                <gtv path="icmf/receiver/local">
                     <array>
-                        <string>city</string>
+                        <dict>
+                            <entry key="bc-rid">
+                                <bytea>[DAPP_BRID]</bytea>
+                            </entry>
+                            <entry key="topic">
+                                <string>L_city</string>
+                            </entry>
+                        </dict>
                     </array>
                 </gtv>
             </config>

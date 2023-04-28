@@ -7,22 +7,24 @@ import de.m3y.kformat.table
 import net.postchain.chain0.common.queries.getProviderData
 import net.postchain.chain0.proposal.GetProposalResult
 import net.postchain.chain0.proposal.ProposalType
-import net.postchain.chain0.proposal.getBlockchainActionProposal
-import net.postchain.chain0.proposal.getBlockchainProposal
-import net.postchain.chain0.proposal.getClusterAnchoringConfigurationProposal
-import net.postchain.chain0.proposal.getClusterLimitsProposal
-import net.postchain.chain0.proposal.getClusterProviderProposal
-import net.postchain.chain0.proposal.getClusterRemoveProposal
-import net.postchain.chain0.proposal.getConfigurationProposal
-import net.postchain.chain0.proposal.getConfigurationProposalAt
-import net.postchain.chain0.proposal.getContainerLimitsProposal
 import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalVotingResults
-import net.postchain.chain0.proposal.getProviderBatchProposal
-import net.postchain.chain0.proposal.getProviderQuotaProposal
-import net.postchain.chain0.proposal.getProviderRemoveProposal
-import net.postchain.chain0.proposal.getProviderStateProposal
-import net.postchain.chain0.proposal.getSystemProviderProposal
+import net.postchain.chain0.proposal_blockchain.getBlockchainActionProposal
+import net.postchain.chain0.proposal_blockchain.getBlockchainProposal
+import net.postchain.chain0.proposal_blockchain.getConfigurationProposal
+import net.postchain.chain0.proposal_blockchain.getConfigurationProposalAt
+import net.postchain.chain0.proposal_cluster.getClusterLimitsProposal
+import net.postchain.chain0.proposal_cluster.getClusterProviderProposal
+import net.postchain.chain0.proposal_cluster.getClusterRemoveProposal
+import net.postchain.chain0.proposal_cluster_anchoring.getClusterAnchoringConfigurationProposal
+import net.postchain.chain0.proposal_container.getContainerProposal
+import net.postchain.chain0.proposal_container.getContainerRemoveProposal
+import net.postchain.chain0.proposal_container.proposal_container_limits.getContainerLimitsProposal
+import net.postchain.chain0.proposal_provider.getProviderBatchProposal
+import net.postchain.chain0.proposal_provider.getProviderQuotaProposal
+import net.postchain.chain0.proposal_provider.getProviderRemoveProposal
+import net.postchain.chain0.proposal_provider.getProviderStateProposal
+import net.postchain.chain0.proposal_provider.getSystemProviderProposal
 import net.postchain.chain0.proposal_voter_set.getVoterSetUpdateProposal
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.types.RowId
@@ -224,6 +226,25 @@ class CommandGetProposal : CliktCommand(
                 val currentConf = GtvDecoder.decodeGtv(p.currentConf.data) as GtvDictionary
                 val newConf = GtvDecoder.decodeGtv(p.proposedConf.data) as GtvDictionary
                 "Proposed anchoring configuration:\n\n${GtvDiffFinder.diff(currentConf, newConf).diff}"
+            }
+
+            ProposalType.container -> {
+                val pc = client.getContainerProposal(proposal.id) ?: return ""
+                return table {
+                    row("Container:", pc.container)
+                    row("Max blockchains:", pc.maxBlockchains.toString())
+                    row("CPU:", pc.cpu.toString())
+                    row("RAM (MiB):", pc.ram.toString())
+                    row("Storage (MiB):", pc.storage.toString())
+                    row("Disk I/O read (MiB/s):", pc.ioRead.toString())
+                    row("Disk I/O write (MiB/s):", pc.ioWrite.toString())
+                    hints { defaultAlignment = Table.Hints.Alignment.LEFT }
+                }.render().toString()
+            }
+
+            ProposalType.container_remove -> {
+                val container = client.getContainerRemoveProposal(proposal.id) ?: return ""
+                return "Container to remove: $container"
             }
 
             ProposalType.other -> "No details"

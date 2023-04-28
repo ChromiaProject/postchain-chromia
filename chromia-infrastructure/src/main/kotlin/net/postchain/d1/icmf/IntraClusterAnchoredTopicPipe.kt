@@ -12,17 +12,17 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
-import net.postchain.d1.rell.icmf.icmfGetMessagesAtHeight
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
 class IntraClusterAnchoredTopicPipe(
-    private val queryProvider: ChromiaQueryProvider,
-    override val route: TopicRoute,
-    override val id: String,
-    private val cryptoSystem: CryptoSystem,
-    private val clusterManagement: ClusterManagement
+        private val queryProvider: ChromiaQueryProvider,
+        override val route: TopicRoute,
+        override val id: String,
+        private val cryptoSystem: CryptoSystem,
+        private val clusterManagement: ClusterManagement
 ) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging()
 
@@ -30,7 +30,14 @@ class IntraClusterAnchoredTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
         val anchorQuery = queryProvider.getClusterAnchoringQuery()
         if (anchorQuery == null) {
             logger.warn("Anchor chain does not exist!")
@@ -38,8 +45,8 @@ class IntraClusterAnchoredTopicPipe(
         }
 
         val signedBlockHeaderWithAnchorHeights = anchorQuery.icmfGetHeadersWithMessagesAfterHeight(
-            route.topic,
-            currentPointer
+                route.topic,
+                currentPointer
         )
 
         val anchorPackets = mutableListOf<IcmfAnchorPacket>()
@@ -72,10 +79,10 @@ class IntraClusterAnchoredTopicPipe(
                     continue
                 }
 
-                val messages = query.icmfGetMessagesAtHeight(
-                        route.topic,
-                        decodedHeader.getHeight()
-                ).map {
+                val messages = query.query(
+                        QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                        GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(decodedHeader.getHeight())))
+                ).asArray().map {
                     val size = GtvEncoder.encodeGtv(it).size
                     if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
                     IcmfMessage(it, size)

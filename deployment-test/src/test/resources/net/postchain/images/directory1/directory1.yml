@@ -2,17 +2,31 @@ blockchains:
   manager:
     module: management_chain_directory1
     moduleArgs:
+      common:
+        enable_pcu: true
       common.init:
         initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
         genesis_node:
           - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
           - node1
           - 9871
-          - "http://localhost:7740"
+          - "http://node1:7740"
     config:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
       config_consensus_strategy: HEADER_HASH
+      fast_revolt_status_timeout: 1000
       blockstrategy:
         maxblocktime: 2000
+      sync_ext:
+        - net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension
+      gtx:
+        modules:
+          - net.postchain.d1.icmf.IcmfReceiverGTXModule
+      icmf:
+        receiver:
+          anchoring:
+            topics:
+              - G_configuration_updated
+              - G_configuration_failed
         

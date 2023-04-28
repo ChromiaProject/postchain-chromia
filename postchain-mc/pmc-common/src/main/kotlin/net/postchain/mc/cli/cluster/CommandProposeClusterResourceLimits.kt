@@ -12,7 +12,7 @@ import net.postchain.chain0.model.ClusterResourceLimitType.default_container_max
 import net.postchain.chain0.model.ClusterResourceLimitType.default_container_ram
 import net.postchain.chain0.model.ClusterResourceLimitType.default_container_storage
 import net.postchain.chain0.model.ClusterResourceLimitType.max_containers
-import net.postchain.chain0.proposal.proposeClusterLimitsOperation
+import net.postchain.chain0.proposal_cluster.proposeClusterLimitsOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.cpuOptionHelp
@@ -27,8 +27,8 @@ import net.postchain.mc.cli.util.storageOptionHelp
 
 class CommandProposeClusterResourceLimits : CliktCommand(
         name = "limits",
-        help = "Propose new resource limits for given cluster. There are three types of limits. " +
-                "Proposal can contain one, two, or all three types."
+        help = "Propose new resource limits for given cluster. There are multiple types of limits. " +
+                "Proposal can contain all types of limits or a subset of them."
 ) {
     companion object {
         fun <K> MutableMap<K, Long>.setIfNotNull(key: K, value: Long?) {

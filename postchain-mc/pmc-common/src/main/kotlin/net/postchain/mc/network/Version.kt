@@ -1,21 +1,18 @@
 package net.postchain.mc.network
 
-import net.postchain.chain0.common.Codename
-import net.postchain.chain0.common.directoryVersion
-import net.postchain.chain0.common.Version as D1Version
+import com.github.ajalt.clikt.core.PrintMessage
+import net.postchain.chain0.version.apiVersion
+import net.postchain.client.core.PostchainQuery
 
-class Version(private val client: net.postchain.client.core.PostchainClient) {
-
-    companion object {
-        val Delta = D1Version(Codename.Delta, "0.1.0")
-        val Delta_v0_2_0 = D1Version(Codename.Delta, "0.2.0")
-    }
+class Version(private val client: PostchainQuery) {
 
     val version by lazy {
         try {
-            client.directoryVersion()
+            client.apiVersion()
         } catch (_: Throwable) {
-            Delta
+            1
         }
     }
 }
+
+fun PostchainQuery.requireApiVersion(version: Long) = if (Version(this).version < version) throw PrintMessage("Command not supported by network") else Unit

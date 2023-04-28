@@ -4,7 +4,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0-SNAPSHOT</version>
+        <version>3.10.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -14,7 +14,7 @@
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib</artifactId>
         </dependency>
 
         <dependency>

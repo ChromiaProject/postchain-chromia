@@ -1,14 +1,21 @@
-image: maven:3.8.4-jdk-11
+image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.0
 
 .setup:
+  tags:
+    - saas-linux-large-amd64
   before_script:
-    - apt-get -q update && apt-get -q install -y docker.io
-    - mkdir -p $HOME/.docker/cli-plugins/
-    - wget --no-verbose -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
-    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
+    - docker run
+      --detach
+      --name postgres
+      --env POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
+      --env POSTGRES_PASSWORD=postchain
+      --env POSTGRES_USER=postchain
+      --env PGDATA=/pgtmpfs
+      --tmpfs=/pgtmpfs:size=1000m
+      --publish 5432:5432
+      postgres:14.7
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
-    - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
   artifacts:
     when: on_failure
     paths:
@@ -17,6 +24,7 @@ image: maven:3.8.4-jdk-11
       junit:
         - "**/target/surefire-reports/TEST-*.xml"
         - "**/target/failsafe-reports/TEST-*.xml"
+        - "**/target/rell-reports/rell-tests.xml"
     expire_in: 1 week
 
 .git_template: &git_setup |
@@ -27,19 +35,35 @@ image: maven:3.8.4-jdk-11
 stages:
   - build
   - nightly-tests
-  - deploy
+  - deploy-snapshot
+  - deploy-release
+  - deploy-patch
   - dependency-check
   - release
 
-deploy:
+deploy-snapshot:
   extends: .setup
-  stage: deploy
+  stage: deploy-snapshot
   only:
     - dev
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
+
+deploy-release:
+  extends: .setup
+  stage: deploy-release
+  only:
     - master
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest deploy
+
+deploy-patch:
+  extends: .setup
+  stage: deploy-patch
+  only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-patch deploy
 
 build:
   extends: .setup
@@ -89,11 +113,10 @@ container-scanning:
     - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
-      - IMAGE: [ chromaway/postchain-admin-client,
-                 chromaway/postchain-mc,
+      - IMAGE: [ chromaway/postchain-mc,
                  chromaway/chromia-subnode,
                  chromaway/chromia-server ]
-        VERSION: [ 3.8.0, 3.9.0-SNAPSHOT ]
+        VERSION: [ 3.9.0, 3.10.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
@@ -132,13 +155,10 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
-  # Configure postgres service (https://hub.docker.com/_/postgres/)
-  POSTGRES_DB: postchain
+  CHR_DB_URL: jdbc:postgresql://docker/postchain
+  POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
-  CHR_DB_URL: jdbc:postgresql://postgres/postchain
-  POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
-  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
   # Instruct Testcontainers to use the daemon of DinD.
   DOCKER_HOST: tcp://docker:2375
   # Instruct Docker not to start over TLS.
@@ -146,14 +166,12 @@ variables:
   # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
   DOCKER_CLI_EXPERIMENTAL: enabled
-  BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
 
 services:
-  - postgres
-  - name: docker:20-dind
+  - name: docker:23.0.4-dind
     alias: docker
     # explicitly disable tls to avoid docker startup interruption
     command: [ "--tls=false" , "--experimental" ]

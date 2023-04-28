@@ -1,0 +1,159 @@
+@test module;
+
+import ^^.*;
+import ^^^.common.operations.*;
+import ^^^.common.test.setup.*;
+import ^^^.common.test.util.*;
+import ^^^.direct_container.*;
+import ^^^.proposal_cluster.*;
+import ^^^.proposal_provider.*;
+
+function test_add_remove_cluster() {
+    setup_module();
+
+    // Initial state
+    val node_provider1 = rell.test.keypairs.bob;
+    val dapp_provider1 = rell.test.keypairs.trudy;
+    rell.test.tx().op(
+        register_provider(initial_provider.pub, dapp_provider1.pub, provider_tier.COMMUNITY_NODE_PROVIDER),
+        register_provider(initial_provider.pub, node_provider1.pub, provider_tier.NODE_PROVIDER),
+        propose_provider_is_system(initial_provider.pub, node_provider1.pub, true)
+    ).sign(initial_provider).run();
+
+    // 1. Deleting system cluster. Must fail.
+    rell.test.tx().op(
+        propose_remove_cluster(initial_provider.pub, clusters.system)
+    ).sign(initial_provider).run_must_fail();
+
+    // 2. Deleting unknown cluster. Must fail.
+    rell.test.tx().op(
+        propose_remove_cluster(initial_provider.pub, "unknown")
+    ).sign(initial_provider).run_must_fail();
+
+    // 3. Adding a new cluster
+    rell.test.tx().op(
+        create_cluster(initial_provider.pub, "cluster1",  voter_sets.system_p, [initial_provider.pub])
+    ).sign(initial_provider).run();
+
+    // Asserting cluster1 added
+    val cluster1 = cluster @? { "cluster1" };
+    assert_not_null(cluster1);
+
+    // Adding a node into cluster1
+    val node = node @ { .provider == initial_provider() };
+    rell.test.tx().op(
+        add_node_to_cluster(initial_provider.pub, node.pubkey, "cluster1")
+    ).sign(initial_provider).run();
+
+    // Asserting cluster1's stuff added
+    assert_false(empty(cluster_resource_limit @* { cluster1 }));
+    assert_not_null(cluster_node @? { cluster1 });
+    assert_not_null(cluster_provider @? { cluster1 });
+
+    // Asserting that permissions are honored for create_cluster() / create_cluster_from()
+    rell.test.tx().op(
+        create_cluster(dapp_provider1.pub, "dapp_cluster",  voter_sets.system_p, [dapp_provider1.pub])
+    ).sign(dapp_provider1).run_must_fail();
+    rell.test.tx().op(
+        create_cluster_from(dapp_provider1.pub, "dapp_cluster_from",  voter_sets.system_p, voter_sets.system_p)
+    ).sign(dapp_provider1).run_must_fail();
+    rell.test.tx().op(
+        create_cluster(node_provider1.pub, "node_cluster",  voter_sets.system_p, [node_provider1.pub])
+    ).sign(node_provider1).run();
+    assert_not_null(cluster @? { "node_cluster" });
+    rell.test.tx().op(
+        create_cluster_from(node_provider1.pub, "node_cluster_from",  voter_sets.system_p, voter_sets.system_p)
+    ).sign(node_provider1).run();
+    assert_not_null(cluster @? { "node_cluster_from" });
+    // Permissions are honored
+
+    // Adding container
+    rell.test.tx().op(
+        create_container_from(initial_provider.pub, "container1", cluster1.name, 1, voter_sets.system_p)
+    ).sign(initial_provider).run();
+
+    // Asserting container1 is added
+    assert_not_null(container @? { "container1" });
+
+    // Trying to remove cluster1 and fail because it contains container1
+    rell.test.tx().op(
+        propose_remove_cluster(initial_provider.pub, "cluster1")
+    ).sign(initial_provider).run_must_fail();
+
+    // Removing container1 from cluster1
+    rell.test.tx().op(
+        remove_container(initial_provider.pub, "container1")
+    ).sign(initial_provider).run();
+
+    // Asserting container1 is deleted
+    assert_null(container @? { "container1" });
+
+    // Trying to remove cluster1 again
+    rell.test.tx().op(
+        propose_remove_cluster(initial_provider.pub, "cluster1")
+    ).sign(initial_provider).run();
+    rell.test.tx().op(
+        make_vote(node_provider1.pub, last_proposal().rowid.to_integer(), true)
+    ).sign(node_provider1).run();
+
+    // Asserting cluster1 is deleted with its stuff
+    assert_null(cluster @? { "cluster1" });
+    assert_true(empty(cluster_resource_limit @* { cluster1 }));
+    assert_null(cluster_node @? { cluster1 });
+    assert_null(cluster_provider @? { cluster1 });
+}
+
+function test_request_cluster() {
+    setup_module();
+
+    rell.test.tx()
+    .op(
+        register_provider(initial_provider.pub, rell.test.pubkeys.bob, provider_tier.NODE_PROVIDER),
+        register_provider(initial_provider.pub, rell.test.pubkeys.trudy, provider_tier.NODE_PROVIDER),
+        register_provider(initial_provider.pub, rell.test.pubkeys.charlie, provider_tier.NODE_PROVIDER),
+        register_provider(initial_provider.pub, rell.test.pubkeys.dave, provider_tier.NODE_PROVIDER),
+        propose_provider_state(initial_provider.pub, rell.test.pubkeys.bob, true),
+        propose_provider_state(initial_provider.pub, rell.test.pubkeys.trudy, true),
+        propose_provider_state(initial_provider.pub, rell.test.pubkeys.charlie, true),
+        propose_provider_state(initial_provider.pub, rell.test.pubkeys.dave, true)
+    ).sign(initial_provider).run();
+
+    rell.test.tx().op(
+        register_node(rell.test.pubkeys.bob, rell.test.pubkeys.eve, "localhost", 1, "http:")
+    ).sign(rell.test.keypairs.bob).run();
+    rell.test.tx().op(
+        register_node(rell.test.pubkeys.trudy, rell.test.pubkeys.frank, "localhost", 2, "http:")
+    ).sign(rell.test.keypairs.trudy).run();
+    rell.test.tx().op(
+        register_node(rell.test.pubkeys.charlie, rell.test.pubkeys.grace, "localhost", 3, "http:")
+    ).sign(rell.test.keypairs.charlie).run();
+    rell.test.tx().op(
+        register_node(rell.test.pubkeys.dave, rell.test.pubkeys.heidi, "localhost", 4, "http:")
+    ).sign(rell.test.keypairs.dave).run();
+
+    assert_equals((node @* {}).size(), 5);
+    rell.test.tx().op(
+        request_cluster(initial_provider.pub, "new_cluster", 4, true)
+    ).sign(initial_provider).run_must_fail();
+
+    make_node_system_managed(rell.test.keypairs.bob, rell.test.pubkeys.eve);
+    make_node_system_managed(rell.test.keypairs.trudy, rell.test.pubkeys.frank);
+    make_node_system_managed(rell.test.keypairs.charlie, rell.test.pubkeys.grace);
+    make_node_system_managed(rell.test.keypairs.dave, rell.test.pubkeys.heidi);
+    
+    rell.test.tx().op(
+        request_cluster(initial_provider.pub, "new_cluster", 4, true)
+    ).sign(initial_provider).run();
+
+    assert_not_null(cluster @? { "new_cluster"});    
+    
+    rell.test.tx().op(
+        request_cluster(initial_provider.pub, "2nd_cluster", 4, true)
+    ).sign(initial_provider).run_must_fail();
+}
+
+function make_node_system_managed(keypair: rell.test.keypair, node: pubkey) {
+    rell.test.tx().op(
+        update_node_capability(keypair.pub, node, node_capability_type.SYSTEM_MANAGED, true)
+    ).sign(keypair).run();
+}

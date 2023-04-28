@@ -4,8 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
-import net.postchain.chain0.proposal.proposeConfigurationAtOperation
-import net.postchain.chain0.proposal.proposeConfigurationOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationAtOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.mc.cli.AlreadyExistMode
 import net.postchain.mc.cli.base.printResult
@@ -49,7 +49,7 @@ class CommandProposeConfiguration : CliktCommand(
                 .apply {
                     if (height == null) {
                         when (version.version) {
-                            Version.Delta -> {
+                            1L -> {
                                 addOperation("propose_configuration",
                                         gtv(client.config.pubkey().data),
                                         gtv(blockchainRID),
@@ -63,7 +63,7 @@ class CommandProposeConfiguration : CliktCommand(
                         }
                     } else {
                         when (version.version) {
-                            Version.Delta -> {
+                            1L -> {
                                 addOperation("propose_configuration_at",
                                         gtv(client.config.pubkey().data),
                                         gtv(blockchainRID),

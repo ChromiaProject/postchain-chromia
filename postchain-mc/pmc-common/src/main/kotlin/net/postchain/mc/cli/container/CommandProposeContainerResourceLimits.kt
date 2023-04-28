@@ -11,7 +11,7 @@ import net.postchain.chain0.model.ContainerResourceLimitType.io_write
 import net.postchain.chain0.model.ContainerResourceLimitType.max_blockchains
 import net.postchain.chain0.model.ContainerResourceLimitType.ram
 import net.postchain.chain0.model.ContainerResourceLimitType.storage
-import net.postchain.chain0.proposal.proposeContainerLimitsOperation
+import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.cluster.CommandProposeClusterResourceLimits.Companion.setIfNotNull
@@ -27,8 +27,8 @@ import net.postchain.mc.cli.util.storageOptionHelp
 
 class CommandProposeContainerResourceLimits : CliktCommand(
         name = "limits",
-        help = "Propose new resource limits for given container There are three types of limits. " +
-                "Proposal can contain one, two, or all three types."
+        help = "Propose new resource limits for given container. There are multiple types of limits. " +
+                "Proposal can contain all types of limits or a subset of them."
 ) {
     private val client by nopClientOption()
 

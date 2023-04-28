@@ -33,7 +33,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>
+                    <string>net.postchain.d1.icmf.IcmfSenderTestGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
@@ -42,13 +42,16 @@
                 <dict>
                     <entry key="modules">
                         <array>
-                            <string>icmf</string>
+                            <string>messaging.icmf</string>
                         </array>
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="icmf/module.rell">
-                                <param key="rell" type="string"/>
+                            <entry key="messaging/icmf.rell">
+                                <param key="messaging.icmf" type="string"/>
+                            </entry>
+                            <entry key="messaging/icmf_constants.rell">
+                                <param key="messaging.icmf_constants" type="string"/>
                             </entry>
                         </dict>
                     </entry>

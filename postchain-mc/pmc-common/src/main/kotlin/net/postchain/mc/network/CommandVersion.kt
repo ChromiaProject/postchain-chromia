@@ -11,6 +11,6 @@ class CommandVersion : CliktCommand(
 
     override fun run() {
         val version = Version(client).version
-        println("Directory1 version: ${version.codename} v${version.semver}")
+        println("Directory1 api version: $version")
     }
 }

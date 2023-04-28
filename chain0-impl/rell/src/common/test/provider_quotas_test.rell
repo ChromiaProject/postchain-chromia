@@ -2,12 +2,12 @@
 
 import ^.ops.*;
 import ^.setup.*;
-import ^^^.cluster.*;
-import ^^^.cluster.cluster_op.*;
-import ^^^.container.container_op.*;
-import ^^^.container.container_proposal.*;
 import ^.util.constants.*;
-import ^^^.proposal.*;
+import ^^.operations.*;
+import ^^^.direct_cluster.*;
+import ^^^.direct_container.*;
+import ^^^.proposal_container.*;
+import ^^^.proposal_provider.*;
 
 // Container / create_
 
