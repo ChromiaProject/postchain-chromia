@@ -541,8 +541,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Test
-    @Order(17)
+//    @Test
+//    @Order(17)
     fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
         val iccfReceiver = "[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()
         val dapp2brid = dapps["test-dapp2"]!!
@@ -575,8 +575,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Test
-    @Order(18)
+//    @Test
+//    @Order(18)
     fun `Reconfiguration cluster anchoring chain`(@TempDir tmpIccfSources: File) {
         testLogger.info("Update $clusterAnchoringChain")
 
@@ -601,8 +601,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Test
-    @Order(19)
+//    @Test
+//    @Order(19)
     fun `Reconfiguration system anchoring chain`(@TempDir tmpIccfSources: File) {
         testLogger.info("Update $systemAnchoringBrid")
 

@@ -17,7 +17,7 @@
                 </gtv>
                 <app module="anchoring_chain_system">
                     <args module="anchoring_chain_common">
-                        <arg key="enable_pcu"><int>1</int></arg>
+                        <arg key="enable_pcu"><int>0</int></arg>
                     </args>
                 </app>
             </config>
