@@ -18,9 +18,6 @@ internal class PostchainContainerIT {
     @Container
     private val postgres = ChromaWayPostgresContainer()
             .withNetwork(network)
-            .withEnv("POSTGRES_DB", "postchain")
-            .withEnv("POSTGRES_PASSWORD", "postchain")
-            .withEnv("POSTGRES_USER", "postchain")
 
     @Container
     private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/node-config.properties")!!))

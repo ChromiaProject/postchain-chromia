@@ -40,9 +40,6 @@ open class ManagedModeBase(rellFolder: String) {
 
     val postgres: ChromaWayPostgresContainer = ChromaWayPostgresContainer(DockerImages.postgresImage())
             .withNetwork(network)
-            .withEnv("POSTGRES_PASSWORD", "postchain")
-            .withEnv("POSTGRES_USER", "postchain")
-            .withEnv("POSTGRES_DB", "postchain")
 
     lateinit var node1: PostchainContainer
     lateinit var node2: PostchainContainer

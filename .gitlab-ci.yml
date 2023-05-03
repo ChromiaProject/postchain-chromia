@@ -156,8 +156,6 @@ variables:
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
   CHR_DB_URL: jdbc:postgresql://docker/postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
-  POSTGRES_USER: postchain
-  POSTGRES_PASSWORD: postchain
   # Instruct Testcontainers to use the daemon of DinD.
   DOCKER_HOST: tcp://docker:2375
   # Instruct Docker not to start over TLS.
