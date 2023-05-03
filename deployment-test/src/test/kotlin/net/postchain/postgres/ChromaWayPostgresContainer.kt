@@ -22,6 +22,8 @@ class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageN
         withTmpFs(mapOf("/pgtmpfs" to "rw,size=1000m"))
         addEnv("PGDATA", "/pgtmpfs")
         addEnv("POSTGRES_PASSWORD", "postchain")
+        addEnv("POSTGRES_USER", "postchain")
+        addEnv("POSTGRES_DB", "postchain")
     }
 
     override fun getUsername() = "postchain"

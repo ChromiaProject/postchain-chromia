@@ -28,9 +28,6 @@ internal class MultiNodeLegacyIT {
         @Container
         private val postgres = ChromaWayPostgresContainer()
                 .withNetwork(network)
-                .withEnv("POSTGRES_DB", "postchain")
-                .withEnv("POSTGRES_PASSWORD", "postchain")
-                .withEnv("POSTGRES_USER", "postchain")
     }
 
     private val node1 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node1/node-config.properties")!!))
