@@ -105,7 +105,7 @@
                                             <argument>--platform</argument>
                                             <argument>${image.platforms}</argument>
                                             <argument>--tag</argument>
-                                            <argument>${gitlab.registry}/${image.name}:${project.version}
+                                            <argument>${gitlab.registry}/${image.name}:${project.version}-${postchain.eif.version}
                                             </argument>
                                             <argument>${project.basedir}/.</argument>
                                             <argument>--push</argument>
