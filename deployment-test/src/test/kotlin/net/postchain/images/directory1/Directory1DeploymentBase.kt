@@ -51,6 +51,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
@@ -65,20 +66,16 @@ import java.io.File
 import java.lang.ProcessBuilder.Redirect
 import kotlin.test.assertEquals
 
-const val systemRellSource = "../chain0-impl/rell/src"
-
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 abstract class Directory1DeploymentBase {
 
-    companion object : ManagedModeBase(systemRellSource) {
+    companion object : ManagedModeBase() {
         @JvmStatic
         protected val resolvedDockerHost = getResolvedDockerHost()
         private val dockerClient: DockerClient = DockerClientFactory.create()
         private val dapps = mutableMapOf<String, BlockchainRid>()
-        private const val clusterAnchoringChain = "cluster_anchoring_foobar"
-        private const val systemAnchoringChain = "system_anchoring"
         lateinit var clusterAnchoringBrid: BlockchainRid
         lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
@@ -131,7 +128,7 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    val cryptoSystem = Secp256K1CryptoSystem()
+    private val cryptoSystem = Secp256K1CryptoSystem()
 
     abstract val numberOfMasterNodes: Int
 
@@ -145,12 +142,8 @@ abstract class Directory1DeploymentBase {
     @Order(2)
     fun `Initialize network with provider1`() {
         with(node1.c0) {
-            val clusterAnchoringDapp = compileChain("anchoring/blockchain_config_cluster_anchoring.run.xml", File(systemRellSource))
-            val clusterAnchoringGtvConfig = getBaseConfig(clusterAnchoringDapp.config.chains.first().configs.entries.first().value)
-
-            // compile system anchoring dapp
-            val systemAnchoringDapp = compileChain("anchoring/blockchain_config_system_anchoring.run.xml", File(systemRellSource))
-            val systemAnchoringGtvConfig = getBaseConfig(systemAnchoringDapp.config.chains.first().configs.entries.first().value)
+            val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
+            val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
@@ -578,7 +571,7 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(18)
     fun `Reconfiguration cluster anchoring chain`(@TempDir tmpIccfSources: File) {
-        testLogger.info("Update $clusterAnchoringChain")
+        testLogger.info("Update cluster anchoring chain")
 
         // initial value 500
         nodes().forEach {
@@ -588,7 +581,7 @@ abstract class Directory1DeploymentBase {
         listOf(2000, 3000, 4000).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(it, it == 3000), "")
-                    .postTransactionUntilConfirmed("Propose $clusterAnchoringChain config")
+                    .postTransactionUntilConfirmed("Propose cluster anchoring chain config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
         }
@@ -628,23 +621,14 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun getClusterAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
-            getAnchoringConfig(
-                    if (faulty) "anchoring/blockchain_config_cluster_anchoring_faulty_update.run.xml"
-                    else "anchoring/blockchain_config_cluster_anchoring_update.run.xml",
-                    maxBlockTransactions
-            )
+            GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText()
+                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
+                    .let { if (faulty) it.replace("<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>", "<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>\n<string>unknown_module</string>") else it }))
 
     private fun getSystemAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
-            getAnchoringConfig(
-                    if (faulty) "anchoring/blockchain_config_system_anchoring_faulty_update.run.xml"
-                    else "anchoring/blockchain_config_system_anchoring_update.run.xml",
-                    maxBlockTransactions
-            )
-
-    private fun getAnchoringConfig(runXml: String, maxBlockTransactions: Int): ByteArray {
-        val rellConfig = compileChain(runXml, File(systemRellSource), mapOf("[MAXBLOCKTRANSACTIONS]" to maxBlockTransactions.toString()))
-        return GtvEncoder.encodeGtv(getBaseConfig(rellConfig.config.chains.first().configs.entries.first().value))
-    }
+            GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText()
+                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
+                    .let { if (faulty) it.replace("<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>", "<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>\n<string>unknown_module</string>") else it }))
 
     private fun updateDapp(dappName: String, dappDirPostfix: String = "-update", additionalSources: File? = null, runXmlFileOverrides: Map<String, String>) {
         testLogger.info("Update dapp $dappName")
@@ -673,5 +657,5 @@ abstract class Directory1DeploymentBase {
 
     private val PostchainContainer.c0 get() = client(chain0Brid)
 
-    val PostchainContainer.providerPubkey get() = provider.pubKey.data
+    private val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }
