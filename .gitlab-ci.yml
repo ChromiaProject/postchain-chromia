@@ -50,7 +50,7 @@ build:
       - dev
       - master
       - tags
-      - /^support\/.*$/
+      - support-3.9.1-eif
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
   script:
