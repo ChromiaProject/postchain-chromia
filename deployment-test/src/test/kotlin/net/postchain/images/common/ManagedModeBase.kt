@@ -29,7 +29,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 
 // Base class for managed mode tests
-open class ManagedModeBase(rellFolder: String) {
+open class ManagedModeBase {
 
     val testLogger = KotlinLogging.logger("TestLogger")
     val node1Logger = KotlinLogging.logger("Node1Logger")
@@ -152,7 +152,7 @@ open class ManagedModeBase(rellFolder: String) {
         return compileChain("$dappName/$runXmlFile", applicationFolder, runXmlFileOverrides)
     }
 
-    fun compileChain(runXmlFile: String, rellSources: File, runXmlFileOverrides: Map<String, String> = mapOf()): RellPostAppCliConfig {
+    private fun compileChain(runXmlFile: String, rellSources: File, runXmlFileOverrides: Map<String, String> = mapOf()): RellPostAppCliConfig {
         val runFile: File = getRunFileWithOverrides(runXmlFile, runXmlFileOverrides)
         return RellRunConfigGenerator.generateCli(
                 rellSources,
