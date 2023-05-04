@@ -34,6 +34,7 @@ stages:
 deploy:
   extends: .setup
   stage: deploy
+  when: manual
   only:
     - dev
     - master
