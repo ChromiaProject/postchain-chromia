@@ -38,6 +38,7 @@ open class AnchoringProcessManagerExtension(
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
+                it.isSigner = process::isSigner
                 it.clusterManagement = createClusterManagement(cfg)
                 it.blockchainConfigProvider = createBlockchainConfigProvider(cfg, it.clusterManagement)
 
