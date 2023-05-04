@@ -38,7 +38,7 @@ deploy:
   only:
     - dev
     - master
-    - /^support\/.*$/
+    - support-3.9.1-eif
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly deploy
 
