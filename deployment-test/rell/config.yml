@@ -1,0 +1,37 @@
+blockchains:
+  test_dapp:
+    module: test_dapp
+    config:
+      config_consensus_strategy: HEADER_HASH
+      blockstrategy:
+        blockdelay: 2000
+        maxblocktime: 2000
+        maxblocktransactions: 500
+      gtx:
+        modules:
+          - net.postchain.d1.icmf.IcmfSenderGTXModule
+    moduleArgs:
+      main:
+        admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+  test_dapp2:
+    module: test_dapp2
+    config:
+      config_consensus_strategy: HEADER_HASH
+      blockstrategy:
+        blockdelay: 2000
+        maxblocktime: 2000
+        maxblocktransactions: 500
+      gtx:
+        modules:
+          - net.postchain.d1.icmf.IcmfReceiverGTXModule
+          - net.postchain.d1.iccf.IccfGTXModule
+      sync_ext:
+        - net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension
+      icmf:
+        receiver:
+          local:
+            - bc-rid: DAPP_BRID
+              topic: L_city
+    moduleArgs:
+      main:
+        admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'

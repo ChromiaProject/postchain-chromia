@@ -94,6 +94,34 @@
         </testResources>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-test-resources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/rell/src</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${project.parent.basedir}/chain0-impl/rell/src</directory>
+                                    <includes>
+                                        <include>messaging/icmf.rell</include>
+                                        <include>messaging/icmf_constants.rell</include>
+                                        <include>iccf/module.rell</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
@@ -118,9 +146,21 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <target>${project.build.directory}/test-classes/directory1deployment</target>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-test-dapp</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configPath>${project.basedir}/rell/config.yml</configPath>
+                            <source>${project.build.directory}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
                 </executions>
