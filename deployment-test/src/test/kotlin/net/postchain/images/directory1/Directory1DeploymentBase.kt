@@ -56,9 +56,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import net.postchain.rell.tools.runcfg.RellPostAppChainConfig
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.io.TempDir
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -303,52 +301,18 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(7)
-    fun `Deploy new dapp`(@TempDir tmpIcmfSources: File, @TempDir tmpIccfSources: File) {
+    fun `Deploy new dapp`() {
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        File("../chain0-impl/rell/src/messaging/icmf.rell").copyTo(tmpIcmfSources.resolve("icmf.rell"))
-        File("../chain0-impl/rell/src/messaging/icmf_constants.rell").copyTo(tmpIcmfSources.resolve("icmf_constants.rell"))
-        deployDapp("test-dapp", systemContainer, tmpIcmfSources)
-        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        deployDapp("test-dapp2", foobarContainer, tmpIccfSources, mapOf("[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()))
+        deployDapp("test_dapp", systemContainer, null)
+        deployDapp("test_dapp2", foobarContainer, dapps["test_dapp"]!!.data)
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
             assert(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
-    }
-
-    private fun deployDapp(dappName: String, containerName: String, additionalSources: File? = null, runFileOverrides: Map<String, String> = mapOf()) {
-        testLogger.info("Deploy new dapp $dappName")
-
-        val rellConfig = compileDapp(dappName, additionalSources, runFileOverrides)
-
-        var blockchainRid: BlockchainRid? = null
-        rellConfig.config.chains.forEach { chain ->
-            testLogger.info { "Adding test dapp $dappName" }
-            chain.configs.forEach { (height, config) ->
-                node3Db.awaitNewBlock()
-
-                val configGtv = getBaseConfig(config)
-                blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
-                dapps[dappName] = blockchainRid!!
-                testLogger.info { "Proposing a blockchain ${blockchainRid?.toHex()} with config at height $height" }
-
-                node1.c0.transactionBuilder()
-                        .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
-                        .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
-
-                if (containerName == systemContainer) {
-                    voteOnAllProposals(node2.provider)
-                    voteOnAllProposals(node3.provider)
-                }
-            }
-        }
-
-        // Asserting that node1, node2, node3 are signers of newly added blockchain
-        assertChainSigners(blockchainRid!!, *nodes())
     }
 
     @Test
@@ -381,14 +345,14 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(10)
-    fun `Transactions can be sent to test-dapp`() {
-        assertThatDappProcessesTx(dapps["test-dapp"]!!, "add_city", "Heraklion", "get_cities")
+    fun `Transactions can be sent to test_dapp`() {
+        assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
     @Order(11)
-    fun `Transactions can be sent to test-dapp2`() {
-        assertThatDappProcessesTx(dapps["test-dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
+    fun `Transactions can be sent to test_dapp2`() {
+        assertThatDappProcessesTx(dapps["test_dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
 
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
@@ -407,8 +371,8 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(12)
     fun `Legacy anchoring can anchor blocks`() {
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp"]!!)
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test-dapp2"]!!)
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp"]!!)
+        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp2"]!!)
     }
 
     private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
@@ -432,8 +396,8 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(13)
     fun `Blocks can be anchored`() {
-        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp"]!!)
-        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test-dapp2"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test_dapp"]!!)
+        assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test_dapp2"]!!)
     }
 
     @Test
@@ -473,7 +437,7 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(15)
     fun `ICMF messages are delivered`() {
-        val receiverDapp = dapps["test-dapp2"]!!
+        val receiverDapp = dapps["test_dapp2"]!!
         awaitUntilAsserted {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
@@ -486,8 +450,8 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(16)
     fun `ICCF transfers are validated`() {
-        val sourceDapp = dapps["test-dapp"]!!
-        val targetDapp = dapps["test-dapp2"]!!
+        val sourceDapp = dapps["test_dapp"]!!
+        val targetDapp = dapps["test_dapp2"]!!
 
         val txToProve = dappTxs[sourceDapp]!!
         val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(),
@@ -519,12 +483,6 @@ abstract class Directory1DeploymentBase {
                 }.toTypedArray()
     }
 
-    private fun getBaseConfig(config: RellPostAppChainConfig): Gtv {
-        val fullConfig = config.gtvConfig.asDict().toMutableMap()
-        fullConfig.remove("signers")
-        return gtv(fullConfig)
-    }
-
     private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
         awaitQueryResult {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
@@ -536,29 +494,19 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(17)
-    fun `Reconfiguration of test-dapp2`(@TempDir tmpIccfSources: File) {
-        val iccfReceiver = "[DAPP_BRID]" to dapps["test-dapp"]!!.toHex()
-        val dapp2brid = dapps["test-dapp2"]!!
+    fun `Reconfiguration of test_dapp2`() {
+        val iccfReceiver = dapps["test_dapp"]!!.data
+        val dapp2brid = dapps["test_dapp2"]!!
 
         // initial value 500
         nodes().forEach {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
         }
 
-        // reconfiguring test-dapp2
-        File("../chain0-impl/rell/src/iccf").copyRecursively(tmpIccfSources.resolve("iccf"))
-        updateDapp("test-dapp2",
-                additionalSources = tmpIccfSources,
-                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "1000", iccfReceiver)
-        )
-        updateDapp("test-dapp2",
-                dappDirPostfix = "-faulty-update",       // Faulty config
-                additionalSources = tmpIccfSources,
-                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "2000", iccfReceiver)
-        )
-        updateDapp("test-dapp2",
-                additionalSources = tmpIccfSources,
-                runXmlFileOverrides = mapOf("[MAXBLOCKTRANSACTIONS]" to "3000", iccfReceiver))
+        // reconfiguring test_dapp2
+        updateDapp("test_dapp2", maxBlockTransactions = 1000, faulty = false, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 2000, faulty = true, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 3000, faulty = false, iccfReceiver)
 
         // new values: 1000, 3000
         awaitUntilAsserted {
@@ -570,7 +518,7 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(18)
-    fun `Reconfiguration cluster anchoring chain`(@TempDir tmpIccfSources: File) {
+    fun `Reconfiguration cluster anchoring chain`() {
         testLogger.info("Update cluster anchoring chain")
 
         // initial value 500
@@ -580,7 +528,8 @@ abstract class Directory1DeploymentBase {
 
         listOf(2000, 3000, 4000).forEach {
             node1.c0.transactionBuilder()
-                    .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, getClusterAnchoringConfig(it, it == 3000), "")
+                    .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid,
+                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 3000)), "")
                     .postTransactionUntilConfirmed("Propose cluster anchoring chain config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
@@ -596,7 +545,7 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(19)
-    fun `Reconfiguration system anchoring chain`(@TempDir tmpIccfSources: File) {
+    fun `Reconfiguration system anchoring chain`() {
         testLogger.info("Update $systemAnchoringBrid")
 
         // initial value 500
@@ -606,7 +555,8 @@ abstract class Directory1DeploymentBase {
 
         listOf(5000, 6000, 7000).forEach {
             node1.c0.transactionBuilder()
-                    .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, getSystemAnchoringConfig(it, it == 6000), "")
+                    .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid,
+                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 6000)), "")
                     .postTransactionUntilConfirmed("Propose $systemAnchoringBrid config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
@@ -620,27 +570,50 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    private fun getClusterAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
-            GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText()
-                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
-                    .let { if (faulty) it.replace("<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>", "<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>\n<string>unknown_module</string>") else it }))
+    private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
+        testLogger.info("Deploy new dapp $dappName")
 
-    private fun getSystemAnchoringConfig(maxBlockTransactions: Int, faulty: Boolean = false): ByteArray =
-            GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText()
-                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
-                    .let { if (faulty) it.replace("<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>", "<string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>\n<string>unknown_module</string>") else it }))
+        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
 
-    private fun updateDapp(dappName: String, dappDirPostfix: String = "-update", additionalSources: File? = null, runXmlFileOverrides: Map<String, String>) {
-        testLogger.info("Update dapp $dappName")
+        node3Db.awaitNewBlock()
 
-        val rellConfig = compileDapp("$dappName$dappDirPostfix", additionalSources, runXmlFileOverrides)
-                .config.chains.first().configs.entries.first().value
-        val config = GtvEncoder.encodeGtv(getBaseConfig(rellConfig))
+        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
+        dapps[dappName] = blockchainRid
+        testLogger.info { "Proposing a blockchain ${blockchainRid.toHex()} with config" }
 
         node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, config, "")
+                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
+
+        if (containerName == systemContainer) {
+            voteOnAllProposals(node2.provider)
+            voteOnAllProposals(node3.provider)
+        }
+
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        assertChainSigners(blockchainRid, *nodes())
+    }
+
+    private fun updateDapp(dappName: String, maxBlockTransactions: Int, faulty: Boolean, iccfReceiver: ByteArray) {
+        testLogger.info("Update dapp $dappName")
+
+        val configGtv = compileDapp(dappName, maxBlockTransactions, iccfReceiver, faulty)
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "")
                 .postTransactionUntilConfirmed("Propose $dappName config")
     }
+
+    private fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, iccfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
+            GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
+                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
+                    .let {
+                        if (iccfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${iccfReceiver.toHex()}</bytea>") else it
+                    }
+                    .let {
+                        if (faulty) it.replace("<string>net.postchain.gtx.StandardOpsGTXModule</string>",
+                                "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>") else it
+                    })
 
     private fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
         val res = mutableSetOf<Int>()

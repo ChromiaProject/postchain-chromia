@@ -14,19 +14,13 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.rell.module.RellVersions
-import net.postchain.rell.tools.runcfg.RellPostAppCliConfig
-import net.postchain.rell.tools.runcfg.RellRunConfigGenerator
 import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
-import org.apache.commons.io.FileUtils
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import java.io.File
-import java.nio.charset.StandardCharsets
 
 // Base class for managed mode tests
 open class ManagedModeBase {
@@ -139,43 +133,5 @@ open class ManagedModeBase {
                                 .setGtv(ByteString.copyFrom(GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(config))))
                                 .build()
                 ).brid
-    }
-
-    fun compileDapp(dappName: String = "test-dapp", additionalSources: File? = null, runXmlFileOverrides: Map<String, String> = mapOf(), runXmlFile: String = "run.xml"): RellPostAppCliConfig {
-        val dappSources = this::class.java.classLoader.getResource(dappName)!!
-        val applicationFolder = if (additionalSources != null) {
-            File(dappSources.toURI()).copyRecursively(additionalSources, true)
-            additionalSources
-        } else {
-            File(dappSources.toURI())
-        }
-        return compileChain("$dappName/$runXmlFile", applicationFolder, runXmlFileOverrides)
-    }
-
-    private fun compileChain(runXmlFile: String, rellSources: File, runXmlFileOverrides: Map<String, String> = mapOf()): RellPostAppCliConfig {
-        val runFile: File = getRunFileWithOverrides(runXmlFile, runXmlFileOverrides)
-        return RellRunConfigGenerator.generateCli(
-                rellSources,
-                runFile,
-                RellVersions.VERSION,
-                false
-        ).apply {
-            RellRunConfigGenerator.buildFiles(this.config)
-        }
-    }
-
-    private fun getRunFileWithOverrides(runXmlFile: String, runXmlFileOverrides: Map<String, String>): File {
-        val runConf = requireNotNull(this::class.java.classLoader.getResource(runXmlFile))
-        val srcFile = File(runConf.toURI())
-        if (runXmlFileOverrides.isEmpty()) {
-            return srcFile
-        }
-        var fileContents = FileUtils.readFileToString(srcFile, StandardCharsets.UTF_8)
-        runXmlFileOverrides.forEach { (key, value) ->
-            fileContents = fileContents.replace(key, value)
-        }
-        val dstFile = File.createTempFile("run-file-override-", ".xml")
-        FileUtils.writeStringToFile(dstFile, fileContents, StandardCharsets.UTF_8)
-        return dstFile
     }
 }
