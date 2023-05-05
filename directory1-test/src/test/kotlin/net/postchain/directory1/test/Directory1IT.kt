@@ -4,6 +4,8 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import mu.KLogging
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.chain0.common.operations.registerProviderOperation
+import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.common.queries.getBlockchain
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
@@ -14,8 +16,6 @@ import net.postchain.chain0.common.queries.getProviderClusters
 import net.postchain.chain0.common.queries.getVoterSetGovernor
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.common.operations.registerProviderOperation
-import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerFromOperation
 import net.postchain.chain0.model.ProviderTier
@@ -46,9 +46,9 @@ import net.postchain.common.toHex
 import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.gtvml.GtvMLParser
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
@@ -65,48 +65,14 @@ class Directory1IT : ManagedModeTest() {
 
     companion object : KLogging()
 
-    override fun chainConfSnippet(): String {
-        val module = "management_chain_directory1"
-
-        return """
-            <chains>
-                <chain name="manager" iid="0">
-                    <config height="0" add-dependencies="false">
-                        <app module="$module">
-                            <args module="common.init">
-                                <arg key="initial_provider"><bytea>${KeyPairHelper.pubKeyHex(providerKey)}</bytea></arg>
-                                <arg key="genesis_node">
-                                    <array>
-                                        <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
-                                        <string>${node0Host}</string>
-                                        <int>${node0Port}</int>
-                                        <string>{apiUrl}</string>
-                                    </array>
-                                </arg>
-                            </args>
-                        <args module="common">
-                            <arg key="enable_pcu"><int>1</int></arg>
-                        </args>
-                        </app>
-                        <gtv path="signers">
-                            <array>
-                                <bytea>${KeyPairHelper.pubKeyHex(node0BlockSignerKey)}</bytea>
-                            </array>
-                        </gtv>
-                    </config>
-                </chain>
-            </chains>
-        """.trimIndent()
-    }
-
-    /*
-    * The pre-step includes starting a single
-    * node, running the rell code in `rellSourceDir`. Operation init() registers and enables the module argument
-    * `initial_provider` as provider. So that we have an initial voter.
-    * */
+    /**
+     * The pre-step includes starting a single node, running the Rell code.
+     *  Operation init() registers and enables the module argument
+     * `initial_provider` as provider. So that we have an initial voter.
+     */
     @BeforeEach
     fun setup() {
-        blockchain0ConfigGtv = run(runXmlFile(), File("../chain0-impl/rell/src"))
+        run(GtvMLParser.parseGtvML(this::class.java.getResource("/directory1/manager.xml")!!.readText()))
         doAndBuildBlocks(provClient.transactionBuilder().initOperation(null, null))
     }
 
