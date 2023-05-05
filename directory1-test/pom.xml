@@ -103,6 +103,18 @@
                             <mainModule>management_chain_directory1</mainModule>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>generate-d1</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configPath>${project.basedir}/src/test/resources/directory1.yml</configPath>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1</target>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

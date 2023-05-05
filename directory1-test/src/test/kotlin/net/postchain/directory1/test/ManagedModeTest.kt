@@ -17,11 +17,17 @@ import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.impl.PostchainClientProviderImpl
+import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.hexStringToWrappedByteArray
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
+import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
@@ -34,11 +40,7 @@ val PostchainClient.pubkey get() = config.pubkey().data
 fun PostchainClientConfig.pubkey() = signers.first().pubKey
 fun PostchainClientConfig.privkey() = signers.first().privKey
 
-abstract class ManagedModeTest : RellIntegrationTest() {
-
-    val node2Pubkey = KeyPairHelper.pubKeyHex(2)
-    val node2Host = "127.0.0.1"
-    val node2Port = 9872L
+abstract class ManagedModeTest : IntegrationTestSetup() {
 
     val node1Pubkey = KeyPairHelper.pubKeyHex(1)
     val node1Host = "127.0.0.1"
@@ -46,17 +48,15 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     val node0Host = "127.0.0.1"
     val node0Port = 9870L
-    val node0BlockSignerKey = 0
 
-    val adminKey = 10
-    val providerKey = 11
-    val providerKey2 = 12
-    val clientConfig by lazy { cliConf(adminKey) }
+    private val adminKey = 10
+    private val providerKey = 11
+    private val providerKey2 = 12
+    private val clientConfig by lazy { cliConf(adminKey) }
     val provConfig by lazy { cliConf(providerKey) }
     val prov2Config by lazy { cliConf(providerKey2) }
     open val provClient by lazy { fromConfig(provConfig) }
     open val prov2Client by lazy { fromConfig(prov2Config) }
-    lateinit var blockchain0ConfigGtv: Gtv
 
     // Voter sets SYSTEM and SYSTEM_P are created during initialization.
     val voterSetSystemP = "SYSTEM_P"
@@ -77,7 +77,7 @@ abstract class ManagedModeTest : RellIntegrationTest() {
         }
     }
 
-    protected fun getPostchainClient(appConfig: PostchainClientConfig): PostchainClient {
+    private fun getPostchainClient(appConfig: PostchainClientConfig): PostchainClient {
         return PostchainClientProviderImpl().createClient(appConfig)
     }
 
@@ -197,5 +197,26 @@ abstract class ManagedModeTest : RellIntegrationTest() {
 
     private fun fromConfig(config: PostchainClientConfig): PostchainClient {
         return PostchainClientProviderImpl().createClient(config)
+    }
+
+    private fun cliConf(keyIndex: Int, blockchainRid: BlockchainRid? = null): PostchainClientConfig {
+        return PostchainClientConfig(
+                blockchainRid ?: nodes[0].getBlockchainRid(0)!!,
+                EndpointPool.singleUrl("http://127.0.0.1:" + nodes[0].getRestApiHttpPort()),
+                listOf(
+                        KeyPair.of(KeyPairHelper.pubKeyHex(keyIndex), KeyPairHelper.privKeyHex(keyIndex))
+                )
+        )
+    }
+
+    protected fun run(configGtv: Gtv) {
+        val blockchainSetups = listOf(BlockchainSetupFactory.buildFromGtv(0, configGtv))
+        val systemSetup = SystemSetupFactory.buildSystemSetup(blockchainSetups)
+        systemSetup.nodeConfProvider = "net.postchain.devtools.utils.configuration.TestNodeConfigurationProvider" // "managed" not implemented yet. See NodeConfigurationProviderGenerator
+        systemSetup.confInfrastructure = "net.postchain.managed.ManagedEBFTInfrastructureFactory"
+        systemSetup.chainConfProvider = "managed"
+        systemSetup.needRestApi = true
+
+        createNodesFromSystemSetup(systemSetup, true)
     }
 }
