@@ -25,12 +25,12 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.9.1</postchain.version>
+        <postchain.version>3.9.2</postchain.version>
         <rellr.version>0.12.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1679489088</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1683632118</project.build.outputTimestamp>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
