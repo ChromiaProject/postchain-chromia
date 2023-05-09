@@ -38,6 +38,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
+    lateinit var isSigner: () -> Boolean
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
 
@@ -152,7 +153,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
             val headerData = anchorOpData.headerData
             val bcRid = BlockchainRid(headerData.getBlockchainRid())
-            if (bcRid !in relevantChains) {
+            if (isSigner() && bcRid !in relevantChains) {
                 logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
                 return false
             }

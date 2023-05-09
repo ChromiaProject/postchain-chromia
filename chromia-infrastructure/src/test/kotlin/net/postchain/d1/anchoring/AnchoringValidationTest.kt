@@ -33,7 +33,7 @@ class AnchoringValidationTest {
     private val blockchainRID = BlockchainRid.buildRepeat(1)
     private val signer = cryptoSystem.generateKeyPair()
     private val clusterManagement: ClusterManagement = mock {
-        on { getBlockchainPeers(eq(blockchainRID), any()) }.doReturn(listOf(signer.pubKey))
+        on { getBlockchainPeers(any(), any()) }.doReturn(listOf(signer.pubKey))
     }
 
     @Test
@@ -238,13 +238,34 @@ class AnchoringValidationTest {
                 )))
     }
 
-    private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
+    @Test
+    fun irrelevantChainIsOkForReplicas() {
+        val txExtension = createAnchorSpecialTxExtension(isSigner = false)
+
+        val irrelevantChain = BlockchainRid.buildRepeat(2)
+        val blockHeader = makeBlockHeader(irrelevantChain, BlockRid(irrelevantChain.data), 0)
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
+        ).getRawData()
+
+        assertTrue(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                listOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                                gtv(blockRid),
+                                blockHeader,
+                                gtv(rawWitness)))
+                )))
+    }
+
+    private fun createAnchorSpecialTxExtension(isSigner: Boolean = true): AnchoringSpecialTxExtension {
         val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.clusterManagement = clusterManagement
         txExtension.anchoringReceiver = mock {
             on { getRelevantChains() } doReturn setOf(blockchainRID)
         }
+        txExtension.isSigner = { isSigner }
         return txExtension
     }
 
