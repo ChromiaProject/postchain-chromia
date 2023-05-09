@@ -13,9 +13,11 @@ import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
@@ -23,8 +25,10 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
+import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.getProposalsSince
+import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
@@ -36,6 +40,7 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.common.types.RowId
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
@@ -63,6 +68,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -367,9 +373,9 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Disabled
-    @Test
-    @Order(12)
+    //    @Disabled
+//    @Test
+//    @Order(12)
     fun `Legacy anchoring can anchor blocks`() {
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp"]!!)
         assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp2"]!!)
@@ -570,6 +576,51 @@ abstract class Directory1DeploymentBase {
         }
     }
 
+    @Test
+    @Order(20)
+    fun `Add new cluster and reconfigure cluster anchoring chain`() {
+        testLogger.info("Creating pcu_cluster")
+        val pcuVs = "pcu_vs"
+        val pcuCluster = "pcu_cluster"
+
+        node1.c0.transactionBuilder()
+                .createVoterSetOperation(node1.providerPubkey, pcuVs, 1, listOf(node1.providerPubkey), null)
+                .postTransactionUntilConfirmed("Create voterset: $pcuVs")
+        awaitQueryResult {
+            assertTrue(node1.c0.getVoterSets().any { it.name == pcuVs })
+        }
+
+        node1.c0.transactionBuilder()
+                .createClusterOperation(node1.providerPubkey, pcuCluster, pcuVs, listOf(node1.providerPubkey))
+                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, pcuCluster)
+                .postTransactionUntilConfirmed("Create cluster $pcuCluster with provider1/node1")
+
+        awaitUntilAsserted {
+            assertTrue(node1.c0.getClusters().any { it.name == pcuCluster })
+            val chains = node1.c0.getClusterBlockchains(pcuCluster)
+            assertEquals(1, chains.size)
+            val brid = BlockchainRid(chains.first())
+
+            // signers from cluster anchoring chain (CAC) config
+            val actual = getLastBlockConfigSigners(node1, brid)
+            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
+        }
+
+        val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(2000), "")
+                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain config(s)")
+
+        // new values: 1000, 2000
+        awaitUntilAsserted {
+            assertEquals(setOf(500, 1000, 2000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
+        }
+    }
+
+    private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
+
     private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
         testLogger.info("Deploy new dapp $dappName")
 
@@ -626,6 +677,11 @@ abstract class Directory1DeploymentBase {
         }
 
         return res
+    }
+
+    private fun getLastBlockConfigSigners(node: PostchainContainer, blockchainRid: BlockchainRid): List<WrappedByteArray> {
+        val lastHeight = node1.client(blockchainRid).currentBlockHeight()
+        return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
     }
 
     private val PostchainContainer.c0 get() = client(chain0Brid)
