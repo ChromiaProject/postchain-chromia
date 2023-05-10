@@ -41,8 +41,8 @@ class CommandRegisterNode : CliktCommand(
 
     private val capability by option(help = "Node capability").enum<NodeCapabilityType>().multiple()
     override fun run() {
-        val verifier = NodeVerifier(client.config)
-        if (!verifier.verifyApi(apiUrl).first) throw CliktError("Api url is not accessible for host")
+        val verifier = NodeVerifier(client.config, null)
+        if (!verifier.verifyApi(apiUrl).responds) throw CliktError("Api url is not accessible for host")
         if (!verifier.verifyHost(host, port)) throw CliktError("Node is not accessible")
         client.transactionBuilder()
                 .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
