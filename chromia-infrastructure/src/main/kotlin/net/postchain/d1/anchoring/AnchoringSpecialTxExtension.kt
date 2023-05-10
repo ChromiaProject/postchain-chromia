@@ -5,7 +5,9 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
@@ -152,11 +154,6 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
             val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
 
             val headerData = anchorOpData.headerData
-            val bcRid = BlockchainRid(headerData.getBlockchainRid())
-            if (isSigner() && bcRid !in relevantChains) {
-                logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
-                return false
-            }
 
             val blockRid = headerData.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
             if (!blockRid.contentEquals(anchorOpData.blockRid)) {
@@ -164,14 +161,8 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                 return false
             }
 
-            val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
-            val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
-            try {
-                Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
-            } catch (e: UserMistake) {
-                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")
-                return false
-            }
+            val bcRid = BlockchainRid(headerData.getBlockchainRid())
+            if (isSigner() && !validateSignatures(bcRid, relevantChains, anchorOpData, headerData, blockRid)) return false
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
 
@@ -195,6 +186,23 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                 )
                 return false
             }
+        }
+        return true
+    }
+
+    private fun validateSignatures(bcRid: BlockchainRid, relevantChains: Set<BlockchainRid>, anchorOpData: AnchoringOpData, headerData: BlockHeaderData, blockRid: Hash): Boolean {
+        if (bcRid !in relevantChains) {
+            logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
+            return false
+        }
+
+        val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
+        val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
+        try {
+            Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
+        } catch (e: UserMistake) {
+            logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")
+            return false
         }
         return true
     }
