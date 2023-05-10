@@ -4,6 +4,7 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 
@@ -34,6 +36,9 @@ class AnchoringValidationTest {
     private val signer = cryptoSystem.generateKeyPair()
     private val clusterManagement: ClusterManagement = mock {
         on { getBlockchainPeers(any(), any()) }.doReturn(listOf(signer.pubKey))
+    }
+    private val emptyClusterManagement: ClusterManagement = mock {
+        on { getBlockchainPeers(any(), any()) } doThrow UserMistake("No records found")
     }
 
     @Test
@@ -261,7 +266,7 @@ class AnchoringValidationTest {
     private fun createAnchorSpecialTxExtension(isSigner: Boolean = true): AnchoringSpecialTxExtension {
         val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
-        txExtension.clusterManagement = clusterManagement
+        txExtension.clusterManagement = if (isSigner) clusterManagement else emptyClusterManagement
         txExtension.anchoringReceiver = mock {
             on { getRelevantChains() } doReturn setOf(blockchainRID)
         }
