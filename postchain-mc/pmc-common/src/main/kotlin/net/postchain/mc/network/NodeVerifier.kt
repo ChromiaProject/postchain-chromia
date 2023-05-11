@@ -36,7 +36,7 @@ class NodeVerifier(private val configTemplate: PostchainClientConfig, private va
         return NodeApiStatus(managementChainStatus.first && systemAnchorStatus.first, managementChainStatus.second, systemAnchorStatus.second)
     }
 
-    private fun verifyBlockchain(blockchainRid: BlockchainRid?, url: String): Pair<Boolean, Long?> {
+    fun verifyBlockchain(blockchainRid: BlockchainRid?, url: String): Pair<Boolean, Long?> {
         if (blockchainRid == null) return true to null
         return try {
             val nodeClient = PostchainClientImpl(configTemplate.copy(
