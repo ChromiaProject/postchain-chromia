@@ -31,21 +31,23 @@ class NodeVerifier(private val configTemplate: PostchainClientConfig, private va
     fun verifyApi(node: NodeInfo) = verifyApi(node.apiUrl)
 
     fun verifyApi(url: String = configTemplate.endpointPool.first().url): NodeApiStatus {
+        val managementChainStatus = verifyBlockchain(configTemplate.blockchainRid, url)
+        val systemAnchorStatus = verifyBlockchain(sacBrid, url)
+        return NodeApiStatus(managementChainStatus.first && systemAnchorStatus.first, managementChainStatus.second, systemAnchorStatus.second)
+    }
+
+    private fun verifyBlockchain(blockchainRid: BlockchainRid?, url: String): Pair<Boolean, Long?> {
+        if (blockchainRid == null) return true to null
         return try {
-            val nodeClient = PostchainClientImpl(configTemplate.copy(endpointPool = EndpointPool.singleUrl(url)))
-            NodeApiStatus(
-                    true,
-                    nodeClient.currentBlockHeight(),
-                    sacBrid?.let { brid -> PostchainClientImpl(nodeClient.config.copy(blockchainRid = brid)).currentBlockHeight() }
-            )
+            val nodeClient = PostchainClientImpl(configTemplate.copy(
+                    endpointPool = EndpointPool.singleUrl(url),
+                    blockchainRid = blockchainRid
+            ))
+            true to nodeClient.currentBlockHeight()
         } catch (e: Exception) {
-            NodeApiStatus.notResponding()
+            false to null
         }
     }
 
-    data class NodeApiStatus(val responds: Boolean, val height: Long?, val systemAnchorHeight: Long?) {
-        companion object {
-            fun notResponding() = NodeApiStatus(false, null, null)
-        }
-    }
+    data class NodeApiStatus(val responds: Boolean, val height: Long?, val systemAnchorHeight: Long?)
 }
