@@ -97,6 +97,9 @@
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
+                <configuration>
+                    <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
+                </configuration>
                 <executions>
                     <execution>
                         <id>rell-client-gen</id>
@@ -104,9 +107,19 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModule>management_chain_directory1</mainModule>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-anchoring-client</id>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <packageName>net.postchain.anchoring</packageName>
+                            <mainModule>anchoring_chain_common</mainModule>
+                            <target>${project.build.directory}/generated-sources/rell-client/anchoring</target>
                         </configuration>
                     </execution>
                 </executions>
