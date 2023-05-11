@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.binaryEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.configureFor
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.ok
+import com.github.tomakehurst.wiremock.client.WireMock.okForContentType
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
@@ -47,6 +48,8 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+
+private const val JsonContentType = "application/json"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class IccfProofTxMaterialBuilderTest {
@@ -120,8 +123,8 @@ class IccfProofTxMaterialBuilderTest {
         val anchoringConfirmationProof = GtvEncoder.encodeGtv(gtv(
                 "hash" to gtv(anchoringTx.toGtv().merkleHash(hashCalculator))
         ))
-        stubFor(get("/tx/${sourceClusterAnchoringChain.toHex()}/${anchoringTxRid.toHex()}/confirmationProof").willReturn(ok(
-                """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
+        stubFor(get("/tx/${sourceClusterAnchoringChain.toHex()}/${anchoringTxRid.toHex()}/confirmationProof").willReturn(okForContentType(
+                JsonContentType, """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
         )))
 
         val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
@@ -168,8 +171,8 @@ class IccfProofTxMaterialBuilderTest {
         val anchoringConfirmationProof = GtvEncoder.encodeGtv(gtv(
                 "hash" to gtv(anchoringTx.toGtv().merkleHash(hashCalculator))
         ))
-        stubFor(get("/tx/${sourceClusterAnchoringChain.toHex()}/${anchoringTxRid.toHex()}/confirmationProof").willReturn(ok(
-                """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
+        stubFor(get("/tx/${sourceClusterAnchoringChain.toHex()}/${anchoringTxRid.toHex()}/confirmationProof").willReturn(okForContentType(
+                JsonContentType, """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
         )))
 
         val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
@@ -205,8 +208,8 @@ class IccfProofTxMaterialBuilderTest {
 
         generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(ok(
-                """{"tx":"${actualTx.encodeHex()}"}"""
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+                JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
         val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
@@ -234,7 +237,8 @@ class IccfProofTxMaterialBuilderTest {
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(ok(
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+                JsonContentType,
                 """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
@@ -260,8 +264,8 @@ class IccfProofTxMaterialBuilderTest {
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(ok(
-                """{"tx":"${actualTx.encodeHex()}"}"""
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+                JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
         verifyIntraClusterIccf(txProof, actualTxHash)
@@ -274,8 +278,8 @@ class IccfProofTxMaterialBuilderTest {
                 "blockHeader" to gtv(GtvEncoder.encodeGtv(dummyBlockHeader))
         ))
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}/confirmationProof").willReturn(ok(
-                """{"proof":"${confirmationProof.toHex()}"}"""
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}/confirmationProof").willReturn(okForContentType(
+                JsonContentType, """{"proof":"${confirmationProof.toHex()}"}"""
         )))
 
         return confirmationProof

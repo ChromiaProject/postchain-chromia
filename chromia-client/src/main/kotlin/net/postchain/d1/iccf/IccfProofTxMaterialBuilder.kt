@@ -63,7 +63,6 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
     private fun verifyUpdatedHash(sourceClient: PostchainClient, txToProveRID: TxRid, proofHash: ByteArray?, txToProveSigners: List<PubKey>): Pair<Gtx, Hash> {
         // Fetch full tx and investigate why we have a mismatch
         val rawTx = sourceClient.getTransaction(txToProveRID)
-                ?: throw ProgrammerMistake("Failed to fetch transaction for verification")
         val txGtv = GtvDecoder.decodeGtv(rawTx)
         val fetchedTxHash = txGtv.merkleHash(hashCalculator)
         if (!fetchedTxHash.contentEquals(proofHash)) {
