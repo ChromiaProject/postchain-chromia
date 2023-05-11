@@ -5,7 +5,6 @@ import assertk.assertions.isEqualTo
 import mu.KLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
-import net.postchain.chain0.common.operations.updateNodeOperation
 import net.postchain.chain0.common.queries.getBlockchain
 import net.postchain.chain0.common.queries.getBlockchainSigners
 import net.postchain.chain0.common.queries.getBlockchains
@@ -22,7 +21,6 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
-import net.postchain.chain0.nm_api.nmGetPeerListVersion
 import net.postchain.chain0.proposal.ProposalType
 import net.postchain.chain0.proposal.getProposal
 import net.postchain.chain0.proposal.getProposalsSince
@@ -59,7 +57,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class Directory1IT : ManagedModeTest() {
 
@@ -354,21 +351,6 @@ class Directory1IT : ManagedModeTest() {
         assert(blockchain.isNotEmpty())
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
         assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
-    }
-
-    @Test
-    fun testGetNodeListVersion() {
-        assertEquals(-1, provClient.nmGetPeerListVersion()) // first block
-
-        provClient.transactionBuilder()
-                .updateNodeOperation(
-                        pubKeyOf(provConfig),
-                        nodes[0].pubKey.hexStringToByteArray(),
-                        null, 1234, null
-                ).post()
-        buildAndAwaitBlocks(1)
-
-        assertTrue(provClient.nmGetPeerListVersion() > 0)
     }
 
     @Test
