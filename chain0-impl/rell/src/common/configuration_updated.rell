@@ -31,7 +31,7 @@
     val pending_configuration = pending_blockchain_configuration @?
         { bc, .config_hash == message.config_hash, .minimum_height <= message.height };
     if (pending_configuration == null) {
-        log("Configuration with hash %s and minimum_height<=%d not found for chain %s".format(message.config_hash, message.height, message.blockchain_rid));
+        log("Configuration with hash %s and minimum_height <= %d not found for chain %s".format(message.config_hash, message.height, message.blockchain_rid));
         return;
     }
 
@@ -51,6 +51,13 @@
         create blockchain_configuration_signers(bc, message.height, pending_signers);
     } else {
         bc_signers.signers = pending_signers;
+    }
+
+    if (bc == anchoring_chain) {
+        val pending_signer_list = list<pubkey>.from_gtv(gtv.from_bytes(pending_signers)),
+        val nodes_to_delete = cluster_node @* { .node.pubkey not in pending_signer_list } ( .node.pubkey );
+        log("nodes_to_delete: " + nodes_to_delete);
+        delete cluster_node @* { .node.pubkey not in pending_signer_list };
     }
 
     add_dependencies(pending_base_config, bc.rid, message.height);
