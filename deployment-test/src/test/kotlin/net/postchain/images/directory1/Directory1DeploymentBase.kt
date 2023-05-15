@@ -36,7 +36,6 @@ import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
-import net.postchain.chain0.proposal_provider.proposeProviderStateOperation
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -639,21 +638,13 @@ abstract class Directory1DeploymentBase {
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
 
-        /**
-         * Add dummy provider4/node4 as a workaround to https://chromaway.atlassian.net/browse/POS-804
-         * This is needed to test remove_node() / disable_node() ops, since node4 doesn't belong to
-         * ebft-majority of pcu_cluster [node1, node2, node3, node4] and can be removed.
-         * This func can be removed after POS-804 is done.
-         */
-        val (provider4, node4) = addDummyProvider4AndNode4(pcuCluster)
-
         // 3. Mixed tx: proposing config, removing signer, faulty config, config again
         testLogger.info("Proposing different kinds of configs for pcu_cluster's CAC: config, removing signer, faulty config, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                // Setting 3000 again, as it was before addDummyProvider4AndNode4() func,
+        node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
+                // Setting 1000 again, as it was before node3 was added,
                 // to propose config which matches with one of the already applied ones.
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(3000), "")
-                .disableNodeOperation(provider4.pubKey.data, node4.pubKey.data)
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1000), "")
+                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
                 .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(5000, true), "")
                 .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(6000), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
@@ -661,44 +652,13 @@ abstract class Directory1DeploymentBase {
         // new values added: 6000
         awaitQueryResult {
             assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
                     setOf(500, 1000, 3000, 6000),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
-    }
-
-    private fun addDummyProvider4AndNode4(cluster: String): Pair<KeyPair, KeyPair> {
-        testLogger.info("Registering provider4")
-        val provider4 = KeyPair.of("0236043F7920C23C27EC2EA01FC63B629C964D28055F4425409F0B859C5A23D4D6", "A822446E3A1D81AA59093B1291F6E92425C1F253B9AD2F1F9AEB81334F53E891")
-        val node4 = KeyPair.of("02B14EA0402F02C02C02B37C683F7613CDFB508B7C1062440D18F3D40C7EA6A977", "32FF5F76783841235C6B743B4B5ED516A8983A549A763BF87AACE4F04B42B1E3")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                .registerProviderOperation(node1.providerPubkey, provider4.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderStateOperation(node1.providerPubkey, provider4.pubKey.data, true, "")
-                .postTransactionUntilConfirmed("Register provider 4")
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-        awaitQueryResult { assertTrue { node1.c0.getProvider(provider4.pubKey).id > 0 } }
-
-        testLogger.info("Adding provider4/node4 to cluster $cluster")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                .proposeClusterProviderOperation(node1.providerPubkey, cluster, provider4.pubKey.data, true, "")
-                .registerNodeOperation(
-                        provider4.pubKey.data, node4.pubKey.data,
-                        "host", 7777, "/api",
-                        listOf(cluster)
-                )
-                .postTransactionUntilConfirmed("Adding provider4/node4 to cluster $cluster")
-        awaitUntilAsserted {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData, node4.pubKey.wData),
-                    node1.c0.getClusterNodes(cluster).map { it.pubkey }.toSet()
-            )
-        }
-
-        return provider4 to node4
     }
 
     private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
