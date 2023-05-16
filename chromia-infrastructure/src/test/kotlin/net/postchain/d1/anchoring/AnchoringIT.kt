@@ -57,7 +57,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun happyAnchor() {
         startManagedSystem(3, 0)
-        val anchorChain = startClusterAnchoringChain()
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -174,7 +174,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun onlyClusterChainsAreAnchored() {
         startManagedSystem(3, 0)
-        val anchorChain = startClusterAnchoringChain()
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -207,7 +207,7 @@ class AnchoringIT : ManagedModeTest() {
     fun systemAnchoringAnchorsClusterAnchoringBlocks() {
         startManagedSystem(3, 0)
         val systemAnchoringChain = startSystemAnchoringChain()
-        val clusterAnchoringChain = startClusterAnchoringChain()
+        val clusterAnchoringChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         buildBlock(clusterAnchoringChain, 0L)
         buildBlock(systemAnchoringChain, 0L)
@@ -224,6 +224,55 @@ class AnchoringIT : ManagedModeTest() {
         assertTrue(systemAnchoringBlock.isNull())
     }
 
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun capSizeOfAnchoringTransaction() {
+        startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size.xml")
+
+        val dappChain = startDappChain()
+
+        for (height in 0..31) {
+            buildBlock(dappChain, height.toLong())
+        }
+
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].getBlockchainInstance(anchorChain).blockchainEngine.getBlockQueries()
+
+        val heightZero = 0
+        buildBlock(anchorChain, 0)
+
+        val expectedNumberOfTxs = 1  // Only the first TX
+
+        val blockDataFull = anchorBlockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
+        assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
+
+        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
+        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
+
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(27, res.size)
+        }
+
+        buildBlock(anchorChain, 1)
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(32, res.size)
+        }
+    }
+
     private fun startDappChain(): Long {
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
@@ -231,8 +280,8 @@ class AnchoringIT : ManagedModeTest() {
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
     }
 
-    private fun startClusterAnchoringChain(): Long {
-        val anchorGtvConfig = getClusterAnchoringChainConfig()
+    private fun startClusterAnchoringChain(blockchainConfigFile: String): Long {
+        val anchorGtvConfig = getClusterAnchoringChainConfig(blockchainConfigFile)
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
