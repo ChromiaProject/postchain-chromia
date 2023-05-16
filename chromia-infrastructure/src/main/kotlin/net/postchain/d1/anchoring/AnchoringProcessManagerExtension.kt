@@ -1,6 +1,8 @@
 package net.postchain.d1.anchoring
 
 import net.postchain.PostchainContext
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
@@ -11,6 +13,8 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
@@ -38,6 +42,10 @@ open class AnchoringProcessManagerExtension(
                 it.isSigner = process::isSigner
                 val clusterManagement = createClusterManagement(cfg)
                 it.clusterManagement = clusterManagement
+
+                val blockStrategyConfig = cfg.rawConfig[KEY_BLOCKSTRATEGY] ?: GtvFactory.gtv(mapOf())
+                it.maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
+
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
             }
