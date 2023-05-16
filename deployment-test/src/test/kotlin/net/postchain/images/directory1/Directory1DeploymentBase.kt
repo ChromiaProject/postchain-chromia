@@ -512,14 +512,14 @@ abstract class Directory1DeploymentBase {
         }
 
         // reconfiguring test_dapp2
-        updateDapp("test_dapp2", maxBlockTransactions = 1000, faulty = false, iccfReceiver)
-        updateDapp("test_dapp2", maxBlockTransactions = 2000, faulty = true, iccfReceiver)
-        updateDapp("test_dapp2", maxBlockTransactions = 3000, faulty = false, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17100, faulty = false, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17200, faulty = true, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17300, faulty = false, iccfReceiver)
 
-        // new values: 1000, 3000
+        // new values: 17100, 17300
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 1000, 3000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+                assertEquals(setOf(500, 17100, 17300), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
             }
         }
     }
@@ -534,19 +534,19 @@ abstract class Directory1DeploymentBase {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
         }
 
-        listOf(2000, 3000, 4000).forEach {
+        listOf(18200, 18300, 18400).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 3000)), "")
+                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 18300)), "")
                     .postTransactionUntilConfirmed("Propose cluster anchoring chain config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
         }
 
-        // new values: 1000, 2000
+        // new values: 18200, 18400
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 2000, 4000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+                assertEquals(setOf(500, 18200, 18400), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
             }
         }
     }
@@ -561,19 +561,19 @@ abstract class Directory1DeploymentBase {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
         }
 
-        listOf(5000, 6000, 7000).forEach {
+        listOf(19500, 19600, 19700).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 6000)), "")
+                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 19600)), "")
                     .postTransactionUntilConfirmed("Propose $systemAnchoringBrid config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
         }
 
-        // new values: 5000, 7000
+        // new values: 19500, 19700
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 5000, 7000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+                assertEquals(setOf(500, 19500, 19700), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
             }
         }
     }
@@ -614,27 +614,27 @@ abstract class Directory1DeploymentBase {
         val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
                 // add node2
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(2000, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20200, true), "")
                 // add node3
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node3.providerPubkey, true, "")
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, pcuCluster)
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(3000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20300), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
-        // new values: 1000, 3000
+        // new values: 20100, 20300
         awaitQueryResult {
             assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
-                    setOf(500, 1000, 3000),
+                    setOf(500, 20100, 20300),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
 
@@ -643,40 +643,40 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
                 // Setting 1000 again, as it was before node3 was added,
                 // to propose config which matches with one of the already applied ones.
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
                 .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(5000, true), "")
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(6000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20600), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
-        // new values added: 6000
+        // new values added: 20600
         awaitQueryResult {
             assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
-                    setOf(500, 1000, 3000, 6000),
+                    setOf(500, 20100, 20300, 20600),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
 
-        // 4. Proposing a faulty singers config
+        // 4. Proposing a faulty signers config
         testLogger.info("Proposing faulty pending config with removed signer")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
                 // proposing faulty pending_config1 and pending_removed_signers_config2,
                 // so that config2 will contain base_config1 and will fail
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(7000, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20700, true), "")
                 .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(8000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20800), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
-        // new values added: 8000
+        // new values added: 20800
         awaitQueryResult {
             assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
-                    setOf(500, 1000, 3000, 6000, 8000),
+                    setOf(500, 20100, 20300, 20600, 20800),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
     }
