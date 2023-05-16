@@ -659,6 +659,26 @@ abstract class Directory1DeploymentBase {
                     setOf(500, 1000, 3000, 6000),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
+
+        // 4. Proposing a faulty singers config
+        testLogger.info("Proposing faulty pending config with removed signer")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
+                // proposing faulty pending_config1 and pending_removed_signers_config2,
+                // so that config2 will contain base_config1 and will fail
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(7000, true), "")
+                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(8000), "")
+                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
+        // new values added: 8000
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, cac).toSet())
+
+            assertEquals(
+                    setOf(500, 1000, 3000, 6000, 8000),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
+        }
     }
 
     private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
