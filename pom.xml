@@ -6,7 +6,7 @@
 
     <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.9.3</version>
+    <version>3.9.4</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
     <url>https://docs.chromia.com/</url>
@@ -25,12 +25,12 @@
     <packaging>pom</packaging>
 
     <properties>
-        <postchain.version>3.9.2</postchain.version>
+        <postchain.version>3.9.4</postchain.version>
         <rellr.version>0.12.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1683701530</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1684231625</project.build.outputTimestamp>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
