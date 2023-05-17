@@ -1,6 +1,6 @@
 package net.postchain.d1.iccf
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.BaseBlockQueries
 import net.postchain.client.core.PostchainQuery
@@ -67,7 +67,7 @@ class IccfIT : ManagedModeTest() {
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
         val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
-        assert(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
     @Test
@@ -112,7 +112,7 @@ class IccfIT : ManagedModeTest() {
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
         val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
-        assert(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {

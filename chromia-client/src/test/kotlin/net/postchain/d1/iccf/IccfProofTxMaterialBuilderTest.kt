@@ -1,6 +1,6 @@
 package net.postchain.d1.iccf
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
@@ -137,7 +137,7 @@ class IccfProofTxMaterialBuilderTest {
         )
 
         val iccfTx = iccfTxMaterial.txBuilder.finish().buildGtx()
-        assert(iccfTx.gtxBody.operations).containsExactly(GtxOp(
+        assertThat(iccfTx.gtxBody.operations).containsExactly(GtxOp(
                 ICCF_OP_NAME,
                 gtv(sourceBlockchainRID),
                 gtv(clientTxHash),
@@ -186,7 +186,7 @@ class IccfProofTxMaterialBuilderTest {
         )
 
         val iccfTx = iccfTxMaterial.txBuilder.finish().buildGtx()
-        assert(iccfTx.gtxBody.operations).containsExactly(GtxOp(
+        assertThat(iccfTx.gtxBody.operations).containsExactly(GtxOp(
                 ICCF_OP_NAME,
                 gtv(sourceBlockchainRID),
                 gtv(clientTxHash),
@@ -233,7 +233,7 @@ class IccfProofTxMaterialBuilderTest {
                 .sign(cryptoSystem.buildSigMaker(clientTxSigners[0]))
                 .buildGtx()
         val actualTxHash = actualTx.toGtv().merkleHash(hashCalculator)
-        assert(clientTxHash.contentEquals(actualTxHash)).isFalse()
+        assertThat(clientTxHash.contentEquals(actualTxHash)).isFalse()
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
@@ -260,7 +260,7 @@ class IccfProofTxMaterialBuilderTest {
                 .sign(cryptoSystem.buildSigMaker(clientTxSigners[1]))
                 .buildGtx()
         val actualTxHash = actualTx.toGtv().merkleHash(hashCalculator)
-        assert(clientTxHash.contentEquals(actualTxHash)).isFalse()
+        assertThat(clientTxHash.contentEquals(actualTxHash)).isFalse()
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
@@ -296,16 +296,16 @@ class IccfProofTxMaterialBuilderTest {
         )
 
         val iccfTx = iccfTxMaterial.txBuilder.finish().buildGtx()
-        assert(iccfTx.gtxBody.operations).containsExactly(GtxOp(
+        assertThat(iccfTx.gtxBody.operations).containsExactly(GtxOp(
                 ICCF_OP_NAME,
                 gtv(sourceBlockchainRID),
                 gtv(proofHashOverride ?: clientTxHash),
                 gtv(txProof)
         ))
         if (proofHashOverride == null) {
-            assert(iccfTxMaterial.updatedTx).isNull()
+            assertThat(iccfTxMaterial.updatedTx).isNull()
         } else {
-            assert(iccfTxMaterial.updatedTx).isNotNull()
+            assertThat(iccfTxMaterial.updatedTx).isNotNull()
         }
     }
 }

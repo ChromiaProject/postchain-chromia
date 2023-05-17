@@ -1,6 +1,6 @@
 package net.postchain.d1.anchoring
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import net.postchain.base.configuration.KEY_SYNC
@@ -64,11 +64,11 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
                 val dbOps = IcmfDatabaseOperationsImpl()
 
                 val configFailedMessages = dbOps.getSentMessagesAfterHeight(it, "G_configuration_failed", -1)
-                assert(configFailedMessages).hasSize(1)
+                assertThat(configFailedMessages).hasSize(1)
 
                 val failedConfigMessageBody = configFailedMessages.first().body.asArray()
-                assert(BlockchainRid(failedConfigMessageBody[0].asByteArray())).isEqualTo(ChainUtil.ridOf(systemAnchoringChain))
-                assert(failedConfigMessageBody[1].asInteger()).isEqualTo(reconfigHeight)
+                assertThat(BlockchainRid(failedConfigMessageBody[0].asByteArray())).isEqualTo(ChainUtil.ridOf(systemAnchoringChain))
+                assertThat(failedConfigMessageBody[1].asInteger()).isEqualTo(reconfigHeight)
             }
         }
     }
