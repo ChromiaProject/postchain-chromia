@@ -15,6 +15,7 @@ import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.disableNodeOperation
+import net.postchain.chain0.common.operations.enableNodeOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.queries.*
@@ -85,6 +86,7 @@ abstract class Directory1DeploymentBase {
         lateinit var clusterAnchoringBrid: BlockchainRid
         lateinit var systemAnchoringBrid: BlockchainRid
         private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
+        private const val systemCluster = "system"
         private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
@@ -168,7 +170,7 @@ abstract class Directory1DeploymentBase {
         assertEquals(3, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
-        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
+        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo(systemCluster).anchoringChain)
         // Asserting cluster anchoring chain is in system_chains list of NP API
         assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
         testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
@@ -191,7 +193,7 @@ abstract class Directory1DeploymentBase {
                     .createContainerOperation(
                             node1.providerPubkey,
                             foobarContainer,
-                            "system",
+                            systemCluster,
                             1,
                             listOf(node1.provider.pubKey.data)
                     )
@@ -251,7 +253,7 @@ abstract class Directory1DeploymentBase {
                         node2.nodeHost,
                         node2.nodePort.toLong(),
                         node2.nodeApiPath(),
-                        listOf("system")
+                        listOf(systemCluster)
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
 
@@ -282,7 +284,7 @@ abstract class Directory1DeploymentBase {
                         node3.nodeHost,
                         node3.nodePort.toLong(),
                         node3.nodeApiPath(),
-                        listOf("system")
+                        listOf(systemCluster)
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
@@ -309,6 +311,34 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(7)
+    fun `Disable and re-enable node2 and node3`() {
+        testLogger.info("Disable and re-enable node2 and node3")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
+                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                .postTransactionUntilConfirmed("Propose disabling node2 and node3")
+
+        assertChainSigners(chain0Brid, node1)
+        assertChainSigners(clusterAnchoringBrid, node1)
+        assertChainSigners(systemAnchoringBrid, node1)
+
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
+                .enableNodeOperation(node2.providerPubkey, node2.pubkey.data)
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, systemCluster)
+                .postTransactionUntilConfirmed("Enable and add node2 to the $systemCluster cluster")
+
+        node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
+                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
+                .postTransactionUntilConfirmed("Enable and add node3 to the $systemCluster cluster")
+
+        assertChainSigners(chain0Brid, *nodes())
+        assertChainSigners(clusterAnchoringBrid, *nodes())
+        assertChainSigners(systemAnchoringBrid, *nodes())
+    }
+
+    @Test
+    @Order(8)
     fun `Deploy new dapps`() {
         nodes().forEach { node ->
             assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
@@ -324,7 +354,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `Subnode container has been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
@@ -335,7 +365,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     fun `Subnode container has resource limits`() {
         testLogger.info("Asserting container resource limits")
 
@@ -352,13 +382,13 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `Transactions can be sent to test_dapp`() {
         assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(11)
+    @Order(12)
     fun `Transactions can be sent to test_dapp2`() {
         assertThatDappProcessesTx(dapps["test_dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
