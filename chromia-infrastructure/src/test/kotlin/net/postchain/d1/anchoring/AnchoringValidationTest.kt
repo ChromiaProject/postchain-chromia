@@ -8,12 +8,15 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.OpData
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -256,6 +259,19 @@ class AnchoringValidationTest {
                                 blockHeader,
                                 gtv(rawWitness)))
                 )))
+    }
+
+    @Test
+    fun operationSize() {
+        val txExtension = createAnchorSpecialTxExtension()
+        val packet = AnchoringPacket(
+                height = 0,
+                blockRid = ByteArray(32) { 17 },
+                rawHeader = GtvEncoder.encodeGtv(gtv(gtv("foobar"), gtv(4711))),
+                rawWitness = ByteArray(16) { 123 }
+        )
+        val (opData, size) = txExtension.buildOpData(packet)
+        assertEquals(GtvEncoder.encodeGtv(GtxOp.fromOpData(opData).toGtv()).size, size)
     }
 
     private fun createAnchorSpecialTxExtension(isSigner: Boolean = true): AnchoringSpecialTxExtension {
