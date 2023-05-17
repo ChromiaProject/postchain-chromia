@@ -1,6 +1,6 @@
 package net.postchain.d1.icmf
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
@@ -214,9 +214,9 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assert(messages).hasSize(2)
-                        assert(messages.any { it.sender == senderOneChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
-                        assert(messages.any { it.sender == senderTwoChainRid && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
+                        assertThat(messages).hasSize(2)
+                        assertThat(messages.any { it.sender == senderOneChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
+                        assertThat(messages.any { it.sender == senderTwoChainRid && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
                     }
                 }
             }
@@ -252,11 +252,11 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assert(messages).hasSize(1)
+                        assertThat(messages).hasSize(1)
                         val message = messages[0]
-                        assert(message.sender).isEqualTo(senderOneChainRid)
-                        assert(message.topic).isEqualTo("my-topic")
-                        assert(message.body.contentEquals(senderOneEncodedMessageBody)).isTrue()
+                        assertThat(message.sender).isEqualTo(senderOneChainRid)
+                        assertThat(message.topic).isEqualTo("my-topic")
+                        assertThat(message.body.contentEquals(senderOneEncodedMessageBody)).isTrue()
                     }
                 }
             }
@@ -293,11 +293,11 @@ class IcmfReceiverIT : ManagedModeTest() {
                             .fetch()
                             .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                    assert(messages).hasSize(1)
+                    assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assert(message.sender).isEqualTo(senderTwoChainRid)
-                    assert(message.topic).isEqualTo("my-topic")
-                    assert(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
                 }
             }
         }
@@ -331,11 +331,11 @@ class IcmfReceiverIT : ManagedModeTest() {
                             .fetch()
                             .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                    assert(messages).hasSize(1)
+                    assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assert(message.sender).isEqualTo(senderTwoChainRid)
-                    assert(message.topic).isEqualTo("my-topic")
-                    assert(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
                 }
             }
         }
@@ -372,11 +372,11 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assert(messages).hasSize(1)
+                        assertThat(messages).hasSize(1)
                         val message = messages[0]
-                        assert(message.sender).isEqualTo(senderTwoChainRid)
-                        assert(message.topic).isEqualTo("my-topic")
-                        assert(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                        assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                        assertThat(message.topic).isEqualTo("my-topic")
+                        assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
                     }
                 }
             }
@@ -430,9 +430,9 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assert(messages).hasSize(2)
-                        assert(messages.any { it.sender == clusterAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
-                        assert(messages.any { it.sender == systemAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
+                        assertThat(messages).hasSize(2)
+                        assertThat(messages.any { it.sender == clusterAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
+                        assertThat(messages.any { it.sender == systemAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
                     }
                 }
             }
@@ -470,7 +470,7 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
-            assert(appender.events.map { it.message.toString() })
+            assertThat(appender.events.map { it.message.toString() })
                     .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
         }
     }
@@ -510,18 +510,18 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assert(messages).hasSize(2)
+                        assertThat(messages).hasSize(2)
                         val firstMessage = messages[0]
-                        assert(firstMessage.sender).isEqualTo(senderOneChainRid)
-                        assert(firstMessage.topic).isEqualTo("my-topic")
-                        assert(firstMessage.body.contentEquals(encodedMessageBody)).isTrue()
+                        assertThat(firstMessage.sender).isEqualTo(senderOneChainRid)
+                        assertThat(firstMessage.topic).isEqualTo("my-topic")
+                        assertThat(firstMessage.body.contentEquals(encodedMessageBody)).isTrue()
 
                         val secondMessage = messages[1]
-                        assert(secondMessage.sender).isEqualTo(senderOneChainRid)
-                        assert(secondMessage.topic).isEqualTo("my-topic")
-                        assert(secondMessage.body.contentEquals(secondEncodedMessageBody)).isTrue()
+                        assertThat(secondMessage.sender).isEqualTo(senderOneChainRid)
+                        assertThat(secondMessage.topic).isEqualTo("my-topic")
+                        assertThat(secondMessage.body.contentEquals(secondEncodedMessageBody)).isTrue()
 
-                        assert(firstMessage.height).isLessThan(secondMessage.height)
+                        assertThat(firstMessage.height).isLessThan(secondMessage.height)
                     }
                 }
             }
@@ -541,7 +541,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             val receiverSpecialTxExtension = receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
             val globalTopicPipe = receiverSpecialTxExtension.globalTopicReceivers[0].getRelevantPipes()[0] as InterClusterAnchoredTopicPipe
 
-            assert(globalTopicPipe.queueIsEmpty).isTrue()
+            assertThat(globalTopicPipe.queueIsEmpty).isTrue()
         }
     }
 

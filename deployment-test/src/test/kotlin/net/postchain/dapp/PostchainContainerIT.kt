@@ -1,6 +1,6 @@
 package net.postchain.dapp
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import net.postchain.gtv.GtvDictionary
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -28,7 +28,7 @@ internal class PostchainContainerIT {
 
     @Test
     fun `A simple dapp can start and handle queries`() {
-        assert(postchain.client(1).query("hello_world", GtvDictionary.build(mapOf())).asString())
+        assertThat(postchain.client(1).query("hello_world", GtvDictionary.build(mapOf())).asString())
                 .contains("Hello World!")
     }
 }

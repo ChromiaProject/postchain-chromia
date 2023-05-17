@@ -1,6 +1,6 @@
 package net.postchain.dapp
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEmpty
 import net.postchain.client.core.PostchainClient
@@ -63,8 +63,8 @@ internal class MultiNodeLegacyIT {
         val currentHeight = node1.client(chainId).getBlockchainHeight()
 
         // Given empty databases
-        assert(node1.client(chainId).getCities()).isEmpty()
-        assert(node2.client(chainId).getCities()).isEmpty()
+        assertThat(node1.client(chainId).getCities()).isEmpty()
+        assertThat(node2.client(chainId).getCities()).isEmpty()
 
         // When a transaction is added to one of the nodes
         node1.txAsAdmin(chainId, "add_city", gtv(dummyCity))
@@ -74,8 +74,8 @@ internal class MultiNodeLegacyIT {
         node2.client(chainId).waitForHeight(currentHeight + 1, TWO_MINUTES)
 
         // Then the transaction can be found in the entire network
-        assert(node1.client(chainId).getCities()).contains(dummyCity)
-        assert(node2.client(chainId).getCities()).contains(dummyCity)
+        assertThat(node1.client(chainId).getCities()).contains(dummyCity)
+        assertThat(node2.client(chainId).getCities()).contains(dummyCity)
     }
 }
 

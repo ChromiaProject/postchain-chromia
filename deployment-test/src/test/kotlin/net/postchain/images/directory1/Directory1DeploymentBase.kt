@@ -1,6 +1,6 @@
 package net.postchain.images.directory1
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
@@ -155,8 +155,8 @@ abstract class Directory1DeploymentBase {
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
 
-            assert(getSummary().providers).isEqualTo(1L)
-            assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            assertThat(getSummary().providers).isEqualTo(1L)
+            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
 
         assertAnchoringChainProperties()
@@ -170,11 +170,11 @@ abstract class Directory1DeploymentBase {
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
         // Asserting cluster anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it }).contains(clusterAnchoringBrid)
+        assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
         testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
         systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
-        assert(systemChains.map { it }).contains(systemAnchoringBrid)
+        assertThat(systemChains.map { it }).contains(systemAnchoringBrid)
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
@@ -184,7 +184,7 @@ abstract class Directory1DeploymentBase {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
-                assert(getSummary().containers).isEqualTo(1L)
+                assertThat(getSummary().containers).isEqualTo(1L)
             }
 
             transactionBuilder()
@@ -296,7 +296,7 @@ abstract class Directory1DeploymentBase {
     private fun voteOnAllProposals(provider: KeyPair) {
         val proposals = awaitQueryResult {
             val result = node1.c0.getProposalsSince(RowId(0))
-            assert(result).isNotEmpty()
+            assertThat(result).isNotEmpty()
             return@awaitQueryResult result
         }!!
 
@@ -311,7 +311,7 @@ abstract class Directory1DeploymentBase {
     @Order(7)
     fun `Deploy new dapps`() {
         nodes().forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(3)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
         deployDapp("test_dapp", systemContainer, null)
@@ -319,7 +319,7 @@ abstract class Directory1DeploymentBase {
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
     }
 
@@ -330,7 +330,7 @@ abstract class Directory1DeploymentBase {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
+            assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
         }
     }
 
@@ -370,7 +370,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly(txArg)
+                assertThat(cities).containsExactly(txArg)
             }
         }
     }
@@ -389,14 +389,14 @@ abstract class Directory1DeploymentBase {
                 val lastAnchoredBlock = awaitQueryResult {
                     node.c0.getLastLegacyAnchoredBlock(dappBrid)
                 }
-                assert(lastAnchoredBlock).isNotNull()
+                assertThat(lastAnchoredBlock).isNotNull()
 
                 val dappChainBlock = awaitQueryResult {
                     node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.height)
                 }
-                assert(dappChainBlock).isNotNull()
+                assertThat(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assertThat(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
@@ -420,21 +420,21 @@ abstract class Directory1DeploymentBase {
                 val lastAnchoredBlock = awaitQueryResult {
                     node.client(anchoringChainBrid).getLastAnchoredBlock(sourceBrid)
                 }
-                assert(lastAnchoredBlock).isNotNull()
+                assertThat(lastAnchoredBlock).isNotNull()
 
                 val sourceChainBlock = awaitQueryResult {
                     node.client(sourceBrid).blockAtHeight(lastAnchoredBlock!!.blockHeight)
                 }
-                assert(sourceChainBlock).isNotNull()
+                assertThat(sourceChainBlock).isNotNull()
 
-                assert(sourceChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assertThat(sourceChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
 
                 val sourceWitness = BaseBlockWitness.fromBytes(sourceChainBlock.witness.data)
                 val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
 
-                assert(sourceWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
+                assertThat(sourceWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
                 sourceWitness.getSignatures().forEach { sourceSignature ->
-                    assert(anchorWitness.getSignatures().any {
+                    assertThat(anchorWitness.getSignatures().any {
                         it.subjectID.contentEquals(sourceSignature.subjectID) && it.data.contentEquals(sourceSignature.data)
                     }).isTrue()
                 }
@@ -450,7 +450,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly("Heraklion")
+                assertThat(cities).containsExactly("Heraklion")
             }
         }
     }
@@ -479,7 +479,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly("Heraklion")
+                assertThat(cities).containsExactly("Heraklion")
             }
         }
     }
