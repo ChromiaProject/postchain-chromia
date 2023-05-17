@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -22,7 +23,6 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
-import net.postchain.concurrent.util.get
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
@@ -145,17 +145,20 @@ class IcmfSenderIT : ManagedModeTest() {
     private fun query(node: PostchainTestNode, ctxt: EContext, chainId: Long, name: String, args: Gtv): Gtv =
             node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.query(ctxt, name, args)
 
-    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp) =
-            IcmfTestTransaction(
-                    id,
-                    node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
-                            ExtOpData.build(
-                                    op,
-                                    0,
-                                    GtxBody(ChainUtil.ridOf(chainId), arrayOf(op), arrayOf())
-                            )
-                    )
-            )
+    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp): IcmfTestTransaction {
+        val operations = arrayOf(op)
+        return IcmfTestTransaction(
+                id,
+                node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
+                        ExtOpData.build(
+                                op.asOpData(),
+                                0,
+                                GtxBody(ChainUtil.ridOf(chainId), operations, arrayOf()),
+                                operations.map { it.asOpData() }.toTypedArray()
+                        )
+                )
+        )
+    }
 
     class IcmfTestTransaction(id: Int, private val op: Transactor, good: Boolean = true, correct: Boolean = true) :
             TestTransaction(id, good, correct) {
