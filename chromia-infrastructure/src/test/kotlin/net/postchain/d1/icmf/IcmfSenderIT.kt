@@ -208,19 +208,22 @@ class IcmfSenderIT : ManagedModeTest() {
         }
     }
 
-    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp) =
-            IcmfTestTransaction(
-                    id,
-                    {
-                        node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
-                                ExtOpData.build(
-                                        op,
-                                        0,
-                                        GtxBody(ChainUtil.ridOf(chainId), arrayOf(op), arrayOf())
-                                )
-                        )
-                    }
-            )
+    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp): IcmfTestTransaction {
+        val operations = arrayOf(op)
+        return IcmfTestTransaction(
+                id,
+                {
+                    node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
+                            ExtOpData.build(
+                                    op.asOpData(),
+                                    0,
+                                    GtxBody(ChainUtil.ridOf(chainId), operations, arrayOf()),
+                                    operations.map { it.asOpData() }.toTypedArray()
+                            )
+                    )
+                }
+        )
+    }
 
     class IcmfTestTransaction(id: Int, private val makeTransactor: () -> Transactor, good: Boolean = true, correct: Boolean = true) :
             TestTransaction(id, good, correct) {
