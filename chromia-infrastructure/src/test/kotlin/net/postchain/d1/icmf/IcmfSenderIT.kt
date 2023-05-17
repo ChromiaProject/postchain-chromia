@@ -1,8 +1,12 @@
 package net.postchain.d1.icmf
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -26,9 +30,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class IcmfSenderIT : ManagedModeTest() {
 
@@ -97,7 +98,7 @@ class IcmfSenderIT : ManagedModeTest() {
         val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, 0, GtxOp("test_message", gtv(message)))
         buildBlock(dappChain, 0, tx)
         val txStatus = getChainNodes(dappChain)[0].getBlockchainInstance(1L).blockchainEngine.getTransactionQueue().getTransactionStatus(tx.getHash())
-        assertEquals(TransactionStatus.REJECTED, txStatus)
+        assertThat(txStatus).isEqualTo(TransactionStatus.REJECTED)
     }
 
     @Test
@@ -172,25 +173,22 @@ class IcmfSenderIT : ManagedModeTest() {
                         .merkleHash(hashCalculator)
 
                 val topicHeader = TopicHeaderData.fromGtv(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()[topic]!!)
-                assertContentEquals(
-                        expectedHash,
-                        topicHeader.hash
-                )
+                assertThat(topicHeader.hash.wrap()).isEqualTo(expectedHash.wrap())
 
-                assertEquals(expectedPreviousMessageBlockHeight, topicHeader.previousBlockHeight)
+                assertThat(topicHeader.previousBlockHeight).isEqualTo(expectedPreviousMessageBlockHeight)
 
                 val dbOps = IcmfDatabaseOperationsImpl()
 
                 val allMessages = dbOps.getSentMessagesAfterHeight(it, topic, -1)
-                assertEquals(expectedAllMessages.size, allMessages.size)
+                assertThat(allMessages.size).isEqualTo(expectedAllMessages.size)
                 expectedAllMessages.forEachIndexed { index, expectedMessage ->
-                    assertEquals(expectedMessage, allMessages[index].body.asString())
+                    assertThat(allMessages[index].body.asString()).isEqualTo(expectedMessage)
                 }
 
                 val messages = dbOps.getSentMessagesAtHeight(it, topic, height)
-                assertEquals(expectedMessages.size, messages.size)
+                assertThat(messages.size).isEqualTo(expectedMessages.size)
                 expectedMessages.forEachIndexed { index, expectedMessage ->
-                    assertEquals(expectedMessage, messages[index].asString())
+                    assertThat(messages[index].asString()).isEqualTo(expectedMessage)
                 }
             }
         }
@@ -203,7 +201,7 @@ class IcmfSenderIT : ManagedModeTest() {
                 val blockRid = blockQueries.getBlockRid(height).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
-                assertNull(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA])
+                assertThat(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]).isNull()
             }
         }
     }
