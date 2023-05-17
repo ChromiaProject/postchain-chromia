@@ -43,6 +43,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
+    var maxBlockSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
@@ -87,40 +88,32 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = anchoringReceiver.getRelevantPipes()
 
+        var currentSize = 0
+
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
-        for (pipe in pipes) {
+        outer@ for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                ops.addAll(handlePipe(pipe, bctx).map { buildOpData(it) })
+                val blockchainRid = pipe.blockchainRid
+                var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
+                while (pipe.mightHaveNewPackets()) {
+                    currentHeight++ // Try next height
+                    val clusterAnchorPacket = pipe.fetchNext(currentHeight)
+                    if (clusterAnchorPacket != null) {
+                        val (opData, size) = buildOpData(clusterAnchorPacket)
+                        if (currentSize + size > maxBlockSize - BLOCK_SIZE_MARGIN) {
+                            break@outer
+                        }
+                        ops.add(opData)
+                        pipe.markTaken(clusterAnchorPacket.height, bctx)
+                        currentSize += size
+                    } else {
+                        break // Nothing more to find
+                    }
+                }
             }
         }
         return ops
-    }
-
-    /**
-     * Loop all messages for the pipe
-     */
-    private fun handlePipe(
-            pipe: AnchoringPipe,
-            bctx: BlockEContext
-    ): List<AnchoringPacket> {
-        val packets = mutableListOf<AnchoringPacket>()
-        val blockchainRid = pipe.blockchainRid
-        var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
-        while (pipe.mightHaveNewPackets()) {
-            currentHeight++ // Try next height
-            val clusterAnchorPacket = pipe.fetchNext(currentHeight)
-            if (clusterAnchorPacket != null) {
-                packets.add(clusterAnchorPacket)
-                pipe.markTaken(clusterAnchorPacket.height, bctx)
-            } else {
-                break // Nothing more to find
-            }
-        }
-        if (logger.isDebugEnabled) {
-            logger.debug("Pulled ${packets.size} messages from pipeId: ${pipe.blockchainRid}")
-        }
-        return packets
     }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
@@ -132,11 +125,15 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      * @param clusterAnchorPacket is what we get from pipe
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(clusterAnchorPacket: AnchoringPacket): OpData {
+    private fun buildOpData(clusterAnchorPacket: AnchoringPacket): Pair<OpData, Int> {
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
         val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness)) to
+                OP_BLOCK_HEADER.length +
+                clusterAnchorPacket.blockRid.size +
+                GtvEncoder.encodeGtv(gtvHeader).size +
+                clusterAnchorPacket.rawWitness.size + 16
     }
 
     /**

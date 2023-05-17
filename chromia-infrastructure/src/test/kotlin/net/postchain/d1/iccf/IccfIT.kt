@@ -46,7 +46,7 @@ class IccfIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
 
         val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         val targetChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
@@ -75,7 +75,7 @@ class IccfIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         val systemAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
 
         val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
