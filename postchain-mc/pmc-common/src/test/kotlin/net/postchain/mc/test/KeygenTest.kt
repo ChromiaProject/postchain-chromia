@@ -11,7 +11,7 @@ import org.bitcoinj.crypto.MnemonicException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.io.path.absolutePathString
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class KeygenTest {
 
