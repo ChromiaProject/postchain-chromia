@@ -691,7 +691,6 @@ abstract class Directory1DeploymentBase {
         }
 
         // 4. Proposing a faulty signers config
-        /* TODO: [POS-804]: Fix it.
         testLogger.info("Proposing faulty pending config with removed signer")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
                 // proposing faulty pending_config1 and pending_removed_signers_config2,
@@ -710,7 +709,6 @@ abstract class Directory1DeploymentBase {
                     setOf(500, 20100, 20300, 20600, 20800),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
-         */
     }
 
     private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
