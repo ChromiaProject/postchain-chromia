@@ -2,7 +2,7 @@ package net.postchain.images.directory1
 
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
 
 internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
     var result: T? = null

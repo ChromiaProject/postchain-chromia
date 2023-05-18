@@ -1,6 +1,6 @@
 package net.postchain.images.directory1
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
@@ -36,7 +36,6 @@ import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
-import net.postchain.chain0.proposal_provider.proposeProviderStateOperation
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -64,14 +63,18 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -156,8 +159,8 @@ abstract class Directory1DeploymentBase {
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
 
-            assert(getSummary().providers).isEqualTo(1L)
-            assert(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            assertThat(getSummary().providers).isEqualTo(1L)
+            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
         }
 
         assertAnchoringChainProperties()
@@ -171,11 +174,11 @@ abstract class Directory1DeploymentBase {
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo("system").anchoringChain)
         // Asserting cluster anchoring chain is in system_chains list of NP API
-        assert(systemChains.map { it }).contains(clusterAnchoringBrid)
+        assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
         testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
         systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
-        assert(systemChains.map { it }).contains(systemAnchoringBrid)
+        assertThat(systemChains.map { it }).contains(systemAnchoringBrid)
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
@@ -185,7 +188,7 @@ abstract class Directory1DeploymentBase {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
-                assert(getSummary().containers).isEqualTo(1L)
+                assertThat(getSummary().containers).isEqualTo(1L)
             }
 
             transactionBuilder()
@@ -297,7 +300,7 @@ abstract class Directory1DeploymentBase {
     private fun voteOnAllProposals(provider: KeyPair) {
         val proposals = awaitQueryResult {
             val result = node1.c0.getProposalsSince(RowId(0))
-            assert(result).isNotEmpty()
+            assertThat(result).isNotEmpty()
             return@awaitQueryResult result
         }!!
 
@@ -312,7 +315,7 @@ abstract class Directory1DeploymentBase {
     @Order(7)
     fun `Deploy new dapps`() {
         nodes().forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(3)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
         deployDapp("test_dapp", systemContainer, null)
@@ -320,7 +323,7 @@ abstract class Directory1DeploymentBase {
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
-            assert(node.c0.getBlockchains(true).size).isEqualTo(5)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(5)
         }
     }
 
@@ -331,7 +334,7 @@ abstract class Directory1DeploymentBase {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
-            assert(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
+            assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
         }
     }
 
@@ -344,10 +347,10 @@ abstract class Directory1DeploymentBase {
         all.forEach {
             if (it.names()?.get(0)?.contains(foobarContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                Assertions.assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                Assertions.assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
-                Assertions.assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
-                Assertions.assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
+                assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
+                assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
             }
         }
     }
@@ -371,7 +374,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly(txArg)
+                assertThat(cities).containsExactly(txArg)
             }
         }
     }
@@ -390,14 +393,14 @@ abstract class Directory1DeploymentBase {
                 val lastAnchoredBlock = awaitQueryResult {
                     node.c0.getLastLegacyAnchoredBlock(dappBrid)
                 }
-                assert(lastAnchoredBlock).isNotNull()
+                assertThat(lastAnchoredBlock).isNotNull()
 
                 val dappChainBlock = awaitQueryResult {
                     node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.height)
                 }
-                assert(dappChainBlock).isNotNull()
+                assertThat(dappChainBlock).isNotNull()
 
-                assert(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assertThat(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
@@ -421,21 +424,21 @@ abstract class Directory1DeploymentBase {
                 val lastAnchoredBlock = awaitQueryResult {
                     node.client(anchoringChainBrid).getLastAnchoredBlock(sourceBrid)
                 }
-                assert(lastAnchoredBlock).isNotNull()
+                assertThat(lastAnchoredBlock).isNotNull()
 
                 val sourceChainBlock = awaitQueryResult {
                     node.client(sourceBrid).blockAtHeight(lastAnchoredBlock!!.blockHeight)
                 }
-                assert(sourceChainBlock).isNotNull()
+                assertThat(sourceChainBlock).isNotNull()
 
-                assert(sourceChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
+                assertThat(sourceChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
 
                 val sourceWitness = BaseBlockWitness.fromBytes(sourceChainBlock.witness.data)
                 val anchorWitness = BaseBlockWitness.fromBytes(lastAnchoredBlock.witness.data)
 
-                assert(sourceWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
+                assertThat(sourceWitness.getSignatures().size).isEqualTo(anchorWitness.getSignatures().size)
                 sourceWitness.getSignatures().forEach { sourceSignature ->
-                    assert(anchorWitness.getSignatures().any {
+                    assertThat(anchorWitness.getSignatures().any {
                         it.subjectID.contentEquals(sourceSignature.subjectID) && it.data.contentEquals(sourceSignature.data)
                     }).isTrue()
                 }
@@ -451,7 +454,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly("Heraklion")
+                assertThat(cities).containsExactly("Heraklion")
             }
         }
     }
@@ -480,7 +483,7 @@ abstract class Directory1DeploymentBase {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assert(cities).containsExactly("Heraklion")
+                assertThat(cities).containsExactly("Heraklion")
             }
         }
     }
@@ -513,14 +516,14 @@ abstract class Directory1DeploymentBase {
         }
 
         // reconfiguring test_dapp2
-        updateDapp("test_dapp2", maxBlockTransactions = 1000, faulty = false, iccfReceiver)
-        updateDapp("test_dapp2", maxBlockTransactions = 2000, faulty = true, iccfReceiver)
-        updateDapp("test_dapp2", maxBlockTransactions = 3000, faulty = false, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17100, faulty = false, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17200, faulty = true, iccfReceiver)
+        updateDapp("test_dapp2", maxBlockTransactions = 17300, faulty = false, iccfReceiver)
 
-        // new values: 1000, 3000
+        // new values: 17100, 17300
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 1000, 3000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+                assertEquals(setOf(500, 17100, 17300), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
             }
         }
     }
@@ -535,19 +538,19 @@ abstract class Directory1DeploymentBase {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
         }
 
-        listOf(2000, 3000, 4000).forEach {
+        listOf(18200, 18300, 18400).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 3000)), "")
+                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 18300)), "")
                     .postTransactionUntilConfirmed("Propose cluster anchoring chain config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
         }
 
-        // new values: 1000, 2000
+        // new values: 18200, 18400
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 2000, 4000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+                assertEquals(setOf(500, 18200, 18400), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
             }
         }
     }
@@ -562,19 +565,19 @@ abstract class Directory1DeploymentBase {
             assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
         }
 
-        listOf(5000, 6000, 7000).forEach {
+        listOf(19500, 19600, 19700).forEach {
             node1.c0.transactionBuilder()
                     .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 6000)), "")
+                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 19600)), "")
                     .postTransactionUntilConfirmed("Propose $systemAnchoringBrid config")
             voteOnAllProposals(node2.provider)
             voteOnAllProposals(node3.provider)
         }
 
-        // new values: 5000, 7000
+        // new values: 19500, 19700
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 5000, 7000), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+                assertEquals(setOf(500, 19500, 19700), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
             }
         }
     }
@@ -615,90 +618,73 @@ abstract class Directory1DeploymentBase {
         val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(1000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
                 // add node2
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(2000, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20200, true), "")
                 // add node3
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node3.providerPubkey, true, "")
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, pcuCluster)
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(3000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20300), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
-        // new values: 1000, 3000
+        // new values: 20100, 20300
         awaitQueryResult {
             assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
-                    setOf(500, 1000, 3000),
+                    setOf(500, 20100, 20300),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
-
-        /**
-         * Add dummy provider4/node4 as a workaround to https://chromaway.atlassian.net/browse/POS-804
-         * This is needed to test remove_node() / disable_node() ops, since node4 doesn't belong to
-         * ebft-majority of pcu_cluster [node1, node2, node3, node4] and can be removed.
-         * This func can be removed after POS-804 is done.
-         */
-        val (provider4, node4) = addDummyProvider4AndNode4(pcuCluster)
 
         // 3. Mixed tx: proposing config, removing signer, faulty config, config again
         testLogger.info("Proposing different kinds of configs for pcu_cluster's CAC: config, removing signer, faulty config, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                // Setting 3000 again, as it was before addDummyProvider4AndNode4() func,
+        node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
+                // Setting 1000 again, as it was before node3 was added,
                 // to propose config which matches with one of the already applied ones.
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(3000), "")
-                .disableNodeOperation(provider4.pubKey.data, node4.pubKey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(5000, true), "")
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(6000), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
+                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20600), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
-        // new values added: 6000
+        // new values added: 20600
         awaitQueryResult {
             assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
 
             assertEquals(
-                    setOf(500, 1000, 3000, 6000),
+                    setOf(500, 20100, 20300, 20600),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
-    }
 
-    private fun addDummyProvider4AndNode4(cluster: String): Pair<KeyPair, KeyPair> {
-        testLogger.info("Registering provider4")
-        val provider4 = KeyPair.of("0236043F7920C23C27EC2EA01FC63B629C964D28055F4425409F0B859C5A23D4D6", "A822446E3A1D81AA59093B1291F6E92425C1F253B9AD2F1F9AEB81334F53E891")
-        val node4 = KeyPair.of("02B14EA0402F02C02C02B37C683F7613CDFB508B7C1062440D18F3D40C7EA6A977", "32FF5F76783841235C6B743B4B5ED516A8983A549A763BF87AACE4F04B42B1E3")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                .registerProviderOperation(node1.providerPubkey, provider4.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderStateOperation(node1.providerPubkey, provider4.pubKey.data, true, "")
-                .postTransactionUntilConfirmed("Register provider 4")
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-        awaitQueryResult { assertTrue { node1.c0.getProvider(provider4.pubKey).id > 0 } }
-
-        testLogger.info("Adding provider4/node4 to cluster $cluster")
-        node1.c0.transactionBuilder(listOf(node1.provider, provider4))
-                .proposeClusterProviderOperation(node1.providerPubkey, cluster, provider4.pubKey.data, true, "")
-                .registerNodeOperation(
-                        provider4.pubKey.data, node4.pubKey.data,
-                        "host", 7777, "/api",
-                        listOf(cluster)
-                )
-                .postTransactionUntilConfirmed("Adding provider4/node4 to cluster $cluster")
-        awaitUntilAsserted {
+        // 4. Proposing a faulty signers config
+        /* TODO: [POS-804]: Fix it.
+        testLogger.info("Proposing faulty pending config with removed signer")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
+                // proposing faulty pending_config1 and pending_removed_signers_config2,
+                // so that config2 will contain base_config1 and will fail
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20700, true), "")
+                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
+                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20800), "")
+                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
+        // new values added: 20800
+        awaitQueryResult {
             assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData, node4.pubKey.wData),
-                    node1.c0.getClusterNodes(cluster).map { it.pubkey }.toSet()
-            )
-        }
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, cac).toSet())
 
-        return provider4 to node4
+            assertEquals(
+                    setOf(500, 20100, 20300, 20600, 20800),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
+        }
+         */
     }
 
     private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))

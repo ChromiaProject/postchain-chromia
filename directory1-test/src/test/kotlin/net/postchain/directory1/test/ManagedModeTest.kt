@@ -1,6 +1,6 @@
 package net.postchain.directory1.test
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
@@ -33,8 +33,8 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 val PostchainClient.pubkey get() = config.pubkey().data
 fun PostchainClientConfig.pubkey() = signers.first().pubKey
@@ -84,18 +84,18 @@ abstract class ManagedModeTest : IntegrationTestSetup() {
     protected fun assertProviderData(provPubkey: PubKey, name: String, isActive: Boolean?) {
         val data = provClient.getProviderData(provPubkey)
         assertArrayEquals(data.pubkey.data, provPubkey.data)
-        assert(data.name).isEqualTo(name)
-        assert(data.active).isEqualTo(isActive)
+        assertThat(data.name).isEqualTo(name)
+        assertThat(data.active).isEqualTo(isActive)
     }
 
     protected fun assertProviderEnabled(providerPublicKey: PubKey) {
         val data = provClient.getProviderData(providerPublicKey)
-        assert(data.active).isEqualTo(true)
+        assertThat(data.active).isEqualTo(true)
     }
 
     protected fun assertProviderDisabled(providerPublicKey: PubKey) {
         val data = provClient.getProviderData(providerPublicKey)
-        assert(data.active).isEqualTo(false)
+        assertThat(data.active).isEqualTo(false)
         val listReplicas = provClient.getBlockchainReplicas(clientConfig.blockchainRid)
         assertEquals(0, listReplicas.size)
 
@@ -109,11 +109,11 @@ abstract class ManagedModeTest : IntegrationTestSetup() {
         assertTrue(lastHeight >= 0)
         val chain0Client = getPostchainClient(config)
         val actualHeight = chain0Client.nmFindNextConfigurationHeight(config.blockchainRid, lastHeight)
-        assert(actualHeight).isEqualTo(expectedHeight)
+        assertThat(actualHeight).isEqualTo(expectedHeight)
 
         // Get next configuration
         val bc = chain0Client.nmGetBlockchainConfiguration(config.blockchainRid, actualHeight!!)
-        assert(bc).isNotNull()
+        assertThat(bc).isNotNull()
 
         if (expectedQueueCapacity != null) {
             val gtv = GtvDecoder.decodeGtv(bc!!)
@@ -138,16 +138,16 @@ abstract class ManagedModeTest : IntegrationTestSetup() {
     fun assertAdded(opName: String, keyName: String, addedItem: Gtv) {
         val client = getPostchainClient(provConfig)
         val vs = client.query(opName, GtvFactory.gtv(keyName to addedItem))
-        assert(vs.asInteger()).isGreaterThan(0L)
+        assertThat(vs.asInteger()).isGreaterThan(0L)
     }
 
     private fun assertAddedNode(providerPublicKey: String, nodePubkey: String, host: String, port: Long, cluster: String, apiUrl: String) {
         awaitUntilAsserted {
             val nodePK = PubKey(nodePubkey)
             val nodeData = provClient.getNodeData(nodePK)
-            assert(nodeData.active).isEqualTo(true)
-            assert(nodeData.host).isEqualTo(host)
-            assert(nodeData.port).isEqualTo(port)
+            assertThat(nodeData.active).isEqualTo(true)
+            assertThat(nodeData.host).isEqualTo(host)
+            assertThat(nodeData.port).isEqualTo(port)
             assertEquals(nodeData.provider, providerPublicKey.hexStringToWrappedByteArray())
             assertEquals(nodeData.pubkey, nodePK.wData)
             assertEquals(nodeData.apiUrl, apiUrl)

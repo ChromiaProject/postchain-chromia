@@ -1,5 +1,6 @@
 package net.postchain.mc.test
 
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
@@ -10,7 +11,7 @@ import org.bitcoinj.crypto.MnemonicException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.io.path.absolutePathString
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class KeygenTest {
 
@@ -35,13 +36,13 @@ class KeygenTest {
                 "-s", file.absolutePathString()))
 
         val keys = PropertiesFileLoader.load(file.absolutePathString())
-        assertk.assert(keys.getString("pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
-        assertk.assert(keys.getString("privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
+        assertThat(keys.getString("pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
+        assertThat(keys.getString("privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
 
         val exception = assertThrows<MnemonicException.MnemonicLengthException> {
             CommandKeygen().parse(arrayOf("-m", "invalid mnemonic"))
         }
-        assertk.assert(exception.message).isEqualTo("Word list size must be multiple of three words.")
+        assertThat(exception.message).isEqualTo("Word list size must be multiple of three words.")
     }
 
     @Test
@@ -53,7 +54,7 @@ class KeygenTest {
                 "-n"))
 
         val keys = PropertiesFileLoader.load(file.absolutePathString())
-        assertk.assert(keys.getString("messaging.pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
-        assertk.assert(keys.getString("messaging.privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
+        assertThat(keys.getString("messaging.pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
+        assertThat(keys.getString("messaging.privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
     }
 }

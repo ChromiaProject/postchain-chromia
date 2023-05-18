@@ -5,6 +5,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.d1.TopicHeaderData
@@ -27,13 +28,12 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.field
 import org.jooq.impl.DSL.table
 import org.jooq.util.postgres.PostgresDataType
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
@@ -98,7 +98,7 @@ class AnchoringIT : ManagedModeTest() {
         val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
         val dappBlockRids = (0..3).map { height -> gtv(dappBlockQueries.getBlockRid(height.toLong()).get()!!) }
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-        assertContentEquals(anchorHash, topicHeaderData.hash)
+        assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
 
         val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
         val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
@@ -111,13 +111,13 @@ class AnchoringIT : ManagedModeTest() {
                     .fetch()
 
             assertEquals(4, res.size)
-            assertContentEquals(blockchainRID.data, res[0][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[0][blockchainRidColumn].wrap())
             assertEquals(0L, res[0][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[1][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[1][blockchainRidColumn].wrap())
             assertEquals(1L, res[1][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[2][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[2][blockchainRidColumn].wrap())
             assertEquals(2L, res[2][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[3][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[3][blockchainRidColumn].wrap())
             assertEquals(3L, res[3][blockHeightColumn])
 
             val headers =
@@ -137,9 +137,9 @@ class AnchoringIT : ManagedModeTest() {
             headers.forEachIndexed { index, header ->
                 val rawHeader = header["block_header"]!!.asByteArray()
                 val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
-                assertContentEquals(blockchainRID.data, decodedHeader.getBlockchainRid())
+                assertEquals(blockchainRID.data.wrap(), decodedHeader.getBlockchainRid().wrap())
                 assertEquals(index.toLong(), decodedHeader.getHeight())
-                assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["G_my-topic"]!!["hash"]!!.asByteArray())
+                assertEquals(messagesHash.wrap(), decodedHeader.getExtra()["icmf_send"]!!["G_my-topic"]!!["hash"]!!.asByteArray().wrap())
 
                 val witness = BaseBlockWitness.fromBytes(header["witness"]!!.asByteArray())
                 val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))

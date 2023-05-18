@@ -28,6 +28,8 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
+private const val GTX_OP_OVERHEAD = 20
+
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
@@ -123,9 +125,9 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      * Transform to [AnchoringPacket] to [OpData] put arguments in correct order
      *
      * @param clusterAnchorPacket is what we get from pipe
-     * @return is the [OpData] we can use to create a special TX.
+     * @return the [OpData] we can use to create a special TX, and the size of it
      */
-    private fun buildOpData(clusterAnchorPacket: AnchoringPacket): Pair<OpData, Int> {
+    internal fun buildOpData(clusterAnchorPacket: AnchoringPacket): Pair<OpData, Int> {
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
         val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
@@ -133,7 +135,8 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                 OP_BLOCK_HEADER.length +
                 clusterAnchorPacket.blockRid.size +
                 GtvEncoder.encodeGtv(gtvHeader).size +
-                clusterAnchorPacket.rawWitness.size + 16
+                clusterAnchorPacket.rawWitness.size +
+                GTX_OP_OVERHEAD
     }
 
     /**

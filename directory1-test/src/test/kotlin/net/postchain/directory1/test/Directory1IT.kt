@@ -1,7 +1,9 @@
 package net.postchain.directory1.test
 
-import assertk.assert
+import assertk.assertThat
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEmpty
 import mu.KLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
@@ -50,13 +52,12 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.core.ConditionTimeoutException
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNotNull
 
 class Directory1IT : ManagedModeTest() {
 
@@ -247,13 +248,13 @@ class Directory1IT : ManagedModeTest() {
         )
         doAndBuildBlocks(tx4)
         clusters = provClient.getProviderClusters(prov2Config.pubkey())
-        assertEquals(listOf(), clusters)
+        assertThat(clusters).isEmpty()
 
         // cluster providers
         val clusterProviders = provClient.getClusterProviders(newClusterName)
         println(clusterProviders.toTypedArray().contentToString())
-        assert(clusterProviders.size).isEqualTo(1)
-        assert(clusterProviders.first().pubkey).isEqualTo(provConfig.pubkey().wData)
+        assertThat(clusterProviders.size).isEqualTo(1)
+        assertThat(clusterProviders.first().pubkey).isEqualTo(provConfig.pubkey().wData)
         // UNKNOWN cluster providers
         assertThrows<UserMistake> {
             provClient.getClusterProviders("unknown cluster name")
@@ -346,9 +347,8 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testGetBlockchainConfiguration() {
-        val blockchain = provClient.nmGetBlockchainConfiguration(provConfig.blockchainRid, 0L)
-        assertNotNull(blockchain)
-        assert(blockchain.isNotEmpty())
+        val blockchain = requireNotNull(provClient.nmGetBlockchainConfiguration(provConfig.blockchainRid, 0L))
+        assertThat(blockchain).isNotEmpty()
         val modules = GtvFactory.decodeGtv(blockchain).asDict()["gtx"]?.get("modules")
         assertEquals("net.postchain.rell.module.RellPostchainModuleFactory", modules?.get(0)?.asString())
     }
