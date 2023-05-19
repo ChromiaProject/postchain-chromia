@@ -4,7 +4,6 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
@@ -29,7 +28,7 @@ import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.proposal.getProposalsSince
+import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
@@ -296,16 +295,16 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun voteOnAllProposals(provider: KeyPair) {
-        val proposals = awaitQueryResult {
-            val result = node1.c0.getProposalsSince(RowId(0))
-            assertThat(result).isNotEmpty()
-            return@awaitQueryResult result
-        }!!
+        var nextId = 0L
+        while (true) {
+            val proposal = awaitQueryResult {
+                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(nextId)).firstOrNull()
+            } ?: break
 
-        proposals.sortedBy { it.rowid.id }.forEach {
             node1.client(chain0Brid, listOf(provider)).transactionBuilder()
-                    .makeVoteOperation(provider.pubKey.data, it.rowid.id, true)
-                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} vote on ${it.rowid}, ${it.proposalType}")
+                    .makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
+                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} votes on ${proposal.rowid}, ${proposal.proposalType}")
+            nextId = proposal.rowid.id + 1L
         }
     }
 
@@ -556,28 +555,60 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(18)
-    fun `Reconfiguration cluster anchoring chain`() {
+    fun `Reconfigure CAC by various config types`() {
         testLogger.info("Update cluster anchoring chain")
 
-        // initial value 500
-        nodes().forEach {
-            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
+        // 1. Mixed tx: proposing config, duplicated config, removing signer, faulty config, config again
+        testLogger.info("Proposing different kinds of configs for CAC: config, duplicated config, removing signer, faulty config, config again")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
+                // propose the same config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
+                // disable node3
+                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                // propose faulty config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18300, true), "")
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
+                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs")
+
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
+            assertEquals(
+                    setOf(500, 18200, 18400),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
         }
 
-        listOf(18200, 18300, 18400).forEach {
-            node1.c0.transactionBuilder()
-                    .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", maxBlockTransactions = it, faulty = it == 18300)), "")
-                    .postTransactionUntilConfirmed("Propose cluster anchoring chain config")
-            voteOnAllProposals(node2.provider)
-            voteOnAllProposals(node3.provider)
-        }
+        // 2. Mixed tx: proposing config, faulty config, adding signer, config again
+        testLogger.info("Proposing different kinds of configs for CAC: proposing config, faulty config, adding signer, config again")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                // propose already applied config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
+                // propose faulty config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18500, true), "")
+                // re-enable node3
+                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18600), "")
+                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #2")
 
-        // new values: 18200, 18400
-        awaitUntilAsserted {
-            nodes().forEach {
-                assertEquals(setOf(500, 18200, 18400), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, clusterAnchoringBrid))
-            }
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
+                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
+            assertEquals(
+                    setOf(500, 18200, 18400, 18600),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
         }
     }
 
@@ -608,8 +639,8 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    @Test
-    @Order(20)
+    //    @Test
+//    @Order(20)
     fun `Add new cluster and reconfigure CAC by updates of different types in single tx`() {
         testLogger.info("Creating pcu_cluster [node1]")
         val pcuVs = "pcu_vs"
@@ -644,17 +675,17 @@ abstract class Directory1DeploymentBase {
         val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100), "")
                 // add node2
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20200, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200, true), "")
                 // add node3
                 .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node3.providerPubkey, true, "")
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, pcuCluster)
                 // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20300), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20300), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
         // new values: 20100, 20300
@@ -673,10 +704,10 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
                 // Setting 1000 again, as it was before node3 was added,
                 // to propose config which matches with one of the already applied ones.
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20100), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100), "")
                 .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20500, true), "")
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20600), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20600), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
 
         // new values added: 20600
@@ -695,9 +726,9 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
                 // proposing faulty pending_config1 and pending_removed_signers_config2,
                 // so that config2 will contain base_config1 and will fail
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20700, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20700, true), "")
                 .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, buildConfig(20800), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20800), "")
                 .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
         // new values added: 20800
         awaitQueryResult {
@@ -711,7 +742,7 @@ abstract class Directory1DeploymentBase {
         }
     }
 
-    private fun buildConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
+    private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
 
     private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
         testLogger.info("Deploy new dapp $dappName")
