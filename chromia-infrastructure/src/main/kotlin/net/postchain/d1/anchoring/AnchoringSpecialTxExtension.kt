@@ -73,7 +73,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      * so we only add them here (if we have any).
      */
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean = when (position) {
-        SpecialTransactionPosition.Begin -> true
+        SpecialTransactionPosition.Begin -> ::anchoringReceiver.isInitialized
         SpecialTransactionPosition.End -> false
     }
 
