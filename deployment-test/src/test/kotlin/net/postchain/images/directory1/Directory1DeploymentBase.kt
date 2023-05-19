@@ -1,39 +1,23 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
-import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.chain0.cm_api.cmGetClusterInfo
-import net.postchain.chain0.cm_api.cmGetPeerInfo
-import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common.init.initOperation
-import net.postchain.chain0.common.operations.addNodeToClusterOperation
-import net.postchain.chain0.common.operations.disableNodeOperation
-import net.postchain.chain0.common.operations.enableNodeOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.queries.*
-import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
-import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
-import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
-import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.proposal.getRelevantProposals
-import net.postchain.chain0.proposal.voting.createVoterSetOperation
-import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
-import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.client.config.FailOverConfig
@@ -41,31 +25,19 @@ import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.common.types.RowId
-import net.postchain.common.types.WrappedByteArray
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.resources.*
-import net.postchain.crypto.KeyPair
-import net.postchain.crypto.PubKey
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -73,8 +45,6 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.io.File
-import java.lang.ProcessBuilder.Redirect
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -82,15 +52,6 @@ import java.lang.ProcessBuilder.Redirect
 abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase() {
-        @JvmStatic
-        protected val resolvedDockerHost = getResolvedDockerHost()
-        private val dockerClient: DockerClient = DockerClientFactory.create()
-        private val dapps = mutableMapOf<String, BlockchainRid>()
-        lateinit var clusterAnchoringBrid: BlockchainRid
-        lateinit var systemAnchoringBrid: BlockchainRid
-        private val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
-        private const val systemCluster = "system"
-        private const val systemContainer = "system"
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -100,46 +61,7 @@ abstract class Directory1DeploymentBase {
                 IoRead(resourceLimitsValues["io_read"] ?: -1),
                 IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
-
-        @JvmStatic
-        @AfterAll
-        fun breakdown() {
-            saveSubnodeLogs(dockerClient)
-            stopNodes()
-            removeSubnodeContainers()
-
-            /*
-                This is used by the CI to run a shell command right before the
-                files in the directory referenced by MOUNT_DIR are removed. It
-                is necessary because the permissions need to be altered, since
-                the files are owned by the root user account.
-            */
-            val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
-
-            if (testBreakdownCommand != null) {
-                ProcessBuilder(testBreakdownCommand)
-                        .redirectOutput(Redirect.INHERIT)
-                        .redirectError(Redirect.INHERIT)
-                        .start()
-                        .waitFor()
-            }
-
-            if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
-                testLogger.error("Unable to clear mount directory")
-            }
-        }
-
-        fun removeSubnodeContainers() {
-            dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
-                if (it.image().contains("chromia-subnode")) {
-                    dockerClient.stopContainer(it.id(), 0)
-                    dockerClient.removeContainer(it.id())
-                }
-            }
-        }
     }
-
-    private val cryptoSystem = Secp256K1CryptoSystem()
 
     abstract val numberOfMasterNodes: Int
 
@@ -165,22 +87,6 @@ abstract class Directory1DeploymentBase {
         }
 
         assertAnchoringChainProperties()
-    }
-
-    private fun assertAnchoringChainProperties() {
-        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
-                .filter { it.system }.map { BlockchainRid(it.rid) }
-        assertEquals(3, systemChains.size)
-
-        // Getting cluster anchoring chain for system cluster via CM API
-        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo(systemCluster).anchoringChain)
-        // Asserting cluster anchoring chain is in system_chains list of NP API
-        assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
-        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
-
-        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
-        assertThat(systemChains.map { it }).contains(systemAnchoringBrid)
-        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
     @Test
@@ -293,48 +199,6 @@ abstract class Directory1DeploymentBase {
 
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
-        assertChainSigners(chain0Brid, *nodes())
-        assertChainSigners(clusterAnchoringBrid, *nodes())
-        assertChainSigners(systemAnchoringBrid, *nodes())
-    }
-
-    private fun voteOnAllProposals(provider: KeyPair) {
-        var nextId = 0L
-        while (true) {
-            val proposal = awaitQueryResult {
-                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(nextId)).firstOrNull()
-            } ?: break
-
-            node1.client(chain0Brid, listOf(provider)).transactionBuilder()
-                    .makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
-                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} votes on ${proposal.rowid}, ${proposal.proposalType}")
-            nextId = proposal.rowid.id + 1L
-        }
-    }
-
-    @Test
-    @Order(7)
-    fun `Disable and re-enable node2 and node3`() {
-        testLogger.info("Disable and re-enable node2 and node3")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .postTransactionUntilConfirmed("Propose disabling node2 and node3")
-
-        assertChainSigners(chain0Brid, node1)
-        assertChainSigners(clusterAnchoringBrid, node1)
-        assertChainSigners(systemAnchoringBrid, node1)
-
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
-                .enableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, systemCluster)
-                .postTransactionUntilConfirmed("Enable and add node2 to the $systemCluster cluster")
-
-        node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
-                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
-                .postTransactionUntilConfirmed("Enable and add node3 to the $systemCluster cluster")
-
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
@@ -524,15 +388,6 @@ abstract class Directory1DeploymentBase {
                 }.toTypedArray()
     }
 
-    private fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
-        awaitQueryResult {
-            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
-            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
-            val expected = nodes.map { it.pubkey }.toSet()
-            assertEquals(expected, actual)
-        }
-    }
-
     @Test
     @Order(17)
     fun `Reconfiguration of test_dapp2`() {
@@ -556,189 +411,6 @@ abstract class Directory1DeploymentBase {
             }
         }
     }
-
-    @Test
-    @Order(18)
-    fun `Reconfigure CAC by various config types`() {
-        testLogger.info("Update cluster anchoring chain")
-
-        // 1. Mixed tx: proposing config, duplicated config, removing signer, faulty config, config again
-        testLogger.info("Proposing different kinds of configs for CAC: config, duplicated config, removing signer, faulty config, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
-                // propose the same config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
-                // disable node3
-                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18300, true), "")
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
-                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs")
-
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 18200, 18400),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
-        }
-
-        // 2. Mixed tx: proposing config, faulty config, adding signer, config again
-        testLogger.info("Proposing different kinds of configs for CAC: proposing config, faulty config, adding signer, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                // propose already applied config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
-                // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18500, true), "")
-                // re-enable node3
-                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18600), "")
-                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #2")
-
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
-                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 18200, 18400, 18600),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
-        }
-    }
-
-    @Test
-    @Order(19)
-    fun `Reconfigure SAC by various config types`() {
-        testLogger.info("Update system anchoring chain")
-
-        // 1. Mixed tx: proposing config, duplicated config, removing signer, faulty config, config again
-        testLogger.info("Proposing different kinds of configs for SAC: config, duplicated config, removing signer, faulty config, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
-                // propose the same config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
-                // disable node3
-                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19300, true), "")
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
-                .postTransactionUntilConfirmed("Propose different system anchoring chain configs")
-
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 19200, 19400),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
-        }
-
-        // 2. Mixed tx: proposing config, faulty config, adding signer, config again
-        testLogger.info("Proposing different kinds of configs for SAC: proposing config, faulty config, adding signer, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                // propose already applied config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
-                // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19500, true), "")
-                // re-enable node3
-                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
-                // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19600), "")
-                .postTransactionUntilConfirmed("Propose different system anchoring chain configs #2")
-
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
-                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
-        }
-        awaitQueryResult {
-            assertEquals(
-                    setOf(500, 19200, 19400, 19600),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
-        }
-    }
-
-    @Test
-    @Order(20)
-    fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
-        testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
-
-        val pcuVs = "pcu_vs"
-        val pcuCluster = "pcu_cluster"
-
-        // 1. Create a new cluster `pcu_cluster`
-        node1.c0.transactionBuilder()
-                .createVoterSetOperation(node1.providerPubkey, pcuVs, 1, listOf(node1.providerPubkey), null)
-                .createClusterOperation(node1.providerPubkey, pcuCluster, pcuVs, listOf(node1.providerPubkey))
-                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, pcuCluster)
-                .postTransactionUntilConfirmed("Create voterset $pcuVs, cluster $pcuCluster with provider1/node1")
-
-        awaitQueryResult {
-            assertNotNull(node1.c0.getClusters().find { it.name == pcuCluster })
-            val chains = node1.c0.getClusterBlockchains(pcuCluster)
-            assertEquals(1, chains.size)
-            val brid = BlockchainRid(chains.first())
-
-            // signers from cluster anchoring chain (CAC) config
-            val actual = getLastBlockConfigSigners(node1, brid)
-            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
-        }
-
-        // 2. Add provider2/node2 to the pcu_cluster
-        val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
-                .postTransactionUntilConfirmed("Add provider2/node2 to the $pcuCluster")
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
-        }
-
-        // 3. Proposing a faulty remove signer config
-        testLogger.info("Proposing faulty remove signer pending config")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
-                // proposing faulty pending_config1 and pending_removed_signers_config2,
-                // so that config2 will contain base_config1 and will fail
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100, true), "")
-                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200), "")
-                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #3")
-
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
-            assertEquals(
-                    setOf(500, 20200),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
-        }
-    }
-
-    private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
-
-    private fun sacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("system_anchoring", param, faulty = faulty))
 
     private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
         testLogger.info("Deploy new dapp $dappName")
@@ -773,37 +445,4 @@ abstract class Directory1DeploymentBase {
                 .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "")
                 .postTransactionUntilConfirmed("Propose $dappName config")
     }
-
-    private fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, iccfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
-            GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
-                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
-                    .let {
-                        if (iccfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${iccfReceiver.toHex()}</bytea>") else it
-                    }
-                    .let {
-                        if (faulty) it.replace("<string>net.postchain.gtx.StandardOpsGTXModule</string>",
-                                "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>") else it
-                    })
-
-    private fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
-        val res = mutableSetOf<Int>()
-        var current: Long? = 0L
-
-        while (current != null) {
-            val config = node.c0.nmGetBlockchainConfiguration(blockchainRid, current) ?: break
-            res.add(GtvDecoder.decodeGtv(config).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger().toInt())
-            current = node.c0.nmFindNextConfigurationHeight(blockchainRid, current)
-        }
-
-        return res
-    }
-
-    private fun getLastBlockConfigSigners(node: PostchainContainer, blockchainRid: BlockchainRid): List<WrappedByteArray> {
-        val lastHeight = node1.client(blockchainRid).currentBlockHeight()
-        return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
-    }
-
-    private val PostchainContainer.c0 get() = client(chain0Brid)
-
-    private val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }

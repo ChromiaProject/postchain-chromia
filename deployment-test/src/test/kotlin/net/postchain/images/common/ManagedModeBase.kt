@@ -1,16 +1,40 @@
 package net.postchain.images.common
 
+import assertk.assertThat
+import assertk.assertions.contains
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
+import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.cm_api.cmGetPeerInfo
+import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
+import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
+import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
+import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
+import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
+import net.postchain.chain0.proposal.getRelevantProposals
+import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
+import net.postchain.common.types.RowId
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
+import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtx.Gtx
+import net.postchain.images.directory1.awaitQueryResult
+import net.postchain.images.directory1.getResolvedDockerHost
+import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -18,12 +42,18 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions
+import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
+import java.io.File
 
 // Base class for managed mode tests
 open class ManagedModeBase {
+
+    protected val cryptoSystem = Secp256K1CryptoSystem()
 
     val testLogger = KotlinLogging.logger("TestLogger")
     val node1Logger = KotlinLogging.logger("Node1Logger")
@@ -39,7 +69,52 @@ open class ManagedModeBase {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
 
+    val resolvedDockerHost = getResolvedDockerHost()
+    protected val dockerClient: DockerClient = DockerClientFactory.create()
+    protected val dapps = mutableMapOf<String, BlockchainRid>()
+    lateinit var clusterAnchoringBrid: BlockchainRid
+    lateinit var systemAnchoringBrid: BlockchainRid
+    protected val dappTxs = mutableMapOf<BlockchainRid, Gtx>()
+    protected val systemCluster = "system"
+    protected val systemContainer = "system"
+
     fun nodes() = arrayOf(node1, node2, node3)
+
+    @AfterAll
+    fun breakdown() {
+        saveSubnodeLogs(dockerClient)
+        stopNodes()
+        removeSubnodeContainers()
+
+        /*
+            This is used by the CI to run a shell command right before the
+            files in the directory referenced by MOUNT_DIR are removed. It
+            is necessary because the permissions need to be altered, since
+            the files are owned by the root user account.
+        */
+        val testBreakdownCommand = System.getenv("TEST_BREAKDOWN_COMMAND")
+
+        if (testBreakdownCommand != null) {
+            ProcessBuilder(testBreakdownCommand)
+                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
+                    .start()
+                    .waitFor()
+        }
+
+        if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
+            testLogger.error("Unable to clear mount directory")
+        }
+    }
+
+    fun removeSubnodeContainers() {
+        dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
+            if (it.image().contains("chromia-subnode")) {
+                dockerClient.stopContainer(it.id(), 0)
+                dockerClient.removeContainer(it.id())
+            }
+        }
+    }
 
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
@@ -134,4 +209,75 @@ open class ManagedModeBase {
                                 .build()
                 ).brid
     }
+
+    protected fun assertAnchoringChainProperties() {
+        val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
+                .filter { it.system }.map { BlockchainRid(it.rid) }
+        Assertions.assertEquals(3, systemChains.size)
+
+        // Getting cluster anchoring chain for system cluster via CM API
+        clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo(systemCluster).anchoringChain)
+        // Asserting cluster anchoring chain is in system_chains list of NP API
+        assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
+        testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
+
+        systemAnchoringBrid = BlockchainRid(node1.c0.cmGetSystemAnchoringChain()!!)
+        assertThat(systemChains.map { it }).contains(systemAnchoringBrid)
+        testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
+    }
+
+    protected fun voteOnAllProposals(provider: KeyPair) {
+        var nextId = 0L
+        while (true) {
+            val proposal = awaitQueryResult {
+                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(nextId)).firstOrNull()
+            } ?: break
+
+            node1.client(chain0Brid, listOf(provider)).transactionBuilder()
+                    .makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
+                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} votes on ${proposal.rowid}, ${proposal.proposalType}")
+            nextId = proposal.rowid.id + 1L
+        }
+    }
+
+    protected fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
+        awaitQueryResult {
+            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
+            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
+            val expected = nodes.map { it.pubkey }.toSet()
+            Assertions.assertEquals(expected, actual)
+        }
+    }
+
+    protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
+        val res = mutableSetOf<Int>()
+        var current: Long? = 0L
+
+        while (current != null) {
+            val config = node.c0.nmGetBlockchainConfiguration(blockchainRid, current) ?: break
+            res.add(GtvDecoder.decodeGtv(config).asDict()["blockstrategy"]!!["maxblocktransactions"]!!.asInteger().toInt())
+            current = node.c0.nmFindNextConfigurationHeight(blockchainRid, current)
+        }
+
+        return res
+    }
+
+    protected fun getLastBlockConfigSigners(node: PostchainContainer, blockchainRid: BlockchainRid): List<WrappedByteArray> {
+        val lastHeight = node1.client(blockchainRid).currentBlockHeight()
+        return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
+    }
+
+    protected fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, iccfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
+            GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
+                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
+                    .let {
+                        if (iccfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${iccfReceiver.toHex()}</bytea>") else it
+                    }
+                    .let {
+                        if (faulty) it.replace("<string>net.postchain.gtx.StandardOpsGTXModule</string>",
+                                "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>") else it
+                    })
+
+    protected val PostchainContainer.c0 get() = client(chain0Brid)
+    protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
 }
