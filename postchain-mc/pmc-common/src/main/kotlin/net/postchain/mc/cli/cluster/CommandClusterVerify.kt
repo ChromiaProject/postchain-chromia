@@ -16,6 +16,7 @@ import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.client.request.SingleEndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.util.clientOption
 import net.postchain.mc.cli.util.nameOption
 import java.time.Duration
@@ -35,7 +36,7 @@ class CommandClusterVerify : CliktCommand(
         echo("Verifying cluster $cluster")
         table {
             header("Pubkey", "Url")
-            clusterInfo.peers.forEach { row(it.pubkey.toHex().substring(50), it.apiUrl) }
+            clusterInfo.peers.forEach { row(PubKey(it.pubkey).toShortHex(), it.apiUrl) }
             hints {
                 defaultAlignment = Table.Hints.Alignment.LEFT
             }
@@ -71,7 +72,7 @@ class CommandClusterVerify : CliktCommand(
     private fun analyzeBlockchains(chainsToAnalyze: Collection<ByteArray>, clusterInfo: CmClusterInfo, anchoringClient: PostchainClientImpl) {
         chainsToAnalyze.map { BlockchainRid(it) }.forEach { bc ->
             table {
-                header("Blockchain", "Anchored height", *clusterInfo.peers.map { it.pubkey.toHex().substring(50) }.toTypedArray())
+                header("Blockchain", "Anchored height", *clusterInfo.peers.map { PubKey(it.pubkey).toShortHex() }.toTypedArray())
 
                 val peerClients = clusterInfo.peers.map {
                     PostchainClientImpl(
