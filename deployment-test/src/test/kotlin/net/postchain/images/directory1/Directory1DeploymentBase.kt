@@ -64,14 +64,13 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -729,109 +728,6 @@ abstract class Directory1DeploymentBase {
                     getLastBlockConfigSigners(node1, cac).toSet())
             assertEquals(
                     setOf(500, 20200),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
-        }
-    }
-
-    //    @Test
-//    @Order(20)
-    fun `Add new cluster and reconfigure CAC by updates of different types in single tx`() {
-        testLogger.info("Creating pcu_cluster [node1]")
-        val pcuVs = "pcu_vs"
-        val pcuCluster = "pcu_cluster"
-
-        // 1. Create a new cluster `pcu_cluster`
-        node1.c0.transactionBuilder()
-                .createVoterSetOperation(node1.providerPubkey, pcuVs, 1, listOf(node1.providerPubkey), null)
-                .postTransactionUntilConfirmed("Create voterset: $pcuVs")
-        awaitQueryResult {
-            assertTrue(node1.c0.getVoterSets().any { it.name == pcuVs })
-        }
-
-        node1.c0.transactionBuilder()
-                .createClusterOperation(node1.providerPubkey, pcuCluster, pcuVs, listOf(node1.providerPubkey))
-                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, pcuCluster)
-                .postTransactionUntilConfirmed("Create cluster $pcuCluster with provider1/node1")
-
-        awaitQueryResult {
-            assertTrue(node1.c0.getClusters().any { it.name == pcuCluster })
-            val chains = node1.c0.getClusterBlockchains(pcuCluster)
-            assertEquals(1, chains.size)
-            val brid = BlockchainRid(chains.first())
-
-            // signers from cluster anchoring chain (CAC) config
-            val actual = getLastBlockConfigSigners(node1, brid)
-            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
-        }
-
-        // 2. Mixed tx: proposing config, signer, faulty config, config again
-        testLogger.info("Proposing different kinds of configs for pcu_cluster's CAC: config, signer, faulty config, config again")
-        val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
-                // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100), "")
-                // add node2
-                .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
-                // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200, true), "")
-                // add node3
-                .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node3.providerPubkey, true, "")
-                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, pcuCluster)
-                // propose good config
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20300), "")
-                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
-
-        // new values: 20100, 20300
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
-
-            assertEquals(
-                    setOf(500, 20100, 20300),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
-        }
-
-        // 3. Mixed tx: proposing config, removing signer, faulty config, config again
-        testLogger.info("Proposing different kinds of configs for pcu_cluster's CAC: config, removing signer, faulty config, config again")
-        node1.c0.transactionBuilder(listOf(node1.provider, node3.provider))
-                // Setting 1000 again, as it was before node3 was added,
-                // to propose config which matches with one of the already applied ones.
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100), "")
-                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20500, true), "")
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20600), "")
-                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
-
-        // new values added: 20600
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
-
-            assertEquals(
-                    setOf(500, 20100, 20300, 20600),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
-        }
-
-        // 4. Proposing a faulty signers config
-        testLogger.info("Proposing faulty pending config with removed signer")
-        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
-                // proposing faulty pending_config1 and pending_removed_signers_config2,
-                // so that config2 will contain base_config1 and will fail
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20700, true), "")
-                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20800), "")
-                .postTransactionUntilConfirmed("Propose pcu_cluster anchoring chain configs")
-        // new values added: 20800
-        awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
-
-            assertEquals(
-                    setOf(500, 20100, 20300, 20600, 20800),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
     }
