@@ -5,6 +5,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
+import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.common.init.initOperation
@@ -37,6 +38,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.ManagedModeBase
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -52,6 +54,10 @@ import org.testcontainers.junit.jupiter.Testcontainers
 abstract class Directory1DeploymentBase {
 
     companion object : ManagedModeBase() {
+        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
+        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
+        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
+
         private const val foobarContainer = "foobar"
         private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
         private val foobarResourceLimits = ContainerResourceLimits(
@@ -61,6 +67,12 @@ abstract class Directory1DeploymentBase {
                 IoRead(resourceLimitsValues["io_read"] ?: -1),
                 IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            super.breakdown()
+        }
     }
 
     abstract val numberOfMasterNodes: Int

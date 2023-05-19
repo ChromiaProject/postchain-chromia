@@ -42,7 +42,6 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
@@ -56,9 +55,6 @@ open class ManagedModeBase {
     protected val cryptoSystem = Secp256K1CryptoSystem()
 
     val testLogger = KotlinLogging.logger("TestLogger")
-    val node1Logger = KotlinLogging.logger("Node1Logger")
-    val node2Logger = KotlinLogging.logger("Node2Logger")
-    val node3Logger = KotlinLogging.logger("Node3Logger")
 
     val network: Network = Network.newNetwork()
 
@@ -80,7 +76,6 @@ open class ManagedModeBase {
 
     fun nodes() = arrayOf(node1, node2, node3)
 
-    @AfterAll
     fun breakdown() {
         saveSubnodeLogs(dockerClient)
         stopNodes()

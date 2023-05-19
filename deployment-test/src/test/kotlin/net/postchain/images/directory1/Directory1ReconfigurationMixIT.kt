@@ -3,6 +3,7 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
+import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
@@ -26,6 +27,7 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -42,6 +44,11 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class Directory1ReconfigurationMixIT {
 
     companion object : ManagedModeBase() {
+
+        val node1Logger = KotlinLogging.logger("Reconfig_Node1Logger")
+        val node2Logger = KotlinLogging.logger("Reconfig_Node2Logger")
+        val node3Logger = KotlinLogging.logger("Reconfig_Node3Logger")
+
         init {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                     KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"),
@@ -63,6 +70,12 @@ class Directory1ReconfigurationMixIT {
 
             removeSubnodeContainers()
             startNodesAndChain0()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            super.breakdown()
         }
     }
 
