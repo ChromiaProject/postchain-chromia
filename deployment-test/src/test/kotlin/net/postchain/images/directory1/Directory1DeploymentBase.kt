@@ -63,9 +63,13 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -372,10 +376,10 @@ abstract class Directory1DeploymentBase {
         all.forEach {
             if (it.names()?.get(0)?.contains(foobarContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                Assertions.assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                Assertions.assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
-                Assertions.assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
-                Assertions.assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
+                assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
+                assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
             }
         }
     }

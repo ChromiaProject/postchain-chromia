@@ -66,13 +66,6 @@
             <artifactId>jooq</artifactId>
         </dependency>
 
-        <!-- Test Dependency -->
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- We want access to integration test setup classes -->
         <dependency>
             <groupId>net.postchain</groupId>

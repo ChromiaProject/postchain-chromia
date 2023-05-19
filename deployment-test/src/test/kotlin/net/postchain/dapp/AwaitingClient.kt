@@ -5,8 +5,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import kotlin.test.assertTrue
-
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class AwaitingClient(val client: PostchainClient): PostchainClient by client {
     override fun query(name: String, args: Gtv): Gtv {

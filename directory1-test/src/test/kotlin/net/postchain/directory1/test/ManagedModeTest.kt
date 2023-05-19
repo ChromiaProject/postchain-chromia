@@ -33,8 +33,8 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 val PostchainClient.pubkey get() = config.pubkey().data
 fun PostchainClientConfig.pubkey() = signers.first().pubKey
