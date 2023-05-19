@@ -614,28 +614,62 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(19)
-    fun `Reconfiguration system anchoring chain`() {
-        testLogger.info("Update $systemAnchoringBrid")
+    fun `Reconfigure SAC by various config types`() {
+        testLogger.info("Update system anchoring chain")
 
-        // initial value 500
-        nodes().forEach {
-            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
+        // 1. Mixed tx: proposing config, duplicated config, removing signer, faulty config, config again
+        testLogger.info("Proposing different kinds of configs for SAC: config, duplicated config, removing signer, faulty config, config again")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
+                // propose the same config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
+                // disable node3
+                .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                // propose faulty config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19300, true), "")
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
+                .postTransactionUntilConfirmed("Propose different system anchoring chain configs")
+
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
+            assertEquals(
+                    setOf(500, 19200, 19400),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
         }
 
-        listOf(19500, 19600, 19700).forEach {
-            node1.c0.transactionBuilder()
-                    .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid,
-                            GtvEncoder.encodeGtv(compileDapp("system_anchoring", maxBlockTransactions = it, faulty = it == 19600)), "")
-                    .postTransactionUntilConfirmed("Propose $systemAnchoringBrid config")
-            voteOnAllProposals(node2.provider)
-            voteOnAllProposals(node3.provider)
-        }
+        // 2. Mixed tx: proposing config, faulty config, adding signer, config again
+        testLogger.info("Proposing different kinds of configs for SAC: proposing config, faulty config, adding signer, config again")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                // propose already applied config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
+                // propose faulty config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19500, true), "")
+                // re-enable node3
+                .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
+                .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
+                // propose config
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19600), "")
+                .postTransactionUntilConfirmed("Propose different system anchoring chain configs #2")
 
-        // new values: 19500, 19700
-        awaitUntilAsserted {
-            nodes().forEach {
-                assertEquals(setOf(500, 19500, 19700), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, systemAnchoringBrid))
-            }
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
+                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
+        }
+        awaitQueryResult {
+            assertEquals(
+                    setOf(500, 19200, 19400, 19600),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
         }
     }
 
@@ -743,6 +777,8 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
+
+    private fun sacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("system_anchoring", param, faulty = faulty))
 
     private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
         testLogger.info("Deploy new dapp $dappName")
