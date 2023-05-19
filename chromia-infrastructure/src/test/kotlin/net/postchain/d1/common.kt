@@ -19,12 +19,12 @@ fun getSystemAnchoringChainConfig(): Gtv {
     )
 }
 
-fun getClusterAnchoringChainConfig(): Gtv {
+fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
     val clusterAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/module.rell").readText()
     val icmfRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/icmf.rell").readText()
     return GtvMLParser.parseGtvML(
-            Any::class::class.java.getResource("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")!!.readText(),
+            Any::class::class.java.getResource(blockchainConfigFile)!!.readText(),
             mapOf(
                     "anchoring_chain_common" to GtvFactory.gtv(anchoringRellCode),
                     "anchoring_chain_cluster" to GtvFactory.gtv(clusterAnchoringRellCode + icmfRellCode)
