@@ -64,6 +64,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -670,6 +671,65 @@ abstract class Directory1DeploymentBase {
             assertEquals(
                     setOf(500, 19200, 19400, 19600),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
+        }
+    }
+
+    @Test
+    @Order(20)
+    fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
+        testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
+
+        val pcuVs = "pcu_vs"
+        val pcuCluster = "pcu_cluster"
+
+        // 1. Create a new cluster `pcu_cluster`
+        node1.c0.transactionBuilder()
+                .createVoterSetOperation(node1.providerPubkey, pcuVs, 1, listOf(node1.providerPubkey), null)
+                .createClusterOperation(node1.providerPubkey, pcuCluster, pcuVs, listOf(node1.providerPubkey))
+                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, pcuCluster)
+                .postTransactionUntilConfirmed("Create voterset $pcuVs, cluster $pcuCluster with provider1/node1")
+
+        awaitQueryResult {
+            assertNotNull(node1.c0.getClusters().find { it.name == pcuCluster })
+            val chains = node1.c0.getClusterBlockchains(pcuCluster)
+            assertEquals(1, chains.size)
+            val brid = BlockchainRid(chains.first())
+
+            // signers from cluster anchoring chain (CAC) config
+            val actual = getLastBlockConfigSigners(node1, brid)
+            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
+        }
+
+        // 2. Add provider2/node2 to the pcu_cluster
+        val cac = BlockchainRid(node1.c0.cmGetClusterInfo(pcuCluster).anchoringChain)
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
+                .proposeClusterProviderOperation(node1.providerPubkey, pcuCluster, node2.providerPubkey, true, "")
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, pcuCluster)
+                .postTransactionUntilConfirmed("Add provider2/node2 to the $pcuCluster")
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, cac).toSet())
+        }
+
+        // 3. Proposing a faulty remove signer config
+        testLogger.info("Proposing faulty remove signer pending config")
+        node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
+                // proposing faulty pending_config1 and pending_removed_signers_config2,
+                // so that config2 will contain base_config1 and will fail
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100, true), "")
+                .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200), "")
+                .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #3")
+
+        awaitQueryResult {
+            assertEquals(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData),
+                    getLastBlockConfigSigners(node1, cac).toSet())
+            assertEquals(
+                    setOf(500, 20200),
+                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }
     }
 
