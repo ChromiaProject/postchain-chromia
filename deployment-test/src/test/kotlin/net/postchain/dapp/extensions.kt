@@ -29,7 +29,7 @@ fun Postable.postTransactionUntilConfirmed(
             println("  Tx $transactionName result (attempt ${attempt}) was: ${txRes.status}, code: ${txRes.httpStatusCode}")
             sleep(timeOut.toMillis())
         } else {
-            println("  TX $transactionName result was: ${txRes.status} , code: ${txRes.httpStatusCode} ${txRes.rejectReason?.let { ", reason: $it" } ?: ""}")
+            println("  TX $transactionName result was: ${txRes.status}, code: ${txRes.httpStatusCode} ${txRes.rejectReason?.let { ", reason: $it" } ?: ""}")
             return txRes
         }
     }
