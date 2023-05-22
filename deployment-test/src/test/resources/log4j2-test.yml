@@ -13,16 +13,28 @@ Configuration:
         fileName: "logs/test.log"
         PatternLayout:
           pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
-      - name: Node1Appender
-        fileName: "logs/node1.log"
+      - name: Deployment_Node1Appender
+        fileName: "logs/deployment/node1.log"
         PatternLayout:
           Pattern: "%msg%n"
-      - name: Node2Appender
-        fileName: "logs/node2.log"
+      - name: Deployment_Node2Appender
+        fileName: "logs/deployment/node2.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: Node3Appender
-        fileName: "logs/node3.log"
+      - name: Deployment_Node3Appender
+        fileName: "logs/deployment/node3.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Reconfig_Node1Appender
+        fileName: "logs/reconfig/node1.log"
+        PatternLayout:
+          Pattern: "%msg%n"
+      - name: Reconfig_Node2Appender
+        fileName: "logs/reconfig/node2.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Reconfig_Node3Appender
+        fileName: "logs/reconfig/node3.log"
         PatternLayout:
           pattern: "%msg%n"
 
@@ -41,18 +53,36 @@ Configuration:
         AppenderRef:
           - ref: ConsoleAppender
           - ref: FileAppender
-      - name: Node1Logger
+
+      - name: Deployment_Node1Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: Node1Appender
-      - name: Node2Logger
+          - ref: Deployment_Node1Appender
+      - name: Deployment_Node2Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: Node2Appender
-      - name: Node3Logger
+          - ref: Deployment_Node2Appender
+      - name: Deployment_Node3Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: Node3Appender
+          - ref: Deployment_Node3Appender
+
+      - name: Reconfig_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Reconfig_Node1Appender
+      - name: Reconfig_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Reconfig_Node2Appender
+      - name: Reconfig_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Reconfig_Node3Appender
+
