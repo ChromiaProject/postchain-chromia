@@ -63,7 +63,6 @@ class CommandGetContainerInfo : CliktCommand(
                 defaultHints()
             }.render().also { echo(it) }
         }
-
     }
 
     private fun Table.defaultHints() {

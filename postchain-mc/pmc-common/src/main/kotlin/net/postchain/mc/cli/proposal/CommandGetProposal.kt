@@ -171,12 +171,8 @@ class CommandGetProposal : CliktCommand(
                 val pcl = client.getContainerLimitsProposal(proposal.id) ?: return ""
                 return table {
                     row("Container:", pcl.container)
+                    row("Container Units:", pcl.containerUnits.toString())
                     row("Max blockchains:", pcl.maxBlockchains.toString())
-                    row("CPU:", pcl.cpu.toString())
-                    row("RAM (MiB):", pcl.ram.toString())
-                    row("Storage (MiB):", pcl.storage.toString())
-                    row("Disk I/O read (MiB/s):", pcl.ioRead.toString())
-                    row("Disk I/O write (MiB/s):", pcl.ioWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -185,13 +181,7 @@ class CommandGetProposal : CliktCommand(
                 val pcl = client.getClusterLimitsProposal(proposal.id) ?: return ""
                 return table {
                     row("Cluster:", pcl.cluster)
-                    row("Max containers:", pcl.maxContainers.toString())
-                    row("Default container max blockchains:", pcl.defaultContainerMaxBlockchains.toString())
-                    row("Default container CPU:", pcl.defaultContainerCpu.toString())
-                    row("Default container RAM (MiB):", pcl.defaultContainerRam.toString())
-                    row("Default container storage (MiB):", pcl.defaultContainerStorage.toString())
-                    row("Default disk I/O read (MiB/s):", pcl.defaultContainerIoRead.toString())
-                    row("Default disk I/O write (MiB/s):", pcl.defaultContainerIoWrite.toString())
+                    row("Cluster Units:", pcl.clusterUnits.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }
@@ -232,12 +222,8 @@ class CommandGetProposal : CliktCommand(
                 val pc = client.getContainerProposal(proposal.id) ?: return ""
                 return table {
                     row("Container:", pc.container)
+                    row("Container Units:", pc.containerUnits.toString())
                     row("Max blockchains:", pc.maxBlockchains.toString())
-                    row("CPU:", pc.cpu.toString())
-                    row("RAM (MiB):", pc.ram.toString())
-                    row("Storage (MiB):", pc.storage.toString())
-                    row("Disk I/O read (MiB/s):", pc.ioRead.toString())
-                    row("Disk I/O write (MiB/s):", pc.ioWrite.toString())
                     hints { defaultAlignment = Table.Hints.Alignment.LEFT }
                 }.render().toString()
             }

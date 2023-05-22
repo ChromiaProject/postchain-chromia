@@ -9,12 +9,15 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.enum
 import net.postchain.chain0.common.operations.registerNodeOperation
+import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.updateNodeCapabilityOperation
 import net.postchain.chain0.model.NodeCapabilityType
+import net.postchain.chain0.version.apiVersion
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.hostOption
 import net.postchain.mc.cli.portOption
+import net.postchain.mc.cli.util.clusterUnitsOption
 import net.postchain.mc.cli.util.nopClientOption
 import net.postchain.mc.cli.util.pubkeyOption
 import net.postchain.mc.network.NodeVerifier
@@ -33,6 +36,8 @@ class CommandRegisterNode : CliktCommand(
 
     private val apiUrl by option("-a", "--api-url", help = "api url").required()
 
+    private val clusterUnits by clusterUnitsOption().default(1)
+
     private val clusters by option(
             "-c",
             "--cluster",
@@ -44,8 +49,14 @@ class CommandRegisterNode : CliktCommand(
         val verifier = NodeVerifier(client.config, null)
         if (!verifier.verifyApi(apiUrl).responds) throw CliktError("Api url is not accessible for host")
         if (!verifier.verifyHost(host, port)) throw CliktError("Node is not accessible")
+        val apiVersion = client.apiVersion()
         client.transactionBuilder()
-                .registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
+                .apply {
+                    when {
+                        apiVersion >= 3 -> registerNodeWithUnitsOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters, clusterUnits)
+                        else -> registerNodeOperation(client.pubkey, key.data, host, port.toLong(), apiUrl, clusters)
+                    }
+                }
                 .apply {
                     if (capability.isNotEmpty()) capability.forEach { updateNodeCapabilityOperation(client.pubkey, key.data, it, true) }
                 }
