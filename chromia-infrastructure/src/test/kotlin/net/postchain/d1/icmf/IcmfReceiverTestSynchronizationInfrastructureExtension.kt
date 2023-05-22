@@ -2,9 +2,11 @@ package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.d1.MockManagedBlockchainConfigurationProvider
 import net.postchain.d1.QueryProviderMocks
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
+import net.postchain.managed.config.ManagedDataSourceAware
 
 class IcmfReceiverTestSynchronizationInfrastructureExtension(postchainContext: PostchainContext) :
     IcmfReceiverSynchronizationInfrastructureExtension(postchainContext) {
@@ -17,4 +19,7 @@ class IcmfReceiverTestSynchronizationInfrastructureExtension(postchainContext: P
 
     override fun createClientProvider(clusterManagement: ClusterManagement) =
         MockPostchainRestApi.createProvider(clusterManagement)
+
+    override fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement) =
+            MockManagedBlockchainConfigurationProvider(clusterManagement)
 }

@@ -123,7 +123,8 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
             ManagedBlockchainConfigProvider(
                     NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
-                    clusterManagement
+                    clusterManagement,
+                    postchainContext.appConfig
             )
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(

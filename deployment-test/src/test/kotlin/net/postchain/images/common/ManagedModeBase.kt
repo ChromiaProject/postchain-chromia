@@ -42,7 +42,6 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
@@ -127,7 +126,6 @@ open class ManagedModeBase {
                 .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping(this::class.java.getResource("/log")!!.path.substringAfter("test-classes/"), "/opt/chromaway/postchain/log", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DEBUG", "true")
-                .withEnv("POSTCHAIN_PCU", true.toString())
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withLogConsumer(logConsumer)
