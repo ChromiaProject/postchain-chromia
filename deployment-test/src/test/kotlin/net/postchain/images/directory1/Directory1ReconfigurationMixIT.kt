@@ -10,15 +10,15 @@ import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.disableNodeOperation
 import net.postchain.chain0.common.operations.enableNodeOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
-import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
+import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
-import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
+import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
@@ -100,56 +100,19 @@ class Directory1ReconfigurationMixIT {
 
     @Test
     @Order(2)
-    fun `Add node2 as signer to c0`() {
-        testLogger.info("Adding node2 to the cluster")
-        testLogger.info("Registering provider2")
+    fun `Add node2 and node3 as signers to c0`() {
+        testLogger.info("Adding provider2/node2 and provider3/node3 to the cluster")
 
-        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-                .registerProviderOperation(node1.providerPubkey, node2.provider.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderIsSystemOperation(node1.providerPubkey, node2.providerPubkey, true, "")
+        val newProviders = listOf(
+                ProviderInfo(node2.provider.pubKey.wData, "provider2", "http://provider2.com"),
+                ProviderInfo(node3.provider.pubKey.wData, "provider3", "http://provider3.com")
+        )
+
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider, node3.provider)).transactionBuilder()
+                .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
+                .registerNodeOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster))
+                .registerNodeOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster))
                 .postTransactionUntilConfirmed("Register p2 as system")
-
-        node1.client(chain0Brid, listOf(node2.provider)).transactionBuilder()
-                .registerNodeOperation(
-                        node2.providerPubkey,
-                        node2.nodeKeyPair.pubKey.data,
-                        node2.nodeHost,
-                        node2.nodePort.toLong(),
-                        node2.nodeApiPath(),
-                        listOf(systemCluster)
-                )
-                .postTransactionUntilConfirmed("add node 2 to system cluster")
-
-        // Asserting that node1, node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
-        assertChainSigners(chain0Brid, node1, node2)
-        assertChainSigners(clusterAnchoringBrid, node1, node2)
-        assertChainSigners(systemAnchoringBrid, node1, node2)
-    }
-
-    @Test
-    @Order(3)
-    fun `Add node3 as signer to c0`() {
-        testLogger.info("Adding node3 to the cluster")
-        testLogger.info("Registering provider3")
-
-        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder()
-                .registerProviderOperation(node1.providerPubkey, node3.provider.pubKey, ProviderTier.NODE_PROVIDER)
-                .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true, "")
-                .postTransactionUntilConfirmed("Register p3 as system")
-
-        voteOnAllProposals(node2.provider)
-
-        testLogger.info("Adding node3 to [node1, node2] network")
-        node1.client(chain0Brid, listOf(node3.provider)).transactionBuilder()
-                .registerNodeOperation(
-                        node3.providerPubkey,
-                        node3.pubkey.data,
-                        node3.nodeHost,
-                        node3.nodePort.toLong(),
-                        node3.nodeApiPath(),
-                        listOf(systemCluster)
-                )
-                .postTransactionUntilConfirmed("add node 3 to system cluster")
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
@@ -158,7 +121,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(4)
+    @Order(3)
     fun `Disable and re-enable node2 and node3`() {
         testLogger.info("Disable and re-enable node2 and node3")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
@@ -186,7 +149,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(4)
     fun `Reconfigure CAC by various config types`() {
         testLogger.info("Update cluster anchoring chain")
 
@@ -245,7 +208,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(6)
+    @Order(5)
     fun `Reconfigure SAC by various config types`() {
         testLogger.info("Update system anchoring chain")
 
@@ -306,7 +269,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(7)
+    @Order(6)
     fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
         testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
 
