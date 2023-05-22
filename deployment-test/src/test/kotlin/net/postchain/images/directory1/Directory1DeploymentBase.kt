@@ -10,9 +10,13 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeOperation
+import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
+import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_container.createContainerOperation
+import net.postchain.chain0.direct_cluster.createClusterWithUnitsOperation
+import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
@@ -59,11 +63,11 @@ abstract class Directory1DeploymentBase {
         val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
 
         private const val foobarContainer = "foobar"
-        private val resourceLimitsValues = mapOf("cpu" to 50L, "ram" to 2048L, "io_read" to 50L, "io_write" to 50L)
+        private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
         private val foobarResourceLimits = ContainerResourceLimits(
                 Cpu(resourceLimitsValues["cpu"] ?: -1),
                 Ram(resourceLimitsValues["ram"] ?: -1),
-                Storage(resourceLimitsValues["storage"] ?: -1),
+                Storage(resourceLimitsValues["storage"] ?: 32768),
                 IoRead(resourceLimitsValues["io_read"] ?: -1),
                 IoWrite(resourceLimitsValues["io_write"] ?: -1)
         )
@@ -111,12 +115,13 @@ abstract class Directory1DeploymentBase {
             }
 
             transactionBuilder()
-                    .createContainerOperation(
+                    .createContainerWithUnitsOperation(
                             node1.providerPubkey,
                             foobarContainer,
                             systemCluster,
                             1,
-                            listOf(node1.provider.pubKey.data)
+                            listOf(node1.provider.pubKey.data),
+                            1
                     )
                     .postTransactionUntilConfirmed("$foobarContainer container")
 
@@ -129,27 +134,31 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(4)
-    fun `Add container resource limits`() {
+    fun `Verify and update node and container resource limits`() {
+        node1.c0.transactionBuilder()
+                .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 2)
+                .postTransactionUntilConfirmed("Update node1 to 2 cluster units")
+
+        awaitUntilAsserted {
+            val nodeData = node1.c0.getNodeData(node1.pubkey)
+            assertEquals(nodeData.clusterUnits!!, 2)
+        }
+
         // Asserting that resource limits are defaults
-        val expectedLimits = ContainerResourceLimits(Cpu(-1L), Ram(-1L), Storage(-1L), IoRead(-1), IoWrite(-1))
+        val expectedLimits = ContainerResourceLimits(Cpu(50L), Ram(2048L), Storage(16384L), IoRead(25), IoWrite(20))
         val actualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
         assertEquals(expectedLimits, actualLimits)
 
         // Changing resource limits
-        with(resourceLimitsValues) {
-            node1.c0.transactionBuilder().proposeContainerLimitsOperation(
-                    node1.providerPubkey,
-                    foobarContainer,
-                    mapOf(
-                            cpu to getOrDefault("cpu", -1),
-                            ram to getOrDefault("ram", -1),
-                            storage to getOrDefault("storage", -1),
-                            io_read to getOrDefault("io_read", -1),
-                            io_write to getOrDefault("io_write", -1)
-                    ),
-                    ""
-            ).postTransactionUntilConfirmed("container limits")
-        }
+        node1.c0.transactionBuilder().proposeContainerLimitsOperation(
+                node1.providerPubkey,
+                foobarContainer,
+                mapOf(
+                        container_units to 2,
+                        max_blockchains to 10
+                ),
+                ""
+        ).postTransactionUntilConfirmed("container limits")
 
         // Asserting resource limits changed
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
@@ -168,13 +177,14 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("Register p2 as system")
 
         node1.client(chain0Brid, listOf(node2.provider)).transactionBuilder()
-                .registerNodeOperation(
+                .registerNodeWithUnitsOperation(
                         node2.providerPubkey,
                         node2.nodeKeyPair.pubKey.data,
                         node2.nodeHost,
                         node2.nodePort.toLong(),
                         node2.nodeApiPath(),
-                        listOf(systemCluster)
+                        listOf(systemCluster),
+                        2
                 )
                 .postTransactionUntilConfirmed("add node 2 to system cluster")
 
@@ -199,13 +209,14 @@ abstract class Directory1DeploymentBase {
 
         testLogger.info("Adding node3 to [node1, node2] network")
         node1.client(chain0Brid, listOf(node3.provider)).transactionBuilder()
-                .registerNodeOperation(
+                .registerNodeWithUnitsOperation(
                         node3.providerPubkey,
                         node3.pubkey.data,
                         node3.nodeHost,
                         node3.nodePort.toLong(),
                         node3.nodeApiPath(),
-                        listOf(systemCluster)
+                        listOf(systemCluster),
+                        2
                 )
                 .postTransactionUntilConfirmed("add node 3 to system cluster")
 
