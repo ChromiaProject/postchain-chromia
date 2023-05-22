@@ -23,7 +23,7 @@ import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.ManagedDataSourceAware
 
 open class AnchoringProcessManagerExtension(
-        postchainContext: PostchainContext
+        private val postchainContext: PostchainContext
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
     private val localDispatcher = AnchoringDispatcher(postchainContext.storage)
@@ -75,7 +75,8 @@ open class AnchoringProcessManagerExtension(
     open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
             ManagedBlockchainConfigProvider(
                     NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
-                    clusterManagement
+                    clusterManagement,
+                    postchainContext.appConfig
             )
 
     @Synchronized

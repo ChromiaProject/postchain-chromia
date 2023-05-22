@@ -5,13 +5,15 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.nm_api.NodeManagement
 
 class ManagedBlockchainConfigProvider(
         private val nodeManagement: NodeManagement,
-        private val clusterManagement: ClusterManagement
+        private val clusterManagement: ClusterManagement,
+        private val appConfig: AppConfig
 ) : BlockchainConfigProvider {
 
     companion object : KLogging()
@@ -20,7 +22,7 @@ class ManagedBlockchainConfigProvider(
         val blockchainRid = BlockchainRid(headerData.getBlockchainRid())
         val height = headerData.getHeight()
 
-        if (isPcuEnabled()) {
+        if (appConfig.isPcuEnabled()) {
             val logPrefix = "getRelevantPeers(brid: ${blockchainRid.toShortHex()}, height: $height)"
             val configHash = headerData.getExtra()["config_hash"]?.asByteArray()
             logger.debug { "$logPrefix - extra config_hash: " + configHash?.wrap() }
@@ -44,9 +46,5 @@ class ManagedBlockchainConfigProvider(
         } else {
             return clusterManagement.getBlockchainPeers(blockchainRid, height)
         }
-    }
-
-    private fun isPcuEnabled(): Boolean {
-        return System.getenv("POSTCHAIN_PCU")?.let { it.toBoolean() } ?: false
     }
 }
