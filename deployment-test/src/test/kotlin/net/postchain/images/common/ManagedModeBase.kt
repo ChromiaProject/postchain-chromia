@@ -43,6 +43,7 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -208,11 +209,11 @@ open class ManagedModeBase {
     protected fun assertAnchoringChainProperties() {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
                 .filter { it.system }.map { BlockchainRid(it.rid) }
-        Assertions.assertEquals(3, systemChains.size)
+        assertEquals(3, systemChains.size)
 
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo(systemCluster).anchoringChain)
-        // Asserting cluster anchoring chain is in system_chains list of NP API
+        // Asserting cluster anchoring chain is in system_chains list of NM API
         assertThat(systemChains.map { it }).contains(clusterAnchoringBrid)
         testLogger.info("Cluster anchor chain bc-rid: $clusterAnchoringBrid")
 
@@ -240,7 +241,7 @@ open class ManagedModeBase {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
             val expected = nodes.map { it.pubkey }.toSet()
-            Assertions.assertEquals(expected, actual)
+            assertEquals(expected, actual)
         }
     }
 

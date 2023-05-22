@@ -29,6 +29,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -157,7 +158,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(7)
+    @Order(4)
     fun `Disable and re-enable node2 and node3`() {
         testLogger.info("Disable and re-enable node2 and node3")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
@@ -185,7 +186,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(18)
+    @Order(5)
     fun `Reconfigure CAC by various config types`() {
         testLogger.info("Update cluster anchoring chain")
 
@@ -208,10 +209,10 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(node3.provider)
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(500, 18200, 18400),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
         }
@@ -234,17 +235,17 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(node3.provider)
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
                     getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(500, 18200, 18400, 18600),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
         }
     }
 
     @Test
-    @Order(19)
+    @Order(6)
     fun `Reconfigure SAC by various config types`() {
         testLogger.info("Update system anchoring chain")
 
@@ -267,10 +268,10 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(node3.provider)
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(500, 19200, 19400),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
         }
@@ -293,19 +294,19 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(node3.provider)
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
                     getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
         }
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(500, 19200, 19400, 19600),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
         }
     }
 
     @Test
-    @Order(20)
+    @Order(7)
     fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
         testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
 
@@ -322,12 +323,12 @@ class Directory1ReconfigurationMixIT {
         awaitQueryResult {
             Assertions.assertNotNull(node1.c0.getClusters().find { it.name == pcuCluster })
             val chains = node1.c0.getClusterBlockchains(pcuCluster)
-            Assertions.assertEquals(1, chains.size)
+            assertEquals(1, chains.size)
             val brid = BlockchainRid(chains.first())
 
             // signers from cluster anchoring chain (CAC) config
             val actual = getLastBlockConfigSigners(node1, brid)
-            Assertions.assertEquals(setOf(node1.pubkey.wData), actual.toSet())
+            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
         }
 
         // 2. Add provider2/node2 to the pcu_cluster
@@ -338,7 +339,7 @@ class Directory1ReconfigurationMixIT {
                 .postTransactionUntilConfirmed("Add provider2/node2 to the $pcuCluster")
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
         }
@@ -354,12 +355,12 @@ class Directory1ReconfigurationMixIT {
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #3")
 
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(node1.pubkey.wData, node2.pubkey.wData),
                     getLastBlockConfigSigners(node1, cac).toSet())
         }
         awaitQueryResult {
-            Assertions.assertEquals(
+            assertEquals(
                     setOf(500, 20200),
                     getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
         }

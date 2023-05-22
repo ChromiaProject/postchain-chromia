@@ -217,7 +217,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(8)
+    @Order(7)
     fun `Deploy new dapps`() {
         nodes().forEach { node ->
             assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
@@ -233,7 +233,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(9)
+    @Order(8)
     fun `Subnode container has been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
@@ -244,7 +244,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(10)
+    @Order(9)
     fun `Subnode container has resource limits`() {
         testLogger.info("Asserting container resource limits")
 
@@ -261,13 +261,13 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(11)
+    @Order(10)
     fun `Transactions can be sent to test_dapp`() {
         assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(12)
+    @Order(11)
     fun `Transactions can be sent to test_dapp2`() {
         assertThatDappProcessesTx(dapps["test_dapp2"]!!, "add_book", "Mastering Bitcoin", "get_books")
     }
@@ -311,14 +311,14 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(13)
+    @Order(12)
     fun `Blocks can be anchored`() {
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test_dapp"]!!)
         assertThatBlocksAreAnchored(clusterAnchoringBrid, dapps["test_dapp2"]!!)
     }
 
     @Test
-    @Order(14)
+    @Order(13)
     fun `Cluster anchoring chain blocks are anchored in system anchoring chain`() {
         assertThatBlocksAreAnchored(systemAnchoringBrid, clusterAnchoringBrid)
     }
@@ -352,7 +352,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(15)
+    @Order(14)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test_dapp2"]!!
         awaitUntilAsserted {
@@ -365,7 +365,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(16)
+    @Order(15)
     fun `ICCF transfers are validated`() {
         val sourceDapp = dapps["test_dapp"]!!
         val targetDapp = dapps["test_dapp2"]!!
@@ -401,7 +401,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(17)
+    @Order(16)
     fun `Reconfiguration of test_dapp2`() {
         val iccfReceiver = dapps["test_dapp"]!!.data
         val dapp2brid = dapps["test_dapp2"]!!
