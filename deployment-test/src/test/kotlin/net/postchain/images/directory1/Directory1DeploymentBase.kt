@@ -9,13 +9,10 @@ import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.common.init.initOperation
-import net.postchain.chain0.common.operations.registerNodeOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.*
-import net.postchain.chain0.direct_container.createContainerOperation
-import net.postchain.chain0.direct_cluster.createClusterWithUnitsOperation
 import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.ContainerResourceLimitType.*

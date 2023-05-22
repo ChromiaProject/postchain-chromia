@@ -9,7 +9,8 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.disableNodeOperation
 import net.postchain.chain0.common.operations.enableNodeOperation
-import net.postchain.chain0.common.operations.registerNodeOperation
+import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
+import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.model.ContainerResourceLimitType.*
@@ -90,6 +91,7 @@ class Directory1ReconfigurationMixIT {
 
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
+                    .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 2)
                     .postTransactionUntilConfirmed("init")
 
             assertThat(getSummary().providers).isEqualTo(1L)
@@ -110,8 +112,8 @@ class Directory1ReconfigurationMixIT {
 
         node1.client(chain0Brid, listOf(node1.provider, node2.provider, node3.provider)).transactionBuilder()
                 .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
-                .registerNodeOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster))
-                .registerNodeOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster))
+                .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
+                .registerNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster), 2)
                 .postTransactionUntilConfirmed("Register p2 as system")
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
