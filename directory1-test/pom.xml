@@ -39,18 +39,8 @@
         </dependency>
         <dependency>
             <groupId>net.postchain.rell</groupId>
-            <artifactId>rell</artifactId>
+            <artifactId>rell-gtx</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion> <!-- Remove when we have updated to Rell 0.13 -->
-                    <groupId>net.postchain</groupId>
-                    <artifactId>postchain-cli</artifactId>
-                </exclusion>
-                <exclusion> <!-- Remove when we have updated to Rell 0.13 -->
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -27,7 +27,7 @@
 
     <properties>
         <postchain.version>3.10.0-SNAPSHOT</postchain.version>
-        <rellr.version>0.12.1</rellr.version>
+        <rellr.version>0.13.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -104,7 +104,7 @@
 
             <dependency>
                 <groupId>net.postchain.rell</groupId>
-                <artifactId>rell</artifactId>
+                <artifactId>rell-gtx</artifactId>
                 <version>${rellr.version}</version>
             </dependency>
 

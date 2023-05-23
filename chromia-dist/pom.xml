@@ -24,17 +24,7 @@
         </dependency>
         <dependency>
             <groupId>net.postchain.rell</groupId>
-            <artifactId>rell</artifactId>
-            <exclusions>
-                <exclusion> <!-- Remove when we have updated to Rell 0.13 -->
-                    <groupId>net.postchain</groupId>
-                    <artifactId>postchain-cli</artifactId>
-                </exclusion>
-                <exclusion> <!-- Remove when we have updated to Rell 0.13 -->
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>rell-gtx</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
