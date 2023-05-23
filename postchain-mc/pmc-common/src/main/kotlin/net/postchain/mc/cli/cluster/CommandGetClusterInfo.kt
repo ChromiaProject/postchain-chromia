@@ -10,8 +10,6 @@ import net.postchain.chain0.common.queries.getClusterData
 import net.postchain.chain0.common.queries.getClusterNodes
 import net.postchain.chain0.common.queries.getClusterProviders
 import net.postchain.chain0.common.queries.getClusterReplicaNodes
-import net.postchain.chain0.model.ClusterResourceLimitType
-import net.postchain.chain0.nm_api.nmGetClusterLimits
 import net.postchain.mc.cli.util.clientOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.validateAlphaNumeric
@@ -31,6 +29,7 @@ class CommandGetClusterInfo : CliktCommand(
             row("Name:", info.name)
             row("Governor:", info.governor)
             row("Is Operational:", info.isOperational.toString())
+            info.clusterUnits?.let { row("Cluster Units:", it) }
             row()
         }.render().also { echo(it) }
 
@@ -72,15 +71,6 @@ class CommandGetClusterInfo : CliktCommand(
         } else {
             echo("No replica nodes")
         }
-
-        table {
-            header("Resource type", "Value")
-            val limits = client.nmGetClusterLimits(name)
-            ClusterResourceLimitType.values().forEach {
-                row(it.name, limits[it.name]?.toString() ?: "-1")
-            }
-            defaultHints()
-        }.render().also { echo(it) }
 
         val containers = client.getClusterContainers(name)
         if (containers.isNotEmpty()) {

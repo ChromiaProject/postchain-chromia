@@ -6,7 +6,7 @@ import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 
-class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:14.1-alpine")) : JdbcDatabaseContainer<ChromaWayPostgresContainer>(dockerImageName) {
+class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:14.7-alpine3.17")) : JdbcDatabaseContainer<ChromaWayPostgresContainer>(dockerImageName) {
 
     companion object {
         const val POSTGRESQL_PORT = 5432
@@ -19,7 +19,11 @@ class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageN
                 .withStartupTimeout(Duration.of(60L, ChronoUnit.SECONDS))
         setCommand("postgres", "-c", "fsync=off")
         addExposedPort(POSTGRESQL_PORT)
+        withTmpFs(mapOf("/pgtmpfs" to "rw,size=1000m"))
+        addEnv("PGDATA", "/pgtmpfs")
         addEnv("POSTGRES_PASSWORD", "postchain")
+        addEnv("POSTGRES_USER", "postchain")
+        addEnv("POSTGRES_DB", "postchain")
     }
 
     override fun getUsername() = "postchain"

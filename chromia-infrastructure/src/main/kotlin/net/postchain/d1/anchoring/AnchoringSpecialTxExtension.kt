@@ -15,6 +15,7 @@ import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
@@ -27,6 +28,8 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
+private const val GTX_OP_OVERHEAD = 20
+
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
@@ -38,8 +41,11 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
+    lateinit var isSigner: () -> Boolean
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
+    lateinit var blockchainConfigProvider: BlockchainConfigProvider
+    var maxBlockSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
@@ -67,7 +73,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      * so we only add them here (if we have any).
      */
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean = when (position) {
-        SpecialTransactionPosition.Begin -> true
+        SpecialTransactionPosition.Begin -> ::anchoringReceiver.isInitialized
         SpecialTransactionPosition.End -> false
     }
 
@@ -84,40 +90,32 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = anchoringReceiver.getRelevantPipes()
 
+        var currentSize = 0
+
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
-        for (pipe in pipes) {
+        outer@ for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                ops.addAll(handlePipe(pipe, bctx).map { buildOpData(it) })
+                val blockchainRid = pipe.blockchainRid
+                var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
+                while (pipe.mightHaveNewPackets()) {
+                    currentHeight++ // Try next height
+                    val clusterAnchorPacket = pipe.fetchNext(currentHeight)
+                    if (clusterAnchorPacket != null) {
+                        val (opData, size) = buildOpData(clusterAnchorPacket)
+                        if (currentSize + size > maxBlockSize - BLOCK_SIZE_MARGIN) {
+                            break@outer
+                        }
+                        ops.add(opData)
+                        pipe.markTaken(clusterAnchorPacket.height, bctx)
+                        currentSize += size
+                    } else {
+                        break // Nothing more to find
+                    }
+                }
             }
         }
         return ops
-    }
-
-    /**
-     * Loop all messages for the pipe
-     */
-    private fun handlePipe(
-            pipe: AnchoringPipe,
-            bctx: BlockEContext
-    ): List<AnchoringPacket> {
-        val packets = mutableListOf<AnchoringPacket>()
-        val blockchainRid = pipe.blockchainRid
-        var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
-        while (pipe.mightHaveNewPackets()) {
-            currentHeight++ // Try next height
-            val clusterAnchorPacket = pipe.fetchNext(currentHeight)
-            if (clusterAnchorPacket != null) {
-                packets.add(clusterAnchorPacket)
-                pipe.markTaken(clusterAnchorPacket.height, bctx)
-            } else {
-                break // Nothing more to find
-            }
-        }
-        if (logger.isDebugEnabled) {
-            logger.debug("Pulled ${packets.size} messages from pipeId: ${pipe.blockchainRid}")
-        }
-        return packets
     }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
@@ -127,13 +125,18 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      * Transform to [AnchoringPacket] to [OpData] put arguments in correct order
      *
      * @param clusterAnchorPacket is what we get from pipe
-     * @return is the [OpData] we can use to create a special TX.
+     * @return the [OpData] we can use to create a special TX, and the size of it
      */
-    private fun buildOpData(clusterAnchorPacket: AnchoringPacket): OpData {
+    internal fun buildOpData(clusterAnchorPacket: AnchoringPacket): Pair<OpData, Int> {
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
         val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness)) to
+                OP_BLOCK_HEADER.length +
+                clusterAnchorPacket.blockRid.size +
+                GtvEncoder.encodeGtv(gtvHeader).size +
+                clusterAnchorPacket.rawWitness.size +
+                GTX_OP_OVERHEAD
     }
 
     /**
@@ -152,7 +155,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
             val headerData = anchorOpData.headerData
             val bcRid = BlockchainRid(headerData.getBlockchainRid())
-            if (bcRid !in relevantChains) {
+            if (isSigner() && bcRid !in relevantChains) {
                 logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
                 return false
             }
@@ -164,7 +167,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
             }
 
             val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
-            val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
+            val peers = blockchainConfigProvider.getRelevantPeers(headerData)
             try {
                 Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
             } catch (e: UserMistake) {

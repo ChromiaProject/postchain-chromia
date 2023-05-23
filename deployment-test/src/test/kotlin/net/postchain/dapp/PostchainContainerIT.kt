@@ -1,6 +1,6 @@
 package net.postchain.dapp
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import net.postchain.gtv.GtvDictionary
 import net.postchain.postgres.ChromaWayPostgresContainer
@@ -18,9 +18,6 @@ internal class PostchainContainerIT {
     @Container
     private val postgres = ChromaWayPostgresContainer()
             .withNetwork(network)
-            .withEnv("POSTGRES_DB", "postchain")
-            .withEnv("POSTGRES_PASSWORD", "postchain")
-            .withEnv("POSTGRES_USER", "postchain")
 
     @Container
     private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/node-config.properties")!!))
@@ -31,7 +28,7 @@ internal class PostchainContainerIT {
 
     @Test
     fun `A simple dapp can start and handle queries`() {
-        assert(postchain.client(1).query("hello_world", GtvDictionary.build(mapOf())).asString())
+        assertThat(postchain.client(1).query("hello_world", GtvDictionary.build(mapOf())).asString())
                 .contains("Hello World!")
     }
 }

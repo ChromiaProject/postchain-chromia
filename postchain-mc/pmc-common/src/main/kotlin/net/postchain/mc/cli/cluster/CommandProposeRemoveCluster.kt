@@ -2,7 +2,7 @@ package net.postchain.mc.cli.cluster
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.proposal.proposeRemoveClusterOperation
+import net.postchain.chain0.proposal_cluster.proposeRemoveClusterOperation
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.util.nameOption

@@ -1,14 +1,13 @@
 module;
 
 import ^.model.*;
-import ^.cm_api.*;
-import ^.nm_api.*;
-import ^.cluster_anchoring;
-import ^.cluster.*;
-import .voting.*;
+import ^.messaging.configuration_update_message.*;
 import ^.proposal.*;
-import .queries.*;
-import .util.*;
+import ^.roles.*;
+
+struct module_args {
+    enable_pcu: boolean;
+}
 
 // Adds the initial provider as a system provider along with voter sets and clusters needed to start
 function initialize_module(
@@ -45,7 +44,7 @@ function initialize_module(
     val provider = provider @ { initial_provider };
 
     log("Creating system cluster with SYSTEM_P as governor");
-    cluster_anchoring.set_config(cluster_anchoring_config);
+    set_cluster_anchoring_config(cluster_anchoring_config);
     val system_cluster = create_cluster_impl(
         provider,
         clusters.system,

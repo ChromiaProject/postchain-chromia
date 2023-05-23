@@ -15,11 +15,15 @@ import net.postchain.d1.ChromiaQueryProviderFactory
 import net.postchain.d1.ClusterManagementFactory
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.config.ManagedBlockchainConfigProvider
+import net.postchain.d1.nm_api.NodeManagementImpl
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.managed.config.ManagedDataSourceAware
 import java.time.Duration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
@@ -33,11 +37,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-        if (configuration is GTXModuleAware) {
+        if (configuration is GTXModuleAware && configuration is ManagedDataSourceAware) {
             getIcmfReceiverSpecialTxExtension(configuration.module)?.let { txExt ->
                 val clusterManagement = createClusterManagement(configuration)
                 val clientProvider = createClientProvider(clusterManagement)
-                txExt.clusterManagement = clusterManagement
+                val blockchainConfigProvider = createBlockchainConfigProvider(configuration, clusterManagement)
+                txExt.blockchainConfigProvider = blockchainConfigProvider
 
                 val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 txExt.maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
@@ -62,6 +67,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                 configuration.chainID,
                                 configuration.blockchainRid,
                                 clusterManagement,
+                                blockchainConfigProvider,
                                 clientProvider,
                                 dbOperations
                         )
@@ -79,6 +85,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                 configuration.chainID,
                                 configuration.blockchainRid,
                                 clusterManagement,
+                                blockchainConfigProvider,
                                 clientProvider,
                                 dbOperations
                         )
@@ -112,6 +119,13 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
     open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement =
             ClusterManagementFactory.create(configuration, postchainContext.connectionManager)
+
+    open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
+            ManagedBlockchainConfigProvider(
+                    NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
+                    clusterManagement,
+                    postchainContext.appConfig
+            )
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(
             failOverConfig = FailOverConfig(

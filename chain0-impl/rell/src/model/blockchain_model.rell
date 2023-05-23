@@ -1,4 +1,3 @@
-
 entity blockchain { 
     key rid: byte_array; 
     mutable name: text;
@@ -16,6 +15,23 @@ entity blockchain_configuration {
     mutable data: byte_array; // base_config, without signers
 }
 
+entity pending_blockchain_configuration {
+    key blockchain, minimum_height: integer;
+    key blockchain, config_hash: byte_array;
+    base_config: byte_array;
+    signers: byte_array;
+}
+
+entity signer_excluded_from_pending_configuration {
+    key blockchain, config_hash: byte_array;
+    pubkey;
+}
+
+entity faulty_blockchain_configuration {
+    key blockchain, reported_at_height: integer;
+    config_hash: byte_array;
+}
+
 entity blockchain_configuration_signers {
     key blockchain, height: integer;
     mutable signers: byte_array;
@@ -31,16 +47,4 @@ entity blockchain_replica_node {
 */
 entity blockchain_dependency { 
     key me: blockchain, height: integer, dependent_on: blockchain; 
-}
-
-enum blockchain_action {
-    pause,
-    resume,
-    remove
-}
-
-function get_signers_for_configuration(blockchain, height: integer): gtv {
-    val raw_signers = blockchain_configuration_signers @ { blockchain, .height <= height }
-        (@omit @sort_desc .height, .signers) limit 1;
-    return gtv.from_bytes(raw_signers);
 }

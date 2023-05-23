@@ -1,0 +1,65 @@
+
+query get_cluster(name) = cluster @ { name };
+
+query get_clusters() {
+    return cluster @* {} (
+        name = .name,
+        governor = .governance.name,
+        operational = .operational
+    );
+}
+
+struct cluster_data {
+    name;
+    governor: text;
+    is_operational: boolean;
+    cluster_units: integer?;
+}
+
+query get_cluster_data(name) {
+    val cluster = require_cluster(name);
+    return cluster_data(
+        name = cluster.name,
+        governor = cluster.governance.name,
+        is_operational = cluster.operational,
+        cluster_units = cluster.cluster_units
+    );
+}
+
+query get_cluster_providers(name): list<(name:text, pubkey:pubkey)> {
+    val cluster = require_cluster(name);
+    return cluster_provider @* { cluster } (name = .provider.name, pubkey = .provider.pubkey);
+}
+
+query get_cluster_nodes(name) {
+    val cluster = require_cluster(name);
+    return cluster_node @* { cluster } (
+        pubkey = .node.pubkey,
+        host = .node.host,
+        port = .node.port,
+        api_url = .node.api_url,
+        active = .node.active
+    );
+}
+
+query get_cluster_replica_nodes(name) {
+    val cluster = require_cluster(name);
+    return cluster_replica_node @* { cluster } (
+        pubkey = .node.pubkey,
+        host = .node.host,
+        port = .node.port,
+        api_url = .node.api_url,
+        active = .node.active
+    );
+}
+
+query get_cluster_containers(cluster_name: text): list<(name:text, deployer:text)> {
+    return container @* { .cluster.name == cluster_name } ( @sort name = .name, deployer = .deployer.name);
+}
+
+query get_cluster_blockchains(name) = cm_get_cluster_blockchains(name);
+
+query get_cluster_api_urls(name) {
+    return (cluster_node, cluster) @* { cluster.name == name and cluster == cluster_node.cluster } ( cluster_node.node.api_url );
+}
+

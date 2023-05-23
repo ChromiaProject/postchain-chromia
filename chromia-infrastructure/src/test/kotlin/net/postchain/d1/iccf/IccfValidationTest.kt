@@ -1,7 +1,5 @@
 package net.postchain.d1.iccf
 
-import assertk.assert
-import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.gtv.BlockHeaderData
@@ -14,6 +12,7 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.query.ChromiaQueryProvider
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -28,6 +27,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
@@ -106,16 +106,17 @@ class IccfValidationTest {
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -124,7 +125,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
         verify(chromiaQueryProvider).getClusterAnchoringQuery()
     }
 
@@ -136,8 +139,7 @@ class IccfValidationTest {
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {}
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -146,7 +148,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
         verify(chromiaQueryProvider, never()).getClusterAnchoringQuery()
     }
 
@@ -158,8 +162,7 @@ class IccfValidationTest {
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {}
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -169,7 +172,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -180,16 +183,17 @@ class IccfValidationTest {
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn listOf(cryptoSystem.generateKeyPair().pubKey, cryptoSystem.generateKeyPair().pubKey)
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -199,7 +203,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -210,9 +214,11 @@ class IccfValidationTest {
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
@@ -227,8 +233,7 @@ class IccfValidationTest {
                 0L
         ))
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(invalidConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(invalidConfirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -238,8 +243,15 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
+    }
+
+    private fun buildExtOpData(invalidConfirmationProof: GtvDictionary): ExtOpData {
+        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(invalidConfirmationProof)))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        return iccfExtOpData
     }
 
     @Test
@@ -249,9 +261,11 @@ class IccfValidationTest {
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
@@ -266,8 +280,7 @@ class IccfValidationTest {
                 0L
         ))
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(invalidConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(invalidConfirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -277,7 +290,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -288,16 +301,17 @@ class IccfValidationTest {
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-            )) } doReturn gtv(false)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(false)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -307,7 +321,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -321,16 +335,19 @@ class IccfValidationTest {
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
         val systemAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -339,7 +356,9 @@ class IccfValidationTest {
         }
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
-        assert(iccfGTXOperation.isCorrect()).isTrue()
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
     }
 
     @Test
@@ -352,9 +371,11 @@ class IccfValidationTest {
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
         val systemAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
@@ -366,7 +387,8 @@ class IccfValidationTest {
         )
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(emtpyClusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -376,7 +398,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -390,9 +412,11 @@ class IccfValidationTest {
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
         val systemAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
-            )) } doReturn gtv(true)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(true)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
@@ -404,7 +428,8 @@ class IccfValidationTest {
         )
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTxFromWrongChain.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -414,7 +439,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -428,16 +453,19 @@ class IccfValidationTest {
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
         val systemAnchoringClient: PostchainBlockClient = mock {
-            on { query("is_block_anchored", gtv(mapOf(
-                    "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
-            )) } doReturn gtv(false)
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(false)
         }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -447,7 +475,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -460,11 +488,12 @@ class IccfValidationTest {
             this.nodeIsReplica = false
         }
         val iccfGtxOpMissingProofArg = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 
@@ -477,11 +506,12 @@ class IccfValidationTest {
             this.nodeIsReplica = false
         }
         val iccfGtxOpMissingProofArg = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(1))
-        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg, 0, GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf()))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.isCorrect()
+            iccfGTXOperation.checkCorrectness()
         }
     }
 }

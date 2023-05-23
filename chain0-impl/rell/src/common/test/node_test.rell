@@ -1,11 +1,12 @@
 @test module;
 
-import ^^.*;
-import ^^^.model.*;
 import ^.ops.*;
 import ^.util.*;
+import ^^.*;
+import ^^.operations.*;
 import ^^.test.setup.*;
-import ^^^.proposal.*;
+import ^^^.model.*;
+import ^^^.proposal_provider.*;
 
 val system_provider = rell.test.keypairs.bob;
 val sp_node_key = x"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa50093798EF9D51E7260BA921CD673F";
@@ -90,7 +91,7 @@ function test_register_node() {
 }
 
 function test_disable_and_enable_node() {
-    setup_module();
+    setup_module(system_anchoring_config = ["any": "value".to_gtv()], cluster_anchoring_config = ["any": "value".to_gtv()]);
 
     rell.test.tx().op(
         register_provider(initial_provider.pub, dapp_provider1.pub, provider_tier.COMMUNITY_NODE_PROVIDER),
@@ -125,6 +126,10 @@ function test_disable_and_enable_node() {
     val np2_node = node @? { np2_node_key };
     assert_not_null(np2_node);
     assert_true(np2_node.active);
+
+    // Assert system anchoring chain is running
+    val system_anchoring = blockchain @ { blockchains.system_anchoring };
+    assert_true(exists(blockchain_replica_node @? { np1_node, system_anchoring }));
 
     // ------------------------
 
@@ -191,6 +196,13 @@ function test_disable_and_enable_node() {
     rell.test.tx().op(
         enable_node(system_provider.pub, sp_node_key)
     ).sign(system_provider).run_must_fail();
+
+    // Check that system anchoring is running on enabled node1
+    rell.test.tx().op(
+        enable_node(node_provider1.pub, np1_node_key)
+    ).sign(node_provider1).run();
+
+    assert_true(exists(blockchain_replica_node @? { np1_node, system_anchoring }));
 }
 
 function test_replace_node() {
@@ -231,13 +243,22 @@ function test_update_node() {
     ).sign(initial_provider).run();
     assert_equals(_get_node_data(prov), before);
 
+    // Updating cluster_units
+    rell.test.tx().op(
+        update_node_with_units(initial_provider.pub, initial_signer.pub, cluster_units = 0)
+    ).sign(initial_provider).run_must_fail();
+
+    rell.test.tx().op(
+        update_node_with_units(initial_provider.pub, initial_signer.pub, cluster_units = 2)
+    ).sign(initial_provider).run();
+
     // Updating host:port
     rell.test.tx().op(
-        update_node(initial_provider.pub, initial_signer.pub, host = "new_host", port = 777)
+        update_node_with_units(initial_provider.pub, initial_signer.pub, host = "new_host", port = 777)
     ).sign(initial_provider).run();
     assert_equals(
         _get_node_data(prov),
-        ("new_host", 777, before[2], _prev_block_time(), _prev_block_time())
+        ("new_host", 777, before[2], _prev_block_time(), _prev_block_time(), 2)
     );
 
     // Updating api_port
@@ -247,7 +268,7 @@ function test_update_node() {
     val prev_node_list = node_list.last_update;
     assert_equals(
         _get_node_data(prov),
-        ("new_host", 777, "http://localhost/api", _prev_block_time(), prev_node_list)
+        ("new_host", 777, "http://localhost/api", _prev_block_time(), prev_node_list, 2)
     );
 }
 
@@ -284,7 +305,7 @@ function test_remove_node() {
 }
 
 function _get_node_data(provider)
-    = node @ { provider } ( _ = .host, _ = .port, _ = .api_url, _ = .last_updated, _ = node_list.last_update );
+    = node @ { provider } ( _ = .host, _ = .port, _ = .api_url, _ = .last_updated, _ = node_list.last_update, _ = .cluster_units );
 
 function _prev_block_time()
     = (block @* { } ( @omit @sort_desc .block_height, .timestamp ) limit 2)[1];

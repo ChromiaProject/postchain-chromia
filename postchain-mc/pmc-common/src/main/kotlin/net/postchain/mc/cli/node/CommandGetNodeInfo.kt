@@ -11,8 +11,8 @@ import net.postchain.mc.cli.requiredPubkeyOption
 import net.postchain.mc.cli.util.configOption
 
 class CommandGetNodeInfo : CliktCommand(
-    name = "info",
-    help = "Get node info for given node pubkey"
+        name = "info",
+        help = "Get node info for given node pubkey"
 ) {
     private val config by configOption()
 
@@ -27,6 +27,7 @@ class CommandGetNodeInfo : CliktCommand(
             row("Port:", "${node.port}")
             row("REST API:", node.apiUrl)
             row("Provided by:", node.provider.toHex())
+            node.clusterUnits?.let { row("Cluster Units:", it) }
             val clusters = client.listClustersOfNode(PubKey(node.pubkey))
             row("Used by clusters:", "$clusters")
             hints { defaultAlignment = Table.Hints.Alignment.LEFT }

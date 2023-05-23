@@ -30,12 +30,12 @@ const val adminPubKey = "030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB46
 const val adminPrivKey = "69BC38753A11753354791A4F189F704C3D14B73B77AE3F55A4D466A991339541"
 
 class PostchainContainer(
-    dockerImageName: DockerImageName = DockerImageName.parse(System.getProperty("POSTCHAIN_IMAGE", "chromaway/chromia-server:latest")),
-    val appConfig: AppConfig,
-    startupMsg: String = "Blockchain has been started",
-    val nodePort: Int = appConfig.getInt("messaging.port"),
-    val nodeHost: String = "",
-    val provider: KeyPair = KeyPair.of(adminPubKey, adminPrivKey)
+        dockerImageName: DockerImageName = DockerImageName.parse(System.getProperty("POSTCHAIN_IMAGE", "chromaway/chromia-server:latest")),
+        val appConfig: AppConfig,
+        startupMsg: String = "Postchain node is running",
+        val nodePort: Int = appConfig.getInt("messaging.port"),
+        val nodeHost: String = "",
+        val provider: KeyPair = KeyPair.of(adminPubKey, adminPrivKey)
 ) : GenericContainer<PostchainContainer>(dockerImageName), Startable {
 
     val nodeKeyPair = KeyPair.of(appConfig.pubKey, appConfig.privKey)
@@ -85,15 +85,15 @@ class PostchainContainer(
 
     fun txAsAdmin(brid: BlockchainRid, opName: String, vararg args: Gtv): TransactionResult {
         return client(brid, listOf(KeyPair.of(adminPubKey, adminPrivKey))).transactionBuilder()
-            .addOperation(opName, *args)
-            .postTransactionUntilConfirmed(opName)
+                .addOperation(opName, *args)
+                .postTransactionUntilConfirmed(opName)
     }
 
     fun tx(brid: BlockchainRid, opName: String, vararg args: Gtv): Pair<Gtx, TransactionResult> {
         val txBuilder = client(brid).transactionBuilder(listOf())
                 .addOperation(opName, *args)
         val txResult = txBuilder
-            .postTransactionUntilConfirmed(opName)
+                .postTransactionUntilConfirmed(opName)
         val tx = txBuilder.finish().buildGtx()
         return tx to txResult
     }

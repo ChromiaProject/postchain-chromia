@@ -5,6 +5,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.d1.TopicHeaderData
@@ -27,13 +28,12 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.field
 import org.jooq.impl.DSL.table
 import org.jooq.util.postgres.PostgresDataType
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
@@ -57,7 +57,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun happyAnchor() {
         startManagedSystem(3, 0)
-        val anchorChain = startClusterAnchoringChain()
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -91,14 +91,14 @@ class AnchoringIT : ManagedModeTest() {
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
         val blockHeaderData = BlockHeaderData.fromBinary(blockDataFull.header.rawData)
         val anchorHeaderExtra = blockHeaderData.getExtra()[ICMF_ANCHOR_HEADERS_EXTRA]!!
-        val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["my-topic"]!!)
+        val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["G_my-topic"]!!)
 
         assertEquals(-1L, topicHeaderData.previousBlockHeight)
 
         val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
         val dappBlockRids = (0..3).map { height -> gtv(dappBlockQueries.getBlockRid(height.toLong()).get()!!) }
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-        assertContentEquals(anchorHash, topicHeaderData.hash)
+        assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
 
         val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
         val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
@@ -111,13 +111,13 @@ class AnchoringIT : ManagedModeTest() {
                     .fetch()
 
             assertEquals(4, res.size)
-            assertContentEquals(blockchainRID.data, res[0][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[0][blockchainRidColumn].wrap())
             assertEquals(0L, res[0][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[1][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[1][blockchainRidColumn].wrap())
             assertEquals(1L, res[1][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[2][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[2][blockchainRidColumn].wrap())
             assertEquals(2L, res[2][blockHeightColumn])
-            assertContentEquals(blockchainRID.data, res[3][blockchainRidColumn])
+            assertEquals(blockchainRID.data.wrap(), res[3][blockchainRidColumn].wrap())
             assertEquals(3L, res[3][blockHeightColumn])
 
             val headers =
@@ -127,7 +127,7 @@ class AnchoringIT : ManagedModeTest() {
                             "icmf_get_headers_with_messages_after_height",
                             gtv(
                                     mapOf(
-                                            "topic" to gtv("my-topic"),
+                                            "topic" to gtv("G_my-topic"),
                                             "from_anchor_height" to gtv(-1)
                                     )
                             ),
@@ -137,9 +137,9 @@ class AnchoringIT : ManagedModeTest() {
             headers.forEachIndexed { index, header ->
                 val rawHeader = header["block_header"]!!.asByteArray()
                 val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
-                assertContentEquals(blockchainRID.data, decodedHeader.getBlockchainRid())
+                assertEquals(blockchainRID.data.wrap(), decodedHeader.getBlockchainRid().wrap())
                 assertEquals(index.toLong(), decodedHeader.getHeight())
-                assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["my-topic"]!!["hash"]!!.asByteArray())
+                assertEquals(messagesHash.wrap(), decodedHeader.getExtra()["icmf_send"]!!["G_my-topic"]!!["hash"]!!.asByteArray().wrap())
 
                 val witness = BaseBlockWitness.fromBytes(header["witness"]!!.asByteArray())
                 val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -174,7 +174,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun onlyClusterChainsAreAnchored() {
         startManagedSystem(3, 0)
-        val anchorChain = startClusterAnchoringChain()
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -207,7 +207,7 @@ class AnchoringIT : ManagedModeTest() {
     fun systemAnchoringAnchorsClusterAnchoringBlocks() {
         startManagedSystem(3, 0)
         val systemAnchoringChain = startSystemAnchoringChain()
-        val clusterAnchoringChain = startClusterAnchoringChain()
+        val clusterAnchoringChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
 
         buildBlock(clusterAnchoringChain, 0L)
         buildBlock(systemAnchoringChain, 0L)
@@ -224,6 +224,55 @@ class AnchoringIT : ManagedModeTest() {
         assertTrue(systemAnchoringBlock.isNull())
     }
 
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun capSizeOfAnchoringTransaction() {
+        startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size.xml")
+
+        val dappChain = startDappChain()
+
+        for (height in 0..31) {
+            buildBlock(dappChain, height.toLong())
+        }
+
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].getBlockchainInstance(anchorChain).blockchainEngine.getBlockQueries()
+
+        val heightZero = 0
+        buildBlock(anchorChain, 0)
+
+        val expectedNumberOfTxs = 1  // Only the first TX
+
+        val blockDataFull = anchorBlockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
+        assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
+
+        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
+        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
+
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(27, res.size)
+        }
+
+        buildBlock(anchorChain, 1)
+        withReadConnection(getChainNodes(anchorChain)[0].postchainContext.storage, anchorChain) {
+            val db = DatabaseAccess.of(it)
+
+            val jooq = DSL.using(it.conn, SQLDialect.POSTGRES)
+            val res = jooq.select(blockchainRidColumn, blockHeightColumn)
+                    .from(table(db.tableName(it, "anchor_block")))
+                    .fetch()
+
+            assertEquals(32, res.size)
+        }
+    }
+
     private fun startDappChain(): Long {
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/anchoring/blockchain_config_1.xml")!!.readText())
@@ -231,8 +280,8 @@ class AnchoringIT : ManagedModeTest() {
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
     }
 
-    private fun startClusterAnchoringChain(): Long {
-        val anchorGtvConfig = getClusterAnchoringChainConfig()
+    private fun startClusterAnchoringChain(blockchainConfigFile: String): Long {
+        val anchorGtvConfig = getClusterAnchoringChainConfig(blockchainConfigFile)
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 

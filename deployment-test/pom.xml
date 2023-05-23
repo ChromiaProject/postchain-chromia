@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.10.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,44 +13,25 @@
 
     <dependencies>
         <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain</groupId>
-            <artifactId>pmc-directory</artifactId>
-            <version>${project.version}</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
-            <groupId>net.postchain.images</groupId>
-            <artifactId>admin-client</artifactId>
-            <version>3.9.0</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-server</artifactId>
-            <version>3.9.0</version>
+            <version>3.10.0</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
             <artifactId>chromia-subnode</artifactId>
-            <version>3.9.0</version>
+            <version>3.10.0</version>
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-admin-client-cli</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
@@ -82,13 +63,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -113,6 +89,34 @@
         </testResources>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-test-resources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/rell/src</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${project.parent.basedir}/chain0-impl/rell/src</directory>
+                                    <includes>
+                                        <include>messaging/icmf.rell</include>
+                                        <include>messaging/icmf_constants.rell</include>
+                                        <include>iccf/module.rell</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
@@ -125,8 +129,33 @@
                             <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
+                                <mainModule>management_chain_directory1</mainModule>
                                 <mainModule>anchoring_chain_common</mainModule>
                             </mainModules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-d1</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
+                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-test-dapp</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configPath>${project.basedir}/rell/config.yml</configPath>
+                            <source>${project.build.directory}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
                 </executions>

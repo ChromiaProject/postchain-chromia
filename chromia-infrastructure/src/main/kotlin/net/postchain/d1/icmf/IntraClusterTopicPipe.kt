@@ -7,13 +7,13 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
-import net.postchain.d1.rell.icmf.icmfGetMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 
 class IntraClusterTopicPipe(
-    private val queryProvider: ChromiaQueryProvider,
-    override val route: TopicRoute,
-    override val id: BlockchainRid
+        private val queryProvider: ChromiaQueryProvider,
+        override val route: TopicRoute,
+        override val id: BlockchainRid
 ) : IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid> {
     companion object : KLogging()
 
@@ -21,20 +21,27 @@ class IntraClusterTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
-    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? = try {
+        fetchNextInternal(currentPointer)
+    } catch (e: Exception) {
+        logger.warn(e) { "Message fetching for $route failed: $e" }
+        null
+    }
+
+    private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
         val query = queryProvider.getQuery(blockchainRid)
         if (query == null) {
             logger.warn("Unable to query blockchain-rid: ${blockchainRid.toHex()}")
             return null
         }
 
-        val allMessages = query.icmfGetMessagesAfterHeight(
-                route.topic,
-                currentPointer
-        ).map {
-            val size = GtvEncoder.encodeGtv(it.body).size
+        val allMessages = query.query(
+                QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
+                GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(currentPointer)))
+        ).asArray().map {
+            val size = GtvEncoder.encodeGtv(it["body"]!!).size
             if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
-            it.height to IcmfMessage(it.body, size)
+            it["height"]!!.asInteger() to IcmfMessage(it["body"]!!, size)
         }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
 
         val packets = mutableListOf<IcmfPacket>()

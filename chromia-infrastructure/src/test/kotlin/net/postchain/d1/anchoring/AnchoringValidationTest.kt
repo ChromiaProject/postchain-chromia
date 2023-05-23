@@ -7,13 +7,16 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.OpData
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -32,8 +35,8 @@ class AnchoringValidationTest {
     private val chainID: Long = 1
     private val blockchainRID = BlockchainRid.buildRepeat(1)
     private val signer = cryptoSystem.generateKeyPair()
-    private val clusterManagement: ClusterManagement = mock {
-        on { getBlockchainPeers(eq(blockchainRID), any()) }.doReturn(listOf(signer.pubKey))
+    private val blockchainConfigProvider: BlockchainConfigProvider = mock {
+        on { getRelevantPeers(any()) } doReturn listOf(signer.pubKey)
     }
 
     @Test
@@ -238,13 +241,47 @@ class AnchoringValidationTest {
                 )))
     }
 
-    private fun createAnchorSpecialTxExtension(): AnchoringSpecialTxExtension {
+    @Test
+    fun irrelevantChainIsOkForReplicas() {
+        val txExtension = createAnchorSpecialTxExtension(isSigner = false)
+
+        val irrelevantChain = BlockchainRid.buildRepeat(2)
+        val blockHeader = makeBlockHeader(irrelevantChain, BlockRid(irrelevantChain.data), 0)
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
+        ).getRawData()
+
+        assertTrue(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                listOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                                gtv(blockRid),
+                                blockHeader,
+                                gtv(rawWitness)))
+                )))
+    }
+
+    @Test
+    fun operationSize() {
+        val txExtension = createAnchorSpecialTxExtension()
+        val packet = AnchoringPacket(
+                height = 0,
+                blockRid = ByteArray(32) { 17 },
+                rawHeader = GtvEncoder.encodeGtv(gtv(gtv("foobar"), gtv(4711))),
+                rawWitness = ByteArray(16) { 123 }
+        )
+        val (opData, size) = txExtension.buildOpData(packet)
+        assertEquals(GtvEncoder.encodeGtv(GtxOp.fromOpData(opData).toGtv()).size, size)
+    }
+
+    private fun createAnchorSpecialTxExtension(isSigner: Boolean = true): AnchoringSpecialTxExtension {
         val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
-        txExtension.clusterManagement = clusterManagement
+        txExtension.blockchainConfigProvider = blockchainConfigProvider
         txExtension.anchoringReceiver = mock {
             on { getRelevantChains() } doReturn setOf(blockchainRID)
         }
+        txExtension.isSigner = { isSigner }
         return txExtension
     }
 

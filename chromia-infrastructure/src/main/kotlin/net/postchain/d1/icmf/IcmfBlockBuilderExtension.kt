@@ -9,6 +9,7 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -16,12 +17,12 @@ import net.postchain.gtv.merkleHash
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val dbOperations: IcmfDatabaseOperations) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
 
-    private val queuedEvents = mutableListOf<SentIcmfMessage>()
+    private val queuedEvents = mutableListOf<SentIcmfMessageItem>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         cryptoSystem = baseBB.cryptoSystem
@@ -30,8 +31,17 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         val message = SentIcmfMessage.fromGtv(data)
-        logger.info("ICMF message sent in topic ${message.topic}")
-        queuedEvents.add(message)
+
+        if (!message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
+            logger.info("ICMF message with invalid topic ${message.topic} will not be sent")
+        } else if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
+            logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
+        } else {
+            logger.info("ICMF message sent in topic ${message.topic}")
+            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, message.blockHeight, GtvEncoder.encodeGtv(message.body))
+            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, message.blockHeight)
+            queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
+        }
     }
 
     /**
@@ -41,15 +51,25 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
      */
     override fun finalize(): Map<String, Gtv> {
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-        val hashesByTopic = queuedEvents
-                .groupBy { it.topic }
-        val hashByTopic = hashesByTopic
-                .mapValues {
-                    TopicHeaderData(gtv(
-                            it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
-                            it.value.first().previousMessageBlockHeight
-                    ).toGtv()
-                }
-        return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
+        return if (queuedEvents.isNotEmpty()) {
+            val hashesByTopic = queuedEvents
+                    .groupBy { it.topic }
+            val hashByTopic = hashesByTopic
+                    .mapValues {
+                        TopicHeaderData(gtv(
+                                it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                it.value.first().previousMessageBlockHeight
+                        ).toGtv()
+                    }
+            mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
+        } else {
+            mapOf()
+        }
     }
+
+    private data class SentIcmfMessageItem(
+            val topic: String, // Topic of message
+            val body: Gtv,
+            val previousMessageBlockHeight: Long
+    )
 }

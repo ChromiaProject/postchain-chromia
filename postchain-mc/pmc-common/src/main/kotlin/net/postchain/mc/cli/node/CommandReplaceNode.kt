@@ -2,19 +2,23 @@ package net.postchain.mc.cli.node
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.chain0.common.replaceNodeOperation
+import net.postchain.chain0.common.operations.replaceNodeOperation
+import net.postchain.chain0.common.operations.replaceNodeWithUnitsOperation
+import net.postchain.chain0.version.apiVersion
 import net.postchain.crypto.PubKey
 import net.postchain.mc.cli.base.printResult
 import net.postchain.mc.cli.base.pubkey
 import net.postchain.mc.cli.hostOption
 import net.postchain.mc.cli.portOption
+import net.postchain.mc.cli.util.clusterUnitsOption
 import net.postchain.mc.cli.util.nopClientOption
 
 class CommandReplaceNode : CliktCommand(
-    name = "replace",
-    help = """
+        name = "replace",
+        help = """
         Replace a node with a new one (Used to rotate keypairs). Add the keys to the nodes to the client configuration as comma-delimited list:
         pubkey=<key>,<old-node-key>,<new-node-key>
         privkey=<key>,<old-node-key>,<new-node-key>
@@ -31,13 +35,21 @@ class CommandReplaceNode : CliktCommand(
 
     private val apiUrl by option("-a", "--api-url", help = "api url")
 
+    private val clusterUnits by clusterUnitsOption().default(1)
+
     override fun run() {
+        val apiVersion = client.apiVersion()
         client.transactionBuilder()
-            .replaceNodeOperation(client.config.pubkey().data, old.data, new.data, host, port?.toLong(), apiUrl)
-            .postAwaitConfirmation()
-            .printResult(
-                "Node has been replaced",
-                "Failed to replace node"
-            )
+                .apply {
+                    when {
+                        apiVersion >= 3 -> replaceNodeWithUnitsOperation(client.config.pubkey().data, old.data, new.data, host, port?.toLong(), apiUrl, clusterUnits)
+                        else -> replaceNodeOperation(client.config.pubkey().data, old.data, new.data, host, port?.toLong(), apiUrl)
+                    }
+                }
+                .postAwaitConfirmation()
+                .printResult(
+                        "Node has been replaced",
+                        "Failed to replace node"
+                )
     }
 }

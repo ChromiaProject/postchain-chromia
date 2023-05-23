@@ -1,17 +1,16 @@
-
+import ^.common.*;
 import ^.model.*;
-import ^.common.queries.*;
-import ^.config.*;
 
 /*
     Returns NM API Version
     NM API Version: 1
 */
-query nm_api_version () = 5;
+query nm_api_version() = 5;
 
 /*
     Returns version of peerlist
     NM API Version: 1
+    Deprecated since version 5:  is not relevant for multi-cluster environment
 */
 query nm_get_peer_list_version() = node_list.last_update;
 
@@ -28,7 +27,7 @@ query nm_get_peer_infos() = node @* {} (_ = .host, _ = .port, _ = .pubkey, _ = .
     Deprecated: relies on legacy anchoring which will be removed
 */
 query nm_get_blockchain_last_built_height(blockchain_rid: byte_array) =
-    get_blockchain_last_height(blockchain_rid);
+    deprecated_get_blockchain_last_height(blockchain_rid);
 
 /*
     Configuration updates are found in two tables. Both must be checked to get next configuration height.
@@ -55,8 +54,8 @@ query nm_get_blockchain_configuration(blockchain_rid: byte_array, height: intege
     val base_config = blockchain_configuration @? { bc, .height <= height } (@omit @sort_desc .height, $) limit 1;
     if (base_config != null) {
         // Checking that signers.size() is non-zero is done when population blockchain_configuration_signers.
-        // Thus, not needed to check here.
-        val signers = blockchain_configuration_signers @ { bc, .height <= height } (@omit @sort_desc .height, .signers) limit 1;
+        val signers = require(blockchain_configuration_signers @? { bc, .height <= height } (@omit @sort_desc .height, .signers) limit 1,
+            "No signers configuration for blockchain %s for height %d".format(blockchain_rid, height));
 
         val full_config = map<text, gtv>.from_gtv(gtv.from_bytes(base_config.data));
         full_config["signers"] = gtv.from_bytes(signers);
@@ -70,16 +69,22 @@ query nm_get_blockchain_configuration(blockchain_rid: byte_array, height: intege
     NM API Version: 5
 */
 query nm_get_blockchain_configuration_v5(blockchain_rid: byte_array, height: integer):
-        (base_config: byte_array, signers: list<pubkey>)? {
+        (base_config: byte_array, signers: list<pubkey>, config_hash: byte_array)? {
     val bc = require_blockchain(blockchain_rid);
     // Find configuration height -- the latest height up to given height.
     // If conf_h exist, so does signer_h, thus no need to check both.
     val base_config = blockchain_configuration @? { bc, .height <= height } (@omit @sort_desc .height, .data) limit 1;
     if (base_config != null) {
         // Checking that signers.size() is non-zero is done when population blockchain_configuration_signers.
-        // Thus, not needed to check here.
-        val signers = blockchain_configuration_signers @ { bc, .height <= height } (@omit @sort_desc .height, .signers) limit 1;
-        return (base_config=base_config, signers=list<pubkey>.from_gtv(gtv.from_bytes(signers)));
+        val signers = require(blockchain_configuration_signers @? { bc, .height <= height } (@omit @sort_desc .height, .signers) limit 1,
+            "No signers configuration for blockchain %s for height %d".format(blockchain_rid, height));
+        val full_config = map<text, gtv>.from_gtv(gtv.from_bytes(base_config));
+        full_config["signers"] = gtv.from_bytes(signers);
+        return (
+            base_config = base_config,
+            signers = list<pubkey>.from_gtv(gtv.from_bytes(signers)),
+            config_hash = full_config.to_gtv().hash()
+        );
     } else {
         return null;
     }
@@ -140,7 +145,7 @@ query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : lis
         if (empty(blockchain @? { brid })) {
             res.add(-1);
         } else {
-            res.add(get_blockchain_last_height(brid));
+            res.add(deprecated_get_blockchain_last_height(brid));
         }
     }
     return res;
@@ -150,28 +155,31 @@ query nm_get_blockchain_last_height_map(blockchain_rids: list<byte_array>) : lis
     NM API Version: 3
 */
 query nm_get_container_limits(name): map<text, integer> {
-    val container = container @ {name};
     var return_map = map<text, integer>();
-    val limits_list = container_resource_limit @* { container };
-    for (l in limits_list) {
-        val r = l.container_resource_limit_type;
-        return_map.put(r.name, l.value);
-    }
+
+    val container_limits = get_current_container_resource_limits(name);
+
+    val container_units = container_limits[container_resource_limit_type.container_units];
+    val max_blockchains = container_limits[container_resource_limit_type.max_blockchains];
+
+    val cpu = _get_container_limit_or_default(standard_container_unit.cpu, container_units);
+    val ram = _get_container_limit_or_default(standard_container_unit.ram, container_units);
+    val io_read = _get_container_limit_or_default(standard_container_unit.io_read, container_units);
+    val io_write = _get_container_limit_or_default(standard_container_unit.io_write, container_units);
+    val storage = _get_container_limit_or_default(standard_container_unit.storage, container_units);
+
+    return_map.put("max_blockchains", max_blockchains);
+    return_map.put("storage", storage);
+    return_map.put("cpu", cpu);
+    return_map.put("ram", ram);
+    return_map.put("io_read", io_read);
+    return_map.put("io_write", io_write);
+
     return return_map;
 }
 
-/*
-    NM API Version: 3
-*/
-query nm_get_cluster_limits(name): map<text, integer> {
-    val cluster = cluster @ {name};
-    var return_map = map<text, integer>();
-    val limits_list = cluster_resource_limit @* {cluster};
-    for (l in limits_list) {
-        val r = l.cluster_resource_limit_type;
-        return_map.put(r.name, l.value);
-    }
-    return return_map;
+function _get_container_limit_or_default(value: integer, container_units: integer): integer {
+    return if (container_units == -1 or value == -1) -1 else container_units * value;
 }
 
 /*
@@ -179,7 +187,7 @@ query nm_get_cluster_limits(name): map<text, integer> {
     NM API Version: 3
 */
 query nm_get_containers(pubkey): list<text> {
-    val clusters = cluster_node @* {node @ { pubkey }} .cluster;
+    val clusters = cluster_node @* { node @ { pubkey } } .cluster;
     val res = list<text>();
     for (cl in clusters) {
         val containers = container @* { cl } .name;
@@ -227,14 +235,40 @@ query nm_get_blockchain_dependencies(blockchain, height: integer): list<(byte_ar
 }
 
 /*
-    Precise Configuration Update
+    Precise Configuration Update: Returns list of pending configs with minimum_height <= height
     NM API Version: 5
 */
 query nm_get_pending_blockchain_configuration(blockchain_rid: byte_array, height: integer):
         list<(base_config: byte_array, signers: list<pubkey>, minimum_height: integer)> {
+    if (not pcu_enabled()) return list();
     val bc = require_blockchain(blockchain_rid);
-    return pending_blockchain_configuration @* { bc, .minimum_height <= height }
-        (base_config=.base_config,
-         signers=list<pubkey>.from_gtv(gtv.from_bytes(.signers)),
-         @sort minimum_height=.minimum_height);
+    return pending_blockchain_configuration @* { bc, .minimum_height <= height } (
+        base_config = .base_config,
+        signers = list<pubkey>.from_gtv(gtv.from_bytes(.signers)),
+        @sort minimum_height = .minimum_height
+    );
+}
+
+/*
+    Precise Configuration Update: Returns a pending blockchain config by config hash or null
+    NM API Version: 5
+*/
+query nm_get_pending_blockchain_configuration_by_hash(blockchain_rid: byte_array, config_hash: byte_array):
+        (base_config: byte_array, signers: list<pubkey>, minimum_height: integer)? {
+    if (not pcu_enabled()) return null;
+    val bc = require_blockchain(blockchain_rid);
+    return pending_blockchain_configuration @? { bc, config_hash } (
+        base_config = .base_config,
+        signers = list<pubkey>.from_gtv(gtv.from_bytes(.signers)),
+        @sort minimum_height = .minimum_height
+    );
+}
+
+/*
+    Precise Configuration Update: Returns a faulty blockchain config by height or null
+    NM API Version: 5
+*/
+query nm_get_faulty_blockchain_configuration(blockchain_rid: byte_array, height: integer): byte_array? {
+    val bc = require_blockchain(blockchain_rid);
+    return faulty_blockchain_configuration @? { bc, .reported_at_height == height }.config_hash;
 }

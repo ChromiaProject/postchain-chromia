@@ -21,6 +21,7 @@ fun nodeCommands() = NodeCommand().subcommands(
         CommandEnableNode(),
         CommandRemoveNode(),
         CommandGetNodeInfo(),
+        CommandNodeVerify(),
         CommandListBlockchainsForNode(),
         CommandListContainersForNode(),
         CommandListNodes(),

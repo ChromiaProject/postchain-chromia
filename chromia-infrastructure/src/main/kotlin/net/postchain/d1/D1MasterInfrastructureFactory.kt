@@ -10,9 +10,13 @@ import net.postchain.managed.LegacyAnchoringBlockchainProcessManagerExtension
 
 class D1MasterInfrastructureFactory : MasterManagedEbftInfraFactory() {
     override fun getProcessManagerExtensions(postchainContext: PostchainContext): List<BlockchainProcessManagerExtension> {
-        return listOf(
-                AnchoringProcessManagerExtension(postchainContext),
-                LegacyAnchoringBlockchainProcessManagerExtension(postchainContext) // TODO: Temporary until new config update functionality
-        )
+        return if (postchainContext.appConfig.isPcuEnabled()) {
+            listOf(AnchoringProcessManagerExtension(postchainContext))
+        } else {
+            listOf(
+                    AnchoringProcessManagerExtension(postchainContext),
+                    LegacyAnchoringBlockchainProcessManagerExtension(postchainContext) // TODO: Temporary until new config update functionality
+            )
+        }
     }
 }

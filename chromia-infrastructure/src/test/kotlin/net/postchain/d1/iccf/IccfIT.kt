@@ -1,6 +1,6 @@
 package net.postchain.d1.iccf
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.BaseBlockQueries
 import net.postchain.client.core.PostchainQuery
@@ -46,7 +46,7 @@ class IccfIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
 
         val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         val targetChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
@@ -67,7 +67,7 @@ class IccfIT : ManagedModeTest() {
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
         val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
-        assert(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
     @Test
@@ -75,7 +75,7 @@ class IccfIT : ManagedModeTest() {
         startManagedSystem(3, 0)
 
         val systemAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
 
         val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
@@ -112,7 +112,7 @@ class IccfIT : ManagedModeTest() {
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
         val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
-        assert(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {

@@ -21,7 +21,7 @@ object ClusterManagementFactory {
      */
     fun create(configuration: BlockchainConfiguration, connectionManager: ConnectionManager): ClusterManagement {
         val query = if (connectionManager is SubConnectionManager) {
-            Chain0MasterClient(configuration.blockchainRid, configuration.chainID, connectionManager.masterSubQueryManager)::query
+            Chain0MasterClient(connectionManager.masterSubQueryManager)::query
         } else if (configuration is ManagedDataSourceAware) {
             { name, gtv -> configuration.dataSource.query(name, gtv) }
         } else {

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain-chromia</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.10.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,11 +20,11 @@
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
+            <artifactId>postchain-server-cli</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain.rell</groupId>
-            <artifactId>rell</artifactId>
+            <artifactId>rell-gtx</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>

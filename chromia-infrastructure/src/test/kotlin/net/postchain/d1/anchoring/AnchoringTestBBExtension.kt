@@ -16,7 +16,7 @@ class AnchoringTestBBExtension : BaseBlockBuilderExtension {
         return mapOf(
                 "icmf_send" to gtv(
                         mapOf(
-                                "my-topic" to TopicHeaderData(AnchoringIT.messagesHash, -1).toGtv()
+                                "G_my-topic" to TopicHeaderData(AnchoringIT.messagesHash, -1).toGtv()
                         )
                 )
         )

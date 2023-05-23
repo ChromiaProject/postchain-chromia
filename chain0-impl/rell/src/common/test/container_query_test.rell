@@ -1,0 +1,67 @@
+@test module;
+
+import ^.container_helpers.*;
+import ^^.*;
+import ^^.queries.*;
+import ^^.test.setup.*;
+import ^^.test.ops.*;
+import ^^.test.util.constants.*;
+import ^^^.direct_cluster.*;
+import ^^^.direct_container.*;
+import ^^^.proposal_container.*;
+
+function test_get_cluster_containers() {
+    setup_module(provider_quota_max_containers = 4, system_anchoring_config = ["any": "value".to_gtv()], cluster_anchoring_config = ["any": "value".to_gtv()]);
+
+    // Initial asserting
+    _assert_equals_all(get_containers(), [system_container_name(clusters.system)]);
+
+    // Adding `foo` to `system` cluster
+    rell.test.tx().op(
+        propose_container(initial_provider.pub, clusters.system, "foo", voter_sets.system_p)
+    ).sign(initial_provider).run();
+
+    // Adding `bar_cluster` cluster and `bar` container
+    rell.test.tx().op(
+        create_cluster(initial_provider.pub, "bar_cluster", voter_sets.system_p, list<pubkey>())
+    ).sign(initial_provider).run();
+    rell.test.tx().op(
+        propose_container(initial_provider.pub, "bar_cluster", "bar", voter_sets.system_p)
+    ).sign(initial_provider).run();
+
+    // Asserting all containers
+    _assert_equals_all(get_containers(), [system_container_name(clusters.system), "foo", "bar", system_container_name("bar_cluster")]);
+
+    // Asserting clusters in `system` container
+    val system_containers = get_cluster_containers(clusters.system);
+    _assert_equals(system_containers, [system_container_name(clusters.system), "foo"]);
+
+    // Asserting clusters in `bar_cluster` container
+    val bar_containers = get_cluster_containers("bar_cluster");
+    _assert_equals(bar_containers, [system_container_name("bar_cluster"), "bar"]);
+
+    // Unknown cluster
+    assert_equals(get_cluster_containers("unknown").size(), 0);
+
+    // Containers for node
+    val node_containers = get_node_containers(initial_signer.pub);
+    _assert_equals_all(node_containers, [system_container_name(clusters.system), "foo"]);
+    // Unknown blockchain
+    // Using a partial function application to pass a function to assert_fails(), see Rell 0.11.0 Release notes
+    assert_fails("Node not found: 0xff", _query_in_fun__get_node_containers(x"ff", *));}
+
+function _assert_equals_all(actual: list<(cluster:text, name:text, deployer:text)>, expected: list<text>) {
+    val actual0 = set<text>();
+    for (e in actual) {
+        actual0.add(e.name);
+    }
+    assert_equals(actual0, set(expected));
+}
+
+function _assert_equals(actual: list<(name:text, deployer:text)>, expected: list<text>) {
+    val actual0 = set<text>();
+    for (e in actual) {
+        actual0.add(e.name);
+    }
+    assert_equals(actual0, set(expected));
+}
