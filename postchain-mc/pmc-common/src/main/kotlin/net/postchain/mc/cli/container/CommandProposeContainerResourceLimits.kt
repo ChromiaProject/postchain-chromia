@@ -36,8 +36,6 @@ class CommandProposeContainerResourceLimits : CliktCommand(
 
     private val description by proposalDescriptionOption()
 
-    private val _maxBlockchains by maxBlockchainsOption()
-
     // Remove when api version 2 is not needed
     private val _cpu by option("-c", "--cpu", help = "CPU limit (percent of cpus, 10 == 0.1 cpu(s), 150 == 1.5 cpu(s))").long().deprecated()
     private val _ram by option("-r", "--ram", help = "RAM limit (MiB)").long().deprecated()
@@ -69,14 +67,14 @@ class CommandProposeContainerResourceLimits : CliktCommand(
             }
 
             else -> {
-                if (_maxBlockchains == null && _cpu == null && _ram == null && _storage == null && _ioRead == null && _ioWrite == null) {
+                if (maxBlockchains == null && _cpu == null && _ram == null && _storage == null && _ioRead == null && _ioWrite == null) {
                     echo("No resource limits are specified. At least one value should be specified.")
                     return
                 }
 
                 val limits = mutableMapOf<ApiCompatV2.ContainerResourceLimitType, Long>()
                         .apply {
-                            setIfNotNull(ApiCompatV2.ContainerResourceLimitType.max_blockchains, _maxBlockchains)
+                            setIfNotNull(ApiCompatV2.ContainerResourceLimitType.max_blockchains, maxBlockchains)
                             setIfNotNull(ApiCompatV2.ContainerResourceLimitType.cpu, _cpu)
                             setIfNotNull(ApiCompatV2.ContainerResourceLimitType.ram, _ram)
                             setIfNotNull(ApiCompatV2.ContainerResourceLimitType.storage, _storage)
