@@ -27,7 +27,7 @@ class CommandGetNodeInfo : CliktCommand(
             row("Port:", "${node.port}")
             row("REST API:", node.apiUrl)
             row("Provided by:", node.provider.toHex())
-            node.clusterUnits?.let { row("Cluster Units:", it) }
+            node.clusterUnits?.let { row("Cluster Units:", it.toString()) }
             val clusters = client.listClustersOfNode(PubKey(node.pubkey))
             row("Used by clusters:", "$clusters")
             hints { defaultAlignment = Table.Hints.Alignment.LEFT }
