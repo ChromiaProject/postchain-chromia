@@ -15,9 +15,13 @@ import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
 import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
+import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
+import net.postchain.chain0.proposal_blockchain.BlockchainAction
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
@@ -32,6 +36,7 @@ import net.postchain.containers.bpm.resources.*
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
+import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -283,11 +288,15 @@ abstract class Directory1DeploymentBase {
     private fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String) {
         testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
         dappTxs[brid] = node2.tx(brid, txOp, gtv(txArg)).first
+        assertDappQuery(brid, query, txArg)
+    }
+
+    private fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String,) {
         awaitUntilAsserted {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assertThat(cities).containsExactly(txArg)
+                assertThat(cities).containsExactly(expectedResult)
             }
         }
     }
@@ -363,13 +372,7 @@ abstract class Directory1DeploymentBase {
     @Order(14)
     fun `ICMF messages are delivered`() {
         val receiverDapp = dapps["test_dapp2"]!!
-        awaitUntilAsserted {
-            nodes().forEach { node ->
-                val cities = awaitQueryResult { node.client(receiverDapp).query("get_icmf_cities", gtv(mapOf())) }!!
-                        .asArray().map { it.asString() }
-                assertThat(cities).containsExactly("Heraklion")
-            }
-        }
+        assertDappQuery(receiverDapp, "get_icmf_cities", "Heraklion")
     }
 
     @Test
@@ -392,13 +395,7 @@ abstract class Directory1DeploymentBase {
         val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
         iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
                 .postTransactionUntilConfirmed("iccf_transfer")
-        awaitUntilAsserted {
-            nodes().forEach { node ->
-                val cities = awaitQueryResult { node.client(targetDapp).query("get_iccf_cities", gtv(mapOf())) }!!
-                        .asArray().map { it.asString() }
-                assertThat(cities).containsExactly("Heraklion")
-            }
-        }
+        assertDappQuery(targetDapp, "get_iccf_cities", "Heraklion")
     }
 
     private fun queryContainerResourceLimits(): Array<ResourceLimit> {
@@ -429,6 +426,55 @@ abstract class Directory1DeploymentBase {
             nodes().forEach {
                 assertEquals(setOf(500, 17100, 17300), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
             }
+        }
+    }
+
+    @Test
+    @Order(17)
+    fun `Test blockchain state changes`() {
+        // Verify state is RUNNING
+        nodes().forEach {
+            verifyBlockchainState(it, chain0Brid, BlockchainState.RUNNING)
+            verifyBlockchainState(it, systemAnchoringBrid, BlockchainState.RUNNING)
+            verifyBlockchainState(it, clusterAnchoringBrid, BlockchainState.RUNNING)
+        }
+        val dappBrid = dapps["test_dapp"]!!
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+        awaitUntilAsserted {
+            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(1)).second.httpStatusCode!!, 200)
+        }
+
+        // Change to PAUSED
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
+                .postTransactionUntilConfirmed("Change state to ${BlockchainState.PAUSED.name} for dapp $dappBrid")
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
+
+        // Verify no transactions created but chain is reachable
+        awaitUntilAsserted {
+            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(2)).second.httpStatusCode!!, 403)
+        }
+        assertDappQuery(dappBrid, "get_cities", "Heraklion")
+
+        // Change to RUNNING
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
+                .postTransactionUntilConfirmed("Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
+        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(node3.provider)
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+
+        // Verify transactions created
+        awaitUntilAsserted {
+            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!, 200)
+        }
+    }
+
+    private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
+        awaitUntilAsserted {
+            assertEquals(container.c0.nmGetBlockchainState(brid), state.name)
         }
     }
 

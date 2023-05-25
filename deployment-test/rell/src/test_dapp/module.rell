@@ -10,3 +10,5 @@ operation add_city (name) {
 }
 
 query get_cities () { return city @* {} ( .name ); }
+
+operation do_nothing (dummy: integer) {}
