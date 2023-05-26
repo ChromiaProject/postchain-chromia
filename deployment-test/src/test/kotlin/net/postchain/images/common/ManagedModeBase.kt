@@ -220,18 +220,20 @@ open class ManagedModeBase {
         testLogger.info("System anchor chain bc-rid: $systemAnchoringBrid")
     }
 
-    protected fun voteOnAllProposals(provider: KeyPair) {
-        var nextId = 0L
-        while (true) {
-            val proposal = awaitQueryResult {
-                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(nextId)).firstOrNull()
-            } ?: break
+    protected fun voteOnAllProposals(providers: List<KeyPair>) {
+        val txBuilder = node1.client(chain0Brid, providers).transactionBuilder()
 
-            node1.client(chain0Brid, listOf(provider)).transactionBuilder()
-                    .makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
-                    .postTransactionUntilConfirmed("provider ${provider.pubKey.hex()} votes on ${proposal.rowid}, ${proposal.proposalType}")
-            nextId = proposal.rowid.id + 1L
+        providers.forEach { provider ->
+            val proposals = awaitQueryResult {
+                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(0))
+            } ?: return
+
+            proposals.forEach { proposal ->
+                txBuilder.makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
+            }
         }
+
+        txBuilder.postTransactionUntilConfirmed("providers vote on all proposals")
     }
 
     protected fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {

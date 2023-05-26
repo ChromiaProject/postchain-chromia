@@ -207,7 +207,7 @@ abstract class Directory1DeploymentBase {
                 .proposeProviderIsSystemOperation(node1.providerPubkey, node3.providerPubkey, true, "")
                 .postTransactionUntilConfirmed("Register p3 as system")
 
-        voteOnAllProposals(node2.provider)
+        voteOnAllProposals(listOf(node2.provider))
 
         testLogger.info("Adding node3 to [node1, node2] network")
         node1.client(chain0Brid, listOf(node3.provider)).transactionBuilder()
@@ -448,8 +448,7 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.PAUSED.name} for dapp $dappBrid")
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // Verify no transactions created but chain is reachable
@@ -462,8 +461,7 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
         // Verify transactions created
@@ -494,8 +492,7 @@ abstract class Directory1DeploymentBase {
                 .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
 
         if (containerName == systemContainer) {
-            voteOnAllProposals(node2.provider)
-            voteOnAllProposals(node3.provider)
+            voteOnAllProposals(listOf(node2.provider, node3.provider))
         }
 
         // Asserting that node1, node2, node3 are signers of newly added blockchain
