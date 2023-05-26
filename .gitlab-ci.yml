@@ -111,9 +111,10 @@ container-scanning:
     - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
-      - IMAGE: [ chromaway/postchain-mc,
-                 chromaway/chromia-subnode,
-                 chromaway/chromia-server ]
+      - IMAGE: [
+        chromaway/chromia-subnode,
+        chromaway/chromia-server
+      ]
         VERSION: [ 3.9.0, 3.10.0-SNAPSHOT ]
   only:
     variables:
