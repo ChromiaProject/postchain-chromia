@@ -29,7 +29,7 @@ class CommandGetClusterInfo : CliktCommand(
             row("Name:", info.name)
             row("Governor:", info.governor)
             row("Is Operational:", info.isOperational.toString())
-            info.clusterUnits?.let { row("Cluster Units:", it) }
+            info.clusterUnits?.let { row("Cluster Units:", it.toString()) }
             row()
         }.render().also { echo(it) }
 

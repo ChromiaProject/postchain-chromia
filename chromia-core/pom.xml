@@ -26,7 +26,7 @@
             <artifactId>postchain-gtv</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.postchain</groupId>
+            <groupId>net.postchain.client</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
     </dependencies>

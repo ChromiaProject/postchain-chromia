@@ -9,9 +9,11 @@ import net.postchain.chain0.common.queries.getContainerBlockchain
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.chain0.nm_api.nmGetContainerLimits
+import net.postchain.chain0.version.apiVersion
 import net.postchain.mc.cli.util.clientOption
 import net.postchain.mc.cli.util.nameOption
 import net.postchain.mc.cli.util.validateAlphaNumeric
+import net.postchain.mc.compatibility.ApiCompatV3.getContainerBlockchainV3
 
 class CommandGetContainerInfo : CliktCommand(
         name = "info",
@@ -50,18 +52,38 @@ class CommandGetContainerInfo : CliktCommand(
             defaultHints()
         }.render().also { echo(it) }
 
-        val blockchains = client.getContainerBlockchain(name)
-        if (blockchains.isEmpty()) {
-            echo("No blockchains")
-        } else {
-            echo("Blockchains:")
-            table {
-                header("Name", "Rid", "System", "Active")
-                blockchains.forEach {
-                    row(it.name, it.rid.toHex(), it.system.toString(), it.active.toString())
+        val apiVersion = client.apiVersion()
+        when {
+            apiVersion >= 4 -> {
+                val blockchains = client.getContainerBlockchain(name)
+                if (blockchains.isEmpty()) {
+                    echo("No blockchains")
+                } else {
+                    echo("Blockchains:")
+                    table {
+                        header("Name", "Rid", "System", "State")
+                        blockchains.forEach {
+                            row(it.name, it.rid.toHex(), it.system.toString(), it.state.toString())
+                        }
+                        defaultHints()
+                    }.render().also { echo(it) }
                 }
-                defaultHints()
-            }.render().also { echo(it) }
+            }
+            else -> {
+                val blockchains = client.getContainerBlockchainV3(name)
+                if (blockchains.isEmpty()) {
+                    echo("No blockchains")
+                } else {
+                    echo("Blockchains:")
+                    table {
+                        header("Name", "Rid", "System", "Active")
+                        blockchains.forEach {
+                            row(it.name, it.rid.toHex(), it.system.toString(), it.active.toString())
+                        }
+                        defaultHints()
+                    }.render().also { echo(it) }
+                }
+            }
         }
     }
 

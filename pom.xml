@@ -27,6 +27,7 @@
 
     <properties>
         <postchain.version>3.11.0-SNAPSHOT</postchain.version>
+        <postchain.client.version>3.10.0</postchain.client.version>
         <rellr.version>0.13.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
@@ -100,6 +101,12 @@
                 <groupId>net.postchain</groupId>
                 <artifactId>chromia-infrastructure</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.postchain.client</groupId>
+                <artifactId>postchain-client</artifactId>
+                <version>${postchain.client.version}</version>
             </dependency>
 
             <dependency>
@@ -415,9 +422,9 @@
             <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
         </repository>
         <repository>
-            <id>distro</id>
-            <name>Postchain distribution Registry</name>
-            <url>https://gitlab.com/api/v4/projects/32884430/packages/maven</url>
+            <id>postchain-client</id>
+            <name>Postchain Client GitLab Registry</name>
+            <url>https://gitlab.com/api/v4/projects/46288950/packages/maven</url>
         </repository>
     </repositories>
 
