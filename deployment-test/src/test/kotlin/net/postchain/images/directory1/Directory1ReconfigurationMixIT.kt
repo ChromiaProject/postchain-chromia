@@ -170,8 +170,7 @@ class Directory1ReconfigurationMixIT {
                 .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs")
 
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
             assertEquals(
@@ -196,8 +195,7 @@ class Directory1ReconfigurationMixIT {
                 .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18600), "")
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #2")
 
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
             assertEquals(
@@ -229,8 +227,7 @@ class Directory1ReconfigurationMixIT {
                 .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
                 .postTransactionUntilConfirmed("Propose different system anchoring chain configs")
 
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
             assertEquals(
@@ -255,8 +252,7 @@ class Directory1ReconfigurationMixIT {
                 .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19600), "")
                 .postTransactionUntilConfirmed("Propose different system anchoring chain configs #2")
 
-        voteOnAllProposals(node2.provider)
-        voteOnAllProposals(node3.provider)
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
             assertEquals(
