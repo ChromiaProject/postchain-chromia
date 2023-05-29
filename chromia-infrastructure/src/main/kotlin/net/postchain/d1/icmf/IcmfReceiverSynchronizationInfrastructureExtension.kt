@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
+import net.postchain.base.configuration.KEY_GTX
 import net.postchain.client.config.FailOverConfig
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -23,8 +24,10 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.gtx.GtxConfigurationData
 import net.postchain.managed.config.ManagedDataSourceAware
 import java.time.Duration
+import kotlin.math.min
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
         SynchronizationInfrastructureExtension {
@@ -45,10 +48,16 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 txExt.blockchainConfigProvider = blockchainConfigProvider
 
                 val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
-                txExt.maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
-                if (txExt.maxBlockSize < MAX_MESSAGE_SIZE + BLOCK_SIZE_MARGIN) {
-                    logger.warn("Configured max block size ${txExt.maxBlockSize} for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + BLOCK_SIZE_MARGIN}")
+                val maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
+                if (maxBlockSize < MAX_MESSAGE_SIZE + TX_SIZE_MARGIN) {
+                    logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + TX_SIZE_MARGIN}")
                 }
+                val gtxConfig = configuration.rawConfig[KEY_GTX] ?: gtv(mapOf())
+                val maxTxSize = gtxConfig.toObject<GtxConfigurationData>().maxTxSize
+                if (maxTxSize < MAX_MESSAGE_SIZE + TX_SIZE_MARGIN) {
+                    logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + TX_SIZE_MARGIN}")
+                }
+                txExt.maxTxSize = min(maxBlockSize, maxTxSize)
 
                 val queryProvider = createQueryProvider(configuration, clusterManagement)
 
