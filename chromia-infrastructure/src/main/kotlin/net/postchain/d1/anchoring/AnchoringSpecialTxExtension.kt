@@ -45,7 +45,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
-    var maxBlockSize: Long = -1
+    var maxTxSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
@@ -103,7 +103,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                     val clusterAnchorPacket = pipe.fetchNext(currentHeight)
                     if (clusterAnchorPacket != null) {
                         val (opData, size) = buildOpData(clusterAnchorPacket)
-                        if (currentSize + size > maxBlockSize - BLOCK_SIZE_MARGIN) {
+                        if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
                             break@outer
                         }
                         ops.add(opData)

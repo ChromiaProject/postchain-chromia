@@ -112,10 +112,10 @@ container-scanning:
   parallel:
     matrix:
       - IMAGE: [
-        chromaway/chromia-subnode,
-        chromaway/chromia-server
-      ]
-        VERSION: [ 3.9.0, 3.10.0-SNAPSHOT ]
+                 chromaway/chromia-subnode,
+                 chromaway/chromia-server 
+                 ]
+        VERSION: [ 3.10.0, 3.11.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"

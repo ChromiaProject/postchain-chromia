@@ -226,10 +226,23 @@ class AnchoringIT : ManagedModeTest() {
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
-    fun capSizeOfAnchoringTransaction() {
+    fun capSizeOfAnchoringTransactionOnMaxBlockSize() {
         startManagedSystem(3, 0)
         val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size.xml")
 
+        verifyCap(anchorChain)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun capSizeOfAnchoringTransactionOnMaxTxSize() {
+        startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size_on_tx.xml")
+
+        verifyCap(anchorChain)
+    }
+
+    private fun verifyCap(anchorChain: Long) {
         val dappChain = startDappChain()
 
         for (height in 0..31) {
