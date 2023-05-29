@@ -23,7 +23,7 @@
                   <version>1.11.2</version>
                   <executions>
                       <execution>
-                          <id>checkout-git-resources</id>
+                          <id>d1-resources</id>
                           <phase>generate-resources</phase>
                           <goals>
                               <goal>checkout</goal>
@@ -39,6 +39,30 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>d1-local</id>
+            <activation>
+                <property>
+                    <name>local</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                      <artifactId>maven-scm-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>d1-resources</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <repositories>
       <repository>

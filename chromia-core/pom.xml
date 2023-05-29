@@ -37,7 +37,6 @@
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <configuration>
-                    <source>${project.parent.basedir}/chain0-impl/target/directory1/src</source>
                     <packageName>net.postchain.chromia</packageName>
                     <mainModules>
                         <mainModule>cm_api</mainModule>

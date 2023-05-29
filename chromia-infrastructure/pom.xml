@@ -117,7 +117,6 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chain0-impl/target/directory1/src</source>
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
                                 <mainModule>anchoring_chain_cluster</mainModule>
