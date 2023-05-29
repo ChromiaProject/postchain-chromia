@@ -10,69 +10,40 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
 
-    <modules>
-        <module>directory1</module>
-    </modules>
-
     <groupId>net.postchain.chain0</groupId>
     <artifactId>chain0-impl</artifactId>
-    <name>Chain0 - Parent</name>
-    <description>Parent module for chain0 implementations</description>
-
-    <properties>
-        <rell.directory>${project.parent.basedir}/rell</rell.directory>
-    </properties>
+    <name>Chain0</name>
+    <description>Chain0 implementation</description>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>net.postchain.rell</groupId>
-                <artifactId>rell-maven-plugin</artifactId>
-                <inherited>false</inherited>
-                <executions>
-                    <execution>
-                        <id>rell-compile</id>
-                        <goals>
-                            <goal>rell-compile</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>rell-integration-test</id>
-                        <goals>
-                            <goal>rell-integration-test</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-                </executions>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-scm-plugin</artifactId>
+                  <version>1.11.2</version>
+                  <executions>
+                      <execution>
+                          <id>checkout-git-resources</id>
+                          <phase>generate-resources</phase>
+                          <goals>
+                              <goal>checkout</goal>
+                          </goals>
+                          <configuration>
+                              <connectionUrl>scm:git:https://gitlab.com/chromaway/core/directory-chain.git</connectionUrl>
+                              <checkoutDirectory>${project.build.directory}/directory1</checkoutDirectory>
+                              <scmVersion>${directory.chain.version}</scmVersion>
+                              <scmVersionType>tag</scmVersionType>
+                          </configuration>
+                      </execution>
+                  </executions>
             </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>make-archive</id>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>single</goal>
-                            </goals>
-                            <configuration>
-                                <descriptors>
-                                    <descriptor>src/assembly/targz.xml</descriptor>
-                                </descriptors>
-                            </configuration>
-                        </execution>
-                        <execution>
-                            <id>make-executable-jar</id>
-                            <phase>none</phase>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
+
+    <repositories>
+      <repository>
+        <id>Directory Chain</id>
+        <url>https://gitlab.com/api/v4/projects/46396847/packages/maven</url>
+      </repository>
+    </repositories>
 </project>

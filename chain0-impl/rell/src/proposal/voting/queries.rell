@@ -1,3 +1,0 @@
-query get_provider_votes(provider_key: pubkey) {
-    return vote @* { vote.provider.pubkey == provider_key } ( .proposal, .vote );
-}

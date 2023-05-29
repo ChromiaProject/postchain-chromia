@@ -46,7 +46,7 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.parent.basedir}/chain0-impl/rell/src</source>
+                            <source>${project.parent.parent.basedir}/chain0-impl/target/directory1/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModule>management_chain_chromia1</mainModule>
                         </configuration>

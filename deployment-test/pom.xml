@@ -101,7 +101,7 @@
                                     <directory>${project.basedir}/rell/src</directory>
                                 </resource>
                                 <resource>
-                                    <directory>${project.parent.basedir}/chain0-impl/rell/src</directory>
+                                    <directory>${project.parent.basedir}/chain0-impl/target/directory1/src</directory>
                                     <includes>
                                         <include>messaging/icmf.rell</include>
                                         <include>messaging/icmf_constants.rell</include>
@@ -126,7 +126,7 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <source>${project.parent.basedir}/chain0-impl/target/directory1/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
                                 <mainModule>management_chain_directory1</mainModule>
@@ -142,7 +142,7 @@
                         </goals>
                         <configuration>
                             <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
+                            <source>${project.parent.basedir}/chain0-impl/target/directory1/src</source>
                             <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
