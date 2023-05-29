@@ -16,7 +16,6 @@
         <module>chromia-client</module>
         <module>directory1-test</module>
         <module>deployment-test</module>
-        <module>postchain-mc</module>
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
@@ -114,12 +113,6 @@
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-gtx</artifactId>
                 <version>${rellr.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>de.m3y.kformat</groupId>
-                <artifactId>kformat</artifactId>
-                <version>0.9</version>
             </dependency>
 
             <dependency>
