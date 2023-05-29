@@ -30,7 +30,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     val anchoringReceivers: MutableList<AnchoringIcmfReceiver> = mutableListOf()
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
     lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
-    var maxBlockSize: Long = -1
+    var maxTxSize: Long = -1
 
     private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, AnchoredHeaderOp.OP_NAME, NonAnchoredHeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
@@ -155,7 +155,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         var hasSpilledMessages = hasInitialSpilledMessages
         if (spilledCount > 0) {
             for (message in packet.messages.subList(packet.messages.size - spilledCount, packet.messages.size)) {
-                if (!hasSpilledMessages && currentSize + message.size < maxBlockSize - BLOCK_SIZE_MARGIN) {
+                if (!hasSpilledMessages && currentSize + message.size < maxTxSize - TX_SIZE_MARGIN) {
                     allOps.add(MessageOp(packet.sender, packet.topic, message.body).toOpData())
                     currentSize += message.size
                 } else {
@@ -167,7 +167,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
             for (message in packet.messages) {
                 allOps.add(MessageHashOp(packet.sender, packet.topic, message.body.merkleHash(hashCalculator)).toOpData())
-                if (!hasSpilledMessages && currentSize + message.size < maxBlockSize - BLOCK_SIZE_MARGIN) {
+                if (!hasSpilledMessages && currentSize + message.size < maxTxSize - TX_SIZE_MARGIN) {
                     allOps.add(MessageOp(packet.sender, packet.topic, message.body).toOpData())
                     currentSize += message.size
                 } else {
