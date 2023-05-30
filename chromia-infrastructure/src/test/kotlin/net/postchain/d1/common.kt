@@ -5,7 +5,8 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
 
-val RELL_SOURCE_PATH = File("../chain0-impl/rell/src")
+
+val RELL_SOURCE_PATH = File(System.getenv("D1_SOURCE"))
 
 fun getSystemAnchoringChainConfig(): Gtv {
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()

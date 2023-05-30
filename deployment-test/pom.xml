@@ -28,6 +28,12 @@
         </dependency>
 
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>directory-chain</artifactId>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
         </dependency>
@@ -101,7 +107,7 @@
                                     <directory>${project.basedir}/rell/src</directory>
                                 </resource>
                                 <resource>
-                                    <directory>${project.parent.basedir}/chain0-impl/rell/src</directory>
+                                    <directory>${directory.source}</directory>
                                     <includes>
                                         <include>messaging/icmf.rell</include>
                                         <include>messaging/icmf_constants.rell</include>
@@ -126,7 +132,6 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
                                 <mainModule>management_chain_directory1</mainModule>
@@ -142,7 +147,6 @@
                         </goals>
                         <configuration>
                             <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>

@@ -12,7 +12,7 @@
     <url>https://docs.chromia.com/</url>
 
     <modules>
-        <module>chain0-impl</module>
+        <module>directory-chain</module>
         <module>chromia-client</module>
         <module>directory1-test</module>
         <module>deployment-test</module>
@@ -27,6 +27,7 @@
     <properties>
         <postchain.version>3.11.0-SNAPSHOT</postchain.version>
         <postchain.client.version>3.10.0</postchain.client.version>
+        <directory.chain.version>1.4.0</directory.chain.version>
         <rellr.version>0.13.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
@@ -42,8 +43,8 @@
         <maven.compiler.target>11</maven.compiler.target>
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
-        <!-- Distribution -->
-        <assembly.path>${project.basedir}/src/assembly/targz.xml</assembly.path>
+        <!--suppress UnresolvedMavenProperty -->
+        <directory.source>${maven.multiModuleProjectDirectory}/directory-chain/target/directory1/src</directory.source>
     </properties>
 
     <dependencyManagement>
@@ -83,11 +84,6 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
-                <artifactId>pmc-chromia</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
                 <artifactId>chromia-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -100,6 +96,12 @@
                 <groupId>net.postchain</groupId>
                 <artifactId>chromia-infrastructure</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>directory-chain</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
             </dependency>
 
             <dependency>
@@ -239,16 +241,29 @@
                     <groupId>net.postchain.rell</groupId>
                     <artifactId>rell-maven-plugin</artifactId>
                     <version>0.10.1</version>
+                    <configuration>
+                        <source>${directory.source}</source>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.plugin.version}</version>
+                    <configuration>
+                        <environmentVariables>
+                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                        </environmentVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
+                    <configuration>
+                        <environmentVariables>
+                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                        </environmentVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -367,6 +382,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
+
                         <configuration>
                             <skipTests>true</skipTests>
                         </configuration>
@@ -400,6 +416,18 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>d1-local</id>
+            <activation>
+                <property>
+                    <name>local</name>
+                </property>
+            </activation>
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <directory.source>${maven.multiModuleProjectDirectory}/../directory-chain/src</directory.source>
+            </properties>
         </profile>
     </profiles>
 

@@ -1,6 +1,0 @@
-module;
-
-import ^.common.*;
-import ^.proposal.*;
-import ^.model.*;
-import .util.*;

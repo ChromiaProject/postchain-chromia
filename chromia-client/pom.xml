@@ -30,6 +30,11 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>directory-chain</artifactId>
+            <type>pom</type>
+        </dependency>
 
         <dependency>
             <groupId>org.http4k</groupId>
@@ -86,7 +91,6 @@
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
                                 <mainModule>anchoring_chain_common</mainModule>

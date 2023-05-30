@@ -16,6 +16,11 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>directory-chain</artifactId>
+            <type>pom</type>
+        </dependency>
 
         <dependency>
             <groupId>net.postchain</groupId>
@@ -37,7 +42,6 @@
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <configuration>
-                    <source>${project.parent.basedir}/chain0-impl/rell/src</source>
                     <packageName>net.postchain.chromia</packageName>
                     <mainModules>
                         <mainModule>cm_api</mainModule>
