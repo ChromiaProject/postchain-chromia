@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
 
     <groupId>net.postchain.chain0</groupId>
-    <artifactId>chain0-impl</artifactId>
+    <artifactId>directory-chain</artifactId>
     <name>Chain0</name>
     <description>Chain0 implementation</description>
 

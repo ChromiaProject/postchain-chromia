@@ -12,7 +12,7 @@
     <url>https://docs.chromia.com/</url>
 
     <modules>
-        <module>chain0-impl</module>
+        <module>directory-chain</module>
         <module>chromia-client</module>
         <module>directory1-test</module>
         <module>deployment-test</module>
@@ -44,7 +44,7 @@
         <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <!--suppress UnresolvedMavenProperty -->
-        <directory.source>${maven.multiModuleProjectDirectory}/chain0-impl/target/directory1/src</directory.source>
+        <directory.source>${maven.multiModuleProjectDirectory}/directory-chain/target/directory1/src</directory.source>
     </properties>
 
     <dependencyManagement>
@@ -248,11 +248,21 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.plugin.version}</version>
+                    <configuration>
+                        <environmentVariables>
+                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                        </environmentVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
+                    <configuration>
+                        <environmentVariables>
+                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                        </environmentVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -371,6 +381,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
+
                         <configuration>
                             <skipTests>true</skipTests>
                         </configuration>
