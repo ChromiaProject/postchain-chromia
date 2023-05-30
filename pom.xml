@@ -84,11 +84,6 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
-                <artifactId>pmc-chromia</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
                 <artifactId>chromia-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -101,6 +96,12 @@
                 <groupId>net.postchain</groupId>
                 <artifactId>chromia-infrastructure</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>directory-chain</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
             </dependency>
 
             <dependency>

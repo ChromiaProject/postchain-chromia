@@ -16,6 +16,11 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>directory-chain</artifactId>
+            <type>pom</type>
+        </dependency>
 
         <dependency>
             <groupId>net.postchain</groupId>

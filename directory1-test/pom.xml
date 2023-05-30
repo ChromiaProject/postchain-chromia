@@ -26,6 +26,11 @@
             <groupId>net.postchain.client</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>directory-chain</artifactId>
+            <type>pom</type>
+        </dependency>
 
         <dependency>
             <groupId>io.github.microutils</groupId>
