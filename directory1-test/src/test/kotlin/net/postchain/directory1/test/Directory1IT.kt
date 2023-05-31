@@ -19,6 +19,8 @@ import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerFromOperation
+import net.postchain.chain0.model.Blockchain
+import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmComputeBlockchainList
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
@@ -189,7 +191,7 @@ class Directory1IT : ManagedModeTest() {
         doAndBuildBlocks(createContainer(provClient, container1, systemClusterName, voterSetSystemP))
         //propose new bc in new container:
         doAndBuildBlocks(proposeBlockchain(provClient, bcConfig1xmlFile, container1, "1"))
-        assertEquals(2, listBlockchains(false).size)
+        assertEquals(2, listBlockchainRids(false).size)
 
         //test building blocks for new bc
         buildBlock(100, 4)
@@ -207,7 +209,7 @@ class Directory1IT : ManagedModeTest() {
 
         //Now make sure that you cannot delete a bc that someone else is dependent on
         proposeBlockchainAction(provClient, bc1.rid.data, BlockchainAction.remove)
-        assertEquals(3, listBlockchains(false).size)
+        assertEquals(3, listBlockchainRids(false).size)
     }
 
     /**
@@ -310,11 +312,11 @@ class Directory1IT : ManagedModeTest() {
         val listOfBcs = provClient.getBlockchains(false)
         val bridToPause = listOfBcs.find { it.name == "1" }!!.rid.data
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.pause)
-        assertEquals(2, listBlockchains(true).size)
-        assertEquals(1, listBlockchains(false).size)
+        assertEquals(2, listBlockchainRids(true).size)
+        assertEquals(1, listBlockchainRids(false).size)
 
         proposeBlockchainAction(provClient, bridToPause, BlockchainAction.resume)
-        assertEquals(2, listBlockchains(false).size)
+        assertEquals(2, listBlockchainRids(false).size)
 
         // build after unpause
         buildBlock(100, 3)
@@ -333,7 +335,9 @@ class Directory1IT : ManagedModeTest() {
 
         // delete new bc
         proposeBlockchainAction(provClient, bc1, BlockchainAction.remove)
-        assertEquals(1, listBlockchains(true).size)
+        val blockchains = listBlockchains(true)
+        assertEquals(2, blockchains.size)
+        assertEquals(1, blockchains.filter { it.state == BlockchainState.REMOVED }.size)
     }
 
     @Test
@@ -364,7 +368,7 @@ class Directory1IT : ManagedModeTest() {
 
     @Test
     fun testListBlockchains() {
-        assertEquals(1, listBlockchains(false).size)
+        assertEquals(1, listBlockchainRids(false).size)
     }
 
     @Test
@@ -417,8 +421,12 @@ class Directory1IT : ManagedModeTest() {
 
     private fun pubKeyOf(clientConfig: PostchainClientConfig) = clientConfig.signers.first().pubKey.data
 
-    private fun listBlockchains(includeInactive: Boolean): List<ByteArray> {
-        return provClient.getBlockchains(includeInactive).map { it.rid.data }
+    private fun listBlockchainRids(includeInactive: Boolean): List<ByteArray> {
+        return listBlockchains(includeInactive).map { it.rid.data }
+    }
+
+    private fun listBlockchains(includeInactive: Boolean): List<Blockchain> {
+        return provClient.getBlockchains(includeInactive)
     }
 
     private fun listBlockchainDependencies(blockchainRID: WrappedByteArray, height: Long): List<Pair<ByteArray, String>> {

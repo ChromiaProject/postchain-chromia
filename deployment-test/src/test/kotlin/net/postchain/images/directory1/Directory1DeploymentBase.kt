@@ -291,7 +291,7 @@ abstract class Directory1DeploymentBase {
         assertDappQuery(brid, query, txArg)
     }
 
-    private fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String,) {
+    private fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String) {
         awaitUntilAsserted {
             nodes().forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
@@ -468,6 +468,26 @@ abstract class Directory1DeploymentBase {
         awaitUntilAsserted {
             assertEquals(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!, 200)
         }
+    }
+
+    @Test
+    @Order(18)
+    fun `Test remove blockchains`() {
+        // Verify state is RUNNING
+        val dappBrid = dapps["test_dapp"]!!
+        val dapp2Brid = dapps["test_dapp2"]!!
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+        verifyBlockchainState(node1, dapp2Brid, BlockchainState.RUNNING)
+
+        // REMOVE chain
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.remove, "")
+                .proposeBlockchainActionOperation(node1.providerPubkey, dapp2Brid, BlockchainAction.remove, "")
+                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for dapps")
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
+
+        verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
+        verifyBlockchainState(node1, dapp2Brid, BlockchainState.REMOVED)
     }
 
     private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
