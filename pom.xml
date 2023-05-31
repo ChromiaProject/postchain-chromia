@@ -27,7 +27,7 @@
     <properties>
         <postchain.version>3.11.0-SNAPSHOT</postchain.version>
         <postchain.client.version>3.10.0</postchain.client.version>
-        <directory.chain.version>1.4.0</directory.chain.version>
+        <directory.chain.version>1.4.2</directory.chain.version>
         <rellr.version>0.13.0</rellr.version>
         <kotlin.version>1.8.10</kotlin.version>
 
