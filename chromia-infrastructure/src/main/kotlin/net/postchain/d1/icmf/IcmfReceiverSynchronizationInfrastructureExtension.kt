@@ -71,7 +71,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                         val globalTopicIcmfReceiver = GlobalTopicIcmfReceiver(
                                 config.global.topics.distinct().associateWith { listOf() },
                                 cryptoSystem,
-                                engine.storage,
+                                engine.blockBuilderStorage,
                                 queryProvider,
                                 configuration.chainID,
                                 configuration.blockchainRid,
@@ -89,7 +89,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                 config.global.blockchains.groupBy { it.topic }
                                         .mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
                                 cryptoSystem,
-                                engine.storage,
+                                engine.blockBuilderStorage,
                                 queryProvider,
                                 configuration.chainID,
                                 configuration.blockchainRid,

@@ -60,7 +60,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
 
         // Assert configuration failed ICMF message was sent
         for (node in getChainNodes(systemAnchoringChain)) {
-            withReadConnection(node.postchainContext.storage, systemAnchoringChain) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, systemAnchoringChain) {
                 val dbOps = IcmfDatabaseOperationsImpl()
 
                 val configFailedMessages = dbOps.getSentMessagesAfterHeight(it, "G_configuration_failed", -1)

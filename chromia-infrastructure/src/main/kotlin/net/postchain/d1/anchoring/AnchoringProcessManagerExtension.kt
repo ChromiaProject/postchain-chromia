@@ -29,7 +29,7 @@ open class AnchoringProcessManagerExtension(
         private val postchainContext: PostchainContext
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
-    private val localDispatcher = AnchoringDispatcher(postchainContext.storage)
+    private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage)
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
 
     /**
