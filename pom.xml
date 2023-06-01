@@ -6,7 +6,7 @@
 
     <artifactId>postchain-chromia</artifactId>
     <groupId>net.postchain</groupId>
-    <version>3.11.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <name>Chromia</name>
     <description>Chromia Mainnet infrastructure</description>
     <url>https://docs.chromia.com/</url>
@@ -25,12 +25,12 @@
     <packaging>pom</packaging>
 
     <properties>
+        <revision>dev</revision>
         <postchain.version>3.11.0-SNAPSHOT</postchain.version>
         <postchain.client.version>3.10.0</postchain.client.version>
         <directory.chain.version>1.4.3</directory.chain.version>
-        <rellr.version>0.13.0</rellr.version>
+        <rell.version>0.13.0</rell.version>
         <kotlin.version>1.8.10</kotlin.version>
-
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>1684864722</project.build.outputTimestamp>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
@@ -41,7 +41,6 @@
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
 
         <!--suppress UnresolvedMavenProperty -->
         <directory.source>${maven.multiModuleProjectDirectory}/directory-chain/target/directory1/src</directory.source>
@@ -113,7 +112,7 @@
             <dependency>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-gtx</artifactId>
-                <version>${rellr.version}</version>
+                <version>${rell.version}</version>
             </dependency>
 
             <dependency>
@@ -246,6 +245,31 @@
                     </configuration>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>1.1.0</version>
+                    <configuration>
+                        <updatePomFile>true</updatePomFile>
+                        <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>flatten</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>flatten</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>flatten.clean</id>
+                            <phase>clean</phase>
+                            <goals>
+                                <goal>clean</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.plugin.version}</version>
@@ -305,18 +329,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>com.amashchenko.maven.plugin</groupId>
-                <artifactId>gitflow-maven-plugin</artifactId>
-                <version>${gitflow.maven.plugin.version}</version>
-                <configuration>
-                    <gitFlowConfig>
-                        <developmentBranch>dev</developmentBranch>
-                        <versionTagPrefix>ver-</versionTagPrefix>
-                    </gitFlowConfig>
-                </configuration>
             </plugin>
         </plugins>
     </build>
