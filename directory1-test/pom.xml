@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>net.postchain</groupId>
-        <artifactId>postchain-chromia
-        </artifactId><version>3.11.0-SNAPSHOT</version>
+        <artifactId>postchain-chromia</artifactId>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 

@@ -15,8 +15,15 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
       postgres:14.7-alpine3.17
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
+  # Necessary to be able to launch PostgreSQL in Docker manually. PostgreSQL is
+  # launched in Docker manually (and not as a service, here) because then we can
+  # use a tmpfs (in-memory disk) for the data, making it faster.
+  services:
+    - name: docker:23.0.4-dind
+      alias: docker
+      command: [ "--tls=false" , "--experimental" ]
   artifacts:
-    when: on_failure
+    when: always
     paths:
       - "**/*.log"
     reports:
@@ -31,37 +38,51 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
   git config user.name "build-user core-dev"
   git config user.email build_user@chromaway.com
 
+.release:
+  stage: release
+  when: manual
+  before_script:
+    - set -eu
+    - *git_setup
+    - git checkout $CI_COMMIT_REF_NAME
+    - CURRENT_VERSION=$(git describe --tags --abbrev=0)
+    - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
 stages:
   - build
-  - deploy-snapshot
-  - deploy-release
-  - deploy-patch
+  - nightly-tests
+  - deploy
   - dependency-check
   - release
 
+# Triggered by that something was merged into or pushed onto main
 deploy-snapshot:
   extends: .setup
-  stage: deploy-snapshot
-  only:
-    - dev
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro -Djib.serialize=true -Dlatest.tag=latest-snapshot deploy
+    - CURRENT_VERSION=$(git describe --tags --abbrev=0)
+    - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+    - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,nightly,docker-push,distro
+      -Drevision=$SNAPSHOT_VERSION
+      deploy
 
-deploy-release:
+# Triggered by that a semver tag was pushed
+deploy:
   extends: .setup
-  stage: deploy-release
-  only:
-    - master
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest deploy
-
-deploy-patch:
-  extends: .setup
-  stage: deploy-patch
-  only:
-    - /^support\/.*$/
-  script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,distro,nightly -Djib.serialize=true -Dlatest.tag=latest-patch deploy
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,nightly,docker-push,distro
+      -Drevision=$CI_COMMIT_TAG
+      deploy
 
 build:
   extends: .setup
@@ -70,32 +91,54 @@ build:
   except:
     refs:
       - dev
-      - master
       - tags
-      - /^support\/.*$/
-    variables:
-      - $RUN_DEPENDENCY_CHECK == "true"
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,docker
+      verify
 
 nightly-tests:
   extends: .setup
-  stage: build
-  except:
-    - dev
-    - master
-    - tags
-    - /^support\/.*$/
+  stage: nightly-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
-  when: manual
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,nightly
+      verify
+
+release-minor:
+  extends: .release
+  script:
+    - git tag $MAJOR.$((MINOR + 1)).0
+    - git push --tags
+  only:
+    - dev
+
+release-patch:
+  extends: .release
+  script:
+    - git tag $MAJOR.$MINOR.$((PATCH + 1))
+    - git push --tags
+  only:
+    - dev
+    - /^support\/.*$/
 
 dependency-check:
   extends: .setup
   stage: dependency-check
   interruptible: true
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles dependency-check verify -DskipTests
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,dependency-check
+      verify
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
@@ -111,40 +154,11 @@ container-scanning:
     - grype docker:registry.gitlab.com/chromaway/postchain-chromia/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
-      - IMAGE: [
-                 chromaway/chromia-subnode,
-                 chromaway/chromia-server 
-                 ]
+      - IMAGE: [ chromaway/chromia-subnode, chromaway/chromia-server ]
         VERSION: [ 3.10.0, 3.11.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
-
-release:
-  stage: release
-  variables:
-    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
-    GIT_STRATEGY: clone
-    GIT_DEPTH: 0
-  script:
-    - set -eu
-    - *git_setup
-    # Checkout development branch
-    - git checkout $CI_COMMIT_REF_NAME
-    # Bump rell and postchain versions for release
-    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${POSTCHAIN_VERSION:-$VERSION}
-    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$RELL_VERSION
-    - git commit -am "Updating dependencies before release"
-    # Perform release steps
-    - mvn -B gitflow:release -DskipTestProject=true -DreleaseVersion=$VERSION -DdevelopmentVersion=$NEXT_VERSION
-    # Bump rell and postchain versions for development
-    - mvn versions:set-property -Dproperty=postchain.version -DnewVersion=${NEXT_POSTCHAIN_VERSION:-$NEXT_VERSION}
-    - mvn versions:set-property -Dproperty=rellr.version -DnewVersion=$NEXT_RELL_VERSION
-    - git commit -am "Updating dependencies after release"
-    - git push origin HEAD
-  only:
-    - dev
-  when: manual
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
@@ -154,24 +168,14 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
-  CHR_DB_URL: jdbc:postgresql://docker/postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
-  # Instruct Testcontainers to use the daemon of DinD.
   DOCKER_HOST: tcp://docker:2375
-  # Instruct Docker not to start over TLS.
   DOCKER_TLS_CERTDIR: ""
-  # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
   DOCKER_CLI_EXPERIMENTAL: enabled
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
-
-services:
-  - name: docker:23.0.4-dind
-    alias: docker
-    # explicitly disable tls to avoid docker startup interruption
-    command: [ "--tls=false" , "--experimental" ]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
