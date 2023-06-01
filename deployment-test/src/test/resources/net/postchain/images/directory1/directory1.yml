@@ -4,6 +4,7 @@ blockchains:
     moduleArgs:
       common:
         enable_pcu: true
+        allow_blockchain_dependencies: false
       common.init:
         initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
         genesis_node:
