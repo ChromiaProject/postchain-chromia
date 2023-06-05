@@ -28,7 +28,7 @@
         <revision>dev</revision>
         <postchain.version>3.11.0-SNAPSHOT</postchain.version>
         <postchain.client.version>3.10.0</postchain.client.version>
-        <directory.chain.version>1.4.3</directory.chain.version>
+        <directory.chain.version>1.5.1</directory.chain.version>
         <rell.version>0.13.0</rell.version>
         <kotlin.version>1.8.10</kotlin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
