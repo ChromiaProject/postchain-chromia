@@ -40,7 +40,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.1.0</image> <!--No hash here until https://github.com/GoogleContainerTools/jib/pull/3974 -->
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.1.0@sha256:a0a3c939dd3a04f0df006ae2bdac984ce57e9a78a26736efd6ea7f0ff535b30d</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
