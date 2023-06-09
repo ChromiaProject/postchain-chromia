@@ -18,19 +18,11 @@ Configuration:
 
     Logger:
 
+    - name: net.postchain.api.rest.controller
+      level: warn
+      additivity: false
+
     - name: net.postchain
-      level: info
-      additivity: false
-      AppenderRef:
-      - ref: ConsoleAppender
-
-    - name: net.postchain.base.BaseBlockchainProcessManager
-      level: info
-      additivity: false
-      AppenderRef:
-      - ref: ConsoleAppender
-
-    - name: net.postchain.network.x.DefaultXCommunicationManager
       level: info
       additivity: false
       AppenderRef:
