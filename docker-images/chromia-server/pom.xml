@@ -41,7 +41,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-quota:1.1.0@sha256:c273df70343f66855a6cf4bd37fabf56adb5e89994d2d53f2bc47b34f033b5be</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-quota:1.1.2@sha256:7bf5238d957d360cced7de89029d45ebb0056bcc24deb15639555c1582732d6e</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
@@ -53,6 +53,8 @@
                             <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>
                             <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log4j2.yml</LOG4J_CONFIGURATION_FILE>
                         </environment>
+                        <creationTime>${git.commit.time}</creationTime>
+                        <filesModificationTime>${git.commit.time}</filesModificationTime>
                     </container>
                 </configuration>
             </plugin>
