@@ -250,7 +250,7 @@ abstract class Directory1DeploymentBase {
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
-            assertThat(runningSubnodes.size).isEqualTo(3 * numberOfMasterNodes)
+            assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
         }
     }
 
