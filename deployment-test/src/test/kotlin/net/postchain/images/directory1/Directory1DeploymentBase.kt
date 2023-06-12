@@ -64,9 +64,10 @@ abstract class Directory1DeploymentBase {
         val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
         val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
 
-        private const val foobarContainer = "foobar"
+        private const val fooContainer = "fooContainer"
+        private const val barContainer = "barContainer"
         private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
-        private val foobarResourceLimits = ContainerResourceLimits(
+        private val fooResourceLimits = ContainerResourceLimits(
                 Cpu(resourceLimitsValues["cpu"] ?: -1),
                 Ram(resourceLimitsValues["ram"] ?: -1),
                 Storage(resourceLimitsValues["storage"] ?: 32768),
@@ -109,7 +110,7 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(3)
-    fun `Add new container`() {
+    fun `Add new containers`() {
         with(node1.c0) {
             // Asserting that there is only one container (system) before test
             awaitQueryResult {
@@ -118,18 +119,18 @@ abstract class Directory1DeploymentBase {
 
             transactionBuilder()
                     .createContainerWithUnitsOperation(
-                            node1.providerPubkey,
-                            foobarContainer,
-                            systemCluster,
-                            1,
-                            listOf(node1.provider.pubKey.data),
-                            1
+                            node1.providerPubkey, fooContainer, systemCluster, 1,
+                            listOf(node1.provider.pubKey.data), 1
                     )
-                    .postTransactionUntilConfirmed("$foobarContainer container")
+                    .createContainerWithUnitsOperation(
+                            node1.providerPubkey, barContainer, systemCluster, 1,
+                            listOf(node1.provider.pubKey.data), 1
+                    )
+                    .postTransactionUntilConfirmed("$fooContainer and $barContainer containers created")
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, foobarContainer), containers)
+                assertEquals(setOf(systemContainer, fooContainer, barContainer), containers)
             }
         }
     }
@@ -154,17 +155,14 @@ abstract class Directory1DeploymentBase {
         // Changing resource limits
         node1.c0.transactionBuilder().proposeContainerLimitsOperation(
                 node1.providerPubkey,
-                foobarContainer,
-                mapOf(
-                        container_units to 2,
-                        max_blockchains to 10
-                ),
+                fooContainer,
+                mapOf(container_units to 2, max_blockchains to 10),
                 ""
-        ).postTransactionUntilConfirmed("container limits")
+        ).postTransactionUntilConfirmed("$fooContainer container limits proposed")
 
         // Asserting resource limits changed
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
-        assertEquals(foobarResourceLimits, newActualLimits)
+        assertEquals(fooResourceLimits, newActualLimits)
     }
 
     @Test
@@ -236,8 +234,8 @@ abstract class Directory1DeploymentBase {
             assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        deployDapp("test_dapp", systemContainer, null)
-        deployDapp("test_dapp2", foobarContainer, dapps["test_dapp"]!!.data)
+        deployDapp("test_dapp", fooContainer, null)
+        deployDapp("test_dapp2", barContainer, dapps["test_dapp"]!!.data)
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
@@ -247,28 +245,28 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(8)
-    fun `Subnode container has been launched`() {
+    fun `Subnode containers have been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
             val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
             val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
-            assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
+            assertThat(runningSubnodes.size).isEqualTo(3 * numberOfMasterNodes)
         }
     }
 
     @Test
     @Order(9)
-    fun `Subnode container has resource limits`() {
-        testLogger.info("Asserting container resource limits")
+    fun `fooContainer has resource limits`() {
+        testLogger.info("Asserting $fooContainer resource limits")
 
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
-            if (it.names()?.get(0)?.contains(foobarContainer) == true) {
+            if (it.names()?.get(0)?.contains(fooContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                assertEquals(foobarResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                assertEquals(foobarResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
-                assertEquals(foobarResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
-                assertEquals(foobarResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
+                assertEquals(fooResourceLimits.ramBytes(), res.hostConfig()?.memory())
+                assertEquals(fooResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
+                assertEquals(fooResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
+                assertEquals(fooResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
             }
         }
     }
@@ -399,7 +397,7 @@ abstract class Directory1DeploymentBase {
     }
 
     private fun queryContainerResourceLimits(): Array<ResourceLimit> {
-        return node1.c0.nmGetContainerLimits(foobarContainer)
+        return node1.c0.nmGetContainerLimits(fooContainer)
                 .mapNotNull {
                     ResourceLimitFactory.fromPair(it.toPair())
                 }.toTypedArray()
