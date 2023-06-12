@@ -53,6 +53,8 @@
                             <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>
                             <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log4j2.yml</LOG4J_CONFIGURATION_FILE>
                         </environment>
+                        <creationTime>${git.commit.time}</creationTime>
+                        <filesModificationTime>${git.commit.time}</filesModificationTime>
                     </container>
                 </configuration>
             </plugin>
