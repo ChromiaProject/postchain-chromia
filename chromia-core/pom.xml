@@ -27,6 +27,10 @@
             <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain.client</groupId>
+            <artifactId>postchain-crypto</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
         </dependency>

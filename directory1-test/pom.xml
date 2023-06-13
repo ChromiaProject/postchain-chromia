@@ -24,6 +24,10 @@
 
         <dependency>
             <groupId>net.postchain.client</groupId>
+            <artifactId>postchain-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain.client</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
         <dependency>
