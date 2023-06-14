@@ -17,7 +17,6 @@ import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
@@ -225,7 +224,7 @@ open class ManagedModeBase {
 
         providers.forEach { provider ->
             val proposals = awaitQueryResult {
-                node1.c0.getRelevantProposals(provider.pubKey.data, RowId(0))
+                node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
             } ?: return
 
             proposals.forEach { proposal ->
