@@ -27,7 +27,7 @@ import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainDependencies
 import net.postchain.chain0.proposal.ProposalType
 import net.postchain.chain0.proposal.getProposal
-import net.postchain.chain0.proposal.getProposalsSince
+import net.postchain.chain0.proposal.getProposalsRange
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
@@ -405,7 +405,7 @@ class Directory1IT : ManagedModeTest() {
 
     //    Help function, retrieving the rowid of the proposal. NB: We assume that there exist only _one_ proposal at a time to vote on.
     private fun assertProposalTypeAndGetRowid(expectedType: ProposalType): RowId {
-        val proposals = provClient.getProposalsSince(RowId(0))
+        val proposals = provClient.getProposalsRange(0, Long.MAX_VALUE, true)
         val type = (proposals[0].proposalType.name)
         assertEquals(expectedType.toString(), type, "Wrong proposal type")
         return (proposals[0].rowid)
