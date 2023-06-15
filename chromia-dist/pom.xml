@@ -23,6 +23,10 @@
             <artifactId>postchain-server-cli</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell-gtx</artifactId>
         </dependency>
