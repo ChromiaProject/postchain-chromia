@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
@@ -41,7 +42,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                                     private val clientProvider: ChromiaClientProvider,
                                     private val clusterManagement: ClusterManagement,
                                     private val blockchainConfigProvider: BlockchainConfigProvider,
-                                    _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
+                                    _lastMessageHeights: List<Pair<BlockchainRid, Long>>
+) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 32 * 1024 * 1024 // 32 MiB
@@ -60,7 +62,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
 
-        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("anchored-pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
+        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("anchored-pipe-worker-cluster-$clusterName-topic-${route.topic}") + MDCContext()) {
             while (isActive) {
                 try {
                     logger.info("Fetching messages")

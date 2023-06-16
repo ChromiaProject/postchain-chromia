@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
@@ -20,7 +21,7 @@ import kotlin.time.Duration.Companion.minutes
 class AnchoringIcmfReceiver(
         private val topics: List<String>,
         private val clusterManagement: ClusterManagement,
-        private val queryProvider: ChromiaQueryProvider,
+        private val queryProvider: ChromiaQueryProvider
 ) : IcmfReceiver<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
@@ -39,7 +40,7 @@ class AnchoringIcmfReceiver(
             createClusterAnchoringPipes(allClusters)
         }
 
-        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
+        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater") + MDCContext()) {
             while (isActive) {
                 delay(pollInterval)
                 try {
