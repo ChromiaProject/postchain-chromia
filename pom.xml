@@ -33,14 +33,14 @@
         <kotlin.version>1.8.21</kotlin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>10</project.build.outputTimestamp>
-        <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
+        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
         <maven.surefire.plugin.version>3.0.0-M7</maven.surefire.plugin.version>
         <maven.failsafe.plugin.version>3.0.0-M7</maven.failsafe.plugin.version>
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
 
         <!--suppress UnresolvedMavenProperty -->
         <directory.source>${maven.multiModuleProjectDirectory}/directory-chain/target/directory1/src</directory.source>
@@ -203,10 +203,6 @@
                             </goals>
                         </execution>
                     </executions>
-                    <configuration>
-                        <source>11</source>
-                        <target>11</target>
-                    </configuration>
                 </plugin>
 
                 <plugin>
