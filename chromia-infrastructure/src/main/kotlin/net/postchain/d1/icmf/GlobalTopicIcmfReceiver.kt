@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
@@ -71,7 +72,7 @@ class GlobalTopicIcmfReceiver(
             }
         }
 
-        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
+        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater") + MDCContext()) {
             while (isActive) {
                 delay(pollInterval)
                 try {
