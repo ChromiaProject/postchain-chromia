@@ -20,18 +20,31 @@
                   <groupId>org.apache.maven.plugins</groupId>
                   <artifactId>maven-scm-plugin</artifactId>
                   <version>1.11.2</version>
+                  <configuration>
+                      <connectionUrl>scm:git:https://gitlab.com/chromaway/core/directory-chain.git</connectionUrl>
+                      <scmVersion>${directory.chain.version}</scmVersion>
+                      <scmVersionType>tag</scmVersionType>
+                  </configuration>
                   <executions>
                       <execution>
-                          <id>d1-resources</id>
+                          <id>d1-resources-checkout</id>
                           <phase>generate-resources</phase>
                           <goals>
                               <goal>checkout</goal>
                           </goals>
                           <configuration>
-                              <connectionUrl>scm:git:https://gitlab.com/chromaway/core/directory-chain.git</connectionUrl>
                               <checkoutDirectory>${project.build.directory}/directory1</checkoutDirectory>
-                              <scmVersion>${directory.chain.version}</scmVersion>
-                              <scmVersionType>tag</scmVersionType>
+                              <skipCheckoutIfExists>true</skipCheckoutIfExists>
+                          </configuration>
+                      </execution>
+                      <execution>
+                          <id>d1-resources-update</id>
+                          <phase>generate-resources</phase>
+                          <goals>
+                              <goal>update</goal>
+                          </goals>
+                          <configuration>
+                              <workingDirectory>${project.build.directory}/directory1</workingDirectory>
                           </configuration>
                       </execution>
                   </executions>
