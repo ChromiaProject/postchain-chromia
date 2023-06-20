@@ -21,7 +21,7 @@
     <fileSets>
         <fileSet>
             <directory>${project.build.scriptSourceDirectory}</directory>
-            <outputDirectory>./</outputDirectory>
+            <outputDirectory>./bin</outputDirectory>
             <includes>
                 <include>*.sh</include>
             </includes>
@@ -30,7 +30,7 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/config</directory>
-            <outputDirectory>./</outputDirectory>
+            <outputDirectory>./log</outputDirectory>
             <includes>
                 <include>log4j2.yml</include>
             </includes>

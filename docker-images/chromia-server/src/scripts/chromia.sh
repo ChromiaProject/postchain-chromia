@@ -2,7 +2,7 @@
 set -eu
 D=$(dirname "${BASH_SOURCE[0]}")
 
-export LOG4J_CONFIGURATION_FILE=${LOG4J_CONFIGURATION_FILE:=$D/log4j2.yml}
+export LOG4J_CONFIGURATION_FILE=${LOG4J_CONFIGURATION_FILE:=$D/log/log4j2.yml}
 
 JVM_FLAGS="-XX:+CrashOnOutOfMemoryError"
 
