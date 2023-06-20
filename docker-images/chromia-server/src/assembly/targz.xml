@@ -30,7 +30,7 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/config</directory>
-            <outputDirectory>./log</outputDirectory>
+            <outputDirectory>./config</outputDirectory>
             <includes>
                 <include>log4j2.yml</include>
             </includes>
