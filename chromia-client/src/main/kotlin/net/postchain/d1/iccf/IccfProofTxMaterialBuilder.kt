@@ -37,7 +37,6 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
     ): IccfProofTxMaterial {
         val sourceClient = chromiaClientProvider.blockchain(sourceBlockchainRid)
         val txProof = sourceClient.confirmationProof(txToProveRID)
-                ?: throw UserMistake("Failed to get confirmation proof")
         val decodedProof = GtvDecoder.decodeGtv(txProof)
         val proofHash = decodedProof["hash"]?.asByteArray()
 
@@ -120,7 +119,6 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         val anchoringTx = anchoringChainClient.getAnchoringTransactionForBlockRid(sourceBlockchainRid, sourceBlockRid)
                 ?: throw UserMistake("Block is not present in cluster anchoring chain")
         val anchoringProof = anchoringChainClient.confirmationProof(TxRid(anchoringTx.txRid.toHex()))
-                ?: throw UserMistake("Failed to get confirmation proof for anchoring chain")
 
         txBuilder.addOperation(
                 ICCF_OP_NAME,
