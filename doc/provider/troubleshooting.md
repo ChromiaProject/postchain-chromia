@@ -11,11 +11,3 @@ Suppose chain0 got stuck at `height = 1000` (can't build block 1000), and a new 
 
 2. Restart all nodes of `system` cluster.
 
-3. Once the network is up, add configuration `C` to Directory1 by means of `management-console`:
-```shell
-pmc blockchain update -bc ./directory1/manager.xml --blockchain-rid "$BRID0" -f -h 1000
-```
-
-
-
-
