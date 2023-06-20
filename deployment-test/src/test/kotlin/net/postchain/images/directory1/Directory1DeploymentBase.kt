@@ -499,8 +499,6 @@ abstract class Directory1DeploymentBase {
 
         val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
 
-        node3Db.awaitNewBlock()
-
         val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
         dapps[dappName] = blockchainRid
         testLogger.info { "Proposing a blockchain ${blockchainRid.toHex()} with config" }
@@ -508,10 +506,6 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
                 .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
-
-        if (containerName == systemContainer) {
-            voteOnAllProposals(listOf(node2.provider, node3.provider))
-        }
 
         // Asserting that node1, node2, node3 are signers of newly added blockchain
         assertChainSigners(blockchainRid, *nodes())
