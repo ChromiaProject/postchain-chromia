@@ -70,15 +70,6 @@
 
             <dependency>
                 <groupId>net.postchain</groupId>
-                <artifactId>pmc-common</artifactId>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>pmc-common</artifactId>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
                 <artifactId>chromia-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
