@@ -15,7 +15,10 @@ import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
 import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
+import net.postchain.chain0.proposal_blockchain.findBlockchainRid
+import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.containers.bpm.docker.DockerClientFactory
@@ -42,6 +45,7 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -243,6 +247,18 @@ open class ManagedModeBase {
             assertEquals(expected, actual)
         }
     }
+
+    protected fun assertChainSigners(txRid: TxRid, vararg nodes: PostchainContainer): BlockchainRid =
+            awaitQueryResult {
+                val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
+                assertNotNull(brid)
+                val currentHeight = node1.client(brid!!).currentBlockHeight()
+                val actual = node1.c0.cmGetPeerInfo(brid.data, currentHeight).map { PubKey(it) }.toSet()
+                val expected = nodes.map { it.pubkey }.toSet()
+                assertEquals(expected, actual)
+                brid
+            }!!
+
 
     protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
         val res = mutableSetOf<Int>()
