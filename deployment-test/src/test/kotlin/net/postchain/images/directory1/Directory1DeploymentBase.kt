@@ -7,7 +7,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
@@ -499,16 +498,14 @@ abstract class Directory1DeploymentBase {
 
         val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
 
-        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, cryptoSystem)
-        dapps[dappName] = blockchainRid
-        testLogger.info { "Proposing a blockchain ${blockchainRid.toHex()} with config" }
-
-        node1.c0.transactionBuilder()
+        val txRid = node1.c0.transactionBuilder()
                 .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
-                .postTransactionUntilConfirmed("Propose dapp $blockchainRid")
+                .postTransactionUntilConfirmed("Propose dapp $dappName")
+                .txRid
 
         // Asserting that node1, node2, node3 are signers of newly added blockchain
-        assertChainSigners(blockchainRid, *nodes())
+        dapps[dappName] = assertChainSigners(txRid, *nodes())
+        testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
 
     private fun updateDapp(dappName: String, maxBlockTransactions: Int, faulty: Boolean, iccfReceiver: ByteArray) {
