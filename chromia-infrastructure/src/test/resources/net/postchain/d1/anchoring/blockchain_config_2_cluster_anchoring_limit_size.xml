@@ -70,11 +70,11 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="anchoring_chain_cluster/module.rell">
                                 <param key="anchoring_chain_cluster" type="string"/>
                             </entry>
-                            <entry key="messaging/icmf.rell">
+                            <entry key="messaging/icmf/module.rell">
                                 <param key="messaging.icmf" type="string"/>
                             </entry>
-                            <entry key="messaging/icmf_constants.rell">
-                                <param key="messaging.icmf_constants" type="string"/>
+                            <entry key="messaging/icmf/constants.rell">
+                                <param key="messaging.icmf.constants" type="string"/>
                             </entry>
                             <entry key="messaging/configuration_update_message.rell">
                                 <param key="messaging.configuration_update_message" type="string"/>

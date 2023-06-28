@@ -12,8 +12,8 @@ fun getSystemAnchoringChainConfig(): Gtv {
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
     val systemAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_system/module.rell").readText()
     val selfReportConfigurationFailed = File(RELL_SOURCE_PATH, "anchoring_chain_system/self_report_configuration_failed.rell").readText()
-    val messagingIcmfRellCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText()
-    val messagingIcmfConstantsRellCode = File(RELL_SOURCE_PATH, "messaging/icmf_constants.rell").readText()
+    val messagingIcmfRellCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText()
+    val messagingIcmfConstantsRellCode = File(RELL_SOURCE_PATH, "messaging/icmf/constants.rell").readText()
     val confUpdateMessage = File(RELL_SOURCE_PATH, "messaging/configuration_update_message.rell").readText()
     return GtvMLParser.parseGtvML(
             Any::class::class.java.getResource("/net/postchain/d1/anchoring/blockchain_config_2_system_anchoring.xml")!!.readText(),
@@ -22,7 +22,7 @@ fun getSystemAnchoringChainConfig(): Gtv {
                     "anchoring_chain_system" to GtvFactory.gtv(systemAnchoringRellCode),
                     "self_report_configuration_failed" to GtvFactory.gtv(selfReportConfigurationFailed),
                     "messaging.icmf" to GtvFactory.gtv(messagingIcmfRellCode),
-                    "messaging.icmf_constants" to GtvFactory.gtv(messagingIcmfConstantsRellCode),
+                    "messaging.icmf.constants" to GtvFactory.gtv(messagingIcmfConstantsRellCode),
                     "messaging.configuration_update_message" to GtvFactory.gtv(confUpdateMessage)
             )
     )
@@ -32,8 +32,8 @@ fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
     val clusterAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/module.rell").readText()
     val icmfRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/icmf.rell").readText()
-    val messagingIcmfRellCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText()
-    val messagingIcmfConstantsRellCode = File(RELL_SOURCE_PATH, "messaging/icmf_constants.rell").readText()
+    val messagingIcmfRellCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText()
+    val messagingIcmfConstantsRellCode = File(RELL_SOURCE_PATH, "messaging/icmf/constants.rell").readText()
     val confUpdateMessage = File(RELL_SOURCE_PATH, "messaging/configuration_update_message.rell").readText()
     return GtvMLParser.parseGtvML(
             Any::class::class.java.getResource(blockchainConfigFile)!!.readText(),
@@ -41,7 +41,7 @@ fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
                     "anchoring_chain_common" to GtvFactory.gtv(anchoringRellCode),
                     "anchoring_chain_cluster" to GtvFactory.gtv(clusterAnchoringRellCode + icmfRellCode),
                     "messaging.icmf" to GtvFactory.gtv(messagingIcmfRellCode),
-                    "messaging.icmf_constants" to GtvFactory.gtv(messagingIcmfConstantsRellCode),
+                    "messaging.icmf.constants" to GtvFactory.gtv(messagingIcmfConstantsRellCode),
                     "messaging.configuration_update_message" to GtvFactory.gtv(confUpdateMessage)
             )
     )

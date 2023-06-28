@@ -38,7 +38,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
+        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("L_my-topic", text.to_gtv());
@@ -80,7 +80,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
 
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
+        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("L_my-topic", text.to_gtv());
@@ -106,7 +106,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun `icmf should not add message to header with not allowed topic`() {
         startManagedSystem(3, 0)
 
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
+        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());
@@ -133,7 +133,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun `icmf should not add message to header for normal chain with global topic`() {
         startManagedSystem(3, 0)
 
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf.rell").readText() +
+        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("G_my-topic", text.to_gtv());
@@ -234,6 +234,6 @@ class IcmfSenderIT : ManagedModeTest() {
     }
 
     private fun getIcmfConstantsCode(): Pair<String, Gtv> {
-        return "messaging.icmf_constants" to gtv(File(RELL_SOURCE_PATH, "messaging/icmf_constants.rell").readText())
+        return "messaging.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "messaging/icmf/constants.rell").readText())
     }
 }
