@@ -47,11 +47,11 @@
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="messaging/icmf.rell">
+                            <entry key="messaging/icmf/module.rell">
                                 <param key="messaging.icmf" type="string"/>
                             </entry>
-                            <entry key="messaging/icmf_constants.rell">
-                                <param key="messaging.icmf_constants" type="string"/>
+                            <entry key="messaging/icmf/constants.rell">
+                                <param key="messaging.icmf.constants" type="string"/>
                             </entry>
                         </dict>
                     </entry>
