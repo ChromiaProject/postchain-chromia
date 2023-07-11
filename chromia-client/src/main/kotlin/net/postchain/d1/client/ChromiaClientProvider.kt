@@ -11,7 +11,8 @@ import net.postchain.d1.cluster.ClusterManagement
 /**
  * Provides postchain clients that can be used to communicate with dapps within the chromia network
  *
- * @param failOverConfig fail-over configuration
+ * @param clusterManagement Cluster management api
+ * @param configTemplate Template for create client configurations
  */
 open class ChromiaClientProvider(
         val clusterManagement: ClusterManagement,
