@@ -15,8 +15,9 @@ import net.postchain.d1.cluster.ClusterManagement
  */
 open class ChromiaClientProvider(
         val clusterManagement: ClusterManagement,
-        val configTemplate: PostchainClientConfig = PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl("")),
+        private val configTemplate: PostchainClientConfig = PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl("")),
 ) {
+    val cryptoSystem get() = configTemplate.cryptoSystem
 
     /**
      * Gets the names of all clusters in the network

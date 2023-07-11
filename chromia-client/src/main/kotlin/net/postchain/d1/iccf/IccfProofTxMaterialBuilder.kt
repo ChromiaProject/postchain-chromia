@@ -22,7 +22,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 
 class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClientProvider) {
-    private val cryptoSystem = chromiaClientProvider.configTemplate.cryptoSystem
+    private val cryptoSystem = chromiaClientProvider.cryptoSystem
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val clusterManagement = chromiaClientProvider.clusterManagement
 
