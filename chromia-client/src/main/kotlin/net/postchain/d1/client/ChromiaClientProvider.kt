@@ -1,25 +1,24 @@
 package net.postchain.d1.client
 
-import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.impl.PostchainClientImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
 
 /**
  * Provides postchain clients that can be used to communicate with dapps within the chromia network
  *
- * @param failOverConfig fail-over configuration
+ * @param clusterManagement Cluster management api
+ * @param configTemplate Template for create client configurations
  */
 open class ChromiaClientProvider(
-        val failOverConfig: FailOverConfig,
         val clusterManagement: ClusterManagement,
-        val cryptoSystem: Secp256K1CryptoSystem = Secp256K1CryptoSystem()
+        private val configTemplate: PostchainClientConfig = PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl("")),
 ) {
+    val cryptoSystem get() = configTemplate.cryptoSystem
 
     /**
      * Gets the names of all clusters in the network
@@ -57,12 +56,7 @@ open class ChromiaClientProvider(
     }
 
     private fun client(blockchainRid: BlockchainRid, endpointPool: EndpointPool) = PostchainClientImpl(
-            PostchainClientConfig(
-                    failOverConfig = failOverConfig,
-                    blockchainRid = blockchainRid,
-                    endpointPool = endpointPool,
-                    cryptoSystem = cryptoSystem
-            )
+            configTemplate.copy(blockchainRid, endpointPool)
     )
 
     companion object {
@@ -72,7 +66,7 @@ open class ChromiaClientProvider(
         fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
             val chain0Client: PostchainClient = PostchainClientImpl(config)
             val clusterManagement = ClusterManagementImpl(chain0Client)
-            return ChromiaClientProvider(config.failOverConfig, clusterManagement)
+            return ChromiaClientProvider(clusterManagement, config)
         }
     }
 }
