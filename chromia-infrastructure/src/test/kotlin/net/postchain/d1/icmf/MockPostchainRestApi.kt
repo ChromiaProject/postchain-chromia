@@ -1,6 +1,5 @@
 package net.postchain.d1.icmf
 
-import net.postchain.client.config.FailOverConfig
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.request.EndpointPool
@@ -35,7 +34,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
     private val mockClients = mutableMapOf<BlockchainRid, PostchainClient>()
 
     fun createProvider(clusterManagement: ClusterManagement): ChromiaClientProvider =
-            object : ChromiaClientProvider(FailOverConfig(), clusterManagement) {
+            object : ChromiaClientProvider(clusterManagement) {
                 override fun cluster(clusterName: String): ClusterPostchainClient =
                         ClusterPostchainClient(EndpointPool.singleUrl("http://localhost:$port"))
             }
