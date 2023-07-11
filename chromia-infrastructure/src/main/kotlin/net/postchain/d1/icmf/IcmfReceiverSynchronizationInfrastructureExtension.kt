@@ -139,11 +139,11 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             )
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(
-            PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""),
-                    failOverConfig = FailOverConfig(
-                            attemptsPerEndpoint = 1,
-                            attemptInterval = Duration.ZERO
-                    )), clusterManagement
+            clusterManagement, PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""),
+            failOverConfig = FailOverConfig(
+                    attemptsPerEndpoint = 1,
+                    attemptInterval = Duration.ZERO
+            ))
     )
 
     open fun createQueryProvider(

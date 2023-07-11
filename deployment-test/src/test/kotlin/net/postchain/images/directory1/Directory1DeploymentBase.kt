@@ -25,9 +25,7 @@ import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
-import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TxRid
-import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -380,9 +378,10 @@ abstract class Directory1DeploymentBase {
         val targetDapp = dapps["test_dapp2"]!!
 
         val txToProve = dappTxs[sourceDapp]!!
-        val chromiaClientProvider = ChromiaClientProvider(PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl("")),
+        val chromiaClientProvider = ChromiaClientProvider(
                 ContainerClusterManagement(
-                        ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())))
+                        ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())),
+        )
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(txToProve.gtxBody.rid.toHex()),
                 txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),

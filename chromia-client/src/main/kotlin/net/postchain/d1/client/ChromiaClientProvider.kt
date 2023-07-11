@@ -14,8 +14,8 @@ import net.postchain.d1.cluster.ClusterManagement
  * @param failOverConfig fail-over configuration
  */
 open class ChromiaClientProvider(
-        val configTemplate: PostchainClientConfig,
         val clusterManagement: ClusterManagement,
+        val configTemplate: PostchainClientConfig = PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl("")),
 ) {
 
     /**
@@ -64,7 +64,7 @@ open class ChromiaClientProvider(
         fun fromClientConfig(config: PostchainClientConfig): ChromiaClientProvider {
             val chain0Client: PostchainClient = PostchainClientImpl(config)
             val clusterManagement = ClusterManagementImpl(chain0Client)
-            return ChromiaClientProvider(config, clusterManagement)
+            return ChromiaClientProvider(clusterManagement, config)
         }
     }
 }
