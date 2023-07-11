@@ -6,6 +6,8 @@ import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.client.config.FailOverConfig
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
@@ -137,10 +139,11 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             )
 
     open fun createClientProvider(clusterManagement: ClusterManagement): ChromiaClientProvider = ChromiaClientProvider(
-            failOverConfig = FailOverConfig(
-                    attemptsPerEndpoint = 1,
-                    attemptInterval = Duration.ZERO
-            ), clusterManagement
+            PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""),
+                    failOverConfig = FailOverConfig(
+                            attemptsPerEndpoint = 1,
+                            attemptInterval = Duration.ZERO
+                    )), clusterManagement
     )
 
     open fun createQueryProvider(

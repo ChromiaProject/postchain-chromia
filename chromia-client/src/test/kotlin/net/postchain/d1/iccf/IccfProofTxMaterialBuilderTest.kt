@@ -15,8 +15,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import net.postchain.chain0.anchoring_chain_common.AnchoringTxWithOpIndex
-import net.postchain.client.config.FailOverConfig
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.TxRid
+import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
@@ -53,6 +54,7 @@ private const val JsonContentType = "application/json"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class IccfProofTxMaterialBuilderTest {
+    val configTemplate = PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""))
     private val server = WireMockServer(wireMockConfig().port(7740))
     private val mockServerUrl = "http://localhost:7740"
 
@@ -127,7 +129,7 @@ class IccfProofTxMaterialBuilderTest {
                 JsonContentType, """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
         )))
 
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
+        val chromiaClientProvider = ChromiaClientProvider(configTemplate, clusterManagement)
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.gtxBody.rid.toHex()),
                 clientTxHash,
@@ -175,7 +177,7 @@ class IccfProofTxMaterialBuilderTest {
                 JsonContentType, """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
         )))
 
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
+        val chromiaClientProvider = ChromiaClientProvider(configTemplate, clusterManagement)
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.gtxBody.rid.toHex()),
                 clientTxHash,
@@ -212,7 +214,7 @@ class IccfProofTxMaterialBuilderTest {
                 JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
+        val chromiaClientProvider = ChromiaClientProvider(configTemplate, clusterManagement)
         assertThrows<UserMistake> {
             IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                     TxRid(clientTx.gtxBody.rid.toHex()),
@@ -286,7 +288,7 @@ class IccfProofTxMaterialBuilderTest {
     }
 
     private fun verifyIntraClusterIccf(txProof: ByteArray, proofHashOverride: Hash? = null) {
-        val chromiaClientProvider = ChromiaClientProvider(FailOverConfig(), clusterManagement, cryptoSystem)
+        val chromiaClientProvider = ChromiaClientProvider(configTemplate, clusterManagement)
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.gtxBody.rid.toHex()),
                 clientTxHash,
