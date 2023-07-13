@@ -1,21 +1,20 @@
 package net.postchain.d1.icmf
 
 import assertk.assertThat
+import assertk.assertions.any
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
-import net.postchain.core.Transactor
-import net.postchain.core.TxEContext
+import net.postchain.core.Transaction
 import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.getModules
-import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -23,9 +22,11 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
-import net.postchain.gtx.data.ExtOpData
+import org.awaitility.Duration
+import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
@@ -37,28 +38,14 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
-
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
-                """
-                    operation test_message(text) {
-                        send_message("L_my-topic", text.to_gtv());
-                    }
-                """
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
-                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
-                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+        val dappChain = deployDappChain("L_my-topic")
 
         // Messages in block 0
         val block0Messages = listOf("test0", "test1")
-        val block0Txs = block0Messages.mapIndexed { index, message ->
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, index, GtxOp("test_message", gtv(message)))
+        val block0Txs = block0Messages.map {
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
-
         verifyMessages(dappChain, 0, "L_my-topic", -1, block0Messages, block0Messages)
 
         // No messages in block 1
@@ -66,11 +53,10 @@ class IcmfSenderIT : ManagedModeTest() {
 
         // Messages in block 2
         val block2Messages = listOf("test2", "test3")
-        val block2Txs = block2Messages.mapIndexed { index, message ->
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, block0Messages.size + index, GtxOp("test_message", gtv(message)))
+        val block2Txs = block2Messages.map {
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(it)))
         }
         buildBlock(dappChain, 2, *block2Txs.toTypedArray())
-
         // Expecting previous height to be 0
         verifyMessages(dappChain, 2, "L_my-topic", 0, block2Messages, block0Messages + block2Messages)
     }
@@ -79,50 +65,28 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
-
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
-                """
-                    operation test_message(text) {
-                        send_message("L_my-topic", text.to_gtv());
-                    }
-                """
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
-                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
-                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+        val dappChain = deployDappChain("L_my-topic")
 
         val message = "imtoobig".repeat(2 * 1024 * 1024)
-        val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, 0, GtxOp("test_message", gtv(message)))
+        val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(message)))
         buildBlock(dappChain, 0, tx)
-        val txStatus = getChainNodes(dappChain)[0].getBlockchainInstance(1L).blockchainEngine.getTransactionQueue().getTransactionStatus(tx.getHash())
-        assertThat(txStatus).isEqualTo(TransactionStatus.REJECTED)
+        await.atMost(Duration.ONE_MINUTE).untilAsserted {
+            val txStatuses = getChainNodes(dappChain).map { it.transactionQueue().getTransactionStatus(tx.getRID()) }
+            assertThat(txStatuses).any { it.isEqualTo(TransactionStatus.REJECTED) }
+            val txRejectReasons = getChainNodes(dappChain).mapNotNull { it.transactionQueue().getRejectionReason(tx.getRID().wrap())?.message }
+            assertThat(txRejectReasons.any { it.contains("Message body too big") }).isTrue()
+        }
     }
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header with not allowed topic`() {
         startManagedSystem(3, 0)
-
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
-                """
-                    operation test_message(text) {
-                        send_message("my-topic", text.to_gtv());
-                    }
-                """
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
-                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
-                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+        val dappChain = deployDappChain("my-topic")
 
         val block0Messages = listOf("test0", "test1")
-        val block0Txs = block0Messages.mapIndexed { index, message ->
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, index, GtxOp("test_message", gtv(message)))
+        val block0Txs = block0Messages.map {
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
         verifyMessagesMissing(dappChain, 0)
@@ -132,24 +96,11 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header for normal chain with global topic`() {
         startManagedSystem(3, 0)
-
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
-                """
-                    operation test_message(text) {
-                        send_message("G_my-topic", text.to_gtv());
-                    }
-                """
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
-                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
-
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
-                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+        val dappChain = deployDappChain("G_my-topic")
 
         val block0Messages = listOf("test0", "test1")
-        val block0Txs = block0Messages.mapIndexed { index, message ->
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, index, GtxOp("test_message", gtv(message)))
+        val block0Txs = block0Messages.map {
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
         verifyMessagesMissing(dappChain, 0)
@@ -206,34 +157,33 @@ class IcmfSenderIT : ManagedModeTest() {
         }
     }
 
-    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp): IcmfTestTransaction {
-        val operations = arrayOf(op)
-        return IcmfTestTransaction(
-                id,
-                {
-                    node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
-                            ExtOpData.build(
-                                    op.asOpData(),
-                                    0,
-                                    GtxBody(ChainUtil.ridOf(chainId), operations, arrayOf()),
-                                    operations.map { it.asOpData() }.toTypedArray()
-                            )
-                    )
-                }
-        )
-    }
-
-    class IcmfTestTransaction(id: Int, private val makeTransactor: () -> Transactor, good: Boolean = true, correct: Boolean = true) :
-            TestTransaction(id, good, correct) {
-        override fun apply(ctx: TxEContext): Boolean {
-            val op = makeTransactor()
-            op.checkCorrectness()
-            op.apply(ctx)
-            return true
-        }
+    private fun makeTransaction(node: PostchainTestNode, chainId: Long, op: GtxOp): Transaction {
+        val txData = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem)
+                .addOperation(op.opName, *op.args)
+                .finish().buildGtx().encode()
+        return node.getBlockchainInstance(chainId).blockchainEngine.getConfiguration().getTransactionFactory()
+                .decodeTransaction(txData)
     }
 
     private fun getIcmfConstantsCode(): Pair<String, Gtv> {
         return "messaging.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "messaging/icmf/constants.rell").readText())
+    }
+
+    private fun deployDappChain(icmfTopic: String, signers: Set<Int> = setOf(0, 1, 2)): Long {
+        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
+                """
+                    operation test_message(text) {
+                        send_message("$icmfTopic", text.to_gtv());
+                    }
+                """
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
+                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
+
+        return startNewBlockchain(
+                signers,
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
+                blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
     }
 }
