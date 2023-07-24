@@ -75,7 +75,7 @@ deploy-pqc:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,nightly,docker-push,distro      
       -Drevision=$PQC_VERSION
-      clean deploy -DskipTests
+      clean deploy
 
 # Triggered by that a semver tag was pushed
 deploy:
