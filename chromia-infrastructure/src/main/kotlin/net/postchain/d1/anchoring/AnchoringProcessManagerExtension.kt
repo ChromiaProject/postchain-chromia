@@ -48,6 +48,7 @@ open class AnchoringProcessManagerExtension(
                 it.isSigner = process::isSigner
                 it.clusterManagement = createClusterManagement(cfg)
                 it.blockchainConfigProvider = createBlockchainConfigProvider(cfg, it.clusterManagement)
+                it.strategyFactory = PipesProcessingStrategyFactory.fromGtv(cfg.rawConfig)
 
                 val blockStrategyConfig = cfg.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 val gtxConfig = cfg.rawConfig[KEY_GTX] ?: gtv(mapOf())
