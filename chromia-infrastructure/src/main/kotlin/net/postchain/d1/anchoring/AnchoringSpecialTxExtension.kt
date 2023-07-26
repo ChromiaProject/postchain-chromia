@@ -45,7 +45,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
-    lateinit var strategyFactory: PipesProcessingStrategyFactory
+    lateinit var anchoringConfig: AnchoringBlockchainConfigData
     var maxTxSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
@@ -94,29 +94,31 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
-        val strategy = strategyFactory.create(pipes)
-//        logger.error { "strategy: $strategy, hasNext(): ${strategy.hasNext()}" }
-        val pointers = mutableMapOf<BlockchainRid, Long>()
-        outer@ while (strategy.hasNext()) {
-            val pipe = strategy.nextPipe()
-            val pointer = pointers.merge(
-                    pipe.blockchainRid, getLastAnchoredHeight(bctx, pipe.blockchainRid) + 1) { cur, _ -> cur + 1 }
-//            logger.error { "pointer: $pointer" }
-            val clusterAnchorPacket = pipe.fetchNext(pointer!!)
-//            logger.error { "clusterAnchorPacket: $clusterAnchorPacket" }
-            if (clusterAnchorPacket != null) {
-                val (opData, size) = buildOpData(clusterAnchorPacket)
-//                logger.error { "size: $size, spent: ${((currentSize + size).toDouble() / (maxTxSize - TX_SIZE_MARGIN).toDouble() * 100).toInt()}" }
-                if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
-                    break@outer
+        outer@ for (pipe in pipes) {
+            var opsCount = 0
+            if (pipe.mightHaveNewPackets()) {
+                var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
+                while (pipe.mightHaveNewPackets()) {
+                    currentHeight++ // Try next height
+                    val clusterAnchorPacket = pipe.fetchNext(currentHeight)
+                    if (clusterAnchorPacket != null) {
+                        val (opData, size) = buildOpData(clusterAnchorPacket)
+                        if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
+                            break@outer
+                        }
+                        ops.add(opData)
+                        opsCount++
+                        pipe.markTaken(clusterAnchorPacket.height, bctx)
+                        currentSize += size
+                    } else {
+                        break // Nothing more to find
+                    }
+
+                    if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
+                        break
+                    }
                 }
-                ops.add(opData)
-                pipe.markTaken(clusterAnchorPacket.height, bctx)
-                currentSize += size
-            } else {
-                strategy.markDone(pipe) // Nothing more to find
             }
-//            logger.error { "the end" }
         }
         return ops
     }
