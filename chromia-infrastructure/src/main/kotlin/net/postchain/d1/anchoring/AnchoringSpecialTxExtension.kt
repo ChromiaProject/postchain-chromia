@@ -45,6 +45,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
+    lateinit var anchoringConfig: AnchoringBlockchainConfigData
     var maxTxSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
@@ -89,15 +90,14 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = anchoringReceiver.getRelevantPipes()
-
         var currentSize = 0
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
         outer@ for (pipe in pipes) {
+            var opsCount = 0
             if (pipe.mightHaveNewPackets()) {
-                val blockchainRid = pipe.blockchainRid
-                var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
+                var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
                 while (pipe.mightHaveNewPackets()) {
                     currentHeight++ // Try next height
                     val clusterAnchorPacket = pipe.fetchNext(currentHeight)
@@ -107,10 +107,15 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                             break@outer
                         }
                         ops.add(opData)
+                        opsCount++
                         pipe.markTaken(clusterAnchorPacket.height, bctx)
                         currentSize += size
                     } else {
                         break // Nothing more to find
+                    }
+
+                    if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
+                        break
                     }
                 }
             }

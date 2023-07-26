@@ -48,6 +48,9 @@ open class AnchoringProcessManagerExtension(
                 it.isSigner = process::isSigner
                 it.clusterManagement = createClusterManagement(cfg)
                 it.blockchainConfigProvider = createBlockchainConfigProvider(cfg, it.clusterManagement)
+                it.anchoringConfig = AnchoringBlockchainConfigData.fromGtv(
+                        cfg.rawConfig[KEY_BLOCKCHAIN_CONFIG_ANCHORING] ?: gtv(mapOf())
+                )
 
                 val blockStrategyConfig = cfg.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 val gtxConfig = cfg.rawConfig[KEY_GTX] ?: gtv(mapOf())
