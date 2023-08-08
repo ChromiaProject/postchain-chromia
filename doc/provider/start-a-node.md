@@ -42,7 +42,7 @@ container.docker-image=registry.gitlab.com/chromaway/postchain-chromia/chromaway
 container.host-mount-dir=/var/lib/chromaway/postchain/subnode
 # The host device that the `container.host-mount-dir` is located on. This is used to enforce disk I/O limits.
 # Note that this should only be the name of the device, not the partition.
-# For mac you may use `/dev/vda` to enforce limits
+# For Mac you may use `/dev/vda` to enforce limits
 container.host-mount-device=/dev/sda
 # Hostname of the master host as seen by a subnode. If master is on docker, then the subnode will perceive the host as the internal docker host
 # 172.17.0.1 on linux/Windows. Can be localhost if master node is a native java process
@@ -53,13 +53,16 @@ container.master-port=9880
 container.subnode-host=host.docker.internal
 # Subnodes will spawn and host its own database, use this if you want all subnodes to use another external database
 container.subnode-database-url=jdbc:postgresql://localhost:5432/postchain
+# You can set custom Docker labels on the subnode containers 
+container.label.XXX1=YYY1
+container.label.XXX2=YYY2
 ```
 
 ## Docker
 
 When starting a node using docker you must expose a few ports and add some mount points. Folders containing 
 node-configuration, blockchain configuration and the subnode mount path must be mounted and the docker socket must be a 
-volume. The subnode mount path must have write access and the others can be readonly. Furthermore the messaging port, 
+volume. The subnode mount path must have write access and the others can be readonly. Furthermore, the messaging port, 
 the api port and the subnode port must be exposed. The container will run as the current user/group, and subnode containers 
 will be run as the same user/group. It needs the `docker` group to be able to talk to the docker daemon.
 
@@ -199,7 +202,7 @@ docker run -d --name postchain \
 
 ### Subnodes
 
-Since subnodes are started automatically the log driver and log options has to be added to the node configuration file.
+Since subnodes are started automatically, the log driver and log options has to be added to the node configuration file.
 
 Example:
 
