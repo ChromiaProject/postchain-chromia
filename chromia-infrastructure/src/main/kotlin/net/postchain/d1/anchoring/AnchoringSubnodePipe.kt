@@ -52,6 +52,14 @@ class AnchoringSubnodePipe(
                 )
             }
 
+    override fun hasNext(currentPointer: Long): Boolean =
+            try {
+                client.blockAtHeight(currentPointer) != null
+            } catch (e: Exception) {
+                logger.warn(e) { "Block fetching from sub node failed: $e" }
+                false
+            }
+
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             lastCommitted.getAndUpdate { max(it, currentPointer) }

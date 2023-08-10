@@ -123,6 +123,21 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
         return ops
     }
 
+    fun hasBlocksToAnchor(ctxt: EContext): Boolean {
+        if (!::anchoringReceiver.isInitialized) return false
+        val pipes = anchoringReceiver.getRelevantPipes()
+        for (pipe in pipes) {
+            if (pipe.mightHaveNewPackets()) {
+                val nextHeight: Long = getLastAnchoredHeight(ctxt, pipe.blockchainRid) + 1
+                if (pipe.hasNext(nextHeight)) {
+                    // Should build block
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
 
