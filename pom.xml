@@ -24,7 +24,7 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.11.8</postchain.version>
+        <postchain.version>3.11.9</postchain.version>
         <postchain.client.version>3.11.3</postchain.client.version>
         <directory.chain.version>1.9.1</directory.chain.version>
         <rell.version>0.13.1</rell.version>

@@ -61,6 +61,12 @@ open class AnchoringProcessManagerExtension(
 
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
+
+                (engine.getBlockBuildingStrategy() as? AnchoringBlockBuildingStrategy)?.apply {
+                    txExtension = it
+                    chainId = cfg.chainID
+                    blockBuilderStorage = engine.blockBuilderStorage
+                }
             }
 
             // connect process to local dispatcher
