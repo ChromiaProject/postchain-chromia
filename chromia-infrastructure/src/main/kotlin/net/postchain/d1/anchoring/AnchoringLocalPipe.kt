@@ -40,6 +40,11 @@ class AnchoringLocalPipe(
         }
     }
 
+    override fun hasNext(currentPointer: Long): Boolean =
+            withReadConnection(storage, chainID) { eContext ->
+                DatabaseAccess.of(eContext).getBlockRID(eContext, currentPointer) != null
+            }
+
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             lastCommitted.getAndUpdate { max(it, currentPointer) }
