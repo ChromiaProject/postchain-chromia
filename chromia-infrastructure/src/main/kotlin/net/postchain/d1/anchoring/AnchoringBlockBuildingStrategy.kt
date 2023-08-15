@@ -6,10 +6,12 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.Storage
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockQueries
+import java.time.Clock
 
 class AnchoringBlockBuildingStrategy(configData: BaseBlockBuildingStrategyConfigurationData,
                                      blockQueries: BlockQueries,
-                                     txQueue: TransactionQueue) : BaseBlockBuildingStrategy(configData, blockQueries, txQueue) {
+                                     txQueue: TransactionQueue,
+                                     clock: Clock) : BaseBlockBuildingStrategy(configData, blockQueries, txQueue, clock) {
 
     var chainId: Long = -1
     lateinit var blockBuilderStorage: Storage
