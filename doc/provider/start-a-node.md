@@ -183,9 +183,9 @@ container's files will be located in `/${zfs_pool_name}/${container_name}`.
 
 Logging is done using [Apache Log4j 2](https://logging.apache.org/log4j/2.x/).      
 
-### Native node
+### Native process
 
-The distribution package contains a default log configuration file `chromia-node/config/log4j2.yml` suitable for a native node. 
+The distribution package contains a default log configuration file `chromia-node/config/log4j2.yml` suitable for a native process. 
 It logs both to standard output and to `logs/postchain.log` file. The log file is rotated, compressed. and old files are 
 deleted when the total size exceeds 100 MiB.
 
@@ -194,7 +194,7 @@ how to configure Log4j, and specifically [RollingFileAppender](https://logging.a
 on how to configure log file rotation. A different log configuration file can be used by setting the environment variable 
 `LOG4J_CONFIGURATION_FILE`.
 
-### Node in Docker container
+### Docker container
 
 The `chromia-server` Docker image contain default log configuration file `/opt/chromaway/postchain/log/log4j2.yml` 
 suitable for Docker container. It logs to standard output only, and we recommend letting Docker handle log file 
