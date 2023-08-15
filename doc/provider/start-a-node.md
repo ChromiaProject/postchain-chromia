@@ -186,7 +186,7 @@ Logging is done using [Apache Log4j 2](https://logging.apache.org/log4j/2.x/).
 ### Native process
 
 The distribution package contains a default log configuration file `chromia-node/config/log4j2.yml` suitable for a native process. 
-It logs both to standard output and to `logs/postchain.log` file. The log file is rotated, compressed. and old files are 
+It logs both to standard output and to `logs/postchain.log` file. The log file is rotated, compressed and old files are 
 deleted when the total size exceeds 100 MiB.
 
 See [configuration with YAML](https://logging.apache.org/log4j/2.x/manual/configuration.html#configuration-with-yaml) on 
