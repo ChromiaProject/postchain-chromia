@@ -6,20 +6,21 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Storage
+import net.postchain.network.common.ConnectionManager
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 
-class AnchoringDispatcher(private val storage: Storage) {
+class AnchoringDispatcher(private val storage: Storage, private val connectionManager: ConnectionManager) {
     private val receivers = mutableMapOf<Long, AnchoringReceiver>()
     private val localChains = mutableMapOf<Long, BlockchainRid>()
-    private val subnodeChains = mutableMapOf<Long, Pair<BlockchainRid, String>>()
+    private val subnodeChains = mutableMapOf<Long, BlockchainRid>()
 
     fun connectReceiver(chainID: Long, receiver: AnchoringReceiver) {
         receivers[chainID] = receiver
         localChains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
             receiver.localPipes[currentChainID] = AnchoringLocalPipe(currentChainID, brid, storage)
         }
-        subnodeChains.filterKeys { it != chainID }.forEach { (currentChainID, bridRestapiurl) ->
-            val (brid, restApiUrl) = bridRestapiurl
-            receiver.localPipes[currentChainID] = AnchoringSubnodePipe(currentChainID, brid, restApiUrl)
+        subnodeChains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
+            receiver.localPipes[currentChainID] = AnchoringSubnodePipe(currentChainID, brid, connectionManager as SubConnectionManager)
         }
     }
 
@@ -37,10 +38,10 @@ class AnchoringDispatcher(private val storage: Storage) {
 
     fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
         connectChainInternal(chainID) {
-            AnchoringSubnodePipe(chainID, brid, restApiUrl)
+            AnchoringSubnodePipe(chainID, brid, connectionManager as SubConnectionManager)
         }
 
-        subnodeChains[chainID] = brid to restApiUrl
+        subnodeChains[chainID] = brid
     }
 
     private fun connectChainInternal(chainID: Long, pipeSupplier: () -> AnchoringPipe) {
