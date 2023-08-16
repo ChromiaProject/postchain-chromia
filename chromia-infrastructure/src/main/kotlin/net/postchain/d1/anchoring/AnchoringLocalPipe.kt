@@ -22,6 +22,8 @@ class AnchoringLocalPipe(
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
+    override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
+
     override fun fetchNext(currentPointer: Long): AnchoringPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
@@ -39,11 +41,6 @@ class AnchoringLocalPipe(
             }
         }
     }
-
-    override fun hasNext(currentPointer: Long): Boolean =
-            withReadConnection(storage, chainID) { eContext ->
-                DatabaseAccess.of(eContext).getBlockRID(eContext, currentPointer) != null
-            }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {

@@ -33,7 +33,7 @@ private const val GTX_OP_OVERHEAD = 20
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
+open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -123,20 +123,8 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
         return ops
     }
 
-    fun hasBlocksToAnchor(ctxt: EContext): Boolean {
-        if (!::anchoringReceiver.isInitialized) return false
-        val pipes = anchoringReceiver.getRelevantPipes()
-        for (pipe in pipes) {
-            if (pipe.mightHaveNewPackets()) {
-                val nextHeight: Long = getLastAnchoredHeight(ctxt, pipe.blockchainRid) + 1
-                if (pipe.hasNext(nextHeight)) {
-                    // Should build block
-                    return true
-                }
-            }
-        }
-        return false
-    }
+    open fun numberOfBlocksToAnchor(): Long = if (!::anchoringReceiver.isInitialized) 0 else
+        anchoringReceiver.getRelevantPipes().sumOf { if (it.numberOfNewPackets() > 0) it.numberOfNewPackets() else 0 }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
