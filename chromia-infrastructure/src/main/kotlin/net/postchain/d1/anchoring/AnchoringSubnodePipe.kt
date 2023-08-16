@@ -37,6 +37,8 @@ class AnchoringSubnodePipe(
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
+    override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
+
     override fun fetchNext(currentPointer: Long): AnchoringPacket? =
             try {
                 client.blockAtHeight(currentPointer)
@@ -50,14 +52,6 @@ class AnchoringSubnodePipe(
                         it.header.data,
                         it.witness.data
                 )
-            }
-
-    override fun hasNext(currentPointer: Long): Boolean =
-            try {
-                client.blockAtHeight(currentPointer) != null
-            } catch (e: Exception) {
-                logger.warn(e) { "Block fetching from sub node failed: $e" }
-                false
             }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {

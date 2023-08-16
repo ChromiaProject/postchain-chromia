@@ -10,7 +10,13 @@ const val KEY_BLOCKCHAIN_CONFIG_ANCHORING = "anchoring"
 data class AnchoringBlockchainConfigData(
         @Name("max_blocks_per_chain")
         @DefaultValue(defaultLong = 100)
-        val maxBlocksPerChain: Long
+        val maxBlocksPerChain: Long,
+        @Name("max_anchoring_delay")
+        @DefaultValue(defaultLong = 1000)
+        val maxAnchoringDelay: Long,
+        @Name("max_anchoring_blocks_per_anchor_block")
+        @DefaultValue(defaultLong = 100)
+        val maxAnchoringBlocksPerAnchorBlock: Long,
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): AnchoringBlockchainConfigData = gtv.toObject()

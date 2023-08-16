@@ -64,8 +64,7 @@ open class AnchoringProcessManagerExtension(
 
                 (engine.getBlockBuildingStrategy() as? AnchoringBlockBuildingStrategy)?.apply {
                     txExtension = it
-                    chainId = cfg.chainID
-                    blockBuilderStorage = engine.blockBuilderStorage
+                    anchoringConfig = it.anchoringConfig
                 }
             }
 
