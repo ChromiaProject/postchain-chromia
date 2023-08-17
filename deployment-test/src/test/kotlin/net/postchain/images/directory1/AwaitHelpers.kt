@@ -2,7 +2,7 @@ package net.postchain.images.directory1
 
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 
 internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
     var result: T? = null
@@ -10,7 +10,7 @@ internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, asse
         try {
             result = assertion()
         } catch (ignore: Exception) {
-            assertTrue(false) // Will make sure we try again
+            fail() // Will make sure we try again
         }
     }
     return result

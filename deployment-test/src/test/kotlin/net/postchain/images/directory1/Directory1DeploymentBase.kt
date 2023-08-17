@@ -43,7 +43,6 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -128,7 +127,7 @@ abstract class Directory1DeploymentBase {
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, fooContainer, barContainer), containers)
+                assertThat(containers).isEqualTo(setOf(systemContainer, fooContainer, barContainer))
             }
         }
     }
@@ -142,13 +141,13 @@ abstract class Directory1DeploymentBase {
 
         awaitUntilAsserted {
             val nodeData = node1.c0.getNodeData(node1.pubkey)
-            assertEquals(nodeData.clusterUnits!!, 2)
+            assertThat(nodeData.clusterUnits!!).isEqualTo(2)
         }
 
         // Asserting that resource limits are defaults
         val expectedLimits = ContainerResourceLimits(Cpu(50L), Ram(2048L), Storage(16384L), IoRead(25), IoWrite(20))
         val actualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
-        assertEquals(expectedLimits, actualLimits)
+        assertThat(actualLimits).isEqualTo(expectedLimits)
 
         // Changing resource limits
         node1.c0.transactionBuilder().proposeContainerLimitsOperation(
@@ -160,7 +159,7 @@ abstract class Directory1DeploymentBase {
 
         // Asserting resource limits changed
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
-        assertEquals(fooResourceLimits, newActualLimits)
+        assertThat(newActualLimits).isEqualTo(fooResourceLimits)
     }
 
     @Test
@@ -261,10 +260,10 @@ abstract class Directory1DeploymentBase {
         all.forEach {
             if (it.names()?.get(0)?.contains(fooContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                assertEquals(fooResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                assertEquals(fooResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
-                assertEquals(fooResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
-                assertEquals(fooResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
+                assertThat(res.hostConfig()?.memory()).isEqualTo(fooResourceLimits.ramBytes())
+                assertThat(res.hostConfig()?.cpuQuota()).isEqualTo(fooResourceLimits.cpuQuota())
+                assertThat(res.hostConfig().blkioDeviceReadBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioReadBytes())
+                assertThat(res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioWriteBytes())
             }
         }
     }
@@ -410,7 +409,7 @@ abstract class Directory1DeploymentBase {
 
         // initial value 500
         nodes().forEach {
-            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid)).isEqualTo(setOf(500))
         }
 
         // reconfiguring test_dapp2
@@ -421,7 +420,7 @@ abstract class Directory1DeploymentBase {
         // new values: 17100, 17300
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 17100, 17300), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+                assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid)).isEqualTo(setOf(500, 17100, 17300))
             }
         }
     }
@@ -438,7 +437,7 @@ abstract class Directory1DeploymentBase {
         val dappBrid = dapps["test_dapp"]!!
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(1)).second.httpStatusCode!!, 200)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(1)).second.httpStatusCode!!).isEqualTo(200)
         }
 
         // Change to PAUSED
@@ -450,7 +449,7 @@ abstract class Directory1DeploymentBase {
 
         // Verify no transactions created but chain is reachable
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(2)).second.httpStatusCode!!, 403)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(2)).second.httpStatusCode!!).isEqualTo(403)
         }
         assertDappQuery(dappBrid, "get_cities", "Heraklion")
 
@@ -463,7 +462,7 @@ abstract class Directory1DeploymentBase {
 
         // Verify transactions created
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!, 200)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!).isEqualTo(200)
         }
     }
 
@@ -489,7 +488,7 @@ abstract class Directory1DeploymentBase {
 
     private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
         awaitUntilAsserted {
-            assertEquals(container.c0.nmGetBlockchainState(brid), state.name)
+            assertThat(container.c0.nmGetBlockchainState(brid), state.name)
         }
     }
 
