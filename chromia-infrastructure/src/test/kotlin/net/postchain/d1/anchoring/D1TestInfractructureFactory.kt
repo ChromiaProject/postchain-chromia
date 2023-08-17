@@ -16,7 +16,7 @@ class D1TestInfrastructureFactory : TestManagedEBFTInfrastructureFactory() {
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
                 dataSource,
-                listOf(AnchoringTestProcessManagerExtension(postchainContext))
+                listOf(AnchoringTestProcessManagerExtension(postchainContext, blockchainInfrastructure))
         )
     }
 }

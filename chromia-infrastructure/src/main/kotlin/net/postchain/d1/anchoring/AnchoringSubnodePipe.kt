@@ -3,35 +3,25 @@
 package net.postchain.d1.anchoring
 
 import mu.KLogging
-import net.postchain.client.config.FailOverConfig
-import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.impl.PostchainClientProviderImpl
-import net.postchain.client.request.EndpointPool
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import net.postchain.d1.query.MasterClient
+import net.postchain.network.mastersub.master.MasterConnectionManager
 import java.lang.Long.max
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 class AnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
-        restApiUrl: String
+        connectionManager: MasterConnectionManager
 ) : AnchoringPipe {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
     companion object : KLogging()
 
-    private val client = PostchainClientProviderImpl().createClient(
-            PostchainClientConfig(
-                    blockchainRid = blockchainRid,
-                    endpointPool = EndpointPool.singleUrl(restApiUrl),
-                    failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO),
-                    connectTimeout = Duration.ofSeconds(10),
-                    responseTimeout = Duration.ofSeconds(10)
-            )
-    )
+    private val client: PostchainBlockClient = MasterClient(connectionManager.masterSubQueryManager, blockchainRid)
 
     override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
