@@ -5,7 +5,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 
 class AwaitingClient(val client: PostchainClient): PostchainClient by client {
     override fun query(name: String, args: Gtv): Gtv {
@@ -19,7 +19,7 @@ internal fun <T> awaitQueryResult(atMost: Duration = Duration.TWO_MINUTES, asser
         try {
             result = assertion()
         } catch (ignore: Exception) {
-            assertTrue(false) // Will make sure we try again
+            fail() // Will make sure we try again
         }
     }
     return result

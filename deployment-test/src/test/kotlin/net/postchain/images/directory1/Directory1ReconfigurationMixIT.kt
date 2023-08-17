@@ -2,6 +2,7 @@ package net.postchain.images.directory1
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -11,9 +12,11 @@ import net.postchain.chain0.common.operations.disableNodeOperation
 import net.postchain.chain0.common.operations.enableNodeOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
-import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.queries.getClusterBlockchains
+import net.postchain.chain0.common.queries.getClusters
+import net.postchain.chain0.common.queries.getNodeData
+import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_cluster.createClusterOperation
-import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
@@ -21,7 +24,6 @@ import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
-import net.postchain.containers.bpm.resources.*
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -29,8 +31,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -173,12 +173,8 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 18200, 18400),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
+            assertThat(getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet()).isEqualTo(setOf(node1.pubkey.wData, node2.pubkey.wData))
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid)).isEqualTo(setOf(500, 18200, 18400))
         }
 
         // 2. Mixed tx: proposing config, faulty config, adding signer, config again
@@ -198,12 +194,11 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
-                    getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 18200, 18400, 18600),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid))
+            assertThat(getLastBlockConfigSigners(node1, clusterAnchoringBrid).toSet()).isEqualTo(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData))
+
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, clusterAnchoringBrid)).isEqualTo(
+                    setOf(500, 18200, 18400, 18600))
         }
     }
 
@@ -230,12 +225,11 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
-            assertEquals(
-                    setOf(500, 19200, 19400),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
+            assertThat(getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet()).isEqualTo(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData))
+
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid)).isEqualTo(
+                    setOf(500, 19200, 19400))
         }
 
         // 2. Mixed tx: proposing config, faulty config, adding signer, config again
@@ -255,14 +249,12 @@ class Directory1ReconfigurationMixIT {
         voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData),
-                    getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet())
+            assertThat(getLastBlockConfigSigners(node1, systemAnchoringBrid).toSet()).isEqualTo(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData, node3.pubkey.wData))
         }
         awaitQueryResult {
-            assertEquals(
-                    setOf(500, 19200, 19400, 19600),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid))
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, systemAnchoringBrid)).isEqualTo(
+                    setOf(500, 19200, 19400, 19600))
         }
     }
 
@@ -282,14 +274,14 @@ class Directory1ReconfigurationMixIT {
                 .postTransactionUntilConfirmed("Create voterset $pcuVs, cluster $pcuCluster with provider1/node1")
 
         awaitQueryResult {
-            Assertions.assertNotNull(node1.c0.getClusters().find { it.name == pcuCluster })
+            assertThat(node1.c0.getClusters().find { it.name == pcuCluster }).isNotNull()
             val chains = node1.c0.getClusterBlockchains(pcuCluster)
-            assertEquals(1, chains.size)
+            assertThat(chains.size).isEqualTo(1)
             val brid = BlockchainRid(chains.first())
 
             // signers from cluster anchoring chain (CAC) config
             val actual = getLastBlockConfigSigners(node1, brid)
-            assertEquals(setOf(node1.pubkey.wData), actual.toSet())
+            assertThat(actual.toSet()).isEqualTo(setOf(node1.pubkey.wData))
         }
 
         // 2. Add provider2/node2 to the pcu_cluster
@@ -300,9 +292,8 @@ class Directory1ReconfigurationMixIT {
                 .postTransactionUntilConfirmed("Add provider2/node2 to the $pcuCluster")
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
+            assertThat(getLastBlockConfigSigners(node1, cac).toSet()).isEqualTo(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData))
         }
 
         // 3. Proposing a faulty remove signer config
@@ -316,14 +307,12 @@ class Directory1ReconfigurationMixIT {
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #3")
 
         awaitQueryResult {
-            assertEquals(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData),
-                    getLastBlockConfigSigners(node1, cac).toSet())
+            assertThat(getLastBlockConfigSigners(node1, cac).toSet()).isEqualTo(
+                    setOf(node1.pubkey.wData, node2.pubkey.wData))
         }
         awaitQueryResult {
-            assertEquals(
-                    setOf(500, 20200),
-                    getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac))
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac)).isEqualTo(
+                    setOf(500, 20200))
         }
     }
 
