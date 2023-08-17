@@ -5,21 +5,22 @@ package net.postchain.d1.anchoring
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.infra.MasterSyncInfra
+import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.Storage
 
-class AnchoringDispatcher(private val storage: Storage) {
+class AnchoringDispatcher(private val storage: Storage, private val blockchainInfrastructure: BlockchainInfrastructure) {
     private val receivers = mutableMapOf<Long, AnchoringReceiver>()
     private val localChains = mutableMapOf<Long, BlockchainRid>()
-    private val subnodeChains = mutableMapOf<Long, Pair<BlockchainRid, String>>()
+    private val subnodeChains = mutableMapOf<Long, BlockchainRid>()
 
     fun connectReceiver(chainID: Long, receiver: AnchoringReceiver) {
         receivers[chainID] = receiver
         localChains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
             receiver.localPipes[currentChainID] = AnchoringLocalPipe(currentChainID, brid, storage)
         }
-        subnodeChains.filterKeys { it != chainID }.forEach { (currentChainID, bridRestapiurl) ->
-            val (brid, restApiUrl) = bridRestapiurl
-            receiver.localPipes[currentChainID] = AnchoringSubnodePipe(currentChainID, brid, restApiUrl)
+        subnodeChains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
+            receiver.localPipes[currentChainID] = AnchoringSubnodePipe(currentChainID, brid, (blockchainInfrastructure as MasterSyncInfra).masterConnectionManager)
         }
     }
 
@@ -35,12 +36,12 @@ class AnchoringDispatcher(private val storage: Storage) {
         localChains[chainID] = brid
     }
 
-    fun connectSubnodeChain(chainID: Long, brid: BlockchainRid, restApiUrl: String) {
+    fun connectSubnodeChain(chainID: Long, brid: BlockchainRid) {
         connectChainInternal(chainID) {
-            AnchoringSubnodePipe(chainID, brid, restApiUrl)
+            AnchoringSubnodePipe(chainID, brid, (blockchainInfrastructure as MasterSyncInfra).masterConnectionManager)
         }
 
-        subnodeChains[chainID] = brid to restApiUrl
+        subnodeChains[chainID] = brid
     }
 
     private fun connectChainInternal(chainID: Long, pipeSupplier: () -> AnchoringPipe) {

@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
 import net.postchain.core.BlockRid
+import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
@@ -26,10 +27,11 @@ import net.postchain.managed.config.ManagedDataSourceAware
 import kotlin.math.min
 
 open class AnchoringProcessManagerExtension(
-        private val postchainContext: PostchainContext
+        private val postchainContext: PostchainContext,
+        blockchainInfrastructure: BlockchainInfrastructure
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
-    private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage)
+    private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage, blockchainInfrastructure)
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
 
     /**
@@ -127,9 +129,7 @@ open class AnchoringProcessManagerExtension(
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId
-        localDispatcher.connectSubnodeChain(
-                process.chainId, process.blockchainRid, process.restApiUrl
-        )
+        localDispatcher.connectSubnodeChain(process.chainId, process.blockchainRid)
     }
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {
