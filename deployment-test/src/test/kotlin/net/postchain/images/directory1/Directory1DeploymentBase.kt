@@ -478,7 +478,6 @@ abstract class Directory1DeploymentBase {
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.remove, "")
                 .proposeBlockchainActionOperation(node1.providerPubkey, dapp2Brid, BlockchainAction.remove, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for dapps")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
 
         verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
         verifyBlockchainState(node1, dapp2Brid, BlockchainState.REMOVED)
