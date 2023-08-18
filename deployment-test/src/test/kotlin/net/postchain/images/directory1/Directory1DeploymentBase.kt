@@ -444,7 +444,6 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.PAUSED.name} for dapp $dappBrid")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // Verify no transactions created but chain is reachable
@@ -457,7 +456,6 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
         // Verify transactions created
