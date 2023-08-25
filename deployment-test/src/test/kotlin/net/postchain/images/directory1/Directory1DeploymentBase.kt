@@ -13,7 +13,6 @@ import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.*
 import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
-import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerResourceLimitType.*
 import net.postchain.chain0.model.ProviderTier
@@ -292,32 +291,6 @@ abstract class Directory1DeploymentBase {
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assertThat(cities).containsExactly(expectedResult)
-            }
-        }
-    }
-
-    //    @Disabled
-//    @Test
-//    @Order(12)
-    fun `Legacy anchoring can anchor blocks`() {
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp"]!!)
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp2"]!!)
-    }
-
-    private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
-        awaitUntilAsserted {
-            nodes().forEach { node ->
-                val lastAnchoredBlock = awaitQueryResult {
-                    node.c0.getLastLegacyAnchoredBlock(dappBrid)
-                }
-                assertThat(lastAnchoredBlock).isNotNull()
-
-                val dappChainBlock = awaitQueryResult {
-                    node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.height)
-                }
-                assertThat(dappChainBlock).isNotNull()
-
-                assertThat(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
