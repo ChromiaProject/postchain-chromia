@@ -30,6 +30,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-infrastructure</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-core</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
