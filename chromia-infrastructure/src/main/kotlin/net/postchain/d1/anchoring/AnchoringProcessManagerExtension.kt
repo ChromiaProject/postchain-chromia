@@ -4,12 +4,10 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
-import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
@@ -112,19 +110,14 @@ open class AnchoringProcessManagerExtension(
     }
 
     @Synchronized
-    override fun afterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
+    override fun afterCommitInSubnode(blockchainRid: BlockchainRid, blockHeight: Long) {
         val chainId = remoteProcessChainIds[blockchainRid]
                 ?: throw ProgrammerMistake("Received commit from blockchain with rid ${blockchainRid.toHex()} that has no mapped chain id")
-        val height = BlockHeaderData.fromBinary(blockHeader).getHeight()
-        localDispatcher.afterCommit(
-                chainId,
-                height
-        )
+        localDispatcher.afterCommit(chainId, blockHeight)
     }
 
     @Synchronized
-    override fun shutdown() {
-    }
+    override fun shutdown() {}
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId

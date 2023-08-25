@@ -19,8 +19,8 @@ api.port=7740
 
 # Postchain configuration
 configuration.provider.node=managed
-# Infrastructure to use. Can be  net.postchain.managed.Chromia0InfrastructureFactory if all blockchains should be in the same process
-infrastructure=net.postchain.managed.Chromia0MasterInfrastructureFactory
+# Infrastructure to use. Can be  net.postchain.d1.D1InfrastructureFactory if all blockchains should be in the same process
+infrastructure=net.postchain.d1.D1MasterInfrastructureFactory
 
 # Storage
 database.username=<postgres-user>
