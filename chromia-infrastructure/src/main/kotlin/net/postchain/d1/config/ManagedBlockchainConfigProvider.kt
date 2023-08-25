@@ -22,10 +22,6 @@ class ManagedBlockchainConfigProvider(
         val blockchainRid = BlockchainRid(headerData.getBlockchainRid())
         val height = headerData.getHeight()
 
-        if (!appConfig.isPcuEnabled()) {
-            return clusterManagement.getBlockchainPeers(blockchainRid, height)
-        }
-
         if (nodeManagement.nmApiVersion() >= 7 && nodeManagement.getManagementChain() == blockchainRid) {
             return clusterManagement.getBlockchainPeers(blockchainRid, height)
         }
