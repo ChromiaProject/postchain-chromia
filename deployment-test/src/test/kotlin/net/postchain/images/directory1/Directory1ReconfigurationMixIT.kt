@@ -69,6 +69,7 @@ class Directory1ReconfigurationMixIT {
                             PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
                     )
                     .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
+                    .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
 
             removeSubnodeContainers()
             startNodesAndChain0()
