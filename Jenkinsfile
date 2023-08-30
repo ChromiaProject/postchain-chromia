@@ -37,7 +37,7 @@ pipeline {
               docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
               mkdir -p $TEST_MOUNT_DIRECTORY
 
-              export POSTGRES_CONTAINER_ID=`docker run -d --name postgres -e POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8" -e POSTGRES_PASSWORD=postchain -e POSTGRES_USER=postchain -p 5433:5432 postgres:14.7`
+              export POSTGRES_CONTAINER_ID=`docker run -d --name postgres -e POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8" -e POSTGRES_PASSWORD=postchain -e POSTGRES_USER=postchain -p 5433:5432 postgres:14.9`
 
               docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \$POSTGRES_CONTAINER_ID
             """,
