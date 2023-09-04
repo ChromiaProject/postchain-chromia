@@ -1,9 +1,8 @@
 ## Import Chain Tooling – Foreign Blockchain Import
 
-1. Suppose we have two Directory1 networks testnet1 and testnet2. Let's call testnet2 a _foreign network_. We want to import a _foreign blockchain_ named `dapp1` from foreign testnet2 to container `C1` of testnet1. Importing consists of three phases:      
-   1. Importing of blockchain configurations. At this phase, a new blockchain in `PAUSED` state will be added to the container, and all its configurations will be fetched from testnet2 and loaded to testnet1. Note that every configuration should be voted on separately. To simplify this step, one can (i) import blockchain to a container with a deployer voter set consisting of a single provider or (ii) update the `threshold` parameter of the container deployer voter set to the value 1 (1 vote). Once the import is done, cluster governance can be strengthened by (i) adding more providers or (ii) setting the initial value of `threshold`. This step can be run multiple times, adjusting `--from-height / --up-to-height` options (might be needed if foreign blockchain gets new configurations). Also, make sure that `C1` signers and foreign cluster signers don't overlap. 
-   2. Importing (synchronization) of blocks on all nodes of the cluster `C1`. At this phase, the blockchain state will be changed from `PAUSED` to `RUNNING` and the blockchain will start block synchronization.
-   3. Finalizing import. At this phase, a new configuration with all cluster signers will be proposed at a specific height `H`. Make sure that all configurations from height 0 to `H-1` are imported on phase 1.
+1. Suppose we have two Directory1 networks testnet1 and testnet2. Let's call testnet2 a _foreign network_. We want to import a _foreign blockchain_ named `dapp1` from foreign testnet2 to container `C1` of testnet1. Importing consists of two steps:      
+   1. Importing of blockchain configurations. At this step, a new blockchain in `IMPORTING` state will be added to the container, and all its configurations will be fetched from testnet2 and uploaded to testnet1. Note that every configuration should be voted on separately. To simplify this step, one can (i) import blockchain to a container with a deployer voter set consisting of a single provider or (ii) update the `threshold` parameter of the container deployer voter set to the value 1 (1 vote). Once the import is done, cluster governance can be strengthened by (i) adding more providers or (ii) setting the initial value of `threshold`. This step can be run multiple times, adjusting `--from-height / --up-to-height` options (might be needed if foreign blockchain gets new configurations). Also, make sure that `C1` signers and foreign cluster signers don't overlap. 
+   2. Importing (synchronization) of blocks up to specified height `H`. At this step, a new configuration with all cluster signers will be proposed at a height `H + 1`. As soon as it is approved, the blockchain state will be changed from `IMPORTING` to `RUNNING`, and the blockchain will start block synchronization on all nodes of the cluster `C1`.
 
 Let's go through all steps with an example.
 
@@ -26,17 +25,10 @@ pmc blockchain import-foreign-configurations \
 
 3. Importing (synchronization) of blocks:
 ```shell
-pmc blockchain import-foreign-blocks -brid $DAPP
+pmc blockchain import-foreign-blocks -brid $DAPP3 --up-to-height 1100
 ```
 
-4. Finalizing foreign import:
-```shell
-pmc blockchain finish-foreign-import \
-    -brid $DAPP \
-    --final-height 1100
-```
-
-5. _Monitoring of syncing and anchoring._ Syncing and anchoring might take a long time for big blockchains. To monitor the progress, one can use the following commands:   
+4. _Monitoring of syncing and anchoring._ Syncing and anchoring might take a long time for big blockchains. To monitor the progress, one can use the following commands:   
 
 ```shell
 # block synchronization
