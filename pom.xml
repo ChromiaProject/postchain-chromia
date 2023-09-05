@@ -24,9 +24,9 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.12.2</postchain.version>
+        <postchain.version>3.13.0</postchain.version>
         <postchain.client.version>3.11.4</postchain.client.version>
-        <directory.chain.version>1.11.0</directory.chain.version>
+        <directory.chain.version>1.12.0</directory.chain.version>
         <rell.version>0.13.1</rell.version>
         <eif.version>0.2.0</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
