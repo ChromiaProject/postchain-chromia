@@ -108,7 +108,6 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                         }
                         ops.add(opData)
                         opsCount++
-                        pipe.markTaken(clusterAnchorPacket.height, bctx)
                         currentSize += size
                     } else {
                         break // Nothing more to find
@@ -194,6 +193,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             }
         }
 
+        val relevantPipes = anchoringReceiver.getRelevantPipes()
         // Go through it chain by chain
         for ((bcRid, minimalHeaders) in chainHeadersMap) {
             // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc.
@@ -204,6 +204,11 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
                 )
                 return false
+            }
+            // Clear matching pipe (if we have one)
+            relevantPipes.find { it.blockchainRid == bcRid }?.let { pipe ->
+                val lastHeight = minimalHeaders.maxOf { it.headerHeight }
+                pipe.markTaken(lastHeight, bctx)
             }
         }
         return true
