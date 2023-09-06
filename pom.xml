@@ -19,6 +19,7 @@
         <module>chromia-infrastructure</module>
         <module>postchain-container</module>
         <module>docker-images</module>
+        <module>coverage-report-aggregate</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -139,6 +140,7 @@
     </dependencyManagement>
 
     <build>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -412,6 +414,46 @@
                 <!--suppress UnresolvedMavenProperty -->
                 <directory.source>${maven.multiModuleProjectDirectory}/../directory-chain/src</directory.source>
             </properties>
+        </profile>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.10</version>
+                        <executions>
+                            <execution>
+                                <id>default-prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>default-prepare-agent-integration</id>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>default-report</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>default-report-integration</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report-integration</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
