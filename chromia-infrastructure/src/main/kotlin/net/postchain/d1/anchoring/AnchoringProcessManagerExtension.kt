@@ -25,7 +25,7 @@ import net.postchain.managed.config.ManagedDataSourceAware
 import kotlin.math.min
 
 open class AnchoringProcessManagerExtension(
-        private val postchainContext: PostchainContext,
+        postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
@@ -90,8 +90,7 @@ open class AnchoringProcessManagerExtension(
     open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
             ManagedBlockchainConfigProvider(
                     NodeManagementImpl { name, gtv -> configuration.dataSource.query(name, gtv) },
-                    clusterManagement,
-                    postchainContext.appConfig
+                    clusterManagement
             )
 
     @Synchronized
