@@ -57,6 +57,7 @@
                             <POSTCHAIN_DEBUG>false</POSTCHAIN_DEBUG>
                             <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>
                             <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log4j2.yml</LOG4J_CONFIGURATION_FILE>
+                            <IMAGE_VERSION_TAG>${revision}</IMAGE_VERSION_TAG>
                         </environment>
                         <creationTime>${git.commit.time}</creationTime>
                         <filesModificationTime>${git.commit.time}</filesModificationTime>
