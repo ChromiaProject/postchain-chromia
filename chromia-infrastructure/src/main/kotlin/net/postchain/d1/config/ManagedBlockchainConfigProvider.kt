@@ -4,16 +4,15 @@ import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.common.wrap
-import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.nm_api.NodeManagement
 
 class ManagedBlockchainConfigProvider(
         private val nodeManagement: NodeManagement,
-        private val clusterManagement: ClusterManagement,
-        private val appConfig: AppConfig
+        private val clusterManagement: ClusterManagement
 ) : BlockchainConfigProvider {
 
     companion object : KLogging()
@@ -31,7 +30,7 @@ class ManagedBlockchainConfigProvider(
         logger.debug { "$logPrefix - extra config_hash: " + configHash?.wrap() }
         if (configHash != null) {
             val pendingConfig = nodeManagement.getPendingBlockchainConfigByHash(blockchainRid, configHash)
-            logger.debug { "$logPrefix - pending_signers: ${pendingConfig?.signers?.map(::PubKey)?.toTypedArray()}" }
+            logger.debug { "$logPrefix - pending_signers: ${pendingConfig?.signers?.map{ it.data.toHex() }}" }
             if (pendingConfig != null) {
                 return pendingConfig.signers.map(::PubKey)
             }
