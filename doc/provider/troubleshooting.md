@@ -11,3 +11,14 @@ Suppose chain0 got stuck at `height = 1000` (can't build block 1000), and a new 
 
 2. Restart all nodes of `system` cluster.
 
+## How to enable EBFT logging
+
+To enable EBFT messaging logging, add the following to `log4j2.yml`:
+
+```yaml
+    - name: net.postchain.network.peer.DefaultPeerCommunicationManager
+      level: trace
+      additivity: false
+      AppenderRef:
+        - ref: ConsoleAppender
+```
