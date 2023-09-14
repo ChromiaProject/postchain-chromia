@@ -25,10 +25,10 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.13.1</postchain.version>
+        <postchain.version>3.13.2</postchain.version>
         <postchain.client.version>3.11.5</postchain.client.version>
         <directory.chain.version>1.12.0</directory.chain.version>
-        <rell.version>0.13.1</rell.version>
+        <rell.version>0.13.2</rell.version>
         <eif.version>0.2.2</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
