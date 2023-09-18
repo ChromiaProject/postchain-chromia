@@ -295,6 +295,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>**/*SlowIntegrationTest.java</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
 
             <plugin>
