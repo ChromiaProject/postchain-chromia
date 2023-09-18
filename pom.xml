@@ -390,7 +390,7 @@
             </build>
         </profile>
         <profile>
-            <id>nightly</id>
+            <id>slow-it</id>
             <build>
                 <plugins>
                     <plugin>
@@ -399,7 +399,7 @@
                         <configuration>
                             <includes>
                                 <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
+                                <include>**/*SlowIntegrationTest.java</include>
                             </includes>
                         </configuration>
                         <executions>
