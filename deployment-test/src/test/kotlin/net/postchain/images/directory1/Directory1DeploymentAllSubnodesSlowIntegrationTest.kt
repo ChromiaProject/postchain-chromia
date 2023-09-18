@@ -5,7 +5,7 @@ import net.postchain.dapp.PostchainContainer
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 
-class Directory1DeploymentAllSubnodesNightly : Directory1DeploymentBase() {
+class Directory1DeploymentAllSubnodesSlowIntegrationTest : Directory1DeploymentBase() {
 
     companion object {
         init {
