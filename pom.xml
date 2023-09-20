@@ -29,7 +29,7 @@
         <postchain.client.version>3.11.5</postchain.client.version>
         <directory.chain.version>1.12.0</directory.chain.version>
         <rell.version>0.13.2</rell.version>
-        <eif.version>0.2.3</eif.version>
+        <eif.version>0.2.4</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>10</project.build.outputTimestamp>
