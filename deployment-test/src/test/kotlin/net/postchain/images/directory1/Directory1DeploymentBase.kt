@@ -354,9 +354,10 @@ abstract class Directory1DeploymentBase {
                 ContainerClusterManagement(
                         ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())),
         )
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(txToProve.gtxBody.rid.toHex()),
-                txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                TxRid(txToProve.gtxBody.calculateTxRid(hashCalculator).toHex()),
+                txToProve.toGtv().merkleHash(hashCalculator),
                 listOf(),
                 sourceDapp,
                 targetDapp
