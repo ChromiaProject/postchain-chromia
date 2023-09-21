@@ -128,7 +128,7 @@ class IccfProofTxMaterialBuilderTest {
         )))
 
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(clientTx.gtxBody.rid.toHex()),
+                TxRid(clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
                 clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
@@ -175,7 +175,7 @@ class IccfProofTxMaterialBuilderTest {
         )))
 
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(clientTx.gtxBody.rid.toHex()),
+                TxRid(clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
                 clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
@@ -206,13 +206,13 @@ class IccfProofTxMaterialBuilderTest {
 
         generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
                 JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
         assertThrows<UserMistake> {
             IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                    TxRid(clientTx.gtxBody.rid.toHex()),
+                    TxRid(clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()),
                     clientTxHash,
                     clientTxSigners.map { it.pubKey },
                     sourceBlockchainRID,
@@ -234,7 +234,7 @@ class IccfProofTxMaterialBuilderTest {
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
                 JsonContentType,
                 """{"tx":"${actualTx.encodeHex()}"}"""
         )))
@@ -261,7 +261,7 @@ class IccfProofTxMaterialBuilderTest {
 
         val txProof = generateAndStubConfirmationProof(actualTxHash)
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}").willReturn(okForContentType(
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
                 JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
         )))
 
@@ -275,7 +275,7 @@ class IccfProofTxMaterialBuilderTest {
                 "blockHeader" to gtv(GtvEncoder.encodeGtv(dummyBlockHeader))
         ))
 
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.rid.toHex()}/confirmationProof").willReturn(okForContentType(
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()}/confirmationProof").willReturn(okForContentType(
                 JsonContentType, """{"proof":"${confirmationProof.toHex()}"}"""
         )))
 
@@ -284,7 +284,7 @@ class IccfProofTxMaterialBuilderTest {
 
     private fun verifyIntraClusterIccf(txProof: ByteArray, proofHashOverride: Hash? = null) {
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(clientTx.gtxBody.rid.toHex()),
+                TxRid(clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
                 clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
