@@ -46,7 +46,7 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
     override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
         val clusterManagement = createClusterManagement(configuration, postchainContext.connectionManager)
         val queryProvider = createQueryProvider(configuration, clusterManagement, postchainContext)
-        conf.isSystemChain = isSystemChain(configuration, queryProvider.getChain0Query())
+        conf.isSystemChain = configuration.chainID == 0L || isSystemChain(configuration, queryProvider.getChain0Query())
     }
 
     override fun initializeDB(ctx: EContext) {
