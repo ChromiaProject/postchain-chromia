@@ -47,8 +47,13 @@ configure_resource_limits() {
     echo "shared_buffers = $SHARED_BUFFERS_LIMIT"
     sed -i -E "/^shared_buffers =/ s/= .*/= ${SHARED_BUFFERS_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
 
-    # Formula: 25% / max_connections, where max_connections is POSTCHAIN_DB_READ_CONCURRENCY + 2 write connections
-    WORK_MEM_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4 / (POSTCHAIN_DB_READ_CONCURRENCY + 2)))
+    DB_CONNECTIONS=$((POSTCHAIN_DB_READ_CONCURRENCY + POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY + POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY))
+    MAX_DB_CONNECTIONS=$((DB_CONNECTIONS > 100 ? DB_CONNECTIONS : 100))
+    echo "max_connections = $MAX_DB_CONNECTIONS"
+    sed -i -E "/^#?max_connections =/ s/.*/max_connections = ${MAX_DB_CONNECTIONS}/" /var/lib/postgresql/data/postgresql.conf
+
+    # Formula: 25% / max_connections, where max_connections is POSTCHAIN_DB_READ_CONCURRENCY + POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY + POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY
+    WORK_MEM_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4 / DB_CONNECTIONS))
     WORK_MEM_LIMIT=$((WORK_MEM_LIMIT > 0 ? WORK_MEM_LIMIT : 1)) # Min 1MB
     echo "work_mem = $WORK_MEM_LIMIT"
     sed -i -E "/^#?work_mem =/ s/.*/work_mem = ${WORK_MEM_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
