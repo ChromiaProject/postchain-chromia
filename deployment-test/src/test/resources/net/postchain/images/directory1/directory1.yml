@@ -11,6 +11,7 @@ blockchains:
           - node1
           - 9871
           - "http://node1:7740"
+          - ""
     config:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
