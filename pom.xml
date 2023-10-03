@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </parent>
 
     <artifactId>postchain-chromia</artifactId>
@@ -35,7 +35,7 @@
         <postchain.client.version>3.11.5</postchain.client.version>
         <directory.chain.version>1.14.0</directory.chain.version>
         <rell.version>0.13.2</rell.version>
-        <eif.version>0.2.5</eif.version>
+        <eif.version>0.2.7</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -235,6 +235,17 @@
                     <groupId>com.google.cloud.tools</groupId>
                     <artifactId>jib-maven-plugin</artifactId>
                     <version>3.3.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <configuration>
+                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                        <suppressionFiles>
+                            <suppressionFile>https://gitlab.com/chromaway/chromia-parent/-/raw/dev/common-dependencies-suppression.xml?ref_type=heads</suppressionFile>
+                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
+                        </suppressionFiles>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
