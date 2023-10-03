@@ -62,6 +62,10 @@ configure_resource_limits() {
     EFFECTIVE_CACHE_SIZE_LIMIT=$((PSQL_MEMORY_SHARE_MB / 2))
     echo "effective_cache_size = $EFFECTIVE_CACHE_SIZE_LIMIT"
     sed -i -E "/^#?effective_cache_size =/ s/.*/effective_cache_size = ${EFFECTIVE_CACHE_SIZE_LIMIT}MB/" /var/lib/postgresql/data/postgresql.conf
+
+    MAX_LOCKS_PER_TRANSACTION=${POSTGRES_MAX_LOCKS_PER_TRANSACTION:-1024}
+    echo "max_locks_per_transaction = $MAX_LOCKS_PER_TRANSACTION"
+    sed -i -E "/^#?max_locks_per_transaction =/ s/.*/max_locks_per_transaction = ${MAX_LOCKS_PER_TRANSACTION}/" /var/lib/postgresql/data/postgresql.conf
   fi
 }
 
