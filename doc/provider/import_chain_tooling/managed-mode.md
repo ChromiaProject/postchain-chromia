@@ -1,9 +1,9 @@
 ## Import Chain Tooling – Managed mode example
 
 1. Suppose we have Directory1 testnet and we want to import blockchain to the container C1 of this network. Importing consists of three phases: 
-   1. Importing of blockchain configurations. At this phase, a new blockchain in `PAUSED` state will be added to the container, and all its configurations will be loaded to the Directory1. Note that every configuration should be voted on separately. To simplify this step, one can (i) import blockchain to a container with a deployer voter set consisting of a single provider or (ii) update the `threshold` parameter of the container deployer voter set to the value 1 (1 vote). Once the import is done, cluster governance can be strengthened by (i) adding more providers or (ii) setting the initial value of `threshold`.
+   1. Importing of blockchain configurations. At this phase, a new blockchain in `IMPORTING` state will be added to the container, and all its configurations will be loaded to the Directory1. Note that every configuration should be voted on separately. To simplify this step, one can (i) import blockchain to a container with a deployer voter set consisting of a single provider or (ii) update the `threshold` parameter of the container deployer voter set to the value 1 (1 vote). Once the import is done, cluster governance can be strengthened by (i) adding more providers or (ii) setting the initial value of `threshold`.
    2. Importing of blocks to any node of the cluster.
-   3. Finalizing import. At this phase, the blockchain's state will be changed from `PAUSED` to `RUNNING`.
+   3. Finalizing import. At this phase, the blockchain's state will be changed from `IMPORTING` to `RUNNING`.
 
 (i) Import blockchain to the container C1:
 ```shell
@@ -37,9 +37,18 @@ docker run --rm \
 ```
 
 (iii). Finalize blockchain import:
+
+_Directory1 v1.9.4-v1.18.0._ Make sure the ebft-majority of the cluster blockchain is being imported in is equal to the ebft-majority of the last used blockchain configuration.
 ```shell
 pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1
 ```
+
+_Directory1 v1.19.0 and later._
+```shell
+pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1 --finish-at-height $H
+```
+
+where `$H` is the height of the last imported block. 
 
 2. _Monitoring of syncing and anchoring._ Syncing and anchoring might take a long time for big blockchains. To skip the sync step, one can import blocks on _every_ node in parallel on step 1.ii. Anchoring can be sped up by adjusting `anchoring.max_blocks_per_chain` blockchain configuration parameter of the cluster anchoring chain, which equals 100 by default.  
 
