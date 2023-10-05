@@ -37,13 +37,6 @@ docker run --rm \
 ```
 
 (iii). Finalize blockchain import:
-
-_Directory1 v1.9.4-v1.18.0._ Make sure the ebft-majority of the cluster blockchain is being imported in is equal to the ebft-majority of the last used blockchain configuration.
-```shell
-pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1
-```
-
-_Directory1 v1.19.0 and later._
 ```shell
 pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1 --finish-at-height $H
 ```
