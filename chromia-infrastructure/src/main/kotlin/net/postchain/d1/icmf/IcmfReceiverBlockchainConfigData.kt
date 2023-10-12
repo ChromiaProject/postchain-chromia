@@ -8,7 +8,7 @@ import net.postchain.gtv.mapper.toObject
 data class IcmfReceiverBlockchainConfigData(
         @Name("global")
         @Nullable
-        val global: IcmfReceiverGlobalConfig?,
+        val global: IcmfReceiverTopicsAndSpecificBlockchainConfig?,
 
         @Name("local")
         @Nullable
@@ -16,14 +16,18 @@ data class IcmfReceiverBlockchainConfigData(
 
         @Name("anchoring")
         @Nullable
-        val anchoring: IcmfReceiverAnchoringChainsConfig?,
+        val anchoring: IcmfReceiverTopicsConfig?,
+
+        @Name("directory-chain")
+        @Nullable
+        val directoryChain: IcmfReceiverTopicsConfig?,
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): IcmfReceiverBlockchainConfigData = gtv.toObject()
     }
 }
 
-data class IcmfReceiverGlobalConfig(
+data class IcmfReceiverTopicsAndSpecificBlockchainConfig(
         @Name("topics")
         @Nullable
         val topics: List<String>?,
@@ -41,7 +45,7 @@ data class IcmfReceiverSpecificBlockChainConfig(
         val topic: String
 )
 
-data class IcmfReceiverAnchoringChainsConfig(
+data class IcmfReceiverTopicsConfig(
         @Name("topics")
         val topics: List<String>
 )
