@@ -5,10 +5,13 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
@@ -48,6 +51,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val clientProvider = createClientProvider(clusterManagement)
                 val blockchainConfigProvider = createBlockchainConfigProvider(configuration, clusterManagement)
                 txExt.blockchainConfigProvider = blockchainConfigProvider
+                txExt.clusterManagement = clusterManagement
 
                 val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 val maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
@@ -105,10 +109,17 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     }
                 }
 
-                if (config.local != null) {
-                    val origins = config.local.map { it.topic to BlockchainRid(it.blockchainRid) }
+                if (config.local != null || config.directoryChain != null) {
+                    val directoryChainOrigins = config.directoryChain?.let { directoryChainConfig ->
+                        val directoryChainBrid = withReadConnection(engine.blockBuilderStorage, 0L) { ctx ->
+                            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+                        } ?: throw ProgrammerMistake("Unable to resolve directory chain blockchain RID")
+                        txExt.directoryChainBrid = directoryChainBrid
+                        directoryChainConfig.topics.map { it to directoryChainBrid }
+                    } ?: listOf()
+                    val localOrigins = config.local?.map { it.topic to BlockchainRid(it.blockchainRid) } ?: listOf()
                     val intraClusterTopicIcmfReceiver = IntraClusterTopicIcmfReceiver(
-                            origins,
+                            directoryChainOrigins + localOrigins,
                             queryProvider
                     )
                     receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(intraClusterTopicIcmfReceiver)

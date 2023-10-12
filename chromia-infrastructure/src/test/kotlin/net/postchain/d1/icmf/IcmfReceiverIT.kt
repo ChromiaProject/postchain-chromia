@@ -142,12 +142,12 @@ class IcmfReceiverIT : ManagedModeTest() {
         })
     }
 
-    private fun setupNonAnchoredQueriesMock() {
+    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid) {
         QueryProviderMocks.clearMocks()
 
-        QueryProviderMocks.addMockQueries(senderTwoChainRid, object : PostchainBlockClient {
+        QueryProviderMocks.addMockQueries(senderBrid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(senderTwoChainRid, listOf(senderTwoMessageBody), "my-topic") else null
+                    if (height == 0L) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic") else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
@@ -528,6 +528,47 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
 
         verifyPipesAreEmpty(dappChain)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun directoryChainReceiver() {
+        startManagedSystem(3, 0)
+
+        val directoryChainBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, 0L) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+        setupNonAnchoredQueriesMock(directoryChainBrid)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_directory_chain_receiver_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).hasSize(1)
+                    val message = messages[0]
+                    assertThat(message.sender).isEqualTo(directoryChainBrid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                }
+            }
+        }
     }
 
     private fun verifyPipesAreEmpty(dappChain: Long) {
