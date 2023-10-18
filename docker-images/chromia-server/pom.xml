@@ -52,7 +52,10 @@
                         <appRoot>/opt/chromaway/postchain</appRoot>
                         <workingDirectory>/opt/chromaway/postchain</workingDirectory>
                         <mainClass>${main.class}</mainClass>
-                        <jvmFlags>-XX:+CrashOnOutOfMemoryError</jvmFlags>
+                        <jvmFlags>
+                            <jvmFlag>-XX:+UnlockDiagnosticVMOptions</jvmFlag>
+                            <jvmFlag>-XX:AbortVMOnException=java.lang.OutOfMemoryError</jvmFlag>
+                        </jvmFlags>
                         <environment>
                             <POSTCHAIN_DEBUG>false</POSTCHAIN_DEBUG>
                             <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>

@@ -19,6 +19,6 @@ APP_HOME=$( cd "${APP_HOME:-./}.." && pwd -P ) || exit
 
 export LOG4J_CONFIGURATION_FILE=${LOG4J_CONFIGURATION_FILE:=$APP_HOME/config/log4j2.yml}
 
-JVM_FLAGS="-XX:+CrashOnOutOfMemoryError"
+JVM_FLAGS="-XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError"
 
-exec "${RELL_JAVA:-java}" $JVM_FLAGS -classpath "$APP_HOME/lib/*" net.postchain.server.AppKt "$@"
+exec "${RELL_JAVA:-java}" "$JVM_FLAGS" -classpath "$APP_HOME/lib/*" net.postchain.server.AppKt "$@"
