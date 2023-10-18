@@ -511,7 +511,7 @@ abstract class Directory1DeploymentBase {
             val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
                 it.names().any { name -> name.contains(fooContainer) }
             }
-            assertThat(fooDockerContainer?.state()).isEqualTo("stopped")
+            assertThat(fooDockerContainer?.state()).isEqualTo("exited")
         }
     }
 
