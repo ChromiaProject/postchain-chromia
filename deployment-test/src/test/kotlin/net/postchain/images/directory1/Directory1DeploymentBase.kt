@@ -1,9 +1,11 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
@@ -11,10 +13,14 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
-import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.queries.getContainers
+import net.postchain.chain0.common.queries.getNodeData
+import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
 import net.postchain.chain0.model.BlockchainState
-import net.postchain.chain0.model.ContainerResourceLimitType.*
+import net.postchain.chain0.model.ContainerResourceLimitType.container_units
+import net.postchain.chain0.model.ContainerResourceLimitType.max_blockchains
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
@@ -29,7 +35,13 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.resources.*
+import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.IoRead
+import net.postchain.containers.bpm.resources.IoWrite
+import net.postchain.containers.bpm.resources.Ram
+import net.postchain.containers.bpm.resources.ResourceLimit
+import net.postchain.containers.bpm.resources.ResourceLimitFactory
+import net.postchain.containers.bpm.resources.Storage
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -41,6 +53,8 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.ManagedModeBase
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -441,20 +455,66 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(18)
     fun `Test remove blockchains`() {
+        // Deploy a new dapp to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
+        deployDapp("test_dapp3", fooContainer, null)
+        nodes().forEach { node ->
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(6)
+        }
+
         // Verify state is RUNNING
         val dappBrid = dapps["test_dapp"]!!
-        val dapp2Brid = dapps["test_dapp2"]!!
+        val dapp3Brid = dapps["test_dapp3"]!!
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-        verifyBlockchainState(node1, dapp2Brid, BlockchainState.RUNNING)
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.RUNNING)
 
-        // REMOVE chain
+        // REMOVE test_dapp
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.remove, "")
-                .proposeBlockchainActionOperation(node1.providerPubkey, dapp2Brid, BlockchainAction.remove, "")
-                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for dapps")
+                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp")
 
+        // Verify state is REMOVED
         verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
-        verifyBlockchainState(node1, dapp2Brid, BlockchainState.REMOVED)
+
+        // Verify that removed chains are deleted from DB
+        awaitUntilAsserted {
+            assertThat(node1Db.getChainId(dappBrid)).isNull()
+            assertThat(node2Db.getChainId(dappBrid)).isNull()
+            assertThat(node3Db.getChainId(dappBrid)).isNull()
+        }
+
+        // Verify that removed chains are deleted from subnode DBs
+        if (numberOfMasterNodes > 0) {
+            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                it.names().any { name -> name.contains(fooContainer) }
+            }
+            assertThat(fooDockerContainer).isNotNull()
+
+            Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
+                val logs = getContainerLogs(dockerClient, fooDockerContainer!!)
+                assertThat(logs).contains("Deleting blockchain")
+                assertThat(logs).contains("Blockchain deleted in")
+            }
+        }
+    }
+
+    @Test
+    @Order(19)
+    fun `Subnode container stops if empty`() {
+        if (numberOfMasterNodes > 0) {
+            testLogger.info("Asserting that the container stops if there are no running blockchains in it")
+
+            // REMOVE test_dapp3
+            node1.c0.transactionBuilder()
+                    .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp3"]!!, BlockchainAction.remove, "")
+                    .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp3")
+
+            awaitUntilAsserted {
+                val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                    it.names().any { name -> name.contains(fooContainer) }
+                }
+                assertThat(fooDockerContainer?.state()).isEqualTo("exited")
+            }
+        }
     }
 
     private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
