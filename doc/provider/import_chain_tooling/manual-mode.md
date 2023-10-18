@@ -66,3 +66,14 @@ docker run --name postchain_manual1 \
     -nc ./config/node-config.properties \
     -cid 10
 ```
+
+### Importing managed chain
+
+If the source chain is managed you can export it in the same way as in step 3 but configurations need to be fetched with
+PMC instead. Run:
+
+`pmc get-all-configurations --save` command with `--export-format` flag.
+
+Supply the file that is outputted as `--configuration-file` in step 4.
+
+> **Note:** Ensure that the dApp you import is not relying on any functionality that is only supported in managed mode.
