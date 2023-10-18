@@ -500,18 +500,20 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(19)
     fun `Subnode container stops if empty`() {
-        testLogger.info("Asserting that the container stops if there are no running blockchains in it")
+        if (numberOfMasterNodes > 0) {
+            testLogger.info("Asserting that the container stops if there are no running blockchains in it")
 
-        // REMOVE test_dapp3
-        node1.c0.transactionBuilder()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp3"]!!, BlockchainAction.remove, "")
-                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp3")
+            // REMOVE test_dapp3
+            node1.c0.transactionBuilder()
+                    .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp3"]!!, BlockchainAction.remove, "")
+                    .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp3")
 
-        awaitUntilAsserted {
-            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                it.names().any { name -> name.contains(fooContainer) }
+            awaitUntilAsserted {
+                val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                    it.names().any { name -> name.contains(fooContainer) }
+                }
+                assertThat(fooDockerContainer?.state()).isEqualTo("exited")
             }
-            assertThat(fooDockerContainer?.state()).isEqualTo("exited")
         }
     }
 
