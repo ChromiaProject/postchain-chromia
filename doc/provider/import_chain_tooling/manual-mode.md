@@ -76,4 +76,5 @@ PMC instead. Run:
 
 Supply the file that is outputted as `--configuration-file` in step 4.
 
-> **Note:** Ensure that the dApp you import is not relying on any functionality that is only supported in managed mode.
+> **Note:** Ensure that the chain you import is not relying on any functionality that is only supported in managed mode
+> (e.g. ICMF and ICCF).
