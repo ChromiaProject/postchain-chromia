@@ -6,4 +6,4 @@ operation add_city(name) {
     create city (name);
 }
 
-query get_cities3() { return city @* {} ( .name ); }
+query get_cities5() { return city @* {} ( .name ); }

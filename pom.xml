@@ -33,7 +33,7 @@
         <revision>dev</revision>
         <postchain.version>3.13.13</postchain.version>
         <postchain.client.version>3.11.6</postchain.client.version>
-        <directory.chain.version>1.25.0</directory.chain.version>
+        <directory.chain.version>1.25.1</directory.chain.version>
         <rell.version>0.13.2</rell.version>
         <eif.version>0.2.9</eif.version>
         <kotlin.version>1.8.21</kotlin.version>

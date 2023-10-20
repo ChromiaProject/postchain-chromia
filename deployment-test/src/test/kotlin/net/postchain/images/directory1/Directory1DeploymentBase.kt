@@ -454,26 +454,33 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(18)
-    fun `Test remove blockchains`() {
-        // Deploy a new dapp to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
+    fun `Test remove and archive blockchains`() {
+        // Deploy a new dapps to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
         deployDapp("test_dapp3", fooContainer, null)
+        deployDapp("test_dapp5", fooContainer, null)
         nodes().forEach { node ->
-            assertThat(node.c0.getBlockchains(true).size).isEqualTo(6)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(7)
         }
 
         // Verify state is RUNNING
         val dappBrid = dapps["test_dapp"]!!
         val dapp3Brid = dapps["test_dapp3"]!!
+        val dapp5Brid = dapps["test_dapp5"]!!
+        val chainId = node1Db.getChainId(dappBrid)
+        val chain3Id = node1Db.getChainId(dapp3Brid)
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
         verifyBlockchainState(node1, dapp3Brid, BlockchainState.RUNNING)
+        verifyBlockchainState(node1, dapp5Brid, BlockchainState.RUNNING)
 
-        // REMOVE test_dapp
+        // 1. Removing test_dapp, archiving test_dapp3
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.remove, "")
-                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp")
+                .proposeBlockchainActionOperation(node1.providerPubkey, dapp3Brid, BlockchainAction.archive, "")
+                .postTransactionUntilConfirmed("Removing test_dapp and archiving test_dapp3")
 
         // Verify state is REMOVED
         verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.ARCHIVED)
 
         // Verify that removed chains are deleted from DB
         awaitUntilAsserted {
@@ -482,7 +489,7 @@ abstract class Directory1DeploymentBase {
             assertThat(node3Db.getChainId(dappBrid)).isNull()
         }
 
-        // Verify that removed chains are deleted from subnode DBs
+        // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
             val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
                 it.names().any { name -> name.contains(fooContainer) }
@@ -491,8 +498,39 @@ abstract class Directory1DeploymentBase {
 
             Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
                 val logs = getContainerLogs(dockerClient, fooDockerContainer!!)
-                assertThat(logs).contains("Deleting blockchain")
-                assertThat(logs).contains("Blockchain deleted in")
+                assertThat(logs).contains("chain-id=$chainId]: Deleting blockchain")
+                assertThat(logs).contains("chain-id=$chainId]: Blockchain deleted in")
+                assertThat(logs).contains("chain-id=$chain3Id]: Archiving blockchain")
+                assertThat(logs).contains("chain-id=$chain3Id]: Blockchain archived in")
+            }
+        }
+
+        // 2. Removing already archived blockchain test_dapp3
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dapp3Brid, BlockchainAction.remove, "")
+                .postTransactionUntilConfirmed("Removing test_dapp3")
+
+        // Verify state is REMOVED
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.REMOVED)
+
+        // Verify that removed chains are deleted from DB
+        awaitUntilAsserted {
+            assertThat(node1Db.getChainId(dapp3Brid)).isNull()
+            assertThat(node2Db.getChainId(dapp3Brid)).isNull()
+            assertThat(node3Db.getChainId(dapp3Brid)).isNull()
+        }
+
+        // Verify that removed chain is deleted from subnode DBs
+        if (numberOfMasterNodes > 0) {
+            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                it.names().any { name -> name.contains(fooContainer) }
+            }
+            assertThat(fooDockerContainer).isNotNull()
+
+            Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
+                val logs = getContainerLogs(dockerClient, fooDockerContainer!!)
+                assertThat(logs).contains("chain-id=$chain3Id]: Deleting blockchain")
+                assertThat(logs).contains("chain-id=$chain3Id]: Blockchain deleted in")
             }
         }
     }
@@ -503,10 +541,10 @@ abstract class Directory1DeploymentBase {
         if (numberOfMasterNodes > 0) {
             testLogger.info("Asserting that the container stops if there are no running blockchains in it")
 
-            // REMOVE test_dapp3
+            // Removing test_dapp5
             node1.c0.transactionBuilder()
-                    .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp3"]!!, BlockchainAction.remove, "")
-                    .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for test_dapp3")
+                    .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp5"]!!, BlockchainAction.remove, "")
+                    .postTransactionUntilConfirmed("Removing test_dapp5")
 
             awaitUntilAsserted {
                 val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
