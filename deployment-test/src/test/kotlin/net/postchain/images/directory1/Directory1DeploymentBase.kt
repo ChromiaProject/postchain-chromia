@@ -478,7 +478,7 @@ abstract class Directory1DeploymentBase {
                 .proposeBlockchainActionOperation(node1.providerPubkey, dapp3Brid, BlockchainAction.archive, "")
                 .postTransactionUntilConfirmed("Removing test_dapp and archiving test_dapp3")
 
-        // Verify state is REMOVED
+        // Verify state is REMOVED and ARCHIVED
         verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
         verifyBlockchainState(node1, dapp3Brid, BlockchainState.ARCHIVED)
 
