@@ -44,7 +44,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.2.1@sha256:6e7ea3cbf887a38d8a9e3d4da82f85a5a4aebf1065dac1b66da1a4a781d92063</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.2.2@sha256:14277f6448d761cbe6e1aa13af22c5562ab659bb3792ee5838c559086b085b37</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
