@@ -49,3 +49,17 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+  test_dapp5:
+    module: test_dapp5
+    config:
+      config_consensus_strategy: HEADER_HASH
+      blockstrategy:
+        blockdelay: 2001
+        maxblocktime: 2001
+        maxblocktransactions: 501
+      gtx:
+        modules:
+          - net.postchain.d1.icmf.IcmfSenderGTXModule
+    moduleArgs:
+      main:
+        admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
