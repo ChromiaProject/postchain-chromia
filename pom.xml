@@ -31,11 +31,11 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.13.13</postchain.version>
+        <postchain.version>3.13.14</postchain.version>
         <postchain.client.version>3.11.6</postchain.client.version>
         <directory.chain.version>1.25.1</directory.chain.version>
-        <rell.version>0.13.2</rell.version>
-        <eif.version>0.2.9</eif.version>
+        <rell.version>0.13.3</rell.version>
+        <eif.version>0.2.10</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
