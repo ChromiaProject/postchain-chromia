@@ -40,7 +40,10 @@ docker run --rm \
 pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1 --finish-at-height $H
 ```
 
-where `$H` is the height of the last imported block. 
+where `$H` is the height of the last imported block and can be calculated as 
+```shell
+export H=$(($(curl -s -X GET https://node0.devnet2.chromia.dev:7740/blockchain/$DAPP2/height | jq '.blockHeight') - 1))
+```
 
 2. _Monitoring of syncing and anchoring._ Syncing and anchoring might take a long time for big blockchains. To skip the sync step, one can import blocks on _every_ node in parallel on step 1.ii. Anchoring can be sped up by adjusting `anchoring.max_blocks_per_chain` blockchain configuration parameter of the cluster anchoring chain, which equals 100 by default.  
 
