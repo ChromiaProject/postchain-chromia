@@ -8,7 +8,6 @@
 (i) Import blockchain to the container C1:
 ```shell
 pmc blockchain import --configurations-file ./export/dapp.configs -c C1 -n dapp1
-pmc blockchains -i
 export DAPP1=3EA1FB24DB9C77765D5B4F06B2163D99994AA894DBB907984152F6C65A8C2A5C
 ```
 
@@ -16,17 +15,17 @@ export DAPP1=3EA1FB24DB9C77765D5B4F06B2163D99994AA894DBB907984152F6C65A8C2A5C
 
 To do this find an internal IP address of the docker container (that contains `C1` as a second component, e.g. `0350fe40-C1-1`):
 ```shell
-docker inspect 0350fe40-C1-1 | jq '.[0].NetworkSettings.Networks.bridge.IPAddress'
+export DB_HOST=`docker inspect 0350fe40-C1-1 | jq --raw-output '.[0].NetworkSettings.Networks.bridge.IPAddress'`
 ```
 
-and use this IP address in `POSTCHAIN_DB_URL` environment variable. Also set `POSTCHAIN_DB_SCHEMA` to `devnet_psi0_C1`, where `devnet_psi0` is a master's DB schema. Run a blocks import:
+and use this IP address in `POSTCHAIN_DB_URL` environment variable. Also set `POSTCHAIN_DB_SCHEMA` to `postchain0_c1`, where `postchain0_c1` is a master's DB schema. Run a blocks import:
 
 ```shell
 docker run --rm \
     --mount type=bind,source="$(pwd)"/config,target=/opt/chromaway/postchain/config,readonly \
     --mount type=bind,source="$(pwd)"/export,target=/opt/chromaway/postchain/export,readonly \
-    -e POSTCHAIN_DB_SCHEMA=devnet_psi0_c1 \
-    -e POSTCHAIN_DB_URL=jdbc:postgresql://172.17.0.3:5432/postchain \
+    -e POSTCHAIN_DB_SCHEMA=postchain0_c1 \
+    -e POSTCHAIN_DB_URL=jdbc:postgresql://${DB_HOST}:5432/postchain \
     registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server \
     node blockchain import \
     -nc ./config/config.master.0.properties \
@@ -41,7 +40,10 @@ docker run --rm \
 pmc blockchain finish-import --configurations-file ./export/dapp.configs -brid $DAPP1 --finish-at-height $H
 ```
 
-where `$H` is the height of the last imported block. 
+where `$H` is the height of the last imported block and can be calculated as 
+```shell
+export H=$(($(curl -s -X GET https://node0.devnet2.chromia.dev:7740/blockchain/$DAPP2/height | jq '.blockHeight') - 1))
+```
 
 2. _Monitoring of syncing and anchoring._ Syncing and anchoring might take a long time for big blockchains. To skip the sync step, one can import blocks on _every_ node in parallel on step 1.ii. Anchoring can be sped up by adjusting `anchoring.max_blocks_per_chain` blockchain configuration parameter of the cluster anchoring chain, which equals 100 by default.  
 
@@ -60,4 +62,3 @@ docker run --rm \
     get_last_anchored_block -- blockchain_rid="$DAPP1" \
     | grep -o 'block_height=[0-9]*'
 ```
-
