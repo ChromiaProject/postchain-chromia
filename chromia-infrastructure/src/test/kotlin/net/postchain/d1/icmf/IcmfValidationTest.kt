@@ -37,7 +37,7 @@ class IcmfValidationTest {
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val chainID: Long = 1
     private val spilledMessage = gtv("hej")
-    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(listOf(topic), null), null, null)
+    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf(topic), null), null, null, null)
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
@@ -323,7 +323,7 @@ class IcmfValidationTest {
 
     @Test
     fun successWithoutAnchoring() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic)), null))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic)), null, null))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -339,7 +339,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredOrigin() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null, null))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -355,7 +355,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredTopic() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(listOf("another-topic"), null), null, null))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf("another-topic"), null), null, null, null))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -370,7 +370,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredSender() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverGlobalConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic))), null, null))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic))), null, null, null))
 
         val ops = createOpData(
                 listOf(gtv("hej")),

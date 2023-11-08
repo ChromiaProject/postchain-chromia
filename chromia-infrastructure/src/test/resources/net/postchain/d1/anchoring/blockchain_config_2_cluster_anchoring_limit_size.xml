@@ -45,17 +45,6 @@ This is a Anchor Chain configuration specifically for testing.
             </entry>
             <entry key="rell">
                 <dict>
-                    <entry key="moduleArgs">
-                        <dict>
-                            <entry key="anchoring_chain_common">
-                                <dict>
-                                    <entry key="enable_pcu">
-                                        <int>1</int>
-                                    </entry>
-                                </dict>
-                            </entry>
-                        </dict>
-                    </entry>
                     <entry key="modules">
                         <array>
                             <string>anchoring_chain_common</string>

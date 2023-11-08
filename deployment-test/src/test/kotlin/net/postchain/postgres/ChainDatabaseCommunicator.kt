@@ -3,6 +3,7 @@ package net.postchain.postgres
 import net.postchain.base.BaseEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
+import net.postchain.common.BlockchainRid
 import org.apache.commons.dbcp2.BasicDataSource
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
@@ -32,5 +33,9 @@ class ChainDatabaseCommunicator(chainIId: Long, schema: String, dbConfig: Databa
         await.pollInterval(Duration.TEN_SECONDS).atMost(timeOut).until {
             getHeight() >= height
         }
+    }
+
+    fun getChainId(blockchainRid: BlockchainRid): Long? {
+        return DatabaseAccess.of(eContext).getChainId(eContext, blockchainRid)
     }
 }

@@ -33,7 +33,7 @@ private const val GTX_OP_OVERHEAD = 20
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
+open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -45,6 +45,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
     lateinit var anchoringReceiver: AnchoringReceiver
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
+    lateinit var anchoringConfig: AnchoringBlockchainConfigData
     var maxTxSize: Long = -1
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
@@ -89,15 +90,14 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = anchoringReceiver.getRelevantPipes()
-
         var currentSize = 0
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
         outer@ for (pipe in pipes) {
+            var opsCount = 0
             if (pipe.mightHaveNewPackets()) {
-                val blockchainRid = pipe.blockchainRid
-                var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
+                var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
                 while (pipe.mightHaveNewPackets()) {
                     currentHeight++ // Try next height
                     val clusterAnchorPacket = pipe.fetchNext(currentHeight)
@@ -107,16 +107,23 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                             break@outer
                         }
                         ops.add(opData)
-                        pipe.markTaken(clusterAnchorPacket.height, bctx)
+                        opsCount++
                         currentSize += size
                     } else {
                         break // Nothing more to find
+                    }
+
+                    if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
+                        break
                     }
                 }
             }
         }
         return ops
     }
+
+    open fun numberOfBlocksToAnchor(): Long = if (!::anchoringReceiver.isInitialized) 0 else
+        anchoringReceiver.getRelevantPipes().sumOf { if (it.numberOfNewPackets() > 0) it.numberOfNewPackets() else 0 }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
@@ -186,6 +193,7 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
             }
         }
 
+        val relevantPipes = anchoringReceiver.getRelevantPipes()
         // Go through it chain by chain
         for ((bcRid, minimalHeaders) in chainHeadersMap) {
             // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc.
@@ -196,6 +204,11 @@ class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anchorin
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
                 )
                 return false
+            }
+            // Clear matching pipe (if we have one)
+            relevantPipes.find { it.blockchainRid == bcRid }?.let { pipe ->
+                val lastHeight = minimalHeaders.maxOf { it.headerHeight }
+                pipe.markTaken(lastHeight, bctx)
             }
         }
         return true

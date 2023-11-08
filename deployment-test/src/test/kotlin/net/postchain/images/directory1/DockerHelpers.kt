@@ -9,6 +9,7 @@ import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.parseConfig
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.DockerClient.LogsParam
+import org.mandas.docker.client.messages.Container
 import java.io.File
 import java.net.InetAddress
 import java.net.URI
@@ -45,8 +46,11 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
 internal fun saveSubnodeLogs(dockerClient: DockerClient) {
     val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
     all.filter { it.image().contains("chromia-subnode") }.forEach {
-        val log = dockerClient.logs(it.id(), LogsParam.stdout(), LogsParam.stderr())
-                .readFully()
-        File("logs/${it.names()!!.first().replace("/", "")}.log").appendText(log)
+        File("logs/${it.names()!!.first().replace("/", "")}.log")
+                .appendText(getContainerLogs(dockerClient, it))
     }
 }
+
+internal fun getContainerLogs(dockerClient: DockerClient, container: Container) = dockerClient.logs(
+        container.id(), LogsParam.stdout(), LogsParam.stderr()
+).readFully()

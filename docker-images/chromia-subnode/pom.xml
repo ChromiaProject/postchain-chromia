@@ -30,6 +30,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-infrastructure</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-core</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -40,7 +44,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.1.2@sha256:a6f2d66d0d56c04325c124d67237a95f941d835337841d5a68024c5b8fbfe279</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-postgres14:1.2.3@sha256:6cc0785d060ca2d3a1fee5fa28b9866931b5ebb16467bf16cce4fbb672f20eac</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>

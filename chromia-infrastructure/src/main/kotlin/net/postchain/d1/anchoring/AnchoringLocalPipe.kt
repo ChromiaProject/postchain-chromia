@@ -22,6 +22,8 @@ class AnchoringLocalPipe(
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
+    override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
+
     override fun fetchNext(currentPointer: Long): AnchoringPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)

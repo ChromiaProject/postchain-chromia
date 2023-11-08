@@ -24,7 +24,6 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
         super.addNodeConfigurationOverrides(nodeSetup)
         nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", D1PTestPcuInfrastructureFactory::class.qualifiedName)
         nodeSetup.nodeSpecificConfigs.setProperty("clusterManagementMock", AnchoringTestClusterManagement::class.qualifiedName)
-        nodeSetup.nodeSpecificConfigs.setProperty("pcu", true)
     }
 
     @Test

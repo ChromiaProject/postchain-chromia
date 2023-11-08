@@ -1,9 +1,11 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
@@ -11,11 +13,14 @@ import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.registerProviderOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
-import net.postchain.chain0.common.queries.*
+import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.queries.getContainers
+import net.postchain.chain0.common.queries.getNodeData
+import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
-import net.postchain.chain0.legacy_anchoring.integrated.getLastLegacyAnchoredBlock
 import net.postchain.chain0.model.BlockchainState
-import net.postchain.chain0.model.ContainerResourceLimitType.*
+import net.postchain.chain0.model.ContainerResourceLimitType.container_units
+import net.postchain.chain0.model.ContainerResourceLimitType.max_blockchains
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
@@ -30,7 +35,13 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.resources.*
+import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.IoRead
+import net.postchain.containers.bpm.resources.IoWrite
+import net.postchain.containers.bpm.resources.Ram
+import net.postchain.containers.bpm.resources.ResourceLimit
+import net.postchain.containers.bpm.resources.ResourceLimitFactory
+import net.postchain.containers.bpm.resources.Storage
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
@@ -42,8 +53,9 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.ManagedModeBase
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -128,7 +140,7 @@ abstract class Directory1DeploymentBase {
 
             awaitUntilAsserted {
                 val containers = getContainers().map { it.name }.toSet()
-                assertEquals(setOf(systemContainer, fooContainer, barContainer), containers)
+                assertThat(containers).isEqualTo(setOf(systemContainer, fooContainer, barContainer))
             }
         }
     }
@@ -142,13 +154,13 @@ abstract class Directory1DeploymentBase {
 
         awaitUntilAsserted {
             val nodeData = node1.c0.getNodeData(node1.pubkey)
-            assertEquals(nodeData.clusterUnits!!, 2)
+            assertThat(nodeData.clusterUnits!!).isEqualTo(2)
         }
 
         // Asserting that resource limits are defaults
         val expectedLimits = ContainerResourceLimits(Cpu(50L), Ram(2048L), Storage(16384L), IoRead(25), IoWrite(20))
         val actualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
-        assertEquals(expectedLimits, actualLimits)
+        assertThat(actualLimits).isEqualTo(expectedLimits)
 
         // Changing resource limits
         node1.c0.transactionBuilder().proposeContainerLimitsOperation(
@@ -160,7 +172,7 @@ abstract class Directory1DeploymentBase {
 
         // Asserting resource limits changed
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
-        assertEquals(fooResourceLimits, newActualLimits)
+        assertThat(newActualLimits).isEqualTo(fooResourceLimits)
     }
 
     @Test
@@ -261,10 +273,10 @@ abstract class Directory1DeploymentBase {
         all.forEach {
             if (it.names()?.get(0)?.contains(fooContainer) == true) {
                 val res = dockerClient.inspectContainer(it.id())
-                assertEquals(fooResourceLimits.ramBytes(), res.hostConfig()?.memory())
-                assertEquals(fooResourceLimits.cpuQuota(), res.hostConfig()?.cpuQuota())
-                assertEquals(fooResourceLimits.ioReadBytes(), res.hostConfig().blkioDeviceReadBps()[0].rate().toLong())
-                assertEquals(fooResourceLimits.ioWriteBytes(), res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong())
+                assertThat(res.hostConfig()?.memory()).isEqualTo(fooResourceLimits.ramBytes())
+                assertThat(res.hostConfig()?.cpuQuota()).isEqualTo(fooResourceLimits.cpuQuota())
+                assertThat(res.hostConfig().blkioDeviceReadBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioReadBytes())
+                assertThat(res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioWriteBytes())
             }
         }
     }
@@ -293,32 +305,6 @@ abstract class Directory1DeploymentBase {
                 val cities = awaitQueryResult { node.client(brid).query(query, gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assertThat(cities).containsExactly(expectedResult)
-            }
-        }
-    }
-
-    //    @Disabled
-//    @Test
-//    @Order(12)
-    fun `Legacy anchoring can anchor blocks`() {
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp"]!!)
-        assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dapps["test_dapp2"]!!)
-    }
-
-    private fun assertThatDappBlocksAreAnchoredWithLegacyAnchoring(dappBrid: BlockchainRid) {
-        awaitUntilAsserted {
-            nodes().forEach { node ->
-                val lastAnchoredBlock = awaitQueryResult {
-                    node.c0.getLastLegacyAnchoredBlock(dappBrid)
-                }
-                assertThat(lastAnchoredBlock).isNotNull()
-
-                val dappChainBlock = awaitQueryResult {
-                    node.client(dappBrid).blockAtHeight(lastAnchoredBlock!!.height)
-                }
-                assertThat(dappChainBlock).isNotNull()
-
-                assertThat(dappChainBlock!!.rid).isEqualTo(lastAnchoredBlock!!.blockRid)
             }
         }
     }
@@ -382,9 +368,10 @@ abstract class Directory1DeploymentBase {
                 ContainerClusterManagement(
                         ClusterManagementImpl(node1.c0), listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())),
         )
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(txToProve.gtxBody.rid.toHex()),
-                txToProve.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                TxRid(txToProve.gtxBody.calculateTxRid(hashCalculator).toHex()),
+                txToProve.toGtv().merkleHash(hashCalculator),
                 listOf(),
                 sourceDapp,
                 targetDapp
@@ -410,7 +397,7 @@ abstract class Directory1DeploymentBase {
 
         // initial value 500
         nodes().forEach {
-            assertEquals(setOf(500), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+            assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid)).isEqualTo(setOf(500))
         }
 
         // reconfiguring test_dapp2
@@ -421,7 +408,7 @@ abstract class Directory1DeploymentBase {
         // new values: 17100, 17300
         awaitUntilAsserted {
             nodes().forEach {
-                assertEquals(setOf(500, 17100, 17300), getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid))
+                assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(it, dapp2brid)).isEqualTo(setOf(500, 17100, 17300))
             }
         }
     }
@@ -438,19 +425,18 @@ abstract class Directory1DeploymentBase {
         val dappBrid = dapps["test_dapp"]!!
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(1)).second.httpStatusCode!!, 200)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(1)).second.httpStatusCode!!).isEqualTo(200)
         }
 
         // Change to PAUSED
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.PAUSED.name} for dapp $dappBrid")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // Verify no transactions created but chain is reachable
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(2)).second.httpStatusCode!!, 403)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(2)).second.httpStatusCode!!).isEqualTo(403)
         }
         assertDappQuery(dappBrid, "get_cities", "Heraklion")
 
@@ -458,38 +444,120 @@ abstract class Directory1DeploymentBase {
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
                 .postTransactionUntilConfirmed("Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
         // Verify transactions created
         awaitUntilAsserted {
-            assertEquals(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!, 200)
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(3)).second.httpStatusCode!!).isEqualTo(200)
         }
     }
 
     @Test
     @Order(18)
-    fun `Test remove blockchains`() {
+    fun `Test remove and archive blockchains`() {
+        // Deploy a new dapps to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
+        deployDapp("test_dapp3", fooContainer, null)
+        deployDapp("test_dapp5", fooContainer, null)
+        nodes().forEach { node ->
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(7)
+        }
+
         // Verify state is RUNNING
         val dappBrid = dapps["test_dapp"]!!
-        val dapp2Brid = dapps["test_dapp2"]!!
+        val dapp3Brid = dapps["test_dapp3"]!!
+        val dapp5Brid = dapps["test_dapp5"]!!
+        val chainId = node1Db.getChainId(dappBrid)
+        val chain3Id = node1Db.getChainId(dapp3Brid)
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-        verifyBlockchainState(node1, dapp2Brid, BlockchainState.RUNNING)
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.RUNNING)
+        verifyBlockchainState(node1, dapp5Brid, BlockchainState.RUNNING)
 
-        // REMOVE chain
+        // 1. Removing test_dapp, archiving test_dapp3
         node1.c0.transactionBuilder()
                 .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.remove, "")
-                .proposeBlockchainActionOperation(node1.providerPubkey, dapp2Brid, BlockchainAction.remove, "")
-                .postTransactionUntilConfirmed("Change state to ${BlockchainState.REMOVED.name} for dapps")
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
+                .proposeBlockchainActionOperation(node1.providerPubkey, dapp3Brid, BlockchainAction.archive, "")
+                .postTransactionUntilConfirmed("Removing test_dapp and archiving test_dapp3")
 
+        // Verify state is REMOVED and ARCHIVED
         verifyBlockchainState(node1, dappBrid, BlockchainState.REMOVED)
-        verifyBlockchainState(node1, dapp2Brid, BlockchainState.REMOVED)
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.ARCHIVED)
+
+        // Verify that removed chains are deleted from DB
+        awaitUntilAsserted {
+            assertThat(node1Db.getChainId(dappBrid)).isNull()
+            assertThat(node2Db.getChainId(dappBrid)).isNull()
+            assertThat(node3Db.getChainId(dappBrid)).isNull()
+        }
+
+        // Verify that removed chain is deleted from subnode DBs
+        if (numberOfMasterNodes > 0) {
+            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                it.names().any { name -> name.contains(fooContainer) }
+            }
+            assertThat(fooDockerContainer).isNotNull()
+
+            Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
+                val logs = getContainerLogs(dockerClient, fooDockerContainer!!)
+                assertThat(logs).contains("chain-id=$chainId]: Deleting blockchain")
+                assertThat(logs).contains("chain-id=$chainId]: Blockchain deleted in")
+                assertThat(logs).contains("chain-id=$chain3Id]: Archiving blockchain")
+                assertThat(logs).contains("chain-id=$chain3Id]: Blockchain archived in")
+            }
+        }
+
+        // 2. Removing already archived blockchain test_dapp3
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dapp3Brid, BlockchainAction.remove, "")
+                .postTransactionUntilConfirmed("Removing test_dapp3")
+
+        // Verify state is REMOVED
+        verifyBlockchainState(node1, dapp3Brid, BlockchainState.REMOVED)
+
+        // Verify that removed chains are deleted from DB
+        awaitUntilAsserted {
+            assertThat(node1Db.getChainId(dapp3Brid)).isNull()
+            assertThat(node2Db.getChainId(dapp3Brid)).isNull()
+            assertThat(node3Db.getChainId(dapp3Brid)).isNull()
+        }
+
+        // Verify that removed chain is deleted from subnode DBs
+        if (numberOfMasterNodes > 0) {
+            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                it.names().any { name -> name.contains(fooContainer) }
+            }
+            assertThat(fooDockerContainer).isNotNull()
+
+            Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
+                val logs = getContainerLogs(dockerClient, fooDockerContainer!!)
+                assertThat(logs).contains("chain-id=$chain3Id]: Deleting blockchain")
+                assertThat(logs).contains("chain-id=$chain3Id]: Blockchain deleted in")
+            }
+        }
+    }
+
+    @Test
+    @Order(19)
+    fun `Subnode container stops if empty`() {
+        if (numberOfMasterNodes > 0) {
+            testLogger.info("Asserting that the container stops if there are no running blockchains in it")
+
+            // Removing test_dapp5
+            node1.c0.transactionBuilder()
+                    .proposeBlockchainActionOperation(node1.providerPubkey, dapps["test_dapp5"]!!, BlockchainAction.remove, "")
+                    .postTransactionUntilConfirmed("Removing test_dapp5")
+
+            awaitUntilAsserted {
+                val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
+                    it.names().any { name -> name.contains(fooContainer) }
+                }
+                assertThat(fooDockerContainer?.state()).isEqualTo("exited")
+            }
+        }
     }
 
     private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
         awaitUntilAsserted {
-            assertEquals(container.c0.nmGetBlockchainState(brid), state.name)
+            assertThat(container.c0.nmGetBlockchainState(brid), state.name)
         }
     }
 

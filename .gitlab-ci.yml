@@ -1,10 +1,12 @@
-image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.2
+image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.1.0
+    ref: 1.1.7
     file:
       - templates/release.yml
-      - templates/dependency-scanning.yml
+      - templates/maven-dependency-scanning.yml
+      - templates/container-dependency-scanning.yml
+      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -18,7 +20,7 @@ include:
       --env PGDATA=/pgtmpfs
       --tmpfs=/pgtmpfs:size=1000m
       --publish 5432:5432
-      postgres:14.7-alpine3.17
+      postgres:14.9-alpine3.18@sha256:8da7e8e94d4bcc28da8f222a4e259b6f7df2dc62640d104f81762678dc1e2200
     - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mkdir -p $TEST_MOUNT_DIRECTORY
   # Necessary to be able to launch PostgreSQL in Docker manually. PostgreSQL is
@@ -32,6 +34,7 @@ include:
     when: always
     paths:
       - "**/*.log"
+      - $JACOCO_REPORT_DIR/*
     reports:
       junit:
         - "**/target/surefire-reports/TEST-*.xml"
@@ -41,7 +44,8 @@ include:
 
 stages:
   - build
-  - nightly-tests
+  - code-coverage
+  - slow-integration-tests
   - deploy
   - dependency-check
   - release
@@ -53,14 +57,16 @@ deploy-snapshot:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
   script:
+    - git fetch --unshallow
+    - git fetch --tags
     - CURRENT_VERSION=$(git describe --tags --abbrev=0)
     - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
     - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly,docker-push,distro
+      --activate-profiles ci,slow-it,docker-push,distro
       -Drevision=$SNAPSHOT_VERSION
-      clean deploy
+      clean source:jar deploy
 
 deploy-pqc:
   extends: .setup
@@ -86,12 +92,14 @@ deploy:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly,docker-push,distro
+      --activate-profiles ci,slow-it,docker-push,distro
       -Drevision=$CI_COMMIT_TAG
-      clean deploy
+      clean source:jar deploy
 
 build:
-  extends: .setup
+  extends:
+    - .setup
+    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
@@ -101,12 +109,21 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,docker
+      --activate-profiles ci,coverage
       verify
 
-nightly-tests:
+test-coverage-report:
+  stage: code-coverage
+  except:
+    refs:
+      - dev
+      - tags
+  dependencies:
+    - build
+
+slow-integration-tests:
   extends: .setup
-  stage: nightly-tests
+  stage: slow-integration-tests
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"
       when: always
@@ -116,7 +133,7 @@ nightly-tests:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       clean verify
 
 dependency-check:
@@ -132,7 +149,7 @@ container-scanning:
   parallel:
     matrix:
       - IMAGE: [ chromaway/chromia-subnode, chromaway/chromia-server ]
-        VERSION: [ 3.11.1, 3.12.0-SNAPSHOT ]
+        VERSION: [ LATEST, LATEST_SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
@@ -144,7 +161,7 @@ variables:
   # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
-  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml -U"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -s .gitlab-settings.xml -U"
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
@@ -153,6 +170,7 @@ variables:
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
+  JACOCO_REPORT_DIR: coverage-report-aggregate/target/site/jacoco-aggregate
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'

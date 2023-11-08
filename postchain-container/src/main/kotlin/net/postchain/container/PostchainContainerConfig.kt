@@ -17,6 +17,6 @@ data class PostchainContainerConfig(
     val resourceLimits: ContainerResourceLimits = ContainerResourceLimits.default(),
     val debug: Boolean = true
 ) {
-    val appConfig = AppConfig.fromPropertiesFile(configFile, debug)
+    val appConfig = AppConfig.fromPropertiesFile(configFile)
     val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 }

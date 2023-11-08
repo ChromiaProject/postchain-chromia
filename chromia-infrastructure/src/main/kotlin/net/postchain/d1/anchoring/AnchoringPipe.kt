@@ -10,6 +10,7 @@ interface AnchoringPipe {
     val blockchainRid: BlockchainRid
     fun setHighestSeenHeight(height: Long)
     fun mightHaveNewPackets(): Boolean
+    fun numberOfNewPackets(): Long
     fun fetchNext(currentPointer: Long): AnchoringPacket?
     fun markTaken(currentPointer: Long, bctx: BlockEContext)
 }

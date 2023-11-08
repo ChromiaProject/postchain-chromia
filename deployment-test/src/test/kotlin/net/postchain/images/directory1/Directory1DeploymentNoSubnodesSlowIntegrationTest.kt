@@ -3,7 +3,7 @@ package net.postchain.images.directory1
 import net.postchain.crypto.KeyPair
 import org.testcontainers.containers.output.Slf4jLogConsumer
 
-class Directory1DeploymentNoSubnodesNightly : Directory1DeploymentBase() {
+class Directory1DeploymentNoSubnodesSlowIntegrationTest : Directory1DeploymentBase() {
 
     companion object {
         init {

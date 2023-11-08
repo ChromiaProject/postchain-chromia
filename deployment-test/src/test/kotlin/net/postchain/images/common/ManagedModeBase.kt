@@ -2,6 +2,8 @@ package net.postchain.images.common
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
@@ -44,8 +46,6 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -210,7 +210,7 @@ open class ManagedModeBase {
     protected fun assertAnchoringChainProperties() {
         val systemChains = node1.c0.nmComputeBlockchainInfoList(node1.nodeKeyPair.pubKey.data)
                 .filter { it.system }.map { BlockchainRid(it.rid) }
-        assertEquals(3, systemChains.size)
+        assertThat(systemChains.size).isEqualTo(3)
 
         // Getting cluster anchoring chain for system cluster via CM API
         clusterAnchoringBrid = BlockchainRid(node1.c0.cmGetClusterInfo(systemCluster).anchoringChain)
@@ -244,18 +244,18 @@ open class ManagedModeBase {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
             val expected = nodes.map { it.pubkey }.toSet()
-            assertEquals(expected, actual)
+            assertThat(actual).isEqualTo(expected)
         }
     }
 
     protected fun assertChainSigners(txRid: TxRid, vararg nodes: PostchainContainer): BlockchainRid =
             awaitQueryResult {
                 val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
-                assertNotNull(brid)
+                assertThat(brid).isNotNull()
                 val currentHeight = node1.client(brid!!).currentBlockHeight()
                 val actual = node1.c0.cmGetPeerInfo(brid.data, currentHeight).map { PubKey(it) }.toSet()
                 val expected = nodes.map { it.pubkey }.toSet()
-                assertEquals(expected, actual)
+                assertThat(actual).isEqualTo(expected)
                 brid
             }!!
 

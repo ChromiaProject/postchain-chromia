@@ -32,6 +32,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-infrastructure</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-core</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -42,17 +46,21 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-quota:1.1.2@sha256:7bf5238d957d360cced7de89029d45ebb0056bcc24deb15639555c1582732d6e</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17-quota:1.2.2@sha256:6848d4232ce1c9d063ce8facdfc01b9ca9a0603c12024b2525da8466cf8fc3aa</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
                         <workingDirectory>/opt/chromaway/postchain</workingDirectory>
                         <mainClass>${main.class}</mainClass>
-                        <jvmFlags>-XX:+CrashOnOutOfMemoryError</jvmFlags>
+                        <jvmFlags>
+                            <jvmFlag>-XX:+UnlockDiagnosticVMOptions</jvmFlag>
+                            <jvmFlag>-XX:AbortVMOnException=java.lang.OutOfMemoryError</jvmFlag>
+                        </jvmFlags>
                         <environment>
                             <POSTCHAIN_DEBUG>false</POSTCHAIN_DEBUG>
                             <POSTCHAIN_RUNNING_IN_CONTAINER>true</POSTCHAIN_RUNNING_IN_CONTAINER>
                             <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log4j2.yml</LOG4J_CONFIGURATION_FILE>
+                            <IMAGE_VERSION_TAG>${revision}</IMAGE_VERSION_TAG>
                         </environment>
                         <creationTime>${git.commit.time}</creationTime>
                         <filesModificationTime>${git.commit.time}</filesModificationTime>
