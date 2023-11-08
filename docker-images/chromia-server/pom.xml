@@ -22,6 +22,10 @@
         <!-- Docker image dependencies -->
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-dilithium</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-server-cli</artifactId>
         </dependency>
         <dependency>
