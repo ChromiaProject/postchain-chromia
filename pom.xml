@@ -34,7 +34,7 @@
         <postchain.version>3.14.3</postchain.version>
         <postchain.client.version>3.11.6</postchain.client.version>
         <directory.chain.version>1.27.0</directory.chain.version>
-        <rell.version>0.13.4</rell.version>
+        <rell.version>0.13.5</rell.version>
         <eif.version>0.2.10</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
