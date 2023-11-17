@@ -1,5 +1,6 @@
 package net.postchain.postgres
 
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.BaseEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
@@ -37,5 +38,13 @@ class ChainDatabaseCommunicator(chainIId: Long, schema: String, dbConfig: Databa
 
     fun getChainId(blockchainRid: BlockchainRid): Long? {
         return DatabaseAccess.of(eContext).getChainId(eContext, blockchainRid)
+    }
+
+    fun isChainArchivedOnNode(blockchainRid: BlockchainRid): Boolean {
+        val chainId = getChainId(blockchainRid) ?: return false
+        return dataSource.connection.use {
+            val chainEContext = BaseEContext(it, chainId, dbAccess)
+            BlockchainApi.isBlockchainArchivedOnNode(chainEContext)
+        }
     }
 }
