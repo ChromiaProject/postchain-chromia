@@ -19,13 +19,13 @@ Configuration:
     Logger:
 
     - name: net.postchain
-      level: info
+      level: debug
       additivity: false
       AppenderRef:
       - ref: ConsoleAppender
 
     - name: net.postchain.base.BaseBlockchainProcessManager
-      level: info
+      level: debug
       additivity: false
       AppenderRef:
       - ref: ConsoleAppender
@@ -37,7 +37,7 @@ Configuration:
       - ref: ConsoleAppender
 
     - name: net.postchain.managed.ManagedBlockchainConfigurationProvider
-      level: info
+      level: debug
       additivity: false
       AppenderRef:
         - ref: ConsoleAppender
