@@ -170,7 +170,6 @@ class Directory1ArchivingMixIT {
             val lastAnchoredBlock = awaitQueryResult {
                 node1.client(s1SAC).getLastAnchoredBlock(dappBrid)
             }
-            println("lastAnchoredBlock: $lastAnchoredBlock")
             assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(10)
         }
     }
