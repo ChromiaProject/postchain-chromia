@@ -115,7 +115,7 @@ class Directory1ReconfigurationMixIT {
                 .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
                 .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
                 .registerNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster), 2)
-                .postTransactionUntilConfirmed("Register p2 as system")
+                .postTransactionUntilConfirmed("Register p2 and p3 as system")
 
         // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())

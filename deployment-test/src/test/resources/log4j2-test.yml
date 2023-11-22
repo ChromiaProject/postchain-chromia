@@ -37,6 +37,18 @@ Configuration:
         fileName: "logs/reconfig/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+      - name: Archiving_Node1Appender
+        fileName: "logs/archiving/node1.log"
+        PatternLayout:
+          Pattern: "%msg%n"
+      - name: Archiving_Node2Appender
+        fileName: "logs/archiving/node2.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Archiving_Node3Appender
+        fileName: "logs/archiving/node3.log"
+        PatternLayout:
+          pattern: "%msg%n"
 
   Loggers:
 
@@ -54,6 +66,7 @@ Configuration:
           - ref: ConsoleAppender
           - ref: FileAppender
 
+      # Deployment tests
       - name: Deployment_Node1Logger
         level: info
         additivity: false
@@ -70,6 +83,7 @@ Configuration:
         AppenderRef:
           - ref: Deployment_Node3Appender
 
+      # Reconfiguration tests
       - name: Reconfig_Node1Logger
         level: info
         additivity: false
@@ -85,4 +99,21 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: Reconfig_Node3Appender
+
+      # Archiving/Unarchiving tests
+      - name: Archiving_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Archiving_Node1Appender
+      - name: Archiving_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Archiving_Node2Appender
+      - name: Archiving_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Archiving_Node3Appender
 
