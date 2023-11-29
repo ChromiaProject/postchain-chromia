@@ -4,6 +4,7 @@ blockchains:
     moduleArgs:
       common:
         allow_blockchain_dependencies: false
+        provider_quota_max_actions_per_day: 100
       common.init:
         initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
         genesis_node:

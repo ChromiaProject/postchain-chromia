@@ -37,6 +37,18 @@ Configuration:
         fileName: "logs/reconfig/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+      - name: Moving_Node1Appender
+        fileName: "logs/moving/node1.log"
+        PatternLayout:
+          Pattern: "%msg%n"
+      - name: Moving_Node2Appender
+        fileName: "logs/moving/node2.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Moving_Node3Appender
+        fileName: "logs/moving/node3.log"
+        PatternLayout:
+          pattern: "%msg%n"
       - name: Archiving_Node1Appender
         fileName: "logs/archiving/node1.log"
         PatternLayout:
@@ -99,6 +111,23 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: Reconfig_Node3Appender
+
+      # Moving tests
+      - name: Moving_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Moving_Node1Appender
+      - name: Moving_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Moving_Node2Appender
+      - name: Moving_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Moving_Node3Appender
 
       # Archiving/Unarchiving tests
       - name: Archiving_Node1Logger

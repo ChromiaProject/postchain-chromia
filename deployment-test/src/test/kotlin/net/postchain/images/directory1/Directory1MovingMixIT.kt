@@ -22,7 +22,8 @@ import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainUnarchiveActionOperation
+import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveFinishOperation
+import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
@@ -34,6 +35,7 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
+import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
@@ -41,7 +43,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -49,13 +50,13 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ArchivingMixIT {
+class Directory1MovingMixIT {
 
     companion object : ManagedModeBase() {
 
-        val node1Logger = KotlinLogging.logger("Archiving_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Archiving_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Archiving_Node3Logger")
+        val node1Logger = KotlinLogging.logger("Moving_Node1Logger")
+        val node2Logger = KotlinLogging.logger("Moving_Node2Logger")
+        val node3Logger = KotlinLogging.logger("Moving_Node3Logger")
 
         lateinit var dappBrid: BlockchainRid
         lateinit var s1SAC: BlockchainRid
@@ -165,91 +166,105 @@ class Directory1ArchivingMixIT {
         s2SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
         s3SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
 
-        testLogger.info("Making sure 10 blocks of dapp are anchored")
+        testLogger.info("Making sure 5 blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
                 node1.client(s1SAC).getLastAnchoredBlock(dappBrid)
             }
-            assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(10)
+            assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(5)
         }
     }
 
     @Test
     @Order(3)
-    fun `Archiving blockchain in container c1 running on master`() {
-        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.archive, "")
-                .postTransactionUntilConfirmed("test_dapp archived in c1 running on master")
-        verifyBlockchainState(node1, dappBrid, BlockchainState.ARCHIVED)
+    fun `Moving blockchain from container c1 on master to container c3 on subnode`() {
+        // build 5 more blocks
+        testLogger.info("Making sure next 5 blocks of dapp are built and anchored")
+        val dappClient = node1.client(dappBrid)
+        val height = dappClient.currentBlockHeight()
         awaitUntilAsserted {
-            assertThat(node1Db.isChainArchivedOnNode(dappBrid)).isTrue()
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 4)
+        }
+
+        // pausing blockchain
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
+                .postTransactionUntilConfirmed("test_dapp paused")
+        // verify blockchain is PAUSED and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
+
+        // initiating moving
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3", "")
+                .postTransactionUntilConfirmed("test_dapp moving to c3/subnode started")
+
+        // finalizing moving
+        val lastHeight = dappClient.currentBlockHeight()
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .postTransactionUntilConfirmed("test_dapp moving to c3/subnode finalized")
+
+        // resuming blockchain
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
+                .postTransactionUntilConfirmed("test_dapp resumed")
+        // verify blockchain is RUNNING and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+
+        // Asserting that all blocks (some of them) are anchored on s3SAC chain
+        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, 0)
+        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC)
+
+        // Asserting that new blocks are anchored on s3SAC chain
+        awaitUntilAsserted {
+            val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
         }
     }
 
     @Test
     @Order(4)
-    fun `Unarchiving blockchain to container c3 running on subnode`() {
-        val s1LastAnchoredHeight = node1.client(s1SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainUnarchiveActionOperation(node1.providerPubkey, dappBrid, "c3", s1LastAnchoredHeight, "")
-                .postTransactionUntilConfirmed("test_dapp unarchiving to c3/subnode started")
-
-        // Asserting that state changed: ARCHIVED -> UNARCHIVING
-        verifyBlockchainState(node1, dappBrid, BlockchainState.UNARCHIVING)
-
-        // Asserting that blockchain is UNARCHIVED, i.e. state changed: UNARCHIVING -> RUNNING
-        verifyBlockchainState(node3, dappBrid, BlockchainState.RUNNING)
-
-        // Asserting that all blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, 0, node1, s1SAC, node3, s3SAC)
-        assertBlockReanchored(dappBrid, s1LastAnchoredHeight, node1, s1SAC, node3, s3SAC)
-
-        // Asserting that new blocks are anchored on s3SAC chain
+    fun `Moving blockchain from container c3 on subnode to container c2 on master`() {
+        testLogger.info("Making sure next 5 blocks of dapp are built and anchored")
+        val dappClient = node3.client(dappBrid)
+        val height = dappClient.currentBlockHeight()
         awaitUntilAsserted {
-            val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(s3LastAnchoredHeight).isGreaterThan(s1LastAnchoredHeight)
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 4)
         }
-    }
 
-    @Test
-    @Order(5)
-    fun `Archiving blockchain in container c3 running on subnode`() {
+        // pausing blockchain
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.archive, "")
-                .postTransactionUntilConfirmed("test_dapp archived in c3 running on subnode")
-        verifyBlockchainState(node1, dappBrid, BlockchainState.ARCHIVED)
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
+                .postTransactionUntilConfirmed("test_dapp paused")
+        // verify blockchain is PAUSED and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
-        awaitUntilAsserted {
-            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                it.names().any { name -> name.contains("-c3-") }
-            }
-            assertThat(fooDockerContainer?.state()).isEqualTo("exited")
-        }
-    }
-
-    @Test
-    @Order(6)
-    fun `Unarchiving blockchain to container c2 running on master`() {
-        val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+        // initiating moving
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainUnarchiveActionOperation(node1.providerPubkey, dappBrid, "c2", s3LastAnchoredHeight, "")
-                .postTransactionUntilConfirmed("test_dapp unarchiving to c2/master started")
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c2", "")
+                .postTransactionUntilConfirmed("test_dapp moving to c2/master started")
 
-        // Asserting that state changed: ARCHIVED -> UNARCHIVING
-        verifyBlockchainState(node3, dappBrid, BlockchainState.UNARCHIVING)
+        // finalizing moving
+        val lastHeight = dappClient.currentBlockHeight()
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .postTransactionUntilConfirmed("test_dapp moving to c2/master finalized")
 
-        // Asserting that blockchain is UNARCHIVED, i.e. state changed: UNARCHIVING -> RUNNING
-        verifyBlockchainState(node2, dappBrid, BlockchainState.RUNNING)
+        // resuming blockchain
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
+                .postTransactionUntilConfirmed("test_dapp resumed")
+        // verify blockchain is RUNNING and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that old blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, 0, node3, s3SAC, node2, s2SAC)
-        assertBlockReanchored(dappBrid, s3LastAnchoredHeight, node3, s3SAC, node2, s2SAC)
+        // Asserting that all blocks (some of them) are anchored on s2SAC chain
+        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, 0)
+        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC)
 
         // Asserting that new blocks are anchored on s2SAC chain
         awaitUntilAsserted {
             val s2LastAnchoredHeight = node2.client(s2SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(s2LastAnchoredHeight).isGreaterThan(s3LastAnchoredHeight)
+            assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
         }
     }
 
@@ -275,14 +290,17 @@ class Directory1ArchivingMixIT {
     }
 
     private fun assertBlockReanchored(
-            brid: BlockchainRid, height: Long,
-            srcNode: PostchainContainer, srcAnchoringChain: BlockchainRid,
-            dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid
+            brid: BlockchainRid, srcNode: PostchainContainer,
+            srcAnchoringChain: BlockchainRid, dstNode: PostchainContainer,
+            dstAnchoringChain: BlockchainRid, height: Long = -1L
     ) {
-        awaitQueryResult {
-            srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid.data.also {
-                assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, it)).isTrue()
+        awaitQueryResult(atMost = Duration.TWO_MINUTES) {
+            val blockRid = if (height == -1L) {
+                srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
+            } else {
+                srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid
             }
+            assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
         }
     }
 }
