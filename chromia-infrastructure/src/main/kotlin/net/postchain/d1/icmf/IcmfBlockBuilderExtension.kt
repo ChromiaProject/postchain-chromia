@@ -38,8 +38,8 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
         } else {
             logger.info("ICMF message sent in topic ${message.topic}")
-            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, message.blockHeight, GtvEncoder.encodeGtv(message.body))
-            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, message.blockHeight)
+            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, GtvEncoder.encodeGtv(message.body))
+            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
             queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
         }
     }
