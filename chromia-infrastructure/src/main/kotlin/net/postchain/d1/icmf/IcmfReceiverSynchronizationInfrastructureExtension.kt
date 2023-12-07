@@ -9,6 +9,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.impl.TryNextOnErrorRequestStrategyFactory
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -153,8 +154,9 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             failOverConfig = FailOverConfig(
                     attemptsPerEndpoint = 1,
                     attemptInterval = Duration.ZERO
-            ))
-    )
+            ),
+            requestStrategy = TryNextOnErrorRequestStrategyFactory()
+    ))
 
     open fun createQueryProvider(
             configuration: BlockchainConfiguration,
