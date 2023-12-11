@@ -27,6 +27,7 @@ import org.http4k.server.Http4kServer
 import org.http4k.server.SunHttp
 import org.http4k.server.asServer
 import java.io.Closeable
+import java.util.zip.GZIPInputStream
 
 object MockPostchainRestApi : HttpHandler, Closeable {
     private const val port = 9000
@@ -54,7 +55,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
             routes(
                     "/query_gtv/{blockchainRID}" bind Method.POST to { request ->
                         val blockchainRid = BlockchainRid(blockchainRid(request).hexStringToByteArray())
-                        val gtvQuery = GtvDecoder.decodeGtv(request.body.stream)
+                        val gtvQuery = parseRequestBody(request)
                         val queryName = gtvQuery[0].asString()
                         val queryArgs = gtvQuery[1]
 
@@ -84,6 +85,12 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                     }
             )
     )
+
+    private fun parseRequestBody(request: Request) = if (request.header("content-encoding") == "gzip") {
+        GtvDecoder.decodeGtv(GZIPInputStream(request.body.stream))
+    } else {
+        GtvDecoder.decodeGtv(request.body.stream)
+    }
 
     override fun invoke(request: Request): Response = app(request)
 
