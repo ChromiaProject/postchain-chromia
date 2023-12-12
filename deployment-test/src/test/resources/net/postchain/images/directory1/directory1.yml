@@ -58,3 +58,86 @@ blockchains:
         modules:
           - "net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule"
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+  mainnet:
+    module: management_chain_mainnet
+    config:
+      config_consensus_strategy: HEADER_HASH
+      blockstrategy:
+        maxblocktime: 2000
+      revolt:
+        fast_revolt_status_timeout: 1000
+      signers:
+        - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      icmf:
+        receiver:
+          anchoring:
+            topics:
+              - G_configuration_updated
+              - G_configuration_failed
+              - G_last_anchored_heights
+          global:
+            topics:
+              - G_create_container
+              - G_upgrade_container
+              - G_stop_container
+              - G_restart_container
+    moduleArgs:
+      common:
+        allow_blockchain_dependencies: false
+        provider_quota_max_actions_per_day: 100
+      common.init:
+        initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
+        genesis_node:
+          - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+          - node1
+          - 9871
+          - "http://node1:7740"
+          - ""
+      proposal_blockchain.util:
+        max_config_path_depth: 10
+        max_config_size: 2097152 # 2 MiB
+  ticket_chain:
+    module: ticket_chain
+    config:
+      config_consensus_strategy: HEADER_HASH
+      revolt:
+        fast_revolt_status_timeout: 2000
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+      icmf:
+        receiver:
+          directory-chain:
+            topics:
+              - L_ticket_container_result
+              - L_cluster_update
+              - L_provider_registered
+              - L_node_update
+              - L_cluster_node_update
+    moduleArgs:
+      lib.ft4.accounts:
+        rate_limit_active: 1
+        rate_limit_max_points: 20
+        rate_limit_recovery_time: 5000
+        rate_limit_points_at_account_creation: 1
+      lib.auth:
+        auth_pubkey: x"0317FF1ECF25B04026B6F9FA1960BA58070FB1CFC98519F7BC02D71ED1B00B1997"
+      ticket_chain:
+        asset_name: "Chromia Test"
+        asset_symbol: "tCHR"
+        asset_decimals: 6
+        asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
+        amount_to_mint: 1000000000
+        # corresponding private key for this test key is FD8F9D4F1327DA6622B969DDD835CB41C982FAA805E614D7F4F4F0ADBCAD135F
+        pool_account_pubkey: x"032FF500E33BC4DF87C7F40C167ADA6DBE52955066DD3F689189ED221B913BFD8F"
+        # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
+        admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"

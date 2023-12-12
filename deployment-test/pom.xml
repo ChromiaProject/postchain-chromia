@@ -107,7 +107,7 @@
                                     <directory>${project.basedir}/rell/src</directory>
                                 </resource>
                                 <resource>
-                                    <directory>${directory.source}</directory>
+                                    <directory>${maven.multiModuleProjectDirectory}/${directory.source}</directory>
                                     <includes>
                                         <include>messaging/icmf/module.rell</include>
                                         <include>messaging/icmf/constants.rell</include>
@@ -136,6 +136,8 @@
                             <mainModules>
                                 <mainModule>management_chain_directory1</mainModule>
                                 <mainModule>anchoring_chain_common</mainModule>
+                                <mainModule>management_chain_mainnet</mainModule>
+                                <mainModule>ticket_chain</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
@@ -146,8 +148,10 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <configPath>${project.basedir}/src/test/resources/net/postchain/images/directory1/directory1.yml</configPath>
-                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                            <rootFolder>${project.basedir}/..</rootFolder>
+                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/directory1.yml</configFile>
+                            <source>${directory.source}</source>
+                            <target>deployment-test/target/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
                     <execution>
@@ -157,9 +161,10 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <configPath>${project.basedir}/rell/config.yml</configPath>
-                            <source>${project.build.directory}/rell/src</source>
-                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                            <rootFolder>${project.basedir}/..</rootFolder>
+                            <configFile>deployment-test/rell/config.yml</configFile>
+                            <source>deployment-test/target/rell/src</source>
+                            <target>deployment-test/target/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
                 </executions>
