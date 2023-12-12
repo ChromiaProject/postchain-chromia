@@ -33,7 +33,7 @@
         <revision>dev</revision>
         <postchain.version>3.14.13</postchain.version>
         <postchain.client.version>3.12.0</postchain.client.version>
-        <directory.chain.version>1.29.1</directory.chain.version>
+        <directory.chain.version>1.29.2</directory.chain.version>
         <rell.version>0.13.5</rell.version>
         <eif.version>0.2.13</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
@@ -44,7 +44,7 @@
         <maven.compiler.target>17</maven.compiler.target>
 
         <!--suppress UnresolvedMavenProperty -->
-        <directory.source>${maven.multiModuleProjectDirectory}/directory-chain/target/directory1/src</directory.source>
+        <directory.source>directory-chain/target/directory1/src</directory.source>
     </properties>
 
     <dependencyManagement>
@@ -208,9 +208,9 @@
                 <plugin>
                     <groupId>net.postchain.rell</groupId>
                     <artifactId>rell-maven-plugin</artifactId>
-                    <version>0.10.1</version>
+                    <version>0.11.5</version>
                     <configuration>
-                        <source>${directory.source}</source>
+                        <source>${maven.multiModuleProjectDirectory}/${directory.source}</source>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -218,7 +218,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <environmentVariables>
-                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                            <D1_SOURCE>${maven.multiModuleProjectDirectory}/${directory.source}</D1_SOURCE>
                         </environmentVariables>
                     </configuration>
                 </plugin>
@@ -227,7 +227,7 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <configuration>
                         <environmentVariables>
-                            <D1_SOURCE>${directory.source}</D1_SOURCE>
+                            <D1_SOURCE>${maven.multiModuleProjectDirectory}/${directory.source}</D1_SOURCE>
                         </environmentVariables>
                     </configuration>
                 </plugin>
@@ -330,7 +330,7 @@
             </activation>
             <properties>
                 <!--suppress UnresolvedMavenProperty -->
-                <directory.source>${maven.multiModuleProjectDirectory}/../directory-chain/src</directory.source>
+                <directory.source>../directory-chain/src</directory.source>
             </properties>
         </profile>
         <profile>

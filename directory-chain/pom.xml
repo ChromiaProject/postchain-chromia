@@ -49,6 +49,24 @@
                       </execution>
                   </executions>
             </plugin>
+            <plugin>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>install-libs</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>rell-install</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.build.directory}/directory1/src</source>
+                            <configPath>${project.build.directory}/directory1/chromia.yml</configPath>
+                            <target>${project.build.directory}/directory1</target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
