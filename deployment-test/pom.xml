@@ -137,7 +137,7 @@
                                 <mainModule>management_chain_directory1</mainModule>
                                 <mainModule>anchoring_chain_common</mainModule>
                                 <mainModule>management_chain_mainnet</mainModule>
-                                <mainModule>ticket_chain</mainModule>
+                                <mainModule>economy_chain</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
