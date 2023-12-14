@@ -14,21 +14,21 @@ import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_cluster.createClusterOperation
+import net.postchain.chain0.economy_chain.TicketState
+import net.postchain.chain0.economy_chain.createContainerOperation
+import net.postchain.chain0.economy_chain.getBalance
+import net.postchain.chain0.economy_chain.getCreateContainerTicketByTransaction
+import net.postchain.chain0.economy_chain.getLeasesByAccount
+import net.postchain.chain0.economy_chain.getPoolBalance
+import net.postchain.chain0.economy_chain.getProviderAccountId
+import net.postchain.chain0.economy_chain.initOperation
+import net.postchain.chain0.economy_chain.registerAccountOperation
+import net.postchain.chain0.economy_chain.registerProviderAccountOperation
+import net.postchain.chain0.economy_chain.transferToPoolOperation
+import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.lib.ft4.auth.external.ftAuthOperation
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
-import net.postchain.chain0.ticket_chain.TicketState
-import net.postchain.chain0.ticket_chain.createContainerOperation
-import net.postchain.chain0.ticket_chain.getBalance
-import net.postchain.chain0.ticket_chain.getCreateContainerTicketByTransaction
-import net.postchain.chain0.ticket_chain.getLeasesByAccount
-import net.postchain.chain0.ticket_chain.getPoolBalance
-import net.postchain.chain0.ticket_chain.getProviderAccountId
-import net.postchain.chain0.ticket_chain.initOperation
-import net.postchain.chain0.ticket_chain.registerAccountOperation
-import net.postchain.chain0.ticket_chain.registerProviderAccountOperation
-import net.postchain.chain0.ticket_chain.transferToPoolOperation
-import net.postchain.chain0.ticketing.initTicketingOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -54,24 +54,24 @@ import java.math.BigInteger
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TicketChainMixIT {
+class Directory1EconomyChainMixIT {
 
-    private val tcAdminKeyPair = KeyPair(
+    private val ecAdminKeyPair = KeyPair(
             "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3".hexStringToByteArray(),
             "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0".hexStringToByteArray())
-    private val PostchainContainer.tcAdmin get() = client(tcBrid, listOf(tcAdminKeyPair))
-    private val PostchainContainer.tc get() = client(tcBrid)
-    private val tcAdminSigMaker = cryptoSystem.buildSigMaker(tcAdminKeyPair)
+    private val PostchainContainer.ecAdmin get() = client(ecBrid, listOf(ecAdminKeyPair))
+    private val PostchainContainer.ec get() = client(ecBrid)
+    private val ecAdminSigMaker = cryptoSystem.buildSigMaker(ecAdminKeyPair)
 
     private val userAccountOwnerKeys = KeyPair(
             "039BEA5DFA1F22D16EF702995794A0082CC358050CDBEAA1E50E7AC067BA1B6160".hexStringToByteArray(),
             "A550EB5580B4DD1A972954CEC39679E4C0C3E82FF2A3510F3A931CE0DB12A567".hexStringToByteArray())
-    private val tcUserAccountSigMaker = cryptoSystem.buildSigMaker(userAccountOwnerKeys)
+    private val ecUserAccountSigMaker = cryptoSystem.buildSigMaker(userAccountOwnerKeys)
 
     companion object : ManagedModeBase() {
 
         private const val APP_CLUSTER = "appCluster"
-        private const val TC_NAME = "ticket_chain"
+        private const val EC_NAME = "economy_chain"
 
         private val node1Logger = KotlinLogging.logger("TC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
@@ -81,7 +81,7 @@ class Directory1TicketChainMixIT {
         private val node1PubkeyByteArray = node1PubkeyString.hexStringToByteArray()
         private val node1KeyPair = KeyPair.of(node1PubkeyString, "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
-        lateinit var tcBrid: BlockchainRid
+        lateinit var ecBrid: BlockchainRid
         lateinit var userAccountClient: PostchainClient
         lateinit var userAccountAuthenticator: FTAuthenticator
         lateinit var userAccountId: ByteArray
@@ -151,24 +151,24 @@ class Directory1TicketChainMixIT {
 
     @Test
     @Order(3)
-    fun `Add Ticket Chain`() {
-        testLogger.info("Adding Ticket Chain")
-        val ticketChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/ticket_chain.xml")!!.readText())
+    fun `Add Economy Chain`() {
+        testLogger.info("Adding Economy Chain")
+        val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!.readText())
 
         node1.c0.transactionBuilder()
-                .initTicketingOperation(node1.providerPubkey, GtvEncoder.encodeGtv(ticketChainGtvConfig))
-                .postTransactionUntilConfirmed("Add $TC_NAME")
+                .initEconomyChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(economyChainGtvConfig))
+                .postTransactionUntilConfirmed("Add $EC_NAME")
 
-        val tcRid = node1.c0.getBlockchains(true).firstOrNull { it.name == TC_NAME }?.rid
+        val tcRid = node1.c0.getBlockchains(true).firstOrNull { it.name == EC_NAME }?.rid
         assertThat(tcRid).isNotNull()
-        tcBrid = BlockchainRid(tcRid!!)
+        ecBrid = BlockchainRid(tcRid!!)
 
-        testLogger.info { "$TC_NAME deployed: $tcBrid" }
+        testLogger.info { "$EC_NAME deployed: $ecBrid" }
 
-        node1.tc.transactionBuilder()
+        node1.ec.transactionBuilder()
                 .initOperation()
-                .postTransactionUntilConfirmed("Init $TC_NAME")
-        testLogger.info { "$TC_NAME initialized" }
+                .postTransactionUntilConfirmed("Init $EC_NAME")
+        testLogger.info { "$EC_NAME initialized" }
     }
 
     @Test
@@ -177,20 +177,20 @@ class Directory1TicketChainMixIT {
         testLogger.info("Register accounts")
 
         // Register provider account
-        node1.tc.transactionBuilder()
+        node1.ec.transactionBuilder()
                 .registerProviderAccountOperation(node1PubkeyByteArray)
                 .postTransactionUntilConfirmed("Register provider account")
-        val accountId = node1.tc.getProviderAccountId(node1PubkeyByteArray)
+        val accountId = node1.ec.getProviderAccountId(node1PubkeyByteArray)
         assertThat(accountId).isNotNull()
         testLogger.info("Provider account id ${accountId?.toHex()}")
-        assertThat(node1.tc.getBalance(accountId!!)).isEqualTo(BigInteger.ZERO)
+        assertThat(node1.ec.getBalance(accountId!!)).isEqualTo(BigInteger.ZERO)
 
         // Register a new user account
-        userAccountClient = node1.client(tcBrid, listOf(userAccountOwnerKeys))
+        userAccountClient = node1.client(ecBrid, listOf(userAccountOwnerKeys))
         userAccountAuthenticator = FTAuthenticator(userAccountClient)
-        node1.tcAdmin.transactionBuilder()
+        node1.ecAdmin.transactionBuilder()
                 .registerAccountOperation(userAccountOwnerKeys.pubKey)
-                .sign(tcAdminSigMaker)
+                .sign(ecAdminSigMaker)
                 .postTransactionUntilConfirmed("Register user account")
         userAccountId = userAccountAuthenticator.findAccountId(userAccountOwnerKeys.pubKey)
         userAccountAuthDescriptor = userAccountAuthenticator.findAuthDescriptor(userAccountId, userAccountOwnerKeys.pubKey)
@@ -203,7 +203,7 @@ class Directory1TicketChainMixIT {
     @Order(5)
     fun `Test pool account`() {
         testLogger.info("Test pool account")
-        val poolBalance = node1.tc.getPoolBalance()
+        val poolBalance = node1.ec.getPoolBalance()
         testLogger.info("poolBalance is: $poolBalance")
         assertThat(poolBalance).isEqualTo(BigInteger.ZERO)
 
@@ -213,7 +213,7 @@ class Directory1TicketChainMixIT {
         transactionBuilder
                 .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
                 .transferToPoolOperation(BigInteger.valueOf(1000))
-                .sign(tcUserAccountSigMaker)
+                .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Transfer to pool")
 
         testLogger.info("poolBalance after transfer is: ${userAccountClient.getPoolBalance()}")
@@ -229,7 +229,7 @@ class Directory1TicketChainMixIT {
         val tcRid = transactionBuilder
                 .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
                 .createContainerOperation(node1.provider.pubKey.data, 2, "", 1, 0, APP_CLUSTER, true)
-                .sign(tcUserAccountSigMaker)
+                .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Create Container")
                 .txRid
 
