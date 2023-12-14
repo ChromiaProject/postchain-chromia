@@ -131,6 +131,7 @@ open class ManagedModeBase {
                 .withEnv("POSTCHAIN_DEBUG", "true")
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
+                .withEnv("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", 30_000.toString())
                 .withLogConsumer(logConsumer)
                 .withCommand("run-server")
     }
