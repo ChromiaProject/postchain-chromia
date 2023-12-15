@@ -1,0 +1,65 @@
+# ICMF user guide
+
+This documentation is targeted to dapp-developers that wants to write a dapp that sends and/or receives ICMF messages.
+
+## Topics
+Messages are sent and received on topics. Note that all topics need to be prefixed with `L_`. This is to indicate that the message is sent on a _local_ topic. Only system chains are allowed to send topics on a _global_ level.
+
+## Sending messages
+
+### Configuration
+You will need to add a GTX module to your blockchain configuration.
+
+```
+config:
+  gtx:
+    modules:
+      - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+```
+
+### Rell code
+See instructions on how to install the ICMF rell code library here: https://gitlab.com/chromaway/core/directory-chain
+
+Now you can import the `icmf` module and call the function `send_message(topic: text, body: gtv)` wherever you want to send a message.
+
+Receivers will read your message if they are configured to listen on the topic that you sent it on. Notice that the body is of type gtv so you can send any structure you like (just make sure receivers can parse it).
+
+## Receiving messages
+
+### Configuration
+You will need to add a GTX module and a synchronization infrastructure extension to your blockchain configuration.
+
+```
+config:
+  gtx:
+    modules:
+      - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+  sync_ext:
+    - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+```
+
+### Rell code
+You will need to implement the message receive operation in rell to receive messages. Example:
+
+```
+operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
+   // Parse and handle the message here
+}
+```
+
+The `sender` parameter here is the blockchain-rid of the sender chain.
+
+### Topic and sender configuration
+You also need to configure which topics and sender chains you want to listen to.
+
+```
+config:
+  icmf:
+    receiver:
+      local: # List your chains and topics here
+        - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000001"
+          topic: "L_topic1"
+        - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000002"
+          topic: "L_topic2"
+        - etc.
+```
