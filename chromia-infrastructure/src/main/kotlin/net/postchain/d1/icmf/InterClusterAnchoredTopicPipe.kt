@@ -65,9 +65,9 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("anchored-pipe-worker-cluster-$clusterName-topic-${route.topic}") + MDCContext()) {
             while (isActive) {
                 try {
-                    logger.info("Fetching messages")
+                    logger.debug { "Fetching messages" }
                     fetchMessages()
-                    logger.info("Fetched messages")
+                    logger.debug { "Fetched messages" }
                 } catch (e: CancellationException) {
                     break
                 } catch (e: UserMistake) {
