@@ -72,7 +72,7 @@ docker run --name postchain_manual1 \
 If the source chain is managed you can export it in the same way as in step 3 but configurations need to be fetched with
 PMC instead. Run:
 
-`pmc get-all-configurations --save` command with `--export-format` flag.
+`pmc blockchain get-all-configurations --save` command with `--export-format` flag.
 
 Supply the file that is outputted as `--configuration-file` in step 4.
 
