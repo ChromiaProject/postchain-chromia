@@ -21,6 +21,7 @@ import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.findBlockchainRid
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -289,6 +290,21 @@ open class ManagedModeBase {
             }
             assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
         }
+    }
+
+    protected fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
+        testLogger.info("Deploy new dapp $dappName")
+
+        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
+
+        val txRid = node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                .postTransactionUntilConfirmed("Propose dapp $dappName")
+                .txRid
+
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        dapps[dappName] = assertChainSigners(txRid, *assertSigners)
+        testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
 
     protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {

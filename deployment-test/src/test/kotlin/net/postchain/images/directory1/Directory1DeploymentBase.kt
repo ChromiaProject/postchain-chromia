@@ -25,7 +25,6 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
@@ -242,8 +241,8 @@ abstract class Directory1DeploymentBase {
             assertThat(node.c0.getBlockchains(true).size).isEqualTo(3)
         }
 
-        deployDapp("test_dapp", fooContainer, null)
-        deployDapp("test_dapp2", barContainer, dapps["test_dapp"]!!.data)
+        deployDapp("test_dapp", fooContainer)
+        deployDapp("test_dapp2", barContainer, iccfReceiver = dapps["test_dapp"]!!.data)
 
         // Asserting that blockchain is added
         nodes().forEach { node ->
@@ -454,8 +453,8 @@ abstract class Directory1DeploymentBase {
     @Order(18)
     fun `Test remove and archive blockchains`() {
         // Deploy a new dapps to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
-        deployDapp("test_dapp3", fooContainer, null)
-        deployDapp("test_dapp5", fooContainer, null)
+        deployDapp("test_dapp3", fooContainer)
+        deployDapp("test_dapp5", fooContainer)
         nodes().forEach { node ->
             assertThat(node.c0.getBlockchains(true).size).isEqualTo(7)
         }
@@ -551,21 +550,6 @@ abstract class Directory1DeploymentBase {
                 assertThat(fooDockerContainer?.state()).isEqualTo("exited")
             }
         }
-    }
-
-    private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray?) {
-        testLogger.info("Deploy new dapp $dappName")
-
-        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
-
-        val txRid = node1.c0.transactionBuilder()
-                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
-                .postTransactionUntilConfirmed("Propose dapp $dappName")
-                .txRid
-
-        // Asserting that node1, node2, node3 are signers of newly added blockchain
-        dapps[dappName] = assertChainSigners(txRid, *nodes())
-        testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
 
     private fun updateDapp(dappName: String, maxBlockTransactions: Int, faulty: Boolean, iccfReceiver: ByteArray) {

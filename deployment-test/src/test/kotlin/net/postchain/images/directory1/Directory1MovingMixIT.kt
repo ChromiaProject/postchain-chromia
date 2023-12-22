@@ -20,7 +20,6 @@ import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveFinishOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
@@ -261,20 +260,5 @@ class Directory1MovingMixIT {
             val s2LastAnchoredHeight = node2.client(s2SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
         }
-    }
-
-    private fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
-        testLogger.info("Deploy new dapp $dappName")
-
-        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
-
-        val txRid = node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
-                .postTransactionUntilConfirmed("Propose dapp $dappName")
-                .txRid
-
-        // Asserting that node1, node2, node3 are signers of newly added blockchain
-        dapps[dappName] = assertChainSigners(txRid, *assertSigners)
-        testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
 }
