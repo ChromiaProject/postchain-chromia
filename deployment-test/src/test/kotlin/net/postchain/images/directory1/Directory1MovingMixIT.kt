@@ -18,7 +18,6 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
@@ -27,17 +26,13 @@ import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveOperat
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
-import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
-import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
-import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -281,20 +276,5 @@ class Directory1MovingMixIT {
         // Asserting that node1, node2, node3 are signers of newly added blockchain
         dapps[dappName] = assertChainSigners(txRid, *assertSigners)
         testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
-    }
-
-    private fun assertBlockReanchored(
-            brid: BlockchainRid, srcNode: PostchainContainer,
-            srcAnchoringChain: BlockchainRid, dstNode: PostchainContainer,
-            dstAnchoringChain: BlockchainRid, height: Long = -1L
-    ) {
-        awaitQueryResult(atMost = Duration.TWO_MINUTES) {
-            val blockRid = if (height == -1L) {
-                srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
-            } else {
-                srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid
-            }
-            assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
-        }
     }
 }

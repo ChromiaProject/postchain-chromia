@@ -18,7 +18,6 @@ import net.postchain.chain0.direct_container.createContainerOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
@@ -26,16 +25,13 @@ import net.postchain.chain0.proposal_blockchain.proposeBlockchainUnarchiveAction
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
-import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
-import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -202,8 +198,8 @@ class Directory1ArchivingMixIT {
         verifyBlockchainState(node3, dappBrid, BlockchainState.RUNNING)
 
         // Asserting that all blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, 0, node1, s1SAC, node3, s3SAC)
-        assertBlockReanchored(dappBrid, s1LastAnchoredHeight, node1, s1SAC, node3, s3SAC)
+        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, 0)
+        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, s1LastAnchoredHeight)
 
         // Asserting that new blocks are anchored on s3SAC chain
         awaitUntilAsserted {
@@ -243,8 +239,8 @@ class Directory1ArchivingMixIT {
         verifyBlockchainState(node2, dappBrid, BlockchainState.RUNNING)
 
         // Asserting that old blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, 0, node3, s3SAC, node2, s2SAC)
-        assertBlockReanchored(dappBrid, s3LastAnchoredHeight, node3, s3SAC, node2, s2SAC)
+        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, 0)
+        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, s3LastAnchoredHeight)
 
         // Asserting that new blocks are anchored on s2SAC chain
         awaitUntilAsserted {
@@ -266,17 +262,5 @@ class Directory1ArchivingMixIT {
         // Asserting that node1, node2, node3 are signers of newly added blockchain
         dapps[dappName] = assertChainSigners(txRid, *assertSigners)
         testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
-    }
-
-    private fun assertBlockReanchored(
-            brid: BlockchainRid, height: Long,
-            srcNode: PostchainContainer, srcAnchoringChain: BlockchainRid,
-            dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid
-    ) {
-        awaitQueryResult {
-            srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid.data.also {
-                assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, it)).isTrue()
-            }
-        }
     }
 }

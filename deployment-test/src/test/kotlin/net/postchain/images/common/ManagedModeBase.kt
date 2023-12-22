@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
@@ -29,6 +30,9 @@ import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
+import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
+import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
@@ -49,6 +53,7 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
@@ -267,6 +272,22 @@ open class ManagedModeBase {
     protected fun verifyBlockchainState(node: PostchainContainer, brid: BlockchainRid, expectedState: BlockchainState) {
         awaitUntilAsserted {
             assertEquals(expectedState.name, node.c0.nmGetBlockchainState(brid))
+        }
+    }
+
+    protected fun assertBlockReanchored(
+            brid: BlockchainRid,
+            srcNode: PostchainContainer, srcAnchoringChain: BlockchainRid,
+            dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid,
+            height: Long = -1L
+    ) {
+        awaitQueryResult(atMost = Duration.TWO_MINUTES) {
+            val blockRid = if (height == -1L) {
+                srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
+            } else {
+                srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid
+            }
+            assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
         }
     }
 
