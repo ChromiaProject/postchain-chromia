@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
@@ -11,13 +12,16 @@ import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
+import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
+import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.findBlockchainRid
+import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
 import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -27,6 +31,9 @@ import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
+import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
+import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
@@ -37,6 +44,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
+import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -46,6 +54,8 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import org.awaitility.Duration
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -260,6 +270,42 @@ open class ManagedModeBase {
                 brid
             }!!
 
+    protected fun verifyBlockchainState(node: PostchainContainer, brid: BlockchainRid, expectedState: BlockchainState) {
+        awaitUntilAsserted {
+            assertEquals(expectedState.name, node.c0.nmGetBlockchainState(brid))
+        }
+    }
+
+    protected fun assertBlockReanchored(
+            brid: BlockchainRid,
+            srcNode: PostchainContainer, srcAnchoringChain: BlockchainRid,
+            dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid,
+            height: Long = -1L
+    ) {
+        awaitQueryResult(atMost = Duration.TWO_MINUTES) {
+            val blockRid = if (height == -1L) {
+                srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
+            } else {
+                srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid
+            }
+            assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
+        }
+    }
+
+    protected fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
+        testLogger.info("Deploy new dapp $dappName")
+
+        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
+
+        val txRid = node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                .postTransactionUntilConfirmed("Propose dapp $dappName")
+                .txRid
+
+        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        dapps[dappName] = assertChainSigners(txRid, *assertSigners)
+        testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
+    }
 
     protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
         val res = mutableSetOf<Int>()
