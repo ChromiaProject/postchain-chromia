@@ -283,12 +283,6 @@ class Directory1MovingMixIT {
         testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
 
-    private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, expectedState: BlockchainState) {
-        awaitUntilAsserted {
-            assertEquals(expectedState.name, container.c0.nmGetBlockchainState(brid))
-        }
-    }
-
     private fun assertBlockReanchored(
             brid: BlockchainRid, srcNode: PostchainContainer,
             srcAnchoringChain: BlockchainRid, dstNode: PostchainContainer,

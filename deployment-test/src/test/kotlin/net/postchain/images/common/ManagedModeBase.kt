@@ -11,10 +11,12 @@ import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
+import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
+import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.findBlockchainRid
@@ -37,6 +39,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
+import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -46,6 +49,7 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -260,6 +264,11 @@ open class ManagedModeBase {
                 brid
             }!!
 
+    protected fun verifyBlockchainState(node: PostchainContainer, brid: BlockchainRid, expectedState: BlockchainState) {
+        awaitUntilAsserted {
+            assertEquals(expectedState.name, node.c0.nmGetBlockchainState(brid))
+        }
+    }
 
     protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
         val res = mutableSetOf<Int>()

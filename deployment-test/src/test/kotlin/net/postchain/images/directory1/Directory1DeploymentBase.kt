@@ -22,7 +22,6 @@ import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerResourceLimitType.container_units
 import net.postchain.chain0.model.ContainerResourceLimitType.max_blockchains
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
@@ -45,7 +44,6 @@ import net.postchain.containers.bpm.resources.Storage
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -552,12 +550,6 @@ abstract class Directory1DeploymentBase {
                 }
                 assertThat(fooDockerContainer?.state()).isEqualTo("exited")
             }
-        }
-    }
-
-    private fun verifyBlockchainState(container: PostchainContainer, brid: BlockchainRid, state: BlockchainState) {
-        awaitUntilAsserted {
-            assertThat(container.c0.nmGetBlockchainState(brid), state.name)
         }
     }
 
