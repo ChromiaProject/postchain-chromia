@@ -1,6 +1,6 @@
 module;
 
-import iccf.*;
+import iccf;
 
 entity book { key name; }
 
@@ -19,14 +19,8 @@ operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
 }
 
 operation iccf_transfer(transaction: gtx_transaction) {
-    val tx_hash = transaction.to_gtv().hash();
-    require(check_iccf_proof(transaction.body.blockchain_rid, tx_hash), "No proof operation present for TX");
-
-    for (op in transaction.body.operations) {
-        if (op.name == "add_city" and op.args.size() == 1) {
-            create iccf_city(text.from_gtv(op.args[0]));
-        }
-    }
+    val tx_args = iccf.extract_operation_args(transaction, "add_city");
+    if (tx_args.size() == 1) create iccf_city(text.from_gtv(tx_args[0]));
 }
 
 query get_icmf_cities () { return icmf_city @* {} ( .name ); }

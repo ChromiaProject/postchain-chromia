@@ -38,8 +38,8 @@ class IccfIT : ManagedModeTest() {
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_source_1.xml")!!.readText())
     private val targetDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_target_1.xml")!!.readText(), mapOf(
-                    "iccf" to gtv(iccfRellCode + iccfRellTestCode)
-            ))
+            "iccf" to gtv(iccfRellCode + iccfRellTestCode)
+    ))
 
     @Test
     fun intraCluster() {
@@ -62,7 +62,7 @@ class IccfIT : ManagedModeTest() {
 
         val iccfTx = enqueueTxWithOps(targetChain, listOf(
                 OpData(ICCF_OP_NAME, arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash()), gtv(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(txProof!!))))),
-                OpData("iccf_test", arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash())))
+                OpData("iccf_test", arrayOf(txToProve.gtvData, gtv(false)))
         ))
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
@@ -107,7 +107,7 @@ class IccfIT : ManagedModeTest() {
                         gtv(clusterAnchoringTx.txOpIndex),
                         gtv(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(clusterAnchoringProof!!)))
                 )),
-                OpData("iccf_test", arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash())))
+                OpData("iccf_test", arrayOf(txToProve.gtvData, gtv(true)))
         ))
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
