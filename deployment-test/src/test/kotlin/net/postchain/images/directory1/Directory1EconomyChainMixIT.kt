@@ -77,9 +77,9 @@ class Directory1EconomyChainMixIT {
         private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
         private val node3Logger = KotlinLogging.logger("TC_Node3Logger")
 
-        private val node1PubkeyString = "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
-        private val node1PubkeyByteArray = node1PubkeyString.hexStringToByteArray()
-        private val node1KeyPair = KeyPair.of(node1PubkeyString, "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
+        private val node1KeyPair = KeyPair.of(
+                "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
+                "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
         lateinit var ecBrid: BlockchainRid
         lateinit var userAccountClient: PostchainClient
@@ -178,9 +178,9 @@ class Directory1EconomyChainMixIT {
 
         // Register provider account
         node1.ec.transactionBuilder()
-                .registerProviderAccountOperation(node1PubkeyByteArray)
+                .registerProviderAccountOperation(node1KeyPair.pubKey.data)
                 .postTransactionUntilConfirmed("Register provider account")
-        val accountId = node1.ec.getProviderAccountId(node1PubkeyByteArray)
+        val accountId = node1.ec.getProviderAccountId(node1KeyPair.pubKey.data)
         assertThat(accountId).isNotNull()
         testLogger.info("Provider account id ${accountId?.toHex()}")
         assertThat(node1.ec.getBalance(accountId!!)).isEqualTo(BigInteger.ZERO)
@@ -251,7 +251,7 @@ class Directory1EconomyChainMixIT {
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
         assertThat(containerData.cluster).isEqualTo(APP_CLUSTER)
-        assertThat(containerData.proposedByPubkey).isEqualTo(WrappedByteArray(node1PubkeyByteArray))
+        assertThat(containerData.proposedByPubkey).isEqualTo(node1KeyPair.pubKey.wData)
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
 
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
