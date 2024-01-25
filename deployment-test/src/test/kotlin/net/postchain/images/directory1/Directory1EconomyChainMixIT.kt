@@ -21,10 +21,12 @@ import net.postchain.chain0.economy_chain.getCreateContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.getLeasesByAccount
 import net.postchain.chain0.economy_chain.getPoolBalance
 import net.postchain.chain0.economy_chain.getProviderAccountId
+import net.postchain.chain0.economy_chain.getUpgradeContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain.registerAccountOperation
 import net.postchain.chain0.economy_chain.registerProviderAccountOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
+import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.lib.ft4.auth.external.ftAuthOperation
 import net.postchain.chain0.model.ContainerState
@@ -33,7 +35,6 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -72,6 +73,10 @@ class Directory1EconomyChainMixIT {
 
         private const val APP_CLUSTER = "appCluster"
         private const val EC_NAME = "economy_chain"
+        private const val CONTAINER_UNITS = 2L
+        private const val CLUSTER_CLASS = ""
+        private const val DURATION_WEEKS = 1L
+        private const val EXTRA_STORAGE_GIB = 0L
 
         private val node1Logger = KotlinLogging.logger("TC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
@@ -86,6 +91,7 @@ class Directory1EconomyChainMixIT {
         lateinit var userAccountAuthenticator: FTAuthenticator
         lateinit var userAccountId: ByteArray
         lateinit var userAccountAuthDescriptor: FTAuthenticator.AuthDescriptor
+        lateinit var containerName: String
 
         init {
             chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
@@ -209,8 +215,7 @@ class Directory1EconomyChainMixIT {
 
         // Transfer funds to the pool account
         userAccountAuthenticator.verifyOperationAuthFlags(userAccountAuthDescriptor, "transfer_to_pool")
-        val transactionBuilder = userAccountClient.transactionBuilder()
-        transactionBuilder
+        userAccountClient.transactionBuilder()
                 .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
                 .transferToPoolOperation(BigInteger.valueOf(1000))
                 .sign(ecUserAccountSigMaker)
@@ -224,11 +229,10 @@ class Directory1EconomyChainMixIT {
     @Order(6)
     fun `Create container`() {
         testLogger.info("Create container")
-        val transactionBuilder = userAccountClient.transactionBuilder()
         userAccountAuthenticator.verifyOperationAuthFlags(userAccountAuthDescriptor, "create_container")
-        val tcRid = transactionBuilder
+        val tcRid = userAccountClient.transactionBuilder()
                 .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
-                .createContainerOperation(node1.provider.pubKey.data, 2, "", 1, 0, APP_CLUSTER, true)
+                .createContainerOperation(node1.provider.pubKey.data, CONTAINER_UNITS, CLUSTER_CLASS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER, true)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Create Container")
                 .txRid
@@ -243,11 +247,12 @@ class Directory1EconomyChainMixIT {
         assertThat(leaseDataList.size).isEqualTo(1)
         val leaseData = leaseDataList[0]
         assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER)
-        assertThat(leaseData.containerUnits).isEqualTo(2)
-        assertThat(leaseData.extraStorageGib).isEqualTo(0)
+        assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS)
+        assertThat(leaseData.extraStorageGib).isEqualTo(EXTRA_STORAGE_GIB)
         assertThat(leaseData.expired).isFalse()
         assertThat(leaseData.autoRenew).isTrue()
 
+        containerName = leaseData.containerName
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
         assertThat(containerData.cluster).isEqualTo(APP_CLUSTER)
@@ -255,6 +260,34 @@ class Directory1EconomyChainMixIT {
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
 
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
-        assertThat(containerLimits["container_units"]).isEqualTo(2)
+        assertThat(containerLimits["container_units"]).isEqualTo(CONTAINER_UNITS)
+    }
+
+    @Test
+    @Order(7)
+    fun `Upgrade container`() {
+        testLogger.info("Upgrade container")
+        userAccountAuthenticator.verifyOperationAuthFlags(userAccountAuthDescriptor, "upgrade_container")
+        val tcRid = userAccountClient.transactionBuilder()
+                .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
+                .upgradeContainerOperation(containerName, CONTAINER_UNITS + 1, CLUSTER_CLASS, EXTRA_STORAGE_GIB, APP_CLUSTER)
+                .sign(ecUserAccountSigMaker)
+                .postTransactionUntilConfirmed("Upgrade Container")
+                .txRid
+
+        awaitUntilAsserted {
+            val ticket = userAccountClient.getUpgradeContainerTicketByTransaction(tcRid.rid.hexStringToByteArray())
+            assertThat(ticket).isNotNull()
+            assertThat(ticket!!.state).isEqualTo(TicketState.SUCCESS)
+        }
+
+        val leaseDataList = userAccountClient.getLeasesByAccount(userAccountId)
+        assertThat(leaseDataList.size).isEqualTo(1)
+        val leaseData = leaseDataList[0]
+        assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER)
+        assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
+
+        val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
+        assertThat(containerLimits["container_units"]).isEqualTo(CONTAINER_UNITS + 1)
     }
 }
