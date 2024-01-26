@@ -61,16 +61,16 @@ Configuration:
         fileName: "logs/archiving/node3.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node1Appender
-        fileName: "logs/tc/node1.log"
+      - name: EC_Node1Appender
+        fileName: "logs/ec/node1.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node2Appender
-        fileName: "logs/tc/node2.log"
+      - name: EC_Node2Appender
+        fileName: "logs/ec/node2.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node3Appender
-        fileName: "logs/tc/node3.log"
+      - name: EC_Node3Appender
+        fileName: "logs/ec/node3.log"
         PatternLayout:
           pattern: "%msg%n"
 
@@ -158,19 +158,19 @@ Configuration:
         AppenderRef:
           - ref: Archiving_Node3Appender
 
-      # TC tests
-      - name: TC_Node1Logger
+      # EC tests
+      - name: EC_Node1Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node1Appender
-      - name: TC_Node2Logger
+          - ref: EC_Node1Appender
+      - name: EC_Node2Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node2Appender
-      - name: TC_Node3Logger
+          - ref: EC_Node2Appender
+      - name: EC_Node3Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node3Appender
+          - ref: EC_Node3Appender
