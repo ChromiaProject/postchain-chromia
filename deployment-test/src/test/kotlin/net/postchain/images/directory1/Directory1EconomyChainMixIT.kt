@@ -21,19 +21,19 @@ import net.postchain.chain0.economy_chain.getCreateContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.getLeasesByAccount
 import net.postchain.chain0.economy_chain.getPoolBalance
 import net.postchain.chain0.economy_chain.getProviderAccountId
+import net.postchain.chain0.economy_chain.getUpgradeContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain.registerAccountOperation
 import net.postchain.chain0.economy_chain.registerProviderAccountOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
+import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
-import net.postchain.chain0.lib.ft4.auth.external.ftAuthOperation
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -56,36 +56,39 @@ import java.math.BigInteger
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class Directory1EconomyChainMixIT {
 
-    private val ecAdminKeyPair = KeyPair(
-            "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3".hexStringToByteArray(),
-            "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0".hexStringToByteArray())
+    private val ecAdminKeyPair = KeyPair.of(
+            "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3",
+            "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0")
     private val PostchainContainer.ecAdmin get() = client(ecBrid, listOf(ecAdminKeyPair))
     private val PostchainContainer.ec get() = client(ecBrid)
     private val ecAdminSigMaker = cryptoSystem.buildSigMaker(ecAdminKeyPair)
 
-    private val userAccountOwnerKeys = KeyPair(
-            "039BEA5DFA1F22D16EF702995794A0082CC358050CDBEAA1E50E7AC067BA1B6160".hexStringToByteArray(),
-            "A550EB5580B4DD1A972954CEC39679E4C0C3E82FF2A3510F3A931CE0DB12A567".hexStringToByteArray())
+    private val userAccountOwnerKeys = KeyPair.of(
+            "039BEA5DFA1F22D16EF702995794A0082CC358050CDBEAA1E50E7AC067BA1B6160",
+            "A550EB5580B4DD1A972954CEC39679E4C0C3E82FF2A3510F3A931CE0DB12A567")
     private val ecUserAccountSigMaker = cryptoSystem.buildSigMaker(userAccountOwnerKeys)
 
     companion object : ManagedModeBase() {
 
-        private const val APP_CLUSTER = "appCluster"
         private const val EC_NAME = "economy_chain"
+        private const val APP_CLUSTER = "appCluster"
+        private const val CONTAINER_UNITS = 2L
+        private const val CLUSTER_CLASS = ""
+        private const val DURATION_WEEKS = 1L
+        private const val EXTRA_STORAGE_GIB = 0L
 
         private val node1Logger = KotlinLogging.logger("TC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
         private val node3Logger = KotlinLogging.logger("TC_Node3Logger")
 
-        private val node1PubkeyString = "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
-        private val node1PubkeyByteArray = node1PubkeyString.hexStringToByteArray()
-        private val node1KeyPair = KeyPair.of(node1PubkeyString, "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
+        private val node1KeyPair = KeyPair.of(
+                "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
+                "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
         lateinit var ecBrid: BlockchainRid
-        lateinit var userAccountClient: PostchainClient
-        lateinit var userAccountAuthenticator: FTAuthenticator
-        lateinit var userAccountId: ByteArray
-        lateinit var userAccountAuthDescriptor: FTAuthenticator.AuthDescriptor
+        lateinit var userClient: PostchainClient
+        lateinit var userAuthenticator: FTAuthenticator
+        lateinit var containerName: String
 
         init {
             chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
@@ -178,23 +181,23 @@ class Directory1EconomyChainMixIT {
 
         // Register provider account
         node1.ec.transactionBuilder()
-                .registerProviderAccountOperation(node1PubkeyByteArray)
+                .registerProviderAccountOperation(node1KeyPair.pubKey.data)
                 .postTransactionUntilConfirmed("Register provider account")
-        val accountId = node1.ec.getProviderAccountId(node1PubkeyByteArray)
+        val accountId = node1.ec.getProviderAccountId(node1KeyPair.pubKey.data)
         assertThat(accountId).isNotNull()
         testLogger.info("Provider account id ${accountId?.toHex()}")
         assertThat(node1.ec.getBalance(accountId!!)).isEqualTo(BigInteger.ZERO)
 
         // Register a new user account
-        userAccountClient = node1.client(ecBrid, listOf(userAccountOwnerKeys))
-        userAccountAuthenticator = FTAuthenticator(userAccountClient)
         node1.ecAdmin.transactionBuilder()
                 .registerAccountOperation(userAccountOwnerKeys.pubKey)
                 .sign(ecAdminSigMaker)
                 .postTransactionUntilConfirmed("Register user account")
-        userAccountId = userAccountAuthenticator.findAccountId(userAccountOwnerKeys.pubKey)
-        userAccountAuthDescriptor = userAccountAuthenticator.findAuthDescriptor(userAccountId, userAccountOwnerKeys.pubKey)
-        val userAccountBalance = userAccountClient.getBalance(userAccountId)
+
+        userClient = node1.client(ecBrid, listOf(userAccountOwnerKeys))
+        userAuthenticator = FTAuthenticator(userClient).apply { init() }
+
+        val userAccountBalance = userClient.getBalance(userAuthenticator.accountId)
         testLogger.info("user account balance is: $userAccountBalance")
         assertThat(userAccountBalance).isEqualTo(BigInteger.valueOf(1000000000))
     }
@@ -208,53 +211,80 @@ class Directory1EconomyChainMixIT {
         assertThat(poolBalance).isEqualTo(BigInteger.ZERO)
 
         // Transfer funds to the pool account
-        userAccountAuthenticator.verifyOperationAuthFlags(userAccountAuthDescriptor, "transfer_to_pool")
-        val transactionBuilder = userAccountClient.transactionBuilder()
-        transactionBuilder
-                .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
+        userAuthenticator.verifyOperationAuthFlags("transfer_to_pool")
+        userClient.transactionBuilder()
+                .also { userAuthenticator.ftAuth(it) }
                 .transferToPoolOperation(BigInteger.valueOf(1000))
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Transfer to pool")
 
-        testLogger.info("poolBalance after transfer is: ${userAccountClient.getPoolBalance()}")
-        assertThat(userAccountClient.getPoolBalance()).isEqualTo(BigInteger.valueOf(1000))
+        testLogger.info("poolBalance after transfer is: ${userClient.getPoolBalance()}")
+        assertThat(userClient.getPoolBalance()).isEqualTo(BigInteger.valueOf(1000))
     }
 
     @Test
     @Order(6)
     fun `Create container`() {
         testLogger.info("Create container")
-        val transactionBuilder = userAccountClient.transactionBuilder()
-        userAccountAuthenticator.verifyOperationAuthFlags(userAccountAuthDescriptor, "create_container")
-        val tcRid = transactionBuilder
-                .ftAuthOperation(userAccountId, userAccountAuthDescriptor.id.data)
-                .createContainerOperation(node1.provider.pubKey.data, 2, "", 1, 0, APP_CLUSTER, true)
+        userAuthenticator.verifyOperationAuthFlags("create_container")
+        val tcRid = userClient.transactionBuilder()
+                .also { userAuthenticator.ftAuth(it) }
+                .createContainerOperation(node1.provider.pubKey.data, CONTAINER_UNITS, CLUSTER_CLASS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER, true)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Create Container")
                 .txRid
 
         awaitUntilAsserted {
-            val ticket = userAccountClient.getCreateContainerTicketByTransaction(tcRid.rid.hexStringToByteArray())
+            val ticket = userClient.getCreateContainerTicketByTransaction(tcRid.rid.hexStringToByteArray())
             assertThat(ticket).isNotNull()
             assertThat(ticket!!.state).isEqualTo(TicketState.SUCCESS)
         }
 
-        val leaseDataList = userAccountClient.getLeasesByAccount(userAccountId)
+        val leaseDataList = userClient.getLeasesByAccount(userAuthenticator.accountId)
         assertThat(leaseDataList.size).isEqualTo(1)
         val leaseData = leaseDataList[0]
         assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER)
-        assertThat(leaseData.containerUnits).isEqualTo(2)
-        assertThat(leaseData.extraStorageGib).isEqualTo(0)
+        assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS)
+        assertThat(leaseData.extraStorageGib).isEqualTo(EXTRA_STORAGE_GIB)
         assertThat(leaseData.expired).isFalse()
         assertThat(leaseData.autoRenew).isTrue()
 
+        containerName = leaseData.containerName
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
         assertThat(containerData.cluster).isEqualTo(APP_CLUSTER)
-        assertThat(containerData.proposedByPubkey).isEqualTo(WrappedByteArray(node1PubkeyByteArray))
+        assertThat(containerData.proposedByPubkey).isEqualTo(node1KeyPair.pubKey.wData)
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
 
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
-        assertThat(containerLimits["container_units"]).isEqualTo(2)
+        assertThat(containerLimits["container_units"]).isEqualTo(CONTAINER_UNITS)
+    }
+
+    @Test
+    @Order(7)
+    fun `Upgrade container`() {
+        testLogger.info("Upgrade container")
+        userAuthenticator.verifyOperationAuthFlags("upgrade_container")
+        val tcRid = userClient.transactionBuilder()
+                .also { userAuthenticator.ftAuth(it) }
+                .upgradeContainerOperation(containerName, CONTAINER_UNITS + 1, CLUSTER_CLASS, EXTRA_STORAGE_GIB, APP_CLUSTER)
+                .sign(ecUserAccountSigMaker)
+                .postTransactionUntilConfirmed("Upgrade Container")
+                .txRid
+
+        awaitUntilAsserted {
+            val ticket = userClient.getUpgradeContainerTicketByTransaction(tcRid.rid.hexStringToByteArray())
+            assertThat(ticket).isNotNull()
+            assertThat(ticket!!.state).isEqualTo(TicketState.SUCCESS)
+        }
+
+        val leaseDataList = userClient.getLeasesByAccount(userAuthenticator.accountId)
+        assertThat(leaseDataList.size).isEqualTo(1)
+        val leaseData = leaseDataList[0]
+        assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER)
+        assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
+
+        val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
+        assertThat(containerLimits["container_units"]).isEqualTo(CONTAINER_UNITS + 1)
     }
 }
