@@ -375,7 +375,7 @@ class Directory1EconomyChainMixIT {
             assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
         }
 
-        // Asserting that new blocks are anchored on s2SAC chain
+        // Asserting that new blocks are anchored on s2CAC chain
         awaitUntilAsserted {
             val lastAnchoredHeight2 = node2.client(CAC2).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(lastAnchoredHeight2).isGreaterThan(lastHeightBeforeMoving)

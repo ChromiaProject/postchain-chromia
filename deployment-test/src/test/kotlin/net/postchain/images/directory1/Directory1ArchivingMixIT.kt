@@ -53,9 +53,9 @@ class Directory1ArchivingMixIT {
         val node3Logger = KotlinLogging.logger("Archiving_Node3Logger")
 
         lateinit var dappBrid: BlockchainRid
-        lateinit var s1SAC: BlockchainRid
-        lateinit var s2SAC: BlockchainRid
-        lateinit var s3SAC: BlockchainRid
+        lateinit var s1CAC: BlockchainRid
+        lateinit var s2CAC: BlockchainRid
+        lateinit var s3CAC: BlockchainRid
 
         init {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
@@ -156,14 +156,14 @@ class Directory1ArchivingMixIT {
         }
 
         dappBrid = dapps["test_dapp"]!!
-        s1SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s1").anchoringChain)
-        s2SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
-        s3SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
+        s1CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s1").anchoringChain)
+        s2CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
+        s3CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
 
         testLogger.info("Making sure 10 blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
-                node1.client(s1SAC).getLastAnchoredBlock(dappBrid)
+                node1.client(s1CAC).getLastAnchoredBlock(dappBrid)
             }
             assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(10)
         }
@@ -185,7 +185,7 @@ class Directory1ArchivingMixIT {
     @Test
     @Order(4)
     fun `Unarchiving blockchain to container c3 running on subnode`() {
-        val s1LastAnchoredHeight = node1.client(s1SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+        val s1LastAnchoredHeight = node1.client(s1CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainUnarchiveActionOperation(node1.providerPubkey, dappBrid, "c3", s1LastAnchoredHeight, "")
                 .postTransactionUntilConfirmed("test_dapp unarchiving to c3/subnode started")
@@ -196,13 +196,13 @@ class Directory1ArchivingMixIT {
         // Asserting that blockchain is UNARCHIVED, i.e. state changed: UNARCHIVING -> RUNNING
         verifyBlockchainState(node3, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that all blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, 0)
-        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, s1LastAnchoredHeight)
+        // Asserting that all blocks (some of them) are anchored on s3CAC chain
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, s1LastAnchoredHeight)
 
-        // Asserting that new blocks are anchored on s3SAC chain
+        // Asserting that new blocks are anchored on s3CAC chain
         awaitUntilAsserted {
-            val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s3LastAnchoredHeight).isGreaterThan(s1LastAnchoredHeight)
         }
     }
@@ -226,7 +226,7 @@ class Directory1ArchivingMixIT {
     @Test
     @Order(6)
     fun `Unarchiving blockchain to container c2 running on master`() {
-        val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+        val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainUnarchiveActionOperation(node1.providerPubkey, dappBrid, "c2", s3LastAnchoredHeight, "")
                 .postTransactionUntilConfirmed("test_dapp unarchiving to c2/master started")
@@ -237,13 +237,13 @@ class Directory1ArchivingMixIT {
         // Asserting that blockchain is UNARCHIVED, i.e. state changed: UNARCHIVING -> RUNNING
         verifyBlockchainState(node2, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that old blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, 0)
-        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, s3LastAnchoredHeight)
+        // Asserting that old blocks (some of them) are anchored on s2CAC chain
+        assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC, 0)
+        assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC, s3LastAnchoredHeight)
 
-        // Asserting that new blocks are anchored on s2SAC chain
+        // Asserting that new blocks are anchored on s2CAC chain
         awaitUntilAsserted {
-            val s2LastAnchoredHeight = node2.client(s2SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            val s2LastAnchoredHeight = node2.client(s2CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s2LastAnchoredHeight).isGreaterThan(s3LastAnchoredHeight)
         }
     }
