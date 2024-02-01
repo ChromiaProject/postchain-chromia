@@ -34,6 +34,7 @@ blockchains:
             topics:
               - G_configuration_updated
               - G_configuration_failed
+              - G_last_anchored_heights
   system_anchoring:
     module: anchoring_chain_system
     config:
@@ -42,10 +43,18 @@ blockchains:
         maxblocktime: 2000
         maxblocktransactions: 500
         name: "net.postchain.d1.anchoring.AnchoringBlockBuildingStrategy"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.d1.anchoring.system.SystemAnchoringGTXModule"
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      icmf:
+        receiver:
+          global:
+            topics:
+              - G_get_last_anchored_heights
   cluster_anchoring:
     module: anchoring_chain_cluster
     config:
@@ -54,10 +63,18 @@ blockchains:
         maxblocktime: 2000
         maxblocktransactions: 500
         name: "net.postchain.d1.anchoring.AnchoringBlockBuildingStrategy"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.d1.anchoring.cluster.ClusterAnchoringGTXModule"
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      icmf:
+        receiver:
+          global:
+            topics:
+              - G_get_last_anchored_heights
   mainnet:
     module: management_chain_mainnet
     config:
@@ -106,6 +123,8 @@ blockchains:
     module: economy_chain
     config:
       config_consensus_strategy: HEADER_HASH
+      blockstrategy:
+        maxblocktime: 2000
       revolt:
         fast_revolt_status_timeout: 2000
       sync_ext:
