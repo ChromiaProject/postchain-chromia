@@ -194,7 +194,7 @@ class Directory1MovingMixIT {
                 .postTransactionUntilConfirmed("test_dapp moving to c3/subnode started")
 
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight()
+        val lastHeight = dappClient.currentBlockHeight() - 1
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c3/subnode finalized")
@@ -210,7 +210,7 @@ class Directory1MovingMixIT {
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
 
-        // Asserting that new blocks are anchored on s3CAC chain
+        // Asserting that new blocks are built and anchored on s3CAC chain
         awaitUntilAsserted {
             val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
@@ -240,7 +240,7 @@ class Directory1MovingMixIT {
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master started")
 
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight()
+        val lastHeight = dappClient.currentBlockHeight() - 1
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master finalized")
