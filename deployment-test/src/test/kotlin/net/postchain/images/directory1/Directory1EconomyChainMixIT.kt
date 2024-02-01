@@ -92,6 +92,7 @@ class Directory1EconomyChainMixIT {
         private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
         private val node3Logger = KotlinLogging.logger("EC_Node3Logger")
+        override val logsSubdir = "ec"
 
         private val node1KeyPair = KeyPair.of(
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",

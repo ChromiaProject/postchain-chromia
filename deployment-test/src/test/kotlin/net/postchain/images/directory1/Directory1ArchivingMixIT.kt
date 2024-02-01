@@ -51,6 +51,7 @@ class Directory1ArchivingMixIT {
         val node1Logger = KotlinLogging.logger("Archiving_Node1Logger")
         val node2Logger = KotlinLogging.logger("Archiving_Node2Logger")
         val node3Logger = KotlinLogging.logger("Archiving_Node3Logger")
+        override val logsSubdir = "archiving"
 
         lateinit var dappBrid: BlockchainRid
         lateinit var s1CAC: BlockchainRid

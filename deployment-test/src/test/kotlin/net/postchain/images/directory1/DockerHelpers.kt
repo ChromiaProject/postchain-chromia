@@ -10,10 +10,10 @@ import net.postchain.dapp.parseConfig
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.DockerClient.LogsParam
 import org.mandas.docker.client.messages.Container
-import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
+import java.nio.file.Paths
 
 internal fun getResolvedDockerHost(): URI? {
     return if (System.getenv("DOCKER_HOST") != null) {
@@ -43,10 +43,11 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     return parseConfig(resource, configOverrides)
 }
 
-internal fun saveSubnodeLogs(dockerClient: DockerClient) {
+internal fun saveSubnodeLogs(dockerClient: DockerClient, subdir: String = "") {
     val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
     all.filter { it.image().contains("chromia-subnode") }.forEach {
-        File("logs/${it.names()!!.first().replace("/", "")}.log")
+        Paths.get("logs", subdir, it.names()!!.first().replace("/", "") + ".log")
+                .toFile()
                 .appendText(getContainerLogs(dockerClient, it))
     }
 }

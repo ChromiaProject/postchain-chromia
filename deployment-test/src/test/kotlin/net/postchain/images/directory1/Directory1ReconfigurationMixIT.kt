@@ -50,6 +50,7 @@ class Directory1ReconfigurationMixIT {
         val node1Logger = KotlinLogging.logger("Reconfig_Node1Logger")
         val node2Logger = KotlinLogging.logger("Reconfig_Node2Logger")
         val node3Logger = KotlinLogging.logger("Reconfig_Node3Logger")
+        override val logsSubdir = "reconfig"
 
         init {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),

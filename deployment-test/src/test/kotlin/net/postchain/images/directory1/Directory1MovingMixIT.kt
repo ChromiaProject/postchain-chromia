@@ -51,6 +51,7 @@ class Directory1MovingMixIT {
         val node1Logger = KotlinLogging.logger("Moving_Node1Logger")
         val node2Logger = KotlinLogging.logger("Moving_Node2Logger")
         val node3Logger = KotlinLogging.logger("Moving_Node3Logger")
+        override val logsSubdir = "moving"
 
         lateinit var dappBrid: BlockchainRid
         lateinit var s1CAC: BlockchainRid
@@ -205,11 +206,11 @@ class Directory1MovingMixIT {
         // verify blockchain is RUNNING and all blocks are anchored
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that all blocks (some of them) are anchored on s3SAC chain
+        // Asserting that all blocks (some of them) are anchored on s3CAC chain
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
 
-        // Asserting that new blocks are anchored on s3SAC chain
+        // Asserting that new blocks are anchored on s3CAC chain
         awaitUntilAsserted {
             val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
@@ -251,11 +252,11 @@ class Directory1MovingMixIT {
         // verify blockchain is RUNNING and all blocks are anchored
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that all blocks (some of them) are anchored on s2SAC chain
+        // Asserting that all blocks (some of them) are anchored on s2CAC chain
         assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC, 0)
         assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC)
 
-        // Asserting that new blocks are anchored on s2SAC chain
+        // Asserting that new blocks are anchored on s2CAC chain
         awaitUntilAsserted {
             val s2LastAnchoredHeight = node2.client(s2CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
