@@ -83,6 +83,7 @@ blockchains:
               - G_last_anchored_heights
           global:
             topics:
+              - G_create_cluster
               - G_create_container
               - G_upgrade_container
               - G_stop_container
@@ -116,11 +117,15 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
       icmf:
         receiver:
+          anchoring:
+            topics:
+              - G_node_availability_report
           directory-chain:
             topics:
+              - L_create_cluster_error
               - L_ticket_container_result
               - L_cluster_update
-              - L_provider_registered
+              - L_provider_update
               - L_node_update
               - L_cluster_node_update
     moduleArgs:

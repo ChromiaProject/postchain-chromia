@@ -13,7 +13,6 @@ import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
-import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.economy_chain.TicketState
 import net.postchain.chain0.economy_chain.createContainerOperation
 import net.postchain.chain0.economy_chain.getBalance
@@ -27,6 +26,13 @@ import net.postchain.chain0.economy_chain.registerAccountOperation
 import net.postchain.chain0.economy_chain.registerProviderAccountOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
+import net.postchain.chain0.economy_chain.createTagOperation
+import net.postchain.chain0.economy_chain.getClusterCreationStatus
+import net.postchain.chain0.economy_chain.ClusterCreationStatus
+import net.postchain.chain0.economy_chain.createClusterOperation
+import net.postchain.chain0.economy_chain.getClusters
+import net.postchain.chain0.economy_chain.getTagByName
+import net.postchain.chain0.economy_chain.TagData
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.nm_api.nmGetContainerLimits
@@ -72,10 +78,12 @@ class Directory1EconomyChainMixIT {
 
         private const val EC_NAME = "economy_chain"
         private const val APP_CLUSTER = "appCluster"
+        private const val APP_CLUSTER_TAG = "appClusterTag"
         private const val CONTAINER_UNITS = 2L
-        private const val CLUSTER_CLASS = ""
         private const val DURATION_WEEKS = 1L
         private const val EXTRA_STORAGE_GIB = 0L
+        private const val SCU_PRICE = 1L
+        private const val EXTRA_STORAGE_PRICE = 1L
 
         private val node1Logger = KotlinLogging.logger("TC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
@@ -141,19 +149,6 @@ class Directory1EconomyChainMixIT {
 
     @Test
     @Order(2)
-    fun `Add new cluster`() {
-        testLogger.info("Adding cluster")
-        with(node1.c0) {
-            transactionBuilder()
-                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER, "SYSTEM_P", listOf(node1.providerPubkey))
-                    .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 3)
-                    .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, APP_CLUSTER)
-                    .postTransactionUntilConfirmed("$APP_CLUSTER cluster created")
-        }
-    }
-
-    @Test
-    @Order(3)
     fun `Add Economy Chain`() {
         testLogger.info("Adding Economy Chain")
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!.readText())
@@ -175,7 +170,58 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
+    @Order(3)
+    fun `Add new tag`() {
+
+        testLogger.info("Adding tag")
+
+        with(node1.ec) {
+            transactionBuilder()
+                    .createTagOperation(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
+
+            awaitQueryResult {
+
+                assertThat(getTagByName(APP_CLUSTER_TAG))
+                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
+            }
+        }
+    }
+
+    @Test
     @Order(4)
+    fun `Add new cluster`() {
+        testLogger.info("Adding cluster")
+
+        with(node1.ec) {
+
+            transactionBuilder()
+                    .createClusterOperation(APP_CLUSTER, "SYSTEM_P", "SYSTEM_P", CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
+                    .postTransactionUntilConfirmed("$APP_CLUSTER cluster created")
+
+            awaitQueryResult {
+
+                assertThat(getClusterCreationStatus(APP_CLUSTER))
+                        .isEqualTo(ClusterCreationStatus.SUCCESS)
+            }
+
+            awaitQueryResult {
+
+                assertThat(getClusters().first { it.name == APP_CLUSTER })
+                        .isNotNull()
+            }
+        }
+
+        with(node1.c0) {
+            transactionBuilder()
+                    .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, CONTAINER_UNITS + 1)
+                    .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, APP_CLUSTER)
+                    .postTransactionUntilConfirmed("$APP_CLUSTER cluster created")
+        }
+    }
+
+    @Test
+    @Order(5)
     fun `Register accounts`() {
         testLogger.info("Register accounts")
 
@@ -203,7 +249,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Test pool account`() {
         testLogger.info("Test pool account")
         val poolBalance = node1.ec.getPoolBalance()
@@ -223,13 +269,13 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `Create container`() {
         testLogger.info("Create container")
         userAuthenticator.verifyOperationAuthFlags("create_container")
         val tcRid = userClient.transactionBuilder()
                 .also { userAuthenticator.ftAuth(it) }
-                .createContainerOperation(node1.provider.pubKey.data, CONTAINER_UNITS, CLUSTER_CLASS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER, true)
+                .createContainerOperation(node1.provider.pubKey.data, CONTAINER_UNITS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER, true)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Create Container")
                 .txRid
@@ -261,13 +307,13 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `Upgrade container`() {
         testLogger.info("Upgrade container")
         userAuthenticator.verifyOperationAuthFlags("upgrade_container")
         val tcRid = userClient.transactionBuilder()
                 .also { userAuthenticator.ftAuth(it) }
-                .upgradeContainerOperation(containerName, CONTAINER_UNITS + 1, CLUSTER_CLASS, EXTRA_STORAGE_GIB, APP_CLUSTER)
+                .upgradeContainerOperation(containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Upgrade Container")
                 .txRid
