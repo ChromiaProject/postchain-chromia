@@ -1,6 +1,7 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
@@ -17,14 +18,21 @@ import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
-import net.postchain.chain0.direct_cluster.createClusterOperation
+import net.postchain.chain0.common.queries.getVoterSets
+import net.postchain.chain0.economy_chain.ClusterCreationStatus
+import net.postchain.chain0.economy_chain.TagData
 import net.postchain.chain0.economy_chain.TicketState
+import net.postchain.chain0.economy_chain.createClusterOperation
 import net.postchain.chain0.economy_chain.createContainerOperation
+import net.postchain.chain0.economy_chain.createTagOperation
 import net.postchain.chain0.economy_chain.getBalance
+import net.postchain.chain0.economy_chain.getClusterCreationStatus
+import net.postchain.chain0.economy_chain.getClusters
 import net.postchain.chain0.economy_chain.getCreateContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.getLeasesByAccount
 import net.postchain.chain0.economy_chain.getPoolBalance
 import net.postchain.chain0.economy_chain.getProviderAccountId
+import net.postchain.chain0.economy_chain.getTagByName
 import net.postchain.chain0.economy_chain.getUpgradeContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain.registerAccountOperation
@@ -37,6 +45,7 @@ import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
+import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
@@ -84,10 +93,15 @@ class Directory1EconomyChainMixIT {
         private const val EC_NAME = "economy_chain"
         private const val APP_CLUSTER1 = "appCluster1"
         private const val APP_CLUSTER2 = "appCluster2"
+        private const val APP_CLUSTER_TAG = "appClusterTag"
         private const val CONTAINER_UNITS = 2L
-        private const val CLUSTER_CLASS = ""
         private const val DURATION_WEEKS = 1L
         private const val EXTRA_STORAGE_GIB = 0L
+        private const val SCU_PRICE = 1L
+        private const val EXTRA_STORAGE_PRICE = 1L
+        private const val PROVIDER1_VS = "provider1_vs"
+        private const val PROVIDER2_VS = "provider2_vs"
+
 
         private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
@@ -163,28 +177,19 @@ class Directory1EconomyChainMixIT {
                 .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
                 .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
                 .postTransactionUntilConfirmed("System provider2 registered, node2 added to the system cluster")
+
+        // Creating voter sets for provider1 and provider2
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
+                .createVoterSetOperation(node1.providerPubkey, "provider1_vs", 0, listOf(node1.providerPubkey), null)
+                .createVoterSetOperation(node2.providerPubkey, "provider2_vs", 0, listOf(node2.providerPubkey), null)
+                .postTransactionUntilConfirmed("Voter sets provider1_vs and provider2_vs created")
+        awaitQueryResult {
+            assertThat(node1.c0.getVoterSets().map { it.name }).containsAll(PROVIDER1_VS, PROVIDER2_VS)
+        }
     }
 
     @Test
     @Order(2)
-    fun `Add clusters`() {
-        testLogger.info("Adding clusters")
-        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
-                // APP_CLUSTER1 / node1
-                .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", listOf(node1.providerPubkey))
-                .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 3)
-                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, APP_CLUSTER1)
-                // APP_CLUSTER2 / node2
-                .createClusterOperation(node2.providerPubkey, APP_CLUSTER2, "SYSTEM_P", listOf(node2.providerPubkey))
-                .updateNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, null, null, null, 3)
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, APP_CLUSTER2)
-                .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
-        CAC1 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER1).anchoringChain)
-        CAC2 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER2).anchoringChain)
-    }
-
-    @Test
-    @Order(3)
     fun `Add Economy Chain`() {
         testLogger.info("Adding Economy Chain")
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!.readText())
@@ -206,7 +211,60 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
+    @Order(3)
+    fun `Add new tag`() {
+
+        testLogger.info("Adding tag")
+
+        with(node1.ec) {
+            transactionBuilder()
+                    .createTagOperation(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
+
+            awaitQueryResult {
+
+                assertThat(getTagByName(APP_CLUSTER_TAG))
+                        .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
+            }
+        }
+    }
+
+    @Test
     @Order(4)
+    fun `Add clusters`() {
+        testLogger.info("Adding clusters")
+
+        with(node1.ec) {
+            transactionBuilder()
+                    .createClusterOperation(APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
+                    .createClusterOperation(APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
+                    .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
+            awaitQueryResult {
+                assertThat(getClusterCreationStatus(APP_CLUSTER1))
+                        .isEqualTo(ClusterCreationStatus.SUCCESS)
+            }
+            awaitQueryResult {
+                assertThat(getClusters().first { it.name == APP_CLUSTER1 })
+                        .isNotNull()
+            }
+        }
+
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
+                // APP_CLUSTER1 / node1
+//                .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", listOf(node1.providerPubkey))
+                .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 3)
+                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, APP_CLUSTER1)
+                // APP_CLUSTER2 / node2
+//                .createClusterOperation(node2.providerPubkey, APP_CLUSTER2, "SYSTEM_P", listOf(node2.providerPubkey))
+                .updateNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, null, null, null, 3)
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, APP_CLUSTER2)
+                .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
+        CAC1 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER1).anchoringChain)
+        CAC2 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER2).anchoringChain)
+    }
+
+    @Test
+    @Order(5)
     fun `Register accounts`() {
         testLogger.info("Register accounts")
 
@@ -234,7 +292,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Test pool account`() {
         testLogger.info("Test pool account")
         val poolBalance = node1.ec.getPoolBalance()
@@ -254,14 +312,14 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `Create container`() {
         testLogger.info("Create container")
         userAuthenticator.verifyOperationAuthFlags("create_container")
         val tcRid = userClient.transactionBuilder()
                 .also { userAuthenticator.ftAuth(it) }
                 .createContainerOperation(
-                        node1.provider.pubKey.data, CONTAINER_UNITS, CLUSTER_CLASS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER1, true)
+                        node1.provider.pubKey.data, CONTAINER_UNITS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER1, true)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Create Container")
                 .txRid
@@ -293,7 +351,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `Deploy dapp`() {
         testLogger.info("Deploying dapp to c1")
         deployDapp("test_dapp", containerName, assertSigners = arrayOf(node1))
@@ -308,7 +366,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `Upgrade container`() {
         testLogger.info("Upgrade container")
 
@@ -326,7 +384,7 @@ class Directory1EconomyChainMixIT {
         val tcRid = userClient.transactionBuilder()
                 .also { userAuthenticator.ftAuth(it) }
                 .upgradeContainerOperation(
-                        containerName, CONTAINER_UNITS + 1, CLUSTER_CLASS, EXTRA_STORAGE_GIB, APP_CLUSTER2)
+                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2)
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Upgrade Container")
                 .txRid

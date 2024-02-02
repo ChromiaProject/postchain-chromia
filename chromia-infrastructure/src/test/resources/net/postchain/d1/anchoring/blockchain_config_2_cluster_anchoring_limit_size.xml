@@ -59,6 +59,9 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="anchoring_chain_cluster/module.rell">
                                 <param key="anchoring_chain_cluster" type="string"/>
                             </entry>
+                            <entry key="messaging/node_availability_reporting.rell">
+                                <param key="messaging.node_availability_reporting" type="string"/>
+                            </entry>
                             <entry key="messaging/icmf/module.rell">
                                 <param key="messaging.icmf" type="string"/>
                             </entry>
