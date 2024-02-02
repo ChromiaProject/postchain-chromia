@@ -24,9 +24,8 @@ class FTAuthenticator(private val client: PostchainClient) {
         authDescriptor = findAuthDescriptor(accountId)
     }
 
-    fun ftAuth(txBuilder: TransactionBuilder) {
-        txBuilder.ftAuthOperation(accountId, authDescriptor.id.data)
-    }
+    fun transactionBuilder(): TransactionBuilder = client.transactionBuilder()
+            .ftAuthOperation(accountId, authDescriptor.id.data)
 
     fun verifyOperationAuthFlags(opName: String) {
         val operationAuthFlags = client.getAuthFlags(opName)

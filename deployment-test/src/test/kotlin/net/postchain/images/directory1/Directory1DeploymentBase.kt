@@ -70,6 +70,7 @@ abstract class Directory1DeploymentBase {
         val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
         val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
         val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
+        override val logsSubdir = "deployment"
 
         private const val fooContainer = "fooContainer"
         private const val barContainer = "barContainer"

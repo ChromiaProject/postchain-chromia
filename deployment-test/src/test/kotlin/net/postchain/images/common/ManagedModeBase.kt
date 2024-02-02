@@ -68,6 +68,7 @@ open class ManagedModeBase {
     protected val cryptoSystem = Secp256K1CryptoSystem()
 
     val testLogger = KotlinLogging.logger("TestLogger")
+    open val logsSubdir = ""
 
     val network: Network = Network.newNetwork()
 
@@ -90,7 +91,7 @@ open class ManagedModeBase {
     fun nodes() = arrayOf(node1, node2, node3)
 
     fun breakdown() {
-        saveSubnodeLogs(dockerClient)
+        saveSubnodeLogs(dockerClient, logsSubdir)
         stopNodes()
         removeSubnodeContainers()
 

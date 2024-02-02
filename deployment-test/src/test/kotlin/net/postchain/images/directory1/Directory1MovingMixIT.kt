@@ -51,11 +51,12 @@ class Directory1MovingMixIT {
         val node1Logger = KotlinLogging.logger("Moving_Node1Logger")
         val node2Logger = KotlinLogging.logger("Moving_Node2Logger")
         val node3Logger = KotlinLogging.logger("Moving_Node3Logger")
+        override val logsSubdir = "moving"
 
         lateinit var dappBrid: BlockchainRid
-        lateinit var s1SAC: BlockchainRid
-        lateinit var s2SAC: BlockchainRid
-        lateinit var s3SAC: BlockchainRid
+        lateinit var s1CAC: BlockchainRid
+        lateinit var s2CAC: BlockchainRid
+        lateinit var s3CAC: BlockchainRid
 
         init {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
@@ -156,14 +157,14 @@ class Directory1MovingMixIT {
         }
 
         dappBrid = dapps["test_dapp"]!!
-        s1SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s1").anchoringChain)
-        s2SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
-        s3SAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
+        s1CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s1").anchoringChain)
+        s2CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
+        s3CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
 
         testLogger.info("Making sure 5 blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
-                node1.client(s1SAC).getLastAnchoredBlock(dappBrid)
+                node1.client(s1CAC).getLastAnchoredBlock(dappBrid)
             }
             assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(5)
         }
@@ -193,7 +194,7 @@ class Directory1MovingMixIT {
                 .postTransactionUntilConfirmed("test_dapp moving to c3/subnode started")
 
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight()
+        val lastHeight = dappClient.currentBlockHeight() - 1
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c3/subnode finalized")
@@ -205,13 +206,13 @@ class Directory1MovingMixIT {
         // verify blockchain is RUNNING and all blocks are anchored
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that all blocks (some of them) are anchored on s3SAC chain
-        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC, 0)
-        assertBlockReanchored(dappBrid, node1, s1SAC, node3, s3SAC)
+        // Asserting that all blocks (some of them) are anchored on s3CAC chain
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
 
-        // Asserting that new blocks are anchored on s3SAC chain
+        // Asserting that new blocks are built and anchored on s3CAC chain
         awaitUntilAsserted {
-            val s3LastAnchoredHeight = node3.client(s3SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
         }
     }
@@ -239,7 +240,7 @@ class Directory1MovingMixIT {
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master started")
 
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight()
+        val lastHeight = dappClient.currentBlockHeight() - 1
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master finalized")
@@ -251,13 +252,13 @@ class Directory1MovingMixIT {
         // verify blockchain is RUNNING and all blocks are anchored
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 
-        // Asserting that all blocks (some of them) are anchored on s2SAC chain
-        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC, 0)
-        assertBlockReanchored(dappBrid, node3, s3SAC, node2, s2SAC)
+        // Asserting that all blocks (some of them) are anchored on s2CAC chain
+        assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC, 0)
+        assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC)
 
-        // Asserting that new blocks are anchored on s2SAC chain
+        // Asserting that new blocks are anchored on s2CAC chain
         awaitUntilAsserted {
-            val s2LastAnchoredHeight = node2.client(s2SAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            val s2LastAnchoredHeight = node2.client(s2CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
         }
     }
