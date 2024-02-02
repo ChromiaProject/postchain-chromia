@@ -301,8 +301,7 @@ class Directory1EconomyChainMixIT {
 
         // Transfer funds to the pool account
         userAuthenticator.verifyOperationAuthFlags("transfer_to_pool")
-        userClient.transactionBuilder()
-                .also { userAuthenticator.ftAuth(it) }
+        userAuthenticator.transactionBuilder()
                 .transferToPoolOperation(BigInteger.valueOf(1000))
                 .sign(ecUserAccountSigMaker)
                 .postTransactionUntilConfirmed("Transfer to pool")
@@ -316,8 +315,7 @@ class Directory1EconomyChainMixIT {
     fun `Create container`() {
         testLogger.info("Create container")
         userAuthenticator.verifyOperationAuthFlags("create_container")
-        val tcRid = userClient.transactionBuilder()
-                .also { userAuthenticator.ftAuth(it) }
+        val tcRid = userAuthenticator.transactionBuilder()
                 .createContainerOperation(
                         node1.provider.pubKey.data, CONTAINER_UNITS, DURATION_WEEKS, EXTRA_STORAGE_GIB, APP_CLUSTER1, true)
                 .sign(ecUserAccountSigMaker)
@@ -381,8 +379,7 @@ class Directory1EconomyChainMixIT {
 
         // Upgrading the container in a way that all blockchains to be moved to APP_CLUSTER_2
         userAuthenticator.verifyOperationAuthFlags("upgrade_container")
-        val tcRid = userClient.transactionBuilder()
-                .also { userAuthenticator.ftAuth(it) }
+        val tcRid = userAuthenticator.transactionBuilder()
                 .upgradeContainerOperation(
                         containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2)
                 .sign(ecUserAccountSigMaker)
