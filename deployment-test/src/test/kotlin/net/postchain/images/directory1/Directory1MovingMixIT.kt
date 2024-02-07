@@ -23,8 +23,10 @@ import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveFinishOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
+import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -161,6 +163,9 @@ class Directory1MovingMixIT {
         s2CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s2").anchoringChain)
         s3CAC = BlockchainRid(node1.c0.cmGetClusterInfo("s3").anchoringChain)
 
+        testLogger.info("Post a transaction to the dapp that we can prove after moving")
+        assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities", node1, arrayOf(node1))
+
         testLogger.info("Making sure 5 blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
@@ -261,5 +266,22 @@ class Directory1MovingMixIT {
             val s2LastAnchoredHeight = node2.client(s2CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
         }
+    }
+
+    @Test
+    @Order(5)
+    fun `Transactions can be proven with ICCF after moving`() {
+        // Deploy a target chain (important thing is that it is in another cluster in order to avoid intra-cluster ICCF)
+        testLogger.info("Deploying ICCF target chain")
+        deployDapp("test_dapp2", "c1", icmfReceiver = dapps["test_dapp"]!!.data, assertSigners = arrayOf(node1))
+        awaitUntilAsserted {
+            assertThat(node1.c0.getBlockchains(true).size).isEqualTo(8)
+        }
+
+        val chromiaClientProvider = ChromiaClientProvider(
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0), mapOf("s1" to listOf(node1.peerInfo()), "s2" to listOf(node2.peerInfo()), "s3" to listOf(node3.peerInfo()))),
+        )
+        verifyICCF(chromiaClientProvider, arrayOf(node1))
     }
 }

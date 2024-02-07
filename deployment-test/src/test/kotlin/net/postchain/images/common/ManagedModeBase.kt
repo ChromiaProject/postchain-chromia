@@ -2,6 +2,7 @@ package net.postchain.images.common
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -31,6 +32,8 @@ import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
@@ -41,7 +44,10 @@ import net.postchain.dapp.stopContainers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
@@ -54,7 +60,6 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
-import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
@@ -283,7 +288,7 @@ open class ManagedModeBase {
             dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid,
             height: Long = -1L
     ) {
-        awaitQueryResult(atMost = Duration.TWO_MINUTES) {
+        awaitQueryResult {
             val blockRid = if (height == -1L) {
                 srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
             } else {
@@ -293,10 +298,47 @@ open class ManagedModeBase {
         }
     }
 
-    protected fun deployDapp(dappName: String, containerName: String, iccfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
+    protected fun assertThatDappProcessesTx(brid: BlockchainRid, txOp: String, txArg: String, query: String, txNode: PostchainContainer = node2, queryNodes: Array<PostchainContainer> = nodes()) {
+        testLogger.info("Send TX to new dapp ${brid.toHex()} and fetch data")
+        dappTxs[brid] = txNode.tx(brid, txOp, GtvFactory.gtv(txArg)).first
+        assertDappQuery(brid, query, txArg, queryNodes)
+    }
+
+    protected fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String, nodes: Array<PostchainContainer> = nodes()) {
+        awaitUntilAsserted {
+            nodes.forEach { node ->
+                val cities = awaitQueryResult { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
+                        .asArray().map { it.asString() }
+                assertThat(cities).containsExactly(expectedResult)
+            }
+        }
+    }
+
+    protected fun verifyICCF(chromiaClientProvider: ChromiaClientProvider, targetChainNodes: Array<PostchainContainer> = nodes()) {
+        val sourceDapp = dapps["test_dapp"]!!
+        val targetDapp = dapps["test_dapp2"]!!
+        val txToProve = dappTxs[sourceDapp]!!
+
+        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
+                TxRid(txToProve.gtxBody.calculateTxRid(hashCalculator).toHex()),
+                txToProve.toGtv().merkleHash(hashCalculator),
+                listOf(),
+                sourceDapp,
+                targetDapp
+        )
+        val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
+
+        testLogger.info("Posting ICCF proof to target chain")
+        iccfMaterial.txBuilder.addOperation("iccf_transfer", actualTxToProve.toGtv())
+                .postTransactionUntilConfirmed("iccf_transfer")
+        assertDappQuery(targetDapp, "get_iccf_cities", "Heraklion", targetChainNodes)
+    }
+
+    protected fun deployDapp(dappName: String, containerName: String, icmfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
         testLogger.info("Deploy new dapp $dappName")
 
-        val configGtv = compileDapp(dappName, iccfReceiver = iccfReceiver)
+        val configGtv = compileDapp(dappName, icmfReceiver = icmfReceiver)
 
         val txRid = node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
@@ -326,11 +368,11 @@ open class ManagedModeBase {
         return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
     }
 
-    protected fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, iccfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
+    protected fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, icmfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
             GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
                     .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
                     .let {
-                        if (iccfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${iccfReceiver.toHex()}</bytea>") else it
+                        if (icmfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
                     }
                     .let {
                         if (faulty) it.replace("<string>net.postchain.gtx.StandardOpsGTXModule</string>",
