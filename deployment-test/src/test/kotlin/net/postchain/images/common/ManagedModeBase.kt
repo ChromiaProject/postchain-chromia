@@ -368,16 +368,26 @@ open class ManagedModeBase {
         return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
     }
 
-    protected fun compileDapp(dappName: String, maxBlockTransactions: Int = 500, icmfReceiver: ByteArray? = null, faulty: Boolean = false): Gtv =
-            GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
-                    .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
-                    .let {
-                        if (icmfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
-                    }
-                    .let {
-                        if (faulty) it.replace("<string>net.postchain.gtx.StandardOpsGTXModule</string>",
-                                "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>") else it
-                    })
+    protected fun compileDapp(
+            dappName: String,
+            maxBlockTransactions: Int = 500,
+            icmfReceiver: ByteArray? = null,
+            faulty: Boolean = false,
+            bugSupplier: (String) -> String = ::unknownModuleBug
+    ): Gtv = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
+            .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
+            .let {
+                if (icmfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
+            }
+            .let {
+                if (faulty) bugSupplier(it) else it
+            })
+
+
+    protected fun unknownModuleBug(config: String) = config.replace(
+            "<string>net.postchain.gtx.StandardOpsGTXModule</string>",
+            "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>"
+    )
 
     protected val PostchainContainer.c0 get() = client(chain0Brid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
