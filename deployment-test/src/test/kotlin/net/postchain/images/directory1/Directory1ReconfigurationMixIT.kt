@@ -2,6 +2,7 @@ package net.postchain.images.directory1
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
@@ -23,6 +24,7 @@ import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
+import net.postchain.chromia.nm_api.nmGetBlockchainConfigurationV5
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
@@ -104,6 +106,31 @@ class Directory1ReconfigurationMixIT {
 
     @Test
     @Order(2)
+    fun `Reconfigure chain0 by faulty-config`() {
+        testLogger.info("Reconfigure Chain0 by faulty config")
+
+        testLogger.info("Proposing faulty chain0 config")
+        node1.c0.transactionBuilder(listOf(node1.provider))
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, chain0Config(true), "")
+                .postTransactionUntilConfirmed("Propose a faulty chain0 config")
+
+        // Asserting that chain0 is building blocks
+        val height = node1.c0.currentBlockHeight()
+        awaitQueryResult {
+            assertThat(node1.c0.currentBlockHeight()).isGreaterThan(height)
+        }
+
+        // Asserting that current chain0 config is the latest valid one
+        val config0 = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, 0)!!
+        awaitQueryResult {
+            val currentHeight = node1.c0.currentBlockHeight()
+            val currentConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, currentHeight)
+            assertThat(currentConfig?.configHash).isEqualTo(config0.configHash)
+        }
+    }
+
+    @Test
+    @Order(3)
     fun `Add node2 and node3 as signers to c0`() {
         testLogger.info("Adding provider2/node2 and provider3/node3 to the cluster")
 
@@ -125,7 +152,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     fun `Disable and re-enable node2 and node3`() {
         testLogger.info("Disable and re-enable node2 and node3")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
@@ -153,7 +180,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun `Reconfigure CAC by various config types`() {
         testLogger.info("Update cluster anchoring chain")
 
@@ -205,7 +232,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Reconfigure SAC by various config types`() {
         testLogger.info("Update system anchoring chain")
 
@@ -261,7 +288,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
         testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
 
@@ -318,8 +345,18 @@ class Directory1ReconfigurationMixIT {
         }
     }
 
-    private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
+    private fun chain0Config(faulty: Boolean = false) = GtvEncoder.encodeGtv(
+            compileDapp("manager", faulty = faulty, bugSupplier = ::indexAddedBug)
+    ).also {
+        node1Logger.error { it }
+    }
+
+    private fun indexAddedBug(config: String) = config.replace(
+            "mutable name: text = ",
+            "index mutable name: text = "
+    )
 
     private fun sacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("system_anchoring", param, faulty = faulty))
 
+    private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
 }
