@@ -171,7 +171,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                     return
                 }
 
-                val currentPrevMessageBlockHeight = lastMessageHeights[BlockchainRid(header.decodedHeader.getPreviousBlockRid())]
+                val currentPrevMessageBlockHeight = lastMessageHeights[blockchainRid]
                         ?: -1
                 if (header.decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
                     continue // already processed in previous block, skip it here
@@ -199,7 +199,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                             )
                     )
                 }
-                lastMessageHeights[BlockchainRid(header.decodedHeader.getPreviousBlockRid())] = header.decodedHeader.getHeight()
+                lastMessageHeights[blockchainRid] = header.decodedHeader.getHeight()
             }
 
             icmfAnchorPackets.add(
