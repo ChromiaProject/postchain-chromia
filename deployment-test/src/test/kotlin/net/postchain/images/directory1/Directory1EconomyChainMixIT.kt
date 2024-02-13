@@ -25,6 +25,8 @@ import net.postchain.chain0.economy_chain.TicketState
 import net.postchain.chain0.economy_chain.createClusterOperation
 import net.postchain.chain0.economy_chain.createContainerOperation
 import net.postchain.chain0.economy_chain.createTagOperation
+import net.postchain.chain0.economy_chain.ec_proposal.getProposalsRange
+import net.postchain.chain0.economy_chain.ec_proposal.makeVoteOperation
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.getClusterCreationStatus
 import net.postchain.chain0.economy_chain.getClusters
@@ -221,11 +223,10 @@ class Directory1EconomyChainMixIT {
                     .createTagOperation(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
 
-            awaitQueryResult {
+            makeVoteOnLatestProposal(node2)
 
-                assertThat(getTagByName(APP_CLUSTER_TAG))
-                        .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
-            }
+            assertThat(getTagByName(APP_CLUSTER_TAG))
+                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
         }
     }
 
@@ -239,6 +240,11 @@ class Directory1EconomyChainMixIT {
                     .createClusterOperation(APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
                     .createClusterOperation(APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
                     .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
+
+            // Approve both APP_CLUSTER1 and APP_CLUSTER2
+            makeVoteOnLatestProposal(node2)
+            makeVoteOnLatestProposal(node2)
+
             awaitQueryResult {
                 assertThat(getClusterCreationStatus(APP_CLUSTER1))
                         .isEqualTo(ClusterCreationStatus.SUCCESS)
@@ -435,6 +441,17 @@ class Directory1EconomyChainMixIT {
         awaitUntilAsserted {
             val lastAnchoredHeight2 = node2.client(CAC2).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(lastAnchoredHeight2).isGreaterThan(lastHeightBeforeMoving)
+        }
+    }
+
+    private fun makeVoteOnLatestProposal(node: PostchainContainer) {
+
+        with(node.ec) {
+            val latestProposalId = getProposalsRange(0, Long.MAX_VALUE, true).last().rowid
+
+            transactionBuilder()
+                    .makeVoteOperation(node.providerPubkey, latestProposalId, true)
+                    .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
         }
     }
 }
