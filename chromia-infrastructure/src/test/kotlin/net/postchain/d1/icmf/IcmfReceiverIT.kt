@@ -12,6 +12,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
+import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.d1.QueryProviderMocks
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
 
 class IcmfReceiverIT : ManagedModeTest() {
@@ -57,6 +59,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     private val senderOneMessageBody = gtv("hej1")
     private val senderOneEncodedMessageBody = GtvEncoder.encodeGtv(senderOneMessageBody)
     private val senderOneQueryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(senderOneMessageBody))
+    private val senderOneSecondQueryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(senderOneMessageBody), 1, 0)
 
     private val senderTwoChainRid = BlockchainRid.buildRepeat(3)
     private val senderTwoMessageBody = gtv("hej2")
@@ -83,33 +86,38 @@ class IcmfReceiverIT : ManagedModeTest() {
         MockPostchainRestApi.clearMocks()
     }
 
-    private fun setupClientMocks(anchorQueryResponse: Gtv = senderOneQueryResponse, messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
-        MockPostchainRestApi.addMockClient(clusterAnchoringChain, mock {
-            on { blockAtHeight(0L) } doReturn buildAnchorHeader(listOf(anchorQueryResponse["block_header"]!!.asByteArray()))
-            on {
-                query(
-                        "icmf_get_headers_with_messages_after_height", gtv(
-                        mapOf(
-                                "topic" to gtv("my-topic"),
-                                "from_anchor_height" to gtv(-1)
-                        )
-                )
-                )
-            } doReturn gtv(listOf(anchorQueryResponse))
-        })
+    /**
+     * @param anchorQueryResponse Pass multiple responses to mock sending at multiple heights
+     * @param messageQueryResponse Pass the messages to send at each height
+     */
+    private fun setupClientMocks(anchorQueryResponse: List<Gtv> = listOf(senderOneQueryResponse), messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
+        val clusterAnchoringChainClientMock: PostchainClient = mock {}
+        val senderOneChainClientMock: PostchainClient = mock {}
 
-        MockPostchainRestApi.addMockClient(senderOneChainRid, mock {
-            on {
-                query(
-                        QUERY_ICMF_GET_MESSAGES_AT_HEIGHT, gtv(
-                        mapOf(
-                                "topic" to gtv("my-topic"),
-                                "height" to gtv(0)
-                        )
-                )
-                )
-            } doReturn gtv(messageQueryResponse)
-        })
+        anchorQueryResponse.forEachIndexed { index, response ->
+            val messageHeight = index.toLong()
+            doReturn(buildAnchorHeader(listOf(response["block_header"]!!.asByteArray()), messageHeight - 1))
+                    .whenever(clusterAnchoringChainClientMock).blockAtHeight(messageHeight)
+
+            doReturn(gtv(listOf(response))).whenever(clusterAnchoringChainClientMock).query(
+                    "icmf_get_headers_with_messages_after_height",
+                    gtv(mapOf(
+                            "topic" to gtv("my-topic"),
+                            "from_anchor_height" to gtv(messageHeight - 1)
+                    ))
+            )
+
+            doReturn(gtv(messageQueryResponse)).whenever(senderOneChainClientMock).query(
+                    QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                    gtv(mapOf(
+                            "topic" to gtv("my-topic"),
+                            "height" to gtv(messageHeight)
+                    ))
+            )
+        }
+
+        MockPostchainRestApi.addMockClient(clusterAnchoringChain, clusterAnchoringChainClientMock)
+        MockPostchainRestApi.addMockClient(senderOneChainRid, senderOneChainClientMock)
     }
 
     private fun setupQueriesMocks() {
@@ -188,7 +196,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun globalTopicReceiver() {
-        setupClientMocks()
+        setupClientMocks(listOf(senderOneQueryResponse, senderOneSecondQueryResponse))
         setupQueriesMocks()
 
         startManagedSystem(3, 0)
@@ -214,8 +222,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
-                        assertThat(messages).hasSize(2)
-                        assertThat(messages.any { it.sender == senderOneChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
+                        assertThat(messages).hasSize(3)
+                        assertThat(messages.filter { it.sender == senderOneChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).hasSize(2)
                         assertThat(messages.any { it.sender == senderTwoChainRid && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
                     }
                 }
@@ -453,7 +461,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val queryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(messageBody))
 
-        setupClientMocks(queryResponse, listOf(messageBody))
+        setupClientMocks(listOf(queryResponse), listOf(messageBody))
 
         startManagedSystem(3, 0)
 
@@ -484,7 +492,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         val secondEncodedMessageBody = GtvEncoder.encodeGtv(secondMessageBody)
         val queryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(messageBody, secondMessageBody))
 
-        setupClientMocks(queryResponse, listOf(messageBody, secondMessageBody))
+        setupClientMocks(listOf(queryResponse), listOf(messageBody, secondMessageBody))
 
         startManagedSystem(3, 0)
 
@@ -586,32 +594,32 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
     }
 
-    private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBodies: List<Gtv>): Gtv {
-        val blockDetail = createBlockDetail(blockchainRid, messageBodies, "my-topic")
+    private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, messageHeight: Long = 0, prevMessageHeight: Long = -1): Gtv {
+        val blockDetail = createBlockDetail(blockchainRid, messageBodies, "my-topic", messageHeight, prevMessageHeight)
         return gtv(
                 mapOf(
                         "block_header" to gtv(blockDetail.header),
                         "witness" to gtv(blockDetail.witness),
-                        "anchor_height" to gtv(0)
+                        "anchor_height" to gtv(messageHeight)
                 )
         )
     }
 
-    private fun createBlockDetail(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, topic: String): BlockDetail {
+    private fun createBlockDetail(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, topic: String, messageHeight: Long = 0, prevMessageHeight: Long = -1): BlockDetail {
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
-                gtv(blockchainRid.data),
+                gtv(ByteArray(32) { messageHeight.toByte() }),
                 gtv(ByteArray(32)),
                 gtv(0),
-                gtv(0),
+                gtv(messageHeight),
                 GtvNull,
                 gtv(
                         mapOf(
                                 ICMF_BLOCK_HEADER_EXTRA to gtv(
                                         topic to TopicHeaderData(
                                                 gtv(listOf(gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }))).merkleHash(hashCalculator),
-                                                -1L
+                                                prevMessageHeight
                                         ).toGtv()
                                 )
                         )
@@ -629,14 +637,14 @@ class IcmfReceiverIT : ManagedModeTest() {
                 blockRid.wrap(),
                 blockHeader.getPreviousBlockRid().wrap(),
                 GtvEncoder.encodeGtv(gtvBlockHeader).wrap(),
-                0,
+                messageHeight,
                 listOf(),
                 rawWitness.wrap(),
                 blockHeader.getTimestamp()
         )
     }
 
-    private fun buildAnchorHeader(icmfHeaders: List<ByteArray>): BlockDetail {
+    private fun buildAnchorHeader(icmfHeaders: List<ByteArray>, prevHeight: Long = -1): BlockDetail {
         val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val icmfBlockRids = icmfHeaders.map {
             val decodedHeader = BlockHeaderData.fromBinary(it)
@@ -649,12 +657,12 @@ class IcmfReceiverIT : ManagedModeTest() {
                 gtv(clusterAnchoringChain.data),
                 gtv(ByteArray(32)),
                 gtv(0),
-                gtv(0),
+                gtv(prevHeight + 1),
                 GtvNull,
                 gtv(
                         mapOf(
                                 ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
-                                        "my-topic" to TopicHeaderData(gtv(icmfBlockRids).merkleHash(hashCalculator), -1L).toGtv()
+                                        "my-topic" to TopicHeaderData(gtv(icmfBlockRids).merkleHash(hashCalculator), prevHeight).toGtv()
                                 )),
                         )
                 )
