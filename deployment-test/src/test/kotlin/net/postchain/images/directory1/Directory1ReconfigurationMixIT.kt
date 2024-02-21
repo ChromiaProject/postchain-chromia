@@ -351,9 +351,8 @@ class Directory1ReconfigurationMixIT {
         node1Logger.error { it }
     }
 
-    private fun indexAddedBug(config: String) = config.replace(
-            "mutable name: text = ",
-            "index mutable name: text = "
+    private fun indexAddedBug(config: String) = findAndReplaceBugSupplier(
+            config, "mutable name: text = ", "index mutable name: text = "
     )
 
     private fun sacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("system_anchoring", param, faulty = faulty))
