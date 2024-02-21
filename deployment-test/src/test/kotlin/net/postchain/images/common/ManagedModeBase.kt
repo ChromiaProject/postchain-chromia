@@ -383,8 +383,14 @@ open class ManagedModeBase {
                 if (faulty) bugSupplier(it) else it
             })
 
+    protected fun findAndReplaceBugSupplier(config: String, oldValue: String, newValue: String): String {
+        val patched = config.replace(oldValue, newValue)
+        require(config != patched) { "Original config doesn't contain substring `$oldValue`" }
+        return patched
+    }
 
-    protected fun unknownModuleBug(config: String) = config.replace(
+    protected fun unknownModuleBug(config: String) = findAndReplaceBugSupplier(
+            config,
             "<string>net.postchain.gtx.StandardOpsGTXModule</string>",
             "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>"
     )
