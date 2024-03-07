@@ -1,6 +1,6 @@
 package net.postchain.images.directory1
 
-import net.postchain.chain0.lib.ft4.accounts.external.getAccountsByParticipantId
+import net.postchain.chain0.lib.ft4.accounts.external.getAccountsBySigner
 import net.postchain.chain0.lib.ft4.auth.external.ftAuthOperation
 import net.postchain.chain0.lib.ft4.auth.external.getAuthFlags
 import net.postchain.client.core.PostchainClient
@@ -34,19 +34,19 @@ class FTAuthenticator(private val client: PostchainClient) {
 
     private fun findAccountId(): ByteArray {
         val pubKey = client.config.signers.first().pubKey
-        val accountIds = client.getAccountsByParticipantId(pubKey.data)
-        if (accountIds.isEmpty()) throw FTAuthenticatorException("No accounts found for pubkey: $pubKey")
-        return if (accountIds.size > 1) {
+        val accountsPage = client.getAccountsBySigner(pubKey.data, null, null)
+        if (accountsPage.data.isEmpty()) throw FTAuthenticatorException("No accounts found for pubkey: $pubKey")
+        return if (accountsPage.data.size > 1) {
             throw FTAuthenticatorException("More than one account found")
-        } else accountIds.first()
+        } else accountsPage.data.first().asDict()["id"]!!.asByteArray()
     }
 
     private fun findAuthDescriptor(accountId: ByteArray): AuthDescriptor {
         val pubKey = client.config.signers.first().pubKey
         // Cannot use client.getAccountAuthDescriptorsByParticipantId because it cannot handle that the field "rules" is null
         val authDescriptors = client.query(
-                "ft4.get_account_auth_descriptors_by_participant_id",
-                gtv(mapOf("account_id" to GtvByteArray(accountId), "participant_id" to gtv(pubKey.data)))
+                "ft4.get_account_auth_descriptors_by_signer",
+                gtv(mapOf("account_id" to GtvByteArray(accountId), "signer" to gtv(pubKey.data)))
         )
         return authDescriptors.toList<AuthDescriptor>().find { it.args[1].asByteArray().wrap() == pubKey.wData }
                 ?: throw FTAuthenticatorException("No valid account descriptor found.")
