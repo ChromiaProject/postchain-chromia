@@ -170,6 +170,57 @@ class AnchoringIT : ManagedModeTest() {
         }
     }
 
+    /**
+     * Simple happy test to see that we can run 3 nodes to anchor a normal chain even when we hit the maxBlocksPerChain limit
+     */
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun `happy anchoring with maxBlocksPerChain limit reached`() {
+        startManagedSystem(3, 0)
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring-max_blocks_per_chain.xml")
+        val blocks = 7L
+
+        val dappChain = startDappChain()
+
+        buildBlock(dappChain, blocks - 1)
+
+        // --------------------
+        // Anchor chain: Check that we begin with nothing
+        // --------------------
+        val anchorBlockQueries = getChainNodes(anchorChain)[0].getBlockchainInstance(anchorChain).blockchainEngine.getBlockQueries()
+
+        val expectedNumberOfTxs = 1  // Only the first TX
+        val maxBlocksPerChain = 3 // Same as config file
+        val anchoringBlocksNeeded = blocks / maxBlocksPerChain + 1
+
+        // --------------------
+        // Build and expect the following anchoring distribution:
+        // Anchoring block 0: contains dapp block 0-2
+        // Anchoring block 1: contains dapp block 3-5
+        // Anchoring block 2: contains dapp block 6
+        // --------------------
+        for (anchorHeight in 0L until anchoringBlocksNeeded) {
+
+            buildBlock(anchorChain, anchorHeight)
+
+            val blockDataFull = anchorBlockQueries.getBlockAtHeight(anchorHeight).get()!!
+            assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
+            val blockHeaderData = BlockHeaderData.fromBinary(blockDataFull.header.rawData)
+            val anchorHeaderExtra = blockHeaderData.getExtra()[ICMF_ANCHOR_HEADERS_EXTRA]!!
+            val topicHeaderData = TopicHeaderData.fromGtv(anchorHeaderExtra["G_my-topic"]!!)
+
+            assertEquals(anchorHeight - 1, topicHeaderData.previousBlockHeight)
+
+            val fromHeight = anchorHeight * maxBlocksPerChain
+            val toHeight = (anchorHeight * maxBlocksPerChain + maxBlocksPerChain - 1).coerceAtMost(blocks - 1)
+
+            val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
+            val dappBlockRids = (fromHeight..toHeight).map { height -> gtv(dappBlockQueries.getBlockRid(height).get()!!) }
+            val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
+        }
+    }
+
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun onlyClusterChainsAreAnchored() {

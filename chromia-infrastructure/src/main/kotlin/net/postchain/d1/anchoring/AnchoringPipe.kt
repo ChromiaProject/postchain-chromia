@@ -11,6 +11,6 @@ interface AnchoringPipe {
     fun setHighestSeenHeight(height: Long)
     fun mightHaveNewPackets(): Boolean
     fun numberOfNewPackets(): Long
-    fun fetchNext(currentPointer: Long): AnchoringPacket?
+    fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket>
     fun markTaken(currentPointer: Long, bctx: BlockEContext)
 }

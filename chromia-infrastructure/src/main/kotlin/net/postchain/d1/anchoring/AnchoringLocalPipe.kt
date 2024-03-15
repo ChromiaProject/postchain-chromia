@@ -24,21 +24,37 @@ class AnchoringLocalPipe(
 
     override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): AnchoringPacket? {
+    override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
-            val blockRID = dba.getBlockRID(eContext, currentPointer)
-            if (blockRID != null) {
-                highestSeen.getAndUpdate { max(it, currentPointer) }
-                // Get raw data
-                val rawHeader = dba.getBlockHeader(eContext, blockRID)
-                val rawWitness = dba.getWitnessData(eContext, blockRID)
+            val packets = mutableListOf<AnchoringPacket>()
 
-                AnchoringPacket(currentPointer, blockRID, rawHeader, rawWitness)
-            } else {
-                null
+            while (packets.size < limit) {
+                val height = fromHeight + packets.size
+                val blockRID = dba.getBlockRID(eContext, height)
+                if (blockRID != null) {
+                    highestSeen.getAndUpdate { max(it, height) }
+                    // Get raw data
+                    val rawHeader = dba.getBlockHeader(eContext, blockRID)
+                    val rawWitness = dba.getWitnessData(eContext, blockRID)
+
+                    packets.add(AnchoringPacket(height, blockRID, rawHeader, rawWitness))
+                } else {
+                    break
+                }
             }
+
+            // Are there more blocks available?
+            if (packets.size.toLong() == limit) {
+                val height = fromHeight + packets.size + 1
+                val blockRID = dba.getBlockRID(eContext, height)
+                if (blockRID != null) {
+                    highestSeen.getAndUpdate { max(it, height) }
+                }
+            }
+
+            packets
         }
     }
 
