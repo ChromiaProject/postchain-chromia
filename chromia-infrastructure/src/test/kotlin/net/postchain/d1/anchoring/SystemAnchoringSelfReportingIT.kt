@@ -40,7 +40,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
 
         // Add invalid config
         val reconfigHeight = 3L
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 systemAnchoringChain,
                 signers.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,

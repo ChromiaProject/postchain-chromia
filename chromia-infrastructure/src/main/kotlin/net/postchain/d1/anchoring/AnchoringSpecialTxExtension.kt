@@ -94,28 +94,28 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
 
         // Extract all packages from all pipes
         val ops = mutableListOf<OpData>()
-        outer@ for (pipe in pipes) {
+        pipeIt@ for (pipe in pipes) {
             var opsCount = 0
-            if (pipe.mightHaveNewPackets()) {
-                var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
-                while (pipe.mightHaveNewPackets()) {
-                    currentHeight++ // Try next height
-                    val clusterAnchorPacket = pipe.fetchNext(currentHeight)
-                    if (clusterAnchorPacket != null) {
+            var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
+            pipePacketsIt@ while (pipe.mightHaveNewPackets()) {
+                val clusterAnchorPackets = pipe.fetchNextRange(currentHeight + 1, anchoringConfig.maxBlocksPerChain)
+                if (clusterAnchorPackets.isEmpty()) {
+                    break // Nothing more to find
+                } else {
+                    for (clusterAnchorPacket in clusterAnchorPackets) {
                         val (opData, size) = buildOpData(clusterAnchorPacket)
                         if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
-                            break@outer
+                            break@pipeIt
                         }
                         ops.add(opData)
                         opsCount++
                         currentSize += size
-                    } else {
-                        break // Nothing more to find
-                    }
 
-                    if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
-                        break
+                        if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
+                            break@pipePacketsIt
+                        }
                     }
+                    currentHeight += clusterAnchorPackets.size
                 }
             }
         }

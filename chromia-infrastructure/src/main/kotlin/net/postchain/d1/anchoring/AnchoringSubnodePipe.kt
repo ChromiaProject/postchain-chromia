@@ -3,7 +3,6 @@
 package net.postchain.d1.anchoring
 
 import mu.KLogging
-import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.d1.query.MasterClient
@@ -21,7 +20,7 @@ class AnchoringSubnodePipe(
 
     companion object : KLogging()
 
-    private val client: PostchainBlockClient = MasterClient(connectionManager.masterSubQueryManager, blockchainRid)
+    private val client: MasterClient = MasterClient(connectionManager.masterSubQueryManager, blockchainRid)
 
     override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
@@ -29,20 +28,36 @@ class AnchoringSubnodePipe(
 
     override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): AnchoringPacket? =
-            try {
-                client.blockAtHeight(currentPointer)
-            } catch (e: Exception) {
-                logger.warn(e) { "Block fetching from sub node failed: $e" }
-                null
-            }?.let {
-                AnchoringPacket(
-                        currentPointer,
-                        it.rid.data,
-                        it.header.data,
-                        it.witness.data
-                )
-            }
+    override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> {
+        val r = try {
+            client.blockAtHeight(fromHeight)
+        } catch (e: Exception) {
+            logger.warn(e) { "Block fetching from sub node failed: $e" }
+            null
+        }?.let {
+            listOf(AnchoringPacket(
+                    fromHeight,
+                    it.rid.data,
+                    it.header.data,
+                    it.witness.data
+            ))
+        }
+
+        return r ?: listOf()
+    }
+//            try {
+//                client.blocksFromHeight(fromHeight, limit, false)
+//            } catch (e: Exception) {
+//                logger.warn(e) { "Block fetching from sub node failed: $e" }
+//                listOf()
+//            }.let { blockDetails ->
+//                blockDetails.map { AnchoringPacket(
+//                        it.height,
+//                        it.rid.data,
+//                        it.header.data,
+//                        it.witness.data
+//                ) }
+//            }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
