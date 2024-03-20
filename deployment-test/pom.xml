@@ -144,6 +144,7 @@
                                 <mainModule>anchoring_chain_common</mainModule>
                                 <mainModule>management_chain_mainnet</mainModule>
                                 <mainModule>economy_chain</mainModule>
+                                <mainModule>evm_event_receiver</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
