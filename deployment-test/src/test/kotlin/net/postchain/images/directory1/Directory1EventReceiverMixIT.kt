@@ -31,8 +31,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
+import org.testcontainers.containers.DockerComposeContainer
 import org.testcontainers.containers.output.Slf4jLogConsumer
+import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.web3j.crypto.Credentials
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import org.web3j.tx.FastRawTransactionManager
+import org.web3j.tx.TransactionManager
+import org.web3j.tx.response.PollingTransactionReceiptProcessor
 
 @Testcontainers
 @DisableIfTestFails
@@ -54,16 +62,46 @@ class Directory1EventReceiverMixIT {
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
         lateinit var eventReceiverBrid: BlockchainRid
+        val evmContainer: DockerComposeContainer<*>
+        protected val evmServiceUrl: String
+        protected val web3j: Web3j
+        protected val transactionManager: TransactionManager
 
         init {
-            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
+            // Initialize EVM container
+            evmContainer = GethContainer()
+                    .withExposedService(
+                            "geth", 8545,
+                            Wait.forLogMessage(".*HTTP server started.*\\s", 1)
+                    ).withLogConsumer(
+                            "geth",
+                            Slf4jLogConsumer(node1Logger.underlyingLogger, true)
+                    ).apply {
+                        start()
+                    }
+            val evmHost = evmContainer.getServiceHost("geth", 8545)
+            val evmPort = evmContainer.getServicePort("geth", 8545)
+            evmServiceUrl = "http://$evmHost:$evmPort"
+            val credentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
+            // Web3j
+            web3j = Web3j.build(HttpService(evmServiceUrl))
+            transactionManager = FastRawTransactionManager(
+                    web3j,
+                    credentials,
+                    PollingTransactionReceiptProcessor(web3j, 1000, 30)
+            )
+
+            // Nodes
+            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                     node1KeyPair,
                     "config-mix")
+                    .withEifEnv()
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
                     "config-mix")
+                    .withEifEnv()
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
                     "config-mix")
@@ -76,9 +114,18 @@ class Directory1EventReceiverMixIT {
                     )
                     .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
                     .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                    .withEifEnv()
 
             removeSubnodeContainers()
             startNodesAndChain0()
+        }
+
+        private fun PostchainContainer.withEifEnv(): PostchainContainer {
+            withEnv("POSTCHAIN_EIF_ETHEREUM_URLS", evmServiceUrl)
+            withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_READ_AHEAD", 200.toString())
+            withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_QUEUE_SIZE", 100.toString())
+            withEnv("POSTCHAIN_EIF_EVM_MAX_TRY_ERRORS", 1.toString())
+            return this
         }
 
         @JvmStatic
