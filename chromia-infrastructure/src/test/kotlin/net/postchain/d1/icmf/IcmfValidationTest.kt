@@ -421,6 +421,32 @@ class IcmfValidationTest {
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
+    @Test
+    fun `Topics in header that we dont receive messages ops for should not impact validation for local receivers`() {
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic)), null, null))
+
+        val relevantMessageBodies = listOf(gtv("hej"))
+        val irrelevantMessageBodies = listOf(gtv("hej on another topic"))
+        val block = createBlockDetail(relevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(relevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv(),
+                        irrelevantTopic to TopicHeaderData(
+                                gtv(irrelevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                )))
+        )
+
+        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageOps = createMessageOps(relevantMessageBodies)
+        val ops = listOf(nonAnchoredHeaderOp) + messageOps
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
     private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock, icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         blockchainConfigProvider = BlockchainConfigProvider { _ -> listOf(IcmfTestClusterManagement.keyPair.pubKey) }
