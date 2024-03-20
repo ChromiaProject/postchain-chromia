@@ -236,17 +236,20 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx)) return false
                     bodyHashesByTopic.clear()
 
+                    if (headerOp is NonAnchoredHeaderOp && currentAnchorHeaderData != null) {
+                        logger.warn("got ${AnchorHeaderOp.OP_NAME} before a ${NonAnchoredHeaderOp.OP_NAME}")
+                        return false
+                    }
+
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
                     val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_BLOCK_HEADER_EXTRA)
                             ?: return false
 
-                    for (topic in topicData.keys) {
-                        if (headerOp is AnchoredHeaderOp) {
+                    if (headerOp is AnchoredHeaderOp) {
+                        for (topic in topicData.keys) {
                             headerBlockRidsByTopic.computeIfAbsent(topic) { mutableListOf() }
                                     .add(blockRid)
-                        } else if (!validateHeaderSenderAndTopic(decodedHeader.getBlockchainRid(), topic)) {
-                            return false
                         }
                     }
                     currentHeaderData = HeaderValidationInfo(
@@ -259,7 +262,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 MessageHashOp.OP_NAME -> {
                     val messageHashOp = MessageHashOp.fromOpData(op) ?: return false
 
-                    if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
+                    if (currentAnchorHeaderData != null) {
+                        if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
+                    } else {
+                        if (!validateLocalMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
+                    }
 
                     if (currentHeaderData == null) {
                         logger.warn("got ${MessageHashOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME}")
@@ -347,14 +354,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         return true
     }
 
-    private fun validateHeaderSenderAndTopic(sender: ByteArray, topic: String): Boolean {
-        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender) && it.topic == topic } == true
-                || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(BlockchainRid(sender)))
-                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && BlockchainRid(sender) == directoryChainBrid)) {
+    private fun validateLocalMessageSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
+        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender.data) && it.topic == topic } == true
+                || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
+                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)) {
             return true
         }
 
-        logger.warn("Received a ${NonAnchoredHeaderOp.OP_NAME} for non configured origin blockchain-rid: ${sender.toHex()} and topic: $topic")
+        logger.warn("Blockchain $sender is not allowed to send us local non-anchored messages on topic $topic")
         return false
     }
 
