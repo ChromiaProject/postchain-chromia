@@ -3,28 +3,32 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
-import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.eif.contracts.TestToken
+import net.postchain.eif.contracts.TokenBridge
+import net.postchain.eif.contracts.Validator
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -35,12 +39,27 @@ import org.testcontainers.containers.DockerComposeContainer
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.web3j.abi.FunctionEncoder
+import org.web3j.abi.datatypes.Address
+import org.web3j.abi.datatypes.DynamicArray
+import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
+import org.web3j.tx.Contract
 import org.web3j.tx.FastRawTransactionManager
 import org.web3j.tx.TransactionManager
+import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.tx.response.PollingTransactionReceiptProcessor
+import java.math.BigInteger
+
+data class AccountRegister(
+        var accountId: ByteArray = ByteArray(32),
+        val privKey: ByteArray,
+        val pubkey: ByteArray,
+        val evmAddress: ByteArray,
+        val balance: Long
+)
 
 @Testcontainers
 @DisableIfTestFails
@@ -62,10 +81,43 @@ class Directory1EventReceiverMixIT {
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
         lateinit var eventReceiverBrid: BlockchainRid
-        val evmContainer: DockerComposeContainer<*>
-        protected val evmServiceUrl: String
-        protected val web3j: Web3j
-        protected val transactionManager: TransactionManager
+        private val evmContainer: DockerComposeContainer<*>
+        private val evmServiceUrl: String
+        private val web3j: Web3j
+        private val transactionManager: TransactionManager
+        private val networkId = 1337L
+        private val gasProvider = DefaultGasProvider()
+
+        private lateinit var validator: Validator
+        private lateinit var bridge: TokenBridge
+        private lateinit var testToken: TestToken
+        private lateinit var testTokenAddress: ByteArray
+
+        private val tokenBridgeBinary = getBinaryFromArtifactResource("/artifacts/contracts/TokenBridge.sol/TokenBridge.json")
+        private val testTokenBinary = getBinaryFromArtifactResource("/artifacts/contracts/token/TestToken.sol/TestToken.json")
+        private val validatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/Validator.sol/Validator.json")
+
+        // TODO: use getEvmAddress
+        private val node0EvmAddress = Address("659e4a3726275edFD125F52338ECe0d54d15BD99")
+        private val node1EvmAddress = Address("2c3fA9C9FC3C5CB2f9C09aF6f7214f64382eA086")
+
+        // balances
+        private val initialMint = BigInteger("FF".repeat(32), 16)
+        private val depositNum = 5
+        private val depositAmount = BigInteger("AA".repeat(16), 16)
+        private val totalDepositedAmount = depositNum.toBigInteger() * depositAmount
+        private val totalTransferAmount = BigInteger("1234567890ABCDEF", 16)
+
+        private val accountNum = 15
+        private val accountBalance = 1L
+        private val registerAccounts = mutableListOf<AccountRegister>()
+        private val snapshotHeights = mutableListOf<Long>()
+
+        // user
+        private val evmAddress = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
+        private val userEvmAddress = evmAddress.hexStringToByteArray()
+        private val userPubkey = "038f888dec563b5bc253e87abc90afd26c3287021d10236ea19d248043dc39e0b8".hexStringToByteArray()
+        private val userPriKey = "71b5b7f8de0661af934a5e4612f3d0ba183e639bdf4e7452fb6457ed3cfbc825".hexStringToByteArray()
 
         init {
             // Initialize EVM container
@@ -128,6 +180,12 @@ class Directory1EventReceiverMixIT {
             return this
         }
 
+        private fun getBinaryFromArtifactResource(resourcePath: String): String {
+            val artifactFile = Directory1EventReceiverMixIT::class.java.getResource(resourcePath)?.readText()
+            val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
+            return artifactJson.get("bytecode").asString
+        }
+
         @JvmStatic
         @AfterAll
         fun tearDown() {
@@ -171,20 +229,32 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(2)
-    fun `Add EVM Event Receiver Chain`() {
-        testLogger.info("Adding EVM Event Receiver Chain")
-        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver.xml")!!.readText())
+    @Order(1)
+    fun `deploy contracts`() {
+        testLogger.info { "deploy contracts" }
 
-        node1.c0.transactionBuilder()
-                .initEvmEventReceiverChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(gtvConfig))
-                .postTransactionUntilConfirmed("Add $EVM_EVENT_RECEIVER_CHAIN_NAME")
+        // Deploy validator contract
+        val encodedConstructor = FunctionEncoder.encodeConstructor(listOf(DynamicArray(Address::class.java, node0EvmAddress)))
+        validator = Contract.deployRemoteCall(Validator::class.java, web3j, transactionManager, gasProvider, validatorBinary, encodedConstructor).send()
 
-        val tcRid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_EVENT_RECEIVER_CHAIN_NAME }?.rid
-        assertThat(tcRid).isNotNull()
-        eventReceiverBrid = BlockchainRid(tcRid!!)
+        // Deploy token bridge contract
+        bridge = Contract.deployRemoteCall(TokenBridge::class.java, web3j, transactionManager, gasProvider, tokenBridgeBinary, "").send().apply {
+            initialize(Address(validator.contractAddress), Uint256(2)).send()
+        }
 
-        testLogger.info { "$EVM_EVENT_RECEIVER_CHAIN_NAME deployed: $eventReceiverBrid" }
+        // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
+        testToken = Contract.deployRemoteCall(TestToken::class.java, web3j, transactionManager, gasProvider, testTokenBinary, "").send().apply {
+            mint(Address(transactionManager.fromAddress), Uint256(initialMint)).send()
+            approve(Address(bridge.contractAddress), Uint256(initialMint)).send()
+        }
+        testTokenAddress = testToken.contractAddress.substring(2).hexStringToByteArray()
+
+        // Allow token
+        bridge.allowToken(Address(testToken.contractAddress)).send()
+
+        // Assert initial balance
+        val balance = testToken.balanceOf(Address(evmAddress)).send()
+        assertEquals(initialMint, balance.value)
     }
 
 }
