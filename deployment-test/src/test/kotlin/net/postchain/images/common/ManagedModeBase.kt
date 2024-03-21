@@ -341,7 +341,7 @@ open class ManagedModeBase {
         val configGtv = compileDapp(dappName, icmfReceiver = icmfReceiver)
 
         val txRid = node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), dappName, containerName, "")
                 .postTransactionUntilConfirmed("Propose dapp $dappName")
                 .txRid
 

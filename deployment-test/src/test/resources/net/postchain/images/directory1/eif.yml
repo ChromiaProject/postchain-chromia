@@ -1,0 +1,52 @@
+blockchains:
+  evm_event_receiver:
+    module: event_receiver
+    moduleArgs:
+      common:
+        allow_blockchain_dependencies: false
+        provider_quota_max_actions_per_day: 100
+    config:
+      gtx:
+        modules:
+          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+      sync_ext:
+        - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
+  evm_token_bridge:
+    module: main
+    config:
+      gtx:
+        modules:
+          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      eif:
+        snapshot:
+          levels_per_page: 2
+          snapshots_to_keep: 2
+        chains:
+          ethereum:
+            network_id: 1337
+            contracts:
+              - '0x39615b16b74589919c9ce1ea73f1fc5d53141a78'
+            skip_to_height: 0
+            evm_read_offset: 0
+            read_offset: 0
+            events: !include events.yml
+      icmf:
+        receiver:
+          global:
+            topics:
+              - G_evm_block_events
+    moduleArgs:
+      lib.ft4.accounts:
+        rate_limit:
+          active: true
+          max_points: 200
+          recovery_time: 5000
+          points_at_account_creation: 100
+      lib.ft4.admin:
+        admin_pubkey: 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+      lib.access.admin:
+        admin_pubkey: 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57

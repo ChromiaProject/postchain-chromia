@@ -3,15 +3,22 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
+import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
+import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSets
+import net.postchain.chain0.direct_cluster.createClusterOperation
+import net.postchain.chain0.direct_container.createContainerOperation
+import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
@@ -69,6 +76,7 @@ class Directory1EventReceiverMixIT {
     companion object : ManagedModeBase() {
 
         private const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
+        private const val EVM_TOKEN_BRIDGE_CHAIN_NAME = "evm_token_bridge"
         private const val PROVIDER1_VS = "provider1_vs"
         private const val PROVIDER2_VS = "provider2_vs"
 
@@ -81,6 +89,7 @@ class Directory1EventReceiverMixIT {
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
         lateinit var eventReceiverBrid: BlockchainRid
+        lateinit var tokenBridgeBrid: BlockchainRid
         private val evmContainer: DockerComposeContainer<*>
         private val evmServiceUrl: String
         private val web3j: Web3j
@@ -226,12 +235,20 @@ class Directory1EventReceiverMixIT {
         awaitQueryResult {
             assertThat(node1.c0.getVoterSets().map { it.name }).containsAll(PROVIDER1_VS, PROVIDER2_VS)
         }
+
+        // Adding a dapp cluster
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
+                .createClusterOperation(node1.providerPubkey, "dapp_cluster", "SYSTEM_P", listOf(node1.providerPubkey))
+                .createContainerOperation(node1.providerPubkey, "dapp_container", "dapp_cluster", 1, listOf(node1.providerPubkey))
+                .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 3)
+                .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, "dapp_cluster")
+                .postTransactionUntilConfirmed("dapp_cluster and dapp_container created")
     }
 
     @Test
     @Order(1)
-    fun `deploy contracts`() {
-        testLogger.info { "deploy contracts" }
+    fun `Deploy contracts on EVM`() {
+        testLogger.info { "Deploying contracts on EVM" }
 
         // Deploy validator contract
         val encodedConstructor = FunctionEncoder.encodeConstructor(listOf(DynamicArray(Address::class.java, node0EvmAddress)))
@@ -255,6 +272,39 @@ class Directory1EventReceiverMixIT {
         // Assert initial balance
         val balance = testToken.balanceOf(Address(evmAddress)).send()
         assertEquals(initialMint, balance.value)
+    }
+
+    @Test
+    @Order(2)
+    fun `Deploy EVM Event Receiver chain`() {
+        testLogger.info("Deploying EVM Event Receiver Chain")
+        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver.xml")!!.readText())
+
+        node1.c0.transactionBuilder()
+                .initEvmEventReceiverChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(gtvConfig))
+                .postTransactionUntilConfirmed("Add $EVM_EVENT_RECEIVER_CHAIN_NAME")
+
+        val tcRid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_EVENT_RECEIVER_CHAIN_NAME }?.rid
+        assertThat(tcRid).isNotNull()
+        eventReceiverBrid = BlockchainRid(tcRid!!)
+
+        testLogger.info { "$EVM_EVENT_RECEIVER_CHAIN_NAME deployed: $eventReceiverBrid" }
+    }
+
+    @Test
+    @Order(3)
+    fun `Deploy EVM Token Bridge dapp`() {
+        testLogger.info("Deploying EVM Token Bridge dapp")
+        deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1))
+
+        val all = node1.c0.getBlockchains(true).map { it.name }
+        println(all.toTypedArray().contentToString())
+
+        val brid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_TOKEN_BRIDGE_CHAIN_NAME }?.rid
+        assertThat(brid).isNotNull()
+        tokenBridgeBrid = BlockchainRid(brid!!)
+
+        testLogger.info { "$EVM_TOKEN_BRIDGE_CHAIN_NAME deployed: $tokenBridgeBrid" }
     }
 
 }
