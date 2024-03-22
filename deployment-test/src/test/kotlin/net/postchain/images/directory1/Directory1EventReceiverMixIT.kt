@@ -30,6 +30,7 @@ import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.eif.SimpleGtvEncoder
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
@@ -40,6 +41,7 @@ import net.postchain.eif.eif.ft4.addNewTokenMappingOperation
 import net.postchain.eif.lib.ft4.accounts.AuthDescriptor
 import net.postchain.eif.lib.ft4.accounts.AuthType
 import net.postchain.eif.lib.ft4.admin.registerAssetOperation
+import net.postchain.eif.lib.ft4.assets.external.getAssetBalance
 import net.postchain.eif.lib.ft4.assets.external.getAssetsByName
 import net.postchain.eif.lib.ft4.auth.Signature
 import net.postchain.gtv.Gtv
@@ -163,10 +165,10 @@ class Directory1EventReceiverMixIT {
 
         private lateinit var userBalance: Uint256
         private lateinit var withdrawAmount: BigInteger
-        private lateinit var accountNumber: Gtv
+        private var accountNumber: Long = 0L
         private lateinit var authDescriptorId: Hash
         private lateinit var authId: Gtv
-        private lateinit var assetId: Gtv
+        private lateinit var assetId: ByteArray
 
         init {
             // Initialize EVM container
@@ -363,7 +365,7 @@ class Directory1EventReceiverMixIT {
                 .postTransactionUntilConfirmed("Register asset")
 
         assetId = awaitQueryResult {
-            node1.client(tokenBridgeBrid).getAssetsByName(tokenName, 1L, null).data[0]["id"]
+            node1.client(tokenBridgeBrid).getAssetsByName(tokenName, 1L, null).data[0]["id"]?.asByteArray()
         }!!
 
         // Register evm account
@@ -396,7 +398,7 @@ class Directory1EventReceiverMixIT {
 
         node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
                 .addNewEvmErc20Operation(networkId, testTokenAddress, tokenName, tokenSymbol, tokenDecimal)
-                .addNewTokenMappingOperation(networkId, testTokenAddress, assetId.asByteArray())
+                .addNewTokenMappingOperation(networkId, testTokenAddress, assetId)
                 .postTransactionUntilConfirmed("Add ERC-20 token")
         node1.client(tokenBridgeBrid, signers = listOf(aliceKeyPair)).transactionBuilder()
                 .registerAccountOperation(aliceEvmAddress, aliceAuth, aliceSig)
@@ -420,7 +422,24 @@ class Directory1EventReceiverMixIT {
     @Test
     @Order(5)
     fun `Deposit token on EVM`() {
+        testLogger.info { "Deposit token on EVM" }
 
+        // deposit on EVM
+        for (i in 1..depositNum) {
+            bridge.deposit(Address(testToken.contractAddress), Uint256(depositAmount)).send()
+        }
+        // check the balance on EVM
+        userBalance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
+        assertEquals(userBalance.value, initialMint - totalDepositedAmount)
+
+        // check the asset balance on Chromia
+        awaitQueryResult {
+            val balance = node1.client(tokenBridgeBrid).getAssetBalance(aliceAccountId, assetId)
+            assertThat(balance?.amount).isEqualTo(totalDepositedAmount)
+        }
+        snapshotHeights.add(node1.client(tokenBridgeBrid).currentBlockHeight())
+
+        // TODO: Skipping `Check eif state for account as well` from the IT tests here in Deployment Tests
     }
 
     @Test
@@ -429,4 +448,9 @@ class Directory1EventReceiverMixIT {
 
     }
 
+    /**
+     * convert evm address to 32 bytes to compliance with EIF simple gtv encoder
+     * @see SimpleGtvEncoder.encodeGtv
+     */
+    private fun to32Bytes(address: String) = "000000000000000000000000$address".hexStringToByteArray()
 }
