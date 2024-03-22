@@ -24,14 +24,29 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
+import net.postchain.eif.eif.evm.getAccountIdByEvmAddress
+import net.postchain.eif.eif.evm.registerAccountOperation
+import net.postchain.eif.eif.ft4.addNewEvmErc20Operation
+import net.postchain.eif.eif.ft4.addNewTokenMappingOperation
+import net.postchain.eif.lib.ft4.accounts.AuthDescriptor
+import net.postchain.eif.lib.ft4.accounts.AuthType
+import net.postchain.eif.lib.ft4.admin.registerAssetOperation
+import net.postchain.eif.lib.ft4.assets.external.getAssetsByName
+import net.postchain.eif.lib.ft4.auth.Signature
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
@@ -84,7 +99,7 @@ class Directory1EventReceiverMixIT {
         private val node2Logger = KotlinLogging.logger("EvmEventReceiver_Node2Logger")
         private val node3Logger = KotlinLogging.logger("EvmEventReceiver_Node3Logger")
         override val logsSubdir = "evm_event_receiver"
-        private val node1KeyPair = KeyPair.of(
+        private val provider1KeyPair = KeyPair.of(
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
@@ -122,11 +137,36 @@ class Directory1EventReceiverMixIT {
         private val registerAccounts = mutableListOf<AccountRegister>()
         private val snapshotHeights = mutableListOf<Long>()
 
-        // user
-        private val evmAddress = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
-        private val userEvmAddress = evmAddress.hexStringToByteArray()
-        private val userPubkey = "038f888dec563b5bc253e87abc90afd26c3287021d10236ea19d248043dc39e0b8".hexStringToByteArray()
-        private val userPriKey = "71b5b7f8de0661af934a5e4612f3d0ba183e639bdf4e7452fb6457ed3cfbc825".hexStringToByteArray()
+        // users
+        // - admin
+        private val adminKeyPair = KeyPair.of( // node1
+                "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57",
+                "3132333435363738393031323334353637383930313233343536373839303131"
+        )
+        private val adminSigMaker = cryptoSystem.buildSigMaker(adminKeyPair)
+
+        // - Alice
+        private val alicePubkey = "038f888dec563b5bc253e87abc90afd26c3287021d10236ea19d248043dc39e0b8".hexStringToByteArray()
+        private val alicePrivkey = "71b5b7f8de0661af934a5e4612f3d0ba183e639bdf4e7452fb6457ed3cfbc825".hexStringToByteArray()
+        private val aliceKeyPair = KeyPair(alicePubkey, alicePrivkey)
+        private val aliceEvmAddressStr = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
+        private val aliceEvmAddress = aliceEvmAddressStr.hexStringToByteArray()
+        private lateinit var aliceAccountId: ByteArray
+
+        // - Bob
+        private val bobPubkey = "02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80".hexStringToByteArray()
+        private val bobPrivkey = "B31AB878C62B0E940B345C659A456D3573CF25960823C34C7BEEB5D1F813BEFD".hexStringToByteArray()
+        private val bobKeyPair = KeyPair(bobPubkey, bobPrivkey)
+        private val bobEvmAddressStr = "661683e5d36E83B38B1a20247ba6F5c410dC165d"
+        private val bobEvmAddress = bobEvmAddressStr.hexStringToByteArray()
+        private lateinit var bobAccountId: ByteArray
+
+        private lateinit var userBalance: Uint256
+        private lateinit var withdrawAmount: BigInteger
+        private lateinit var accountNumber: Gtv
+        private lateinit var authDescriptorId: Hash
+        private lateinit var authId: Gtv
+        private lateinit var assetId: Gtv
 
         init {
             // Initialize EVM container
@@ -156,7 +196,7 @@ class Directory1EventReceiverMixIT {
             // Nodes
             chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    node1KeyPair,
+                    provider1KeyPair,
                     "config-mix")
                     .withEifEnv()
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
@@ -205,6 +245,7 @@ class Directory1EventReceiverMixIT {
     @Test
     @Order(1)
     fun `Setup the network`() {
+        testLogger.info("Setup the network")
         node1Db.awaitBlockHeight(0)
         with(node1.c0) {
             val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
@@ -218,7 +259,7 @@ class Directory1EventReceiverMixIT {
         assertAnchoringChainProperties()
 
         // Adding provider2 as system
-        testLogger.info("Adding system provider provider2 its node")
+        testLogger.info("Add system provider provider2 its node")
         val newProviders = listOf(
                 ProviderInfo(node2.provider.pubKey.wData, "provider2", "http://provider2.com")
         )
@@ -248,7 +289,7 @@ class Directory1EventReceiverMixIT {
     @Test
     @Order(1)
     fun `Deploy contracts on EVM`() {
-        testLogger.info { "Deploying contracts on EVM" }
+        testLogger.info { "Deploy contracts on EVM" }
 
         // Deploy validator contract
         val encodedConstructor = FunctionEncoder.encodeConstructor(listOf(DynamicArray(Address::class.java, node0EvmAddress)))
@@ -270,14 +311,14 @@ class Directory1EventReceiverMixIT {
         bridge.allowToken(Address(testToken.contractAddress)).send()
 
         // Assert initial balance
-        val balance = testToken.balanceOf(Address(evmAddress)).send()
+        val balance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
         assertEquals(initialMint, balance.value)
     }
 
     @Test
     @Order(2)
     fun `Deploy EVM Event Receiver chain`() {
-        testLogger.info("Deploying EVM Event Receiver Chain")
+        testLogger.info("Deploy EVM Event Receiver Chain")
         val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver.xml")!!.readText())
 
         node1.c0.transactionBuilder()
@@ -294,7 +335,7 @@ class Directory1EventReceiverMixIT {
     @Test
     @Order(3)
     fun `Deploy EVM Token Bridge dapp`() {
-        testLogger.info("Deploying EVM Token Bridge dapp")
+        testLogger.info("Deploy EVM Token Bridge dapp")
         deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1))
 
         val all = node1.c0.getBlockchains(true).map { it.name }
@@ -305,6 +346,87 @@ class Directory1EventReceiverMixIT {
         tokenBridgeBrid = BlockchainRid(brid!!)
 
         testLogger.info { "$EVM_TOKEN_BRIDGE_CHAIN_NAME deployed: $tokenBridgeBrid" }
+    }
+
+    @Test
+    @Order(4)
+    fun `Register FT accounts`() {
+        testLogger.info { "Register FT accounts" }
+
+        val tokenName = "Chromia"
+        val tokenSymbol = "CHR"
+        val tokenDecimal = 18L
+        val tokenIconUrl = "https://chromaway.com/chr"
+
+        node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
+                .registerAssetOperation(tokenName, tokenSymbol, tokenDecimal, tokenIconUrl)
+                .postTransactionUntilConfirmed("Register asset")
+
+        assetId = awaitQueryResult {
+            node1.client(tokenBridgeBrid).getAssetsByName(tokenName, 1L, null).data[0]["id"]
+        }!!
+
+        // Register evm account
+        val aliceSig = Signature(
+                "39b0c8c44a10d0fd70c0ed0e833cf6d93818ae1b10777857eb868516932796dc".hexStringToWrappedByteArray(),
+                "44de8f297cce55c3da8401dd77269d0baf978f60e97ebc5717d4c8eeaed3bea9".hexStringToWrappedByteArray(),
+                28L
+        )
+        val aliceAuth = AuthDescriptor(
+                AuthType.S,
+                listOf(
+                        GtvArray(arrayOf(GtvFactory.gtv("A"), GtvFactory.gtv("T"))),
+                        GtvFactory.gtv(alicePubkey)
+                ),
+                GtvNull
+        )
+        val bobSig = Signature(
+                "8fa4216cd5979efdeb109e10f87225ea9579fd21289fac7f1410278554e79aff".hexStringToWrappedByteArray(),
+                "442017757e4e627a98d40c89cdbdde4612251cc86acabba27cf1683cd1d7cb4c".hexStringToWrappedByteArray(),
+                28L
+        )
+        val bobAuth = AuthDescriptor(
+                AuthType.S,
+                listOf(
+                        GtvArray(arrayOf(GtvFactory.gtv("A"), GtvFactory.gtv("T"))),
+                        GtvFactory.gtv(bobPubkey)
+                ),
+                GtvNull
+        )
+
+        node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
+                .addNewEvmErc20Operation(networkId, testTokenAddress, tokenName, tokenSymbol, tokenDecimal)
+                .addNewTokenMappingOperation(networkId, testTokenAddress, assetId.asByteArray())
+                .postTransactionUntilConfirmed("Add ERC-20 token")
+        node1.client(tokenBridgeBrid, signers = listOf(aliceKeyPair)).transactionBuilder()
+                .registerAccountOperation(aliceEvmAddress, aliceAuth, aliceSig)
+                .postTransactionUntilConfirmed("Register Alice account")
+        node1.client(tokenBridgeBrid, signers = listOf(bobKeyPair)).transactionBuilder()
+                .registerAccountOperation(bobEvmAddress, bobAuth, bobSig)
+                .postTransactionUntilConfirmed("Register Bob account")
+
+        awaitQueryResult {
+            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(aliceEvmAddress)?.also {
+                assertThat(it).isNotNull()
+                aliceAccountId = it
+            }
+            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(bobEvmAddress)?.also {
+                assertThat(it).isNotNull()
+                bobAccountId = it
+            }
+        }
+    }
+
+    @Test
+    @Order(5)
+    fun `Deposit token on EVM`() {
+
+    }
+
+    @Test
+    @Order(6)
+    fun `Withdraw token to EVM`() {
+
     }
 
 }
