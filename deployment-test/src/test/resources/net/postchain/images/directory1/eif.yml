@@ -12,15 +12,6 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
       sync_ext:
         - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
-  evm_token_bridge:
-    module: main
-    config:
-      gtx:
-        modules:
-          - "net.postchain.eif.EifGTXModule"
-          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
-      sync_ext:
-        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       eif:
         snapshot:
           levels_per_page: 2
@@ -34,6 +25,15 @@ blockchains:
             evm_read_offset: 0
             read_offset: 0
             events: !include events.yml
+  evm_token_bridge:
+    module: main
+    config:
+      gtx:
+        modules:
+          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       icmf:
         receiver:
           global:

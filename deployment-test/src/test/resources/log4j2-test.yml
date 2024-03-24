@@ -73,6 +73,10 @@ Configuration:
         fileName: "logs/ec/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+      - name: EvmEventReceiver_EvmContainerAppender
+        fileName: "logs/evm_event_receiver/evm_container.log"
+        PatternLayout:
+          pattern: "%msg%n"
       - name: EvmEventReceiver_Node1Appender
         fileName: "logs/evm_event_receiver/node1.log"
         PatternLayout:
@@ -187,6 +191,11 @@ Configuration:
           - ref: EC_Node3Appender
 
       # EvmEventReceiver tests
+      - name: EvmEventReceiver_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmEventReceiver_EvmContainerAppender
       - name: EvmEventReceiver_Node1Logger
         level: info
         additivity: false

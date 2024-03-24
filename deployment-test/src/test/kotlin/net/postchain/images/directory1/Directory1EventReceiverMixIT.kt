@@ -30,7 +30,6 @@ import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.eif.SimpleGtvEncoder
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
@@ -59,9 +58,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.DockerComposeContainer
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -77,14 +74,6 @@ import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.math.BigInteger
 
-data class AccountRegister(
-        var accountId: ByteArray = ByteArray(32),
-        val privKey: ByteArray,
-        val pubkey: ByteArray,
-        val evmAddress: ByteArray,
-        val balance: Long
-)
-
 @Testcontainers
 @DisableIfTestFails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -97,6 +86,7 @@ class Directory1EventReceiverMixIT {
         private const val PROVIDER1_VS = "provider1_vs"
         private const val PROVIDER2_VS = "provider2_vs"
 
+        private val evmContainerLogger = KotlinLogging.logger("EvmEventReceiver_EvmContainerLogger")
         private val node1Logger = KotlinLogging.logger("EvmEventReceiver_Node1Logger")
         private val node2Logger = KotlinLogging.logger("EvmEventReceiver_Node2Logger")
         private val node3Logger = KotlinLogging.logger("EvmEventReceiver_Node3Logger")
@@ -107,8 +97,8 @@ class Directory1EventReceiverMixIT {
 
         lateinit var eventReceiverBrid: BlockchainRid
         lateinit var tokenBridgeBrid: BlockchainRid
-        private val evmContainer: DockerComposeContainer<*>
-        private val evmServiceUrl: String
+
+        private val evmContainer: EvmContainer
         private val web3j: Web3j
         private val transactionManager: TransactionManager
         private val networkId = 1337L
@@ -134,9 +124,6 @@ class Directory1EventReceiverMixIT {
         private val totalDepositedAmount = depositNum.toBigInteger() * depositAmount
         private val totalTransferAmount = BigInteger("1234567890ABCDEF", 16)
 
-        private val accountNum = 15
-        private val accountBalance = 1L
-        private val registerAccounts = mutableListOf<AccountRegister>()
         private val snapshotHeights = mutableListOf<Long>()
 
         // users
@@ -172,26 +159,17 @@ class Directory1EventReceiverMixIT {
 
         init {
             // Initialize EVM container
-            evmContainer = GethContainer()
-                    .withExposedService(
-                            "geth", 8545,
-                            Wait.forLogMessage(".*HTTP server started.*\\s", 1)
-                    ).withLogConsumer(
-                            "geth",
-                            Slf4jLogConsumer(node1Logger.underlyingLogger, true)
-                    ).apply {
+            evmContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
+                    .withNetwork(network)
+                    .apply {
                         start()
                     }
-            val evmHost = evmContainer.getServiceHost("geth", 8545)
-            val evmPort = evmContainer.getServicePort("geth", 8545)
-            evmServiceUrl = "http://$evmHost:$evmPort"
-            val credentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             // Web3j
-            web3j = Web3j.build(HttpService(evmServiceUrl))
+            web3j = Web3j.build(HttpService(evmContainer.getExternalGethUrl()))
             transactionManager = FastRawTransactionManager(
                     web3j,
-                    credentials,
+                    Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610"),
                     PollingTransactionReceiptProcessor(web3j, 1000, 30)
             )
 
@@ -224,7 +202,7 @@ class Directory1EventReceiverMixIT {
         }
 
         private fun PostchainContainer.withEifEnv(): PostchainContainer {
-            withEnv("POSTCHAIN_EIF_ETHEREUM_URLS", evmServiceUrl)
+            withEnv("POSTCHAIN_EIF_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
             withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_READ_AHEAD", 200.toString())
             withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_QUEUE_SIZE", 100.toString())
             withEnv("POSTCHAIN_EIF_EVM_MAX_TRY_ERRORS", 1.toString())
@@ -289,7 +267,7 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(1)
+    @Order(2)
     fun `Deploy contracts on EVM`() {
         testLogger.info { "Deploy contracts on EVM" }
 
@@ -318,7 +296,7 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(2)
+    @Order(3)
     fun `Deploy EVM Event Receiver chain`() {
         testLogger.info("Deploy EVM Event Receiver Chain")
         val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver.xml")!!.readText())
@@ -335,7 +313,7 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     fun `Deploy EVM Token Bridge dapp`() {
         testLogger.info("Deploy EVM Token Bridge dapp")
         deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1))
@@ -351,7 +329,7 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun `Register FT accounts`() {
         testLogger.info { "Register FT accounts" }
 
@@ -420,7 +398,7 @@ class Directory1EventReceiverMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Deposit token on EVM`() {
         testLogger.info { "Deposit token on EVM" }
 
@@ -439,18 +417,7 @@ class Directory1EventReceiverMixIT {
         }
         snapshotHeights.add(node1.client(tokenBridgeBrid).currentBlockHeight())
 
-        // TODO: Skipping `Check eif state for account as well` from the IT tests here in Deployment Tests
+        // TODO: Skipping the `Check eif state for account as well` from the IT tests here
     }
 
-    @Test
-    @Order(6)
-    fun `Withdraw token to EVM`() {
-
-    }
-
-    /**
-     * convert evm address to 32 bytes to compliance with EIF simple gtv encoder
-     * @see SimpleGtvEncoder.encodeGtv
-     */
-    private fun to32Bytes(address: String) = "000000000000000000000000$address".hexStringToByteArray()
 }

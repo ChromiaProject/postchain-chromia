@@ -216,6 +216,7 @@
                     </execution>
                     <execution>
                         <id>rell-eif-client-gen</id>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
