@@ -377,7 +377,7 @@ open class ManagedModeBase {
     ): Gtv = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
             .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
             .let {
-                if (icmfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
+                if (icmfReceiver != null) it.replace("<string>ICMF_SENDER_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
             }
             .let {
                 if (faulty) bugSupplier(it) else it

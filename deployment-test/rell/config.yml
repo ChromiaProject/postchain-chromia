@@ -30,7 +30,7 @@ blockchains:
       icmf:
         receiver:
           local:
-            - bc-rid: DAPP_BRID
+            - bc-rid: ICMF_SENDER_BRID
               topic: L_city
     moduleArgs:
       main:

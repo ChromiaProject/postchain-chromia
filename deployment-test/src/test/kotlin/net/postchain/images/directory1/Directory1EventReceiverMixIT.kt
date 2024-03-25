@@ -316,10 +316,7 @@ class Directory1EventReceiverMixIT {
     @Order(4)
     fun `Deploy EVM Token Bridge dapp`() {
         testLogger.info("Deploy EVM Token Bridge dapp")
-        deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1))
-
-        val all = node1.c0.getBlockchains(true).map { it.name }
-        println(all.toTypedArray().contentToString())
+        deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1), icmfReceiver = eventReceiverBrid.data)
 
         val brid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_TOKEN_BRIDGE_CHAIN_NAME }?.rid
         assertThat(brid).isNotNull()

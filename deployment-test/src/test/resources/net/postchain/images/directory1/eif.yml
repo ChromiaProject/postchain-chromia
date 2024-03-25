@@ -36,9 +36,9 @@ blockchains:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       icmf:
         receiver:
-          global:
-            topics:
-              - G_evm_block_events
+          local:
+            - topic: L_evm_block_events
+              bc-rid: ICMF_SENDER_BRID
     moduleArgs:
       lib.ft4.accounts:
         rate_limit:
