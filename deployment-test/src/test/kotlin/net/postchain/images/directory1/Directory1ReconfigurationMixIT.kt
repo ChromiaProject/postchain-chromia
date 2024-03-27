@@ -330,6 +330,7 @@ class Directory1ReconfigurationMixIT {
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider))
                 // proposing faulty pending_config1 and pending_removed_signers_config2,
                 // so that config2 will contain base_config1 and will fail
+                // signer update should be retried and eventually succeed
                 .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100, true), "")
                 .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
                 .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200), "")
@@ -337,7 +338,7 @@ class Directory1ReconfigurationMixIT {
 
         awaitQueryResult {
             assertThat(getLastBlockConfigSigners(node1, cac).toSet()).isEqualTo(
-                    setOf(node1.pubkey.wData, node2.pubkey.wData))
+                    setOf(node1.pubkey.wData))
         }
         awaitQueryResult {
             assertThat(getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node1, cac)).isEqualTo(
