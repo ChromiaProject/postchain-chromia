@@ -415,6 +415,49 @@ abstract class Directory1DeploymentBase {
 
     @Test
     @Order(18)
+    fun `Test updating signers of paused chains`() {
+        // Verify state is RUNNING
+        nodes().forEach {
+            verifyBlockchainState(it, chain0Brid, BlockchainState.RUNNING)
+            verifyBlockchainState(it, systemAnchoringBrid, BlockchainState.RUNNING)
+            verifyBlockchainState(it, clusterAnchoringBrid, BlockchainState.RUNNING)
+        }
+        val dappBrid = dapps["test_dapp"]!!
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+        awaitUntilAsserted {
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(4)).second.httpStatusCode!!).isEqualTo(200)
+        }
+
+        // Change to PAUSED
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "(2)Change to PAUSED")
+                .postTransactionUntilConfirmed("(2)Change state to ${BlockchainState.PAUSED.name} for dapp $dappBrid")
+        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
+
+        // Verify no transactions created but chain is reachable
+        awaitUntilAsserted {
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(5)).second.httpStatusCode!!).isEqualTo(403)
+        }
+        assertDappQuery(dappBrid, "get_cities", "Heraklion")
+
+        //stopNode2()
+        //Stopping a node while chain is paused causes the chain to get suck when trying to resume.
+        //TODO Call an force update/emergency update that forces a configuration at height, immediately, without reaching consensus on the update.
+
+        // Change to RUNNING
+        node1.c0.transactionBuilder()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "(2)Change to RUNNING")
+                .postTransactionUntilConfirmed("(2)Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+
+        // Verify transactions created
+        awaitUntilAsserted {
+            assertThat(node1.tx(dappBrid, "do_nothing", gtv(6)).second.httpStatusCode!!).isEqualTo(200)
+        }
+    }
+
+    @Test
+    @Order(19)
     fun `Test remove and archive blockchains`() {
         // Deploy a new dapps to prevent `fooContainer` from stopping when `test_dapp` is REMOVED
         deployDapp("test_dapp3", fooContainer)
@@ -497,7 +540,7 @@ abstract class Directory1DeploymentBase {
     }
 
     @Test
-    @Order(19)
+    @Order(20)
     fun `Subnode container stops if empty`() {
         if (numberOfMasterNodes > 0) {
             testLogger.info("Asserting that the container stops if there are no running blockchains in it")
