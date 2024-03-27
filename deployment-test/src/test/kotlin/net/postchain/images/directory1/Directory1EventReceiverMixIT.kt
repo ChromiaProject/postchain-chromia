@@ -372,7 +372,7 @@ class Directory1EventReceiverMixIT {
         )
 
         node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
-                .addNewEvmErc20Operation(networkId, testTokenAddress, tokenName, tokenSymbol, tokenDecimal)
+                .addNewEvmErc20Operation(networkId, testTokenAddress, tokenName, tokenSymbol, tokenDecimal, true)
                 .addNewTokenMappingOperation(networkId, testTokenAddress, assetId)
                 .postTransactionUntilConfirmed("Add ERC-20 token")
         node1.client(tokenBridgeBrid, signers = listOf(aliceKeyPair)).transactionBuilder()

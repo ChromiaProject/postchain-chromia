@@ -1,6 +1,6 @@
 blockchains:
   evm_event_receiver:
-    module: event_receiver
+    module: eif.event_receiver
     moduleArgs:
       common:
         allow_blockchain_dependencies: false
