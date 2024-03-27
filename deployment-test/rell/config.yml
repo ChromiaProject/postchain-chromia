@@ -4,7 +4,6 @@ blockchains:
     config:
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
-        blockdelay: 1000
         maxblocktime: 1000
         maxblocktransactions: 500
       gtx:
@@ -18,7 +17,6 @@ blockchains:
     config:
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
-        blockdelay: 2000
         maxblocktime: 2000
         maxblocktransactions: 500
       gtx:
@@ -40,7 +38,6 @@ blockchains:
     config:
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
-        blockdelay: 2000
         maxblocktime: 2000
         maxblocktransactions: 500
       gtx:
@@ -54,7 +51,6 @@ blockchains:
     config:
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
-        blockdelay: 2001
         maxblocktime: 2001
         maxblocktransactions: 501
       gtx:
