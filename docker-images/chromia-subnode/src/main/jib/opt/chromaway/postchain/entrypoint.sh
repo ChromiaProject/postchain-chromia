@@ -11,4 +11,4 @@ echo "Configuring and starting Postgres"
 bash postgres-entrypoint.sh postgres
 
 echo "Starting Postchain node"
-exec java -XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/libs/*" net.postchain.server.AppKt run-subnode
+exec java -Duser.language=en -Duser.country=US -XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/libs/*" net.postchain.server.AppKt run-subnode
