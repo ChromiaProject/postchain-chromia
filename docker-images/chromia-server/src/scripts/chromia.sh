@@ -21,4 +21,4 @@ export LOG4J_CONFIGURATION_FILE=${LOG4J_CONFIGURATION_FILE:=$APP_HOME/config/log
 
 JVM_FLAGS="-XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError"
 
-exec "${RELL_JAVA:-java}" "$JVM_FLAGS" -classpath "$APP_HOME/lib/*" net.postchain.server.AppKt "$@"
+exec "${RELL_JAVA:-java}" "$JVM_FLAGS" -Duser.language=en -Duser.country=US -classpath "$APP_HOME/lib/*" net.postchain.server.AppKt "$@"
