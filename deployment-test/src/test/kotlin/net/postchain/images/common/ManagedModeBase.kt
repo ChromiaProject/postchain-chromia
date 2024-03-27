@@ -171,6 +171,21 @@ open class ManagedModeBase {
         postgres.stop()
     }
 
+    fun stopNode1() {
+        if (::channel1.isInitialized) channel1.shutdownNow()
+        stopContainers(node1)
+    }
+
+    fun stopNode2() {
+        if (::channel2.isInitialized) channel2.shutdownNow()
+        stopContainers(node2)
+    }
+
+    fun stopNode3() {
+        if (::channel3.isInitialized) channel3.shutdownNow()
+        stopContainers(node3)
+    }
+
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
         postgres.start()
