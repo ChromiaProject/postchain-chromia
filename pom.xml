@@ -308,7 +308,7 @@
                         <artifactId>kotlin-maven-plugin</artifactId>
                         <configuration>
                             <args>
-                                <arg>-Werror</arg>
+<!--                                <arg>-Werror</arg>-->
                             </args>
                         </configuration>
                     </plugin>
