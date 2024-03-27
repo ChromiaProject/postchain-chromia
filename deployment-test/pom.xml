@@ -32,6 +32,22 @@
             <artifactId>directory-chain</artifactId>
             <type>pom</type>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-contracts</artifactId>
+            <version>${eif.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-rell</artifactId>
+            <version>${eif.version}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+            <type>tar.gz</type>
+        </dependency>
 
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -99,7 +115,43 @@
                 </includes>
             </testResource>
         </testResources>
+
         <plugins>
+            <!-- Unpack dependencies: EIF rell code and EIF contracts -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-eif</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>postchain-eif-rell</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>unpack-contracts</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>postchain-eif-contracts</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Collect rell code to compile -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -109,9 +161,11 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
                             <resources>
+                                <!-- Source code of test dapps -->
                                 <resource>
                                     <directory>${project.basedir}/rell/src</directory>
                                 </resource>
+                                <!-- Source code of D1 components needed for test dapps -->
                                 <resource>
                                     <directory>${maven.multiModuleProjectDirectory}/${directory.source}</directory>
                                     <includes>
@@ -128,12 +182,25 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Compile D1 and test dapps -->
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>rell-client-gen</id>
+                        <id>install-eif-libs</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>rell-install</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.build.directory}/postchain-eif-rell/rell/src</source>
+                            <configPath>${project.build.directory}/postchain-eif-rell/rell/chromia.yml</configPath>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-d1-client-gen</id>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
@@ -148,7 +215,23 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>generate-d1</id>
+                        <id>rell-eif-client-gen</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <packageName>net.postchain.eif</packageName>
+                            <source>${project.build.directory}/postchain-eif-rell/rell/src</source>
+                            <target>${project.build.directory}/generated-sources/rell-client/eif</target>
+                            <force>true</force>
+                            <mainModules>
+                                <mainModule>main</mainModule>
+                            </mainModules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile-d1</id>
                         <phase>generate-test-resources</phase>
                         <goals>
                             <goal>rell-compile</goal>
@@ -161,7 +244,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>generate-test-dapp</id>
+                        <id>compile-test-dapps</id>
                         <phase>generate-test-resources</phase>
                         <goals>
                             <goal>rell-compile</goal>
@@ -173,8 +256,102 @@
                             <target>deployment-test/target/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>compile-eif-chains</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <rootFolder>${project.basedir}/..</rootFolder>
+                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/eif.yml</configFile>
+                            <source>deployment-test/target/postchain-eif-rell/rell/src</source>
+                            <target>deployment-test/target/test-classes/directory1deployment</target>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
+
+            <!-- EIF / contracts / add source and resources -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>add-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>target/generated-test-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-test-resource</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>
+                                        target/postchain-eif-contracts
+                                    </directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- EIF / contracts / generate abi and java stubs -->
+            <plugin>
+                <groupId>com.github.longdt</groupId>
+                <artifactId>web3j-maven-plugin</artifactId>
+                <version>4.8.10</version>
+                <configuration>
+                    <packageName>net.postchain.eif.contracts</packageName>
+                    <nativeJavaType>false</nativeJavaType>
+                    <contract>
+                        <includes>
+                            <include>TokenBridge</include>
+                            <include>TestToken</include>
+                            <include>Validator</include>
+                        </includes>
+                    </contract>
+                    <pathPrefixes>
+                        <pathPrefix>@openzeppelin=../node_modules/@openzeppelin</pathPrefix>
+                    </pathPrefixes>
+                    <abiSourceFiles>
+                        <directory>${project.build.directory}/postchain-eif-contracts/abi</directory>
+                        <includes>
+                            <include>**/TokenBridge.json</include>
+                            <include>**/TestToken.json</include>
+                            <include>**/Validator.json</include>
+                        </includes>
+                    </abiSourceFiles>
+                    <outputDirectory>
+                        <abi>${project.basedir}/target/generated-test-resources</abi>
+                        <java>${project.basedir}/target/generated-test-sources</java>
+                    </outputDirectory>
+                    <outputFormat>java,abi</outputFormat>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>generate-sources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- /EIF -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>

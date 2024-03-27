@@ -356,7 +356,7 @@ open class ManagedModeBase {
         val configGtv = compileDapp(dappName, icmfReceiver = icmfReceiver)
 
         val txRid = node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), "dapp", containerName, "")
+                .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), dappName, containerName, "")
                 .postTransactionUntilConfirmed("Propose dapp $dappName")
                 .txRid
 
@@ -392,7 +392,7 @@ open class ManagedModeBase {
     ): Gtv = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/$dappName.xml")!!.readText()
             .replace("<int>500</int>", "<int>$maxBlockTransactions</int>")
             .let {
-                if (icmfReceiver != null) it.replace("<string>DAPP_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
+                if (icmfReceiver != null) it.replace("<string>ICMF_SENDER_BRID</string>", "<bytea>${icmfReceiver.toHex()}</bytea>") else it
             }
             .let {
                 if (faulty) bugSupplier(it) else it

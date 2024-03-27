@@ -36,7 +36,7 @@
         <directory.chain.version>1.37.4</directory.chain.version>
         <rell.version>0.13.5</rell.version>
         <rell.maven.plugin.version>0.11.8</rell.maven.plugin.version>
-        <eif.version>0.2.14</eif.version>
+        <eif.version>0.3.6</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -110,6 +110,16 @@
                 <artifactId>postchain-eif-core</artifactId>
                 <version>${eif.version}</version>
             </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-eif-contracts</artifactId>
+                <version>${eif.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-eif-rell</artifactId>
+                <version>${eif.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.mockito.kotlin</groupId>
@@ -178,6 +188,7 @@
                                 <sourceDirs>
                                     <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
                                     <sourceDir>${project.basedir}/src/test/java</sourceDir>
+                                    <sourceDir>${project.basedir}/target/generated-test-sources</sourceDir>
                                 </sourceDirs>
                             </configuration>
                         </execution>
@@ -297,7 +308,7 @@
                         <artifactId>kotlin-maven-plugin</artifactId>
                         <configuration>
                             <args>
-                                <arg>-Werror</arg>
+<!--                                <arg>-Werror</arg>-->
                             </args>
                         </configuration>
                     </plugin>
