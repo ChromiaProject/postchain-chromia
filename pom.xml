@@ -31,11 +31,11 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.15.8</postchain.version>
+        <postchain.version>3.15.9</postchain.version>
         <postchain.client.version>3.12.1</postchain.client.version>
         <directory.chain.version>1.37.4</directory.chain.version>
         <rell.version>0.13.5</rell.version>
-        <rell.maven.plugin.version>0.11.8</rell.maven.plugin.version>
+        <rell.maven.plugin.version>0.11.9</rell.maven.plugin.version>
         <eif.version>0.3.6</eif.version>
         <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
@@ -308,7 +308,7 @@
                         <artifactId>kotlin-maven-plugin</artifactId>
                         <configuration>
                             <args>
-<!--                                <arg>-Werror</arg>-->
+                                <arg>-Werror</arg>
                             </args>
                         </configuration>
                     </plugin>
