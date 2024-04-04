@@ -148,6 +148,8 @@ blockchains:
               - L_node_update
               - L_cluster_node_update
     moduleArgs:
+      lib.ft4.admin:
+        admin_pubkey: 0317AC5B309A05B81A68F1A64321A3C6E6799E037C12892838682EBB9A620316A6
       lib.ft4.accounts:
         rate_limit:
           active: 1
