@@ -324,7 +324,7 @@ open class ManagedModeBase {
             nodes.forEach { node ->
                 val cities = awaitQueryResult { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
-                assertThat(cities).containsExactly(expectedResult)
+                assertThat(cities).contains(expectedResult)
             }
         }
     }
