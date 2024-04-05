@@ -1,10 +1,6 @@
 blockchains:
   evm_event_receiver:
     module: eif.event_receiver
-    moduleArgs:
-      common:
-        allow_blockchain_dependencies: false
-        provider_quota_max_actions_per_day: 100
     config:
       gtx:
         modules:
