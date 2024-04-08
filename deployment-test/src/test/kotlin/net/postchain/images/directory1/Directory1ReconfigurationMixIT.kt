@@ -3,6 +3,7 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
+import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
@@ -30,6 +31,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
@@ -106,8 +108,8 @@ class Directory1ReconfigurationMixIT {
 
     @Test
     @Order(2)
-    fun `Reconfigure chain0 by faulty-config`() {
-        testLogger.info("Reconfigure Chain0 by faulty config")
+    fun `Reconfigure chain0 by faulty-config - compile error`() {
+        testLogger.info("Reconfigure Chain0 by faulty compile config")
 
         testLogger.info("Proposing faulty chain0 config")
         node1.c0.transactionBuilder(listOf(node1.provider))
@@ -131,6 +133,48 @@ class Directory1ReconfigurationMixIT {
 
     @Test
     @Order(3)
+    fun `Reconfigure chain0 by faulty-config - runtime error`() {
+
+        testLogger.info("Reconfigure Chain0 by faulty runtime config")
+
+        val compileDapp = compileDapp("manager", faulty = true, bugSupplier = ::addEntityWithoutDefault)
+
+        testLogger.info("Proposing chain0 config")
+        node1.c0.transactionBuilder(listOf(node1.provider))
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDapp), "")
+                .postTransactionUntilConfirmed("Propose a chain0 config")
+
+        val testConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, node1.c0.currentBlockHeight())!!
+
+        val config0 = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, 0)!!
+        assertThat(testConfig.configHash).isNotEqualTo(config0.configHash)
+
+        // Add row to entity (to make the default attribute fail on next config update)
+        node1.tx(chain0Brid, "add_postchain_chromia_test", gtv("t1"))
+
+        val compileDappUpdate = compileDapp("manager", faulty = true, bugSupplier = ::addEntityWithoutDefaultNewAttribute)
+
+        testLogger.info("Proposing faulty chain0 config")
+        node1.c0.transactionBuilder(listOf(node1.provider))
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDappUpdate), "")
+                .postTransactionUntilConfirmed("Propose a faulty chain0 config")
+
+        // Asserting that chain0 is building blocks
+        val height2 = node1.c0.currentBlockHeight()
+        awaitQueryResult {
+            assertThat(node1.c0.currentBlockHeight()).isGreaterThan(height2)
+        }
+
+        // Asserting that current chain0 config is the latest valid one
+        awaitQueryResult {
+            val currentHeight = node1.c0.currentBlockHeight()
+            val currentConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, currentHeight)!!
+            assertThat(currentConfig.configHash).isEqualTo(testConfig.configHash)
+        }
+    }
+
+    @Test
+    @Order(4)
     fun `Add node2 and node3 as signers to c0`() {
         testLogger.info("Adding provider2/node2 and provider3/node3 to the cluster")
 
@@ -152,7 +196,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun `Disable and re-enable node2 and node3`() {
         testLogger.info("Disable and re-enable node2 and node3")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
@@ -180,7 +224,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Reconfigure CAC by various config types`() {
         testLogger.info("Update cluster anchoring chain")
 
@@ -232,7 +276,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `Reconfigure SAC by various config types`() {
         testLogger.info("Update system anchoring chain")
 
@@ -288,7 +332,7 @@ class Directory1ReconfigurationMixIT {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `Reconfigure anchoring chain by faulty-remove-signer-config`() {
         testLogger.info("Reconfigure CAC by faulty-remove-signer-config")
 
@@ -347,16 +391,44 @@ class Directory1ReconfigurationMixIT {
     }
 
     private fun chain0Config(faulty: Boolean = false) = GtvEncoder.encodeGtv(
-            compileDapp("manager", faulty = faulty, bugSupplier = ::indexAddedBug)
+            compileDapp("manager", faulty = faulty, bugSupplier = ::addBrokenBlockStrategyClass)
     ).also {
         node1Logger.error { it }
     }
 
-    private fun indexAddedBug(config: String) = findAndReplaceBugSupplier(
-            config, "mutable name: text = ", "index mutable name: text = "
+    private fun addBrokenBlockStrategyClass(config: String) = findAndReplaceBugSupplier(
+            config, "net.postchain.base.BaseBlockBuildingStrategy", "non-existing-class"
     )
 
     private fun sacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("system_anchoring", param, faulty = faulty))
 
     private fun cacConfig(param: Int, faulty: Boolean = false) = GtvEncoder.encodeGtv(compileDapp("cluster_anchoring", param, faulty = faulty))
+
+    private fun addEntityWithoutDefault(config: String): String {
+        val patch = addTestCode(config,
+                "entity postchain_chromia_test {\n" +
+                        "    value1: text;\n" +
+                        "}\n" +
+                        "operation add_postchain_chromia_test(value: text) {\n" +
+                        "    create postchain_chromia_test(value);\n" +
+                        "}"
+        )
+        return patch
+    }
+
+    private fun addEntityWithoutDefaultNewAttribute(config: String): String {
+        return addTestCode(config,
+                "entity postchain_chromia_test {\n" +
+                        "    value1: text;\n" +
+                        "    value2: text;" +
+                        "}")
+    }
+
+    // Inject rell code as isolated fle in the management_chain_directory1 module
+    private fun addTestCode(config: String, rellModule: String) =
+            config.replace("<entry key=\"sources\">[\\v\\s]*<dict>".toRegex(RegexOption.MULTILINE),
+                    "<entry key=\"sources\"><dict><entry key=\"management_chain_directory1/postchain_chromia_test.rell\"><string>" +
+                            rellModule +
+                            "</string></entry>"
+            )
 }
