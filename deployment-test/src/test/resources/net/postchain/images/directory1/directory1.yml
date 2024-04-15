@@ -16,6 +16,19 @@ blockchains:
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
+        max_block_size: 27262976
+        min_inter_block_interval: 1000
+        min_fast_revolt_status_timeout: 2000
+        allowed_dapp_chain_gtx_modules:
+          - "net.postchain.rell.module.RellPostchainModuleFactory"
+          - "net.postchain.gtx.StandardOpsGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+        allowed_dapp_chain_sync_exts:
+          - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+          - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
     config:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -27,7 +40,9 @@ blockchains:
         - net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension
       gtx:
         modules:
-          - net.postchain.d1.icmf.IcmfReceiverGTXModule
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.eif.transaction.signerupdate.directorychain.SignerUpdateGTXModule"
       icmf:
         receiver:
           anchoring:
@@ -91,6 +106,7 @@ blockchains:
         modules:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.eif.transaction.signerupdate.directorychain.SignerUpdateGTXModule"
       icmf:
         receiver:
           anchoring:
@@ -120,6 +136,19 @@ blockchains:
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
+        max_block_size: 27262976
+        min_inter_block_interval: 1000
+        min_fast_revolt_status_timeout: 2000
+        allowed_dapp_chain_gtx_modules:
+          - "net.postchain.rell.module.RellPostchainModuleFactory"
+          - "net.postchain.gtx.StandardOpsGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+        allowed_dapp_chain_sync_exts:
+          - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+          - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
   economy_chain:
     module: economy_chain
     config:
@@ -172,6 +201,8 @@ blockchains:
         pool_amount_to_mint: 1000000000
         # corresponding private key for this test key is FD8F9D4F1327DA6622B969DDD835CB41C982FAA805E614D7F4F4F0ADBCAD135F
         pool_account_pubkey: x"032FF500E33BC4DF87C7F40C167ADA6DBE52955066DD3F689189ED221B913BFD8F"
+        # corresponding private key for this test key is F85AAB861F58BE75147768EFC59B07AD3365589C5F17AB2CCF917753B3CC6BC5
+        deposit_account_pubkey: x"03559F5999D9F6C75590DC0008A36AE483D813E44EB7CE4984BDE01B90C9C2352E"
         # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
         admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
         chromia_foundation_account_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
@@ -184,17 +215,6 @@ blockchains:
         test_chr_pool_refill_limit_millis: 86400000 # 1 day
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
-        default_providers:
-          Chromaway: x"02EC8AC937846DF24C939801BB0155EE0C1B7CBE4993ACD7669B8962BE1033A4A9"
-          Sunube: x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB"
-          Dwellir: x"02576A126D3FC8588F7756857198294B1C7064E6926D264353A996E44B6E0928A0"
-          SNOWBRIDGE: x"02C45091B7670B89CC1651524AA9F4D46141D085FE16AD75193AD44086178BC6D5"
-          DappRadar: x"0344127844D76346AE6CD4CE01F52DE9E8EDE972E4A1FF26DC7AA70BF6B006858C"
-          Nocturnal Labs: x"036293EC53DC8367E850833E64D8AABB6994EE48DDAEC6F6706B9A1FFCF26E0B9F"
-          Node.Monster: x"038140EBFD9EC1BDF512C92F5257CFD5ADD3115BE1A7283D2EFC17BBCB8E1C1CDD"
-          w3coins: x"02C33257B7F0FACD6D1ACBE2756D355CA86EDBB7451928DC1EA7D1A755D2CEBD48"
-          StableLab: x"03BEA42D36FEAFDFD7C3C729152E992F31F1BC5C139E97E0806A7778A50EFDB96A"
-          EXNT: x"02D8372E2F11D45803B28C46BDE3A8228346C6D5A27E2A3C3EF12F12CBBA9CC231"
 
 compile:
   rellVersion: 0.13.10

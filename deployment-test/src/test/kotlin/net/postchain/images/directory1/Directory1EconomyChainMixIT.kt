@@ -92,7 +92,7 @@ class Directory1EconomyChainMixIT {
 
     companion object : ManagedModeBase() {
 
-        private const val EC_NAME = "economy_chain"
+        const val EC_NAME = "economy_chain"
         private const val APP_CLUSTER1 = "appCluster1"
         private const val APP_CLUSTER2 = "appCluster2"
         private const val APP_CLUSTER_TAG = "appClusterTag"
