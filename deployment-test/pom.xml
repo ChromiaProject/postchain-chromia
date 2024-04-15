@@ -227,6 +227,7 @@
                             <force>true</force>
                             <mainModules>
                                 <mainModule>main</mainModule>
+                                <mainModule>transaction_submitter</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
@@ -322,6 +323,9 @@
                             <include>TokenBridge</include>
                             <include>TestToken</include>
                             <include>Validator</include>
+                            <include>Anchoring</include>
+                            <include>ManagedValidator</include>
+                            <include>DirectoryChainValidator</include>
                         </includes>
                     </contract>
                     <pathPrefixes>
@@ -333,6 +337,9 @@
                             <include>**/TokenBridge.json</include>
                             <include>**/TestToken.json</include>
                             <include>**/Validator.json</include>
+                            <include>**/Anchoring.json</include>
+                            <include>**/ManagedValidator.json</include>
+                            <include>**/DirectoryChainValidator.json</include>
                         </includes>
                     </abiSourceFiles>
                     <outputDirectory>

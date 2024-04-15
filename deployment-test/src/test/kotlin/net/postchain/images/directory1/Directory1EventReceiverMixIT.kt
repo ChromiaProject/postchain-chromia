@@ -218,6 +218,7 @@ class Directory1EventReceiverMixIT {
         @JvmStatic
         @AfterAll
         fun tearDown() {
+            evmContainer.stop()
             super.breakdown()
         }
     }

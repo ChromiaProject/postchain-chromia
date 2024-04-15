@@ -89,6 +89,23 @@ Configuration:
         fileName: "logs/evm_event_receiver/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+
+      - name: EvmTxs_EvmContainerAppender
+        fileName: "logs/evm_tx_submitter/evm_container.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node1Appender
+        fileName: "logs/evm_tx_submitter/node1.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node2Appender
+        fileName: "logs/evm_tx_submitter/node2.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node3Appender
+        fileName: "logs/evm_tx_submitter/node3.log"
+        PatternLayout:
+          pattern: "%msg%n"
   Loggers:
 
     Root:
@@ -211,3 +228,25 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: EvmEventReceiver_Node3Appender
+
+      # EVM transaction submitter tests
+      - name: EvmTxs_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_EvmContainerAppender
+      - name: EvmTxs_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node1Appender
+      - name: EvmTxs_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node2Appender
+      - name: EvmTxs_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node3Appender
