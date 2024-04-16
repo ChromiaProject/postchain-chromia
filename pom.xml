@@ -34,7 +34,7 @@
         <postchain.version>3.15.12</postchain.version>
         <postchain.client.version>3.12.2</postchain.client.version>
         <directory.chain.version>1.41.1</directory.chain.version>
-        <rell.version>0.13.10</rell.version>
+        <rell.version>0.13.11</rell.version>
         <rell.maven.plugin.version>0.11.11</rell.maven.plugin.version>
         <eif.version>0.4.5</eif.version>
         <kotlin.version>1.9.23</kotlin.version>
