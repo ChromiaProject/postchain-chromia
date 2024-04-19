@@ -79,7 +79,7 @@ class Directory1TransactionSubmitterIT {
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
-        private val evmContainer: EvmContainer
+        private val evmContainer: GethContainer
         private val web3j: Web3j
         private val transactionManager: TransactionManager
         private val gasProvider = DefaultGasProvider()
