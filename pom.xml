@@ -31,12 +31,12 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.15.13</postchain.version>
+        <postchain.version>3.15.15</postchain.version>
         <postchain.client.version>3.12.2</postchain.client.version>
         <directory.chain.version>1.41.1</directory.chain.version>
         <rell.version>0.13.11</rell.version>
         <rell.maven.plugin.version>0.11.11</rell.maven.plugin.version>
-        <eif.version>0.4.5</eif.version>
+        <eif.version>0.4.6</eif.version>
         <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>

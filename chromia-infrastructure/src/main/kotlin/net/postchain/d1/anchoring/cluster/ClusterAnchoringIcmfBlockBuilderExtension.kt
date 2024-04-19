@@ -29,7 +29,9 @@ class ClusterAnchoringIcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxE
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
-        queuedEvents.add(AnchorIcmfHeader.fromGtv(data))
+        ctxt.addAfterAppendHook {
+            queuedEvents.add(AnchorIcmfHeader.fromGtv(data))
+        }
     }
 
     /**
