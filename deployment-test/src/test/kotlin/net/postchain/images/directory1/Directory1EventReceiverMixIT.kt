@@ -98,7 +98,7 @@ class Directory1EventReceiverMixIT {
         lateinit var eventReceiverBrid: BlockchainRid
         lateinit var tokenBridgeBrid: BlockchainRid
 
-        private val evmContainer: EvmContainer
+        private val evmContainer: GethContainer
         private val web3j: Web3j
         private val transactionManager: TransactionManager
         private val networkId = 1337L
