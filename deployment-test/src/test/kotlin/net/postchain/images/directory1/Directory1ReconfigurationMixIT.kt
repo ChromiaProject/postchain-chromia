@@ -25,7 +25,7 @@ import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
-import net.postchain.chromia.nm_api.nmGetBlockchainConfigurationV5
+import net.postchain.chromia.nm_api.nmGetBlockchainConfigurationInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
@@ -123,10 +123,10 @@ class Directory1ReconfigurationMixIT {
         }
 
         // Asserting that current chain0 config is the latest valid one
-        val config0 = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, 0)!!
+        val config0 = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, 0)!!
         awaitQueryResult {
             val currentHeight = node1.c0.currentBlockHeight()
-            val currentConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, currentHeight)
+            val currentConfig = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, currentHeight)
             assertThat(currentConfig?.configHash).isEqualTo(config0.configHash)
         }
     }
@@ -144,9 +144,9 @@ class Directory1ReconfigurationMixIT {
                 .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDapp), "")
                 .postTransactionUntilConfirmed("Propose a chain0 config")
 
-        val testConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, node1.c0.currentBlockHeight())!!
+        val testConfig = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, node1.c0.currentBlockHeight())!!
 
-        val config0 = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, 0)!!
+        val config0 = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, 0)!!
         assertThat(testConfig.configHash).isNotEqualTo(config0.configHash)
 
         // Add row to entity (to make the default attribute fail on next config update)
@@ -168,7 +168,7 @@ class Directory1ReconfigurationMixIT {
         // Asserting that current chain0 config is the latest valid one
         awaitQueryResult {
             val currentHeight = node1.c0.currentBlockHeight()
-            val currentConfig = node1.c0.nmGetBlockchainConfigurationV5(chain0Brid, currentHeight)!!
+            val currentConfig = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, currentHeight)!!
             assertThat(currentConfig.configHash).isEqualTo(testConfig.configHash)
         }
     }

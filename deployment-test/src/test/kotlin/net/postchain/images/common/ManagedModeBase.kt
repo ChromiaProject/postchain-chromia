@@ -2,7 +2,6 @@ package net.postchain.images.common
 
 import assertk.assertThat
 import assertk.assertions.contains
-import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -17,7 +16,7 @@ import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
-import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationV5
+import net.postchain.chain0.nm_api.nmGetBlockchainConfigurationInfo
 import net.postchain.chain0.nm_api.nmGetBlockchainState
 import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
@@ -380,7 +379,7 @@ open class ManagedModeBase {
 
     protected fun getLastBlockConfigSigners(node: PostchainContainer, blockchainRid: BlockchainRid): List<WrappedByteArray> {
         val lastHeight = node1.client(blockchainRid).currentBlockHeight()
-        return node.c0.nmGetBlockchainConfigurationV5(blockchainRid, lastHeight)!!.signers
+        return node.c0.nmGetBlockchainConfigurationInfo(blockchainRid, lastHeight)!!.signers
     }
 
     protected fun compileDapp(
