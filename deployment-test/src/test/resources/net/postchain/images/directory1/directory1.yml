@@ -211,7 +211,6 @@ blockchains:
         staking_withdrawal_delay_ms: 1209600000
         staking_delegation_delay_ms: 604800000
         staking_payout_interval_ms: 31536000000 # Good for testing
-        test_chr_refill_limit_millis: 604800000 # 1 week
         test_chr_pool_refill_limit_millis: 86400000 # 1 day
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
