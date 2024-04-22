@@ -4,7 +4,7 @@ import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Assertions.fail
 
-internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
+fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
     var result: T? = null
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         try {
@@ -16,7 +16,7 @@ internal fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, asse
     return result
 }
 
-internal fun awaitUntilAsserted(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> Unit) {
+fun awaitUntilAsserted(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> Unit) {
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         assertion()
     }
