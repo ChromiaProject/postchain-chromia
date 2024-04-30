@@ -33,20 +33,23 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
-import net.postchain.eif.eif.evm.getAccountIdByEvmAddress
-import net.postchain.eif.eif.evm.registerAccountOperation
-import net.postchain.eif.eif.ft4.addNewEvmErc20Operation
-import net.postchain.eif.eif.ft4.addNewTokenMappingOperation
-import net.postchain.eif.lib.ft4.accounts.AuthDescriptor
-import net.postchain.eif.lib.ft4.accounts.AuthType
-import net.postchain.eif.lib.ft4.admin.registerAssetOperation
-import net.postchain.eif.lib.ft4.assets.external.getAssetBalance
-import net.postchain.eif.lib.ft4.assets.external.getAssetsByName
-import net.postchain.eif.lib.ft4.auth.Signature
+import net.postchain.eif.lib.ft4.core.accounts.AuthDescriptor
+import net.postchain.eif.lib.ft4.core.accounts.AuthType
+import net.postchain.eif.lib.ft4.core.auth.Signature
+import net.postchain.eif.lib.ft4.external.accounts.getAccountById
+import net.postchain.eif.lib.ft4.external.accounts.getAccountsBySigner
+import net.postchain.eif.lib.ft4.external.admin.registerAccountOperation
+import net.postchain.eif.lib.ft4.external.admin.registerAssetOperation
+import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
+import net.postchain.eif.lib.ft4.external.assets.getAssetBalances
+import net.postchain.eif.lib.ft4.external.assets.getAssetById
+import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
+import net.postchain.eif.tests.hbridge_it.registerErc20AssetOperation
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
@@ -82,7 +85,7 @@ class Directory1EventReceiverMixIT {
     companion object : ManagedModeBase() {
 
         private const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
-        private const val EVM_TOKEN_BRIDGE_CHAIN_NAME = "evm_token_bridge"
+        private const val EVM_TOKEN_BRIDGE_CHAIN_NAME = "hbridge"
         private const val PROVIDER1_VS = "provider1_vs"
         private const val PROVIDER2_VS = "provider2_vs"
 
@@ -174,7 +177,7 @@ class Directory1EventReceiverMixIT {
             )
 
             // Nodes
-            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
+            chain0Config = this::class.java.getResource("/directory1deployment/devnet1.xml")!!.readText()
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                     provider1KeyPair,
                     "config-mix")
@@ -300,7 +303,7 @@ class Directory1EventReceiverMixIT {
     @Order(3)
     fun `Deploy EVM Event Receiver chain`() {
         testLogger.info("Deploy EVM Event Receiver Chain")
-        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver.xml")!!.readText())
+        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/eif_event_receiver.xml")!!.readText())
 
         node1.c0.transactionBuilder()
                 .initEvmEventReceiverChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(gtvConfig))
@@ -317,7 +320,7 @@ class Directory1EventReceiverMixIT {
     @Order(4)
     fun `Deploy EVM Token Bridge dapp`() {
         testLogger.info("Deploy EVM Token Bridge dapp")
-        deployDapp("evm_token_bridge", "dapp_container", assertSigners = arrayOf(node1), icmfReceiver = eventReceiverBrid.data)
+        deployDapp("hbridge", "dapp_container", assertSigners = arrayOf(node1), icmfReceiver = eventReceiverBrid.data)
 
         val brid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_TOKEN_BRIDGE_CHAIN_NAME }?.rid
         assertThat(brid).isNotNull()
@@ -353,8 +356,8 @@ class Directory1EventReceiverMixIT {
         val aliceAuth = AuthDescriptor(
                 AuthType.S,
                 listOf(
-                        GtvArray(arrayOf(GtvFactory.gtv("A"), GtvFactory.gtv("T"))),
-                        GtvFactory.gtv(alicePubkey)
+                        GtvArray(arrayOf(gtv("A"), gtv("T"))),
+                        gtv(alicePubkey)
                 ),
                 GtvNull
         )
@@ -373,26 +376,39 @@ class Directory1EventReceiverMixIT {
         )
 
         node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
-                .addNewEvmErc20Operation(networkId, testTokenAddress, tokenName, tokenSymbol, tokenDecimal, true)
-                .addNewTokenMappingOperation(networkId, testTokenAddress, assetId)
+                .registerErc20AssetOperation(networkId, testTokenAddress, assetId)
                 .postTransactionUntilConfirmed("Add ERC-20 token")
-        node1.client(tokenBridgeBrid, signers = listOf(aliceKeyPair)).transactionBuilder()
-                .registerAccountOperation(aliceEvmAddress, aliceAuth, aliceSig)
+        node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
+                .registerAccountOperation(aliceAuth)
                 .postTransactionUntilConfirmed("Register Alice account")
-        node1.client(tokenBridgeBrid, signers = listOf(bobKeyPair)).transactionBuilder()
-                .registerAccountOperation(bobEvmAddress, bobAuth, bobSig)
+        node1.client(tokenBridgeBrid, signers = listOf(adminKeyPair)).transactionBuilder()
+                .registerAccountOperation(bobAuth)
                 .postTransactionUntilConfirmed("Register Bob account")
 
-        awaitQueryResult {
-            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(aliceEvmAddress)?.also {
-                assertThat(it).isNotNull()
-                aliceAccountId = it
-            }
-            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(bobEvmAddress)?.also {
-                assertThat(it).isNotNull()
-                bobAccountId = it
-            }
-        }
+//        val myCS = Secp256K1CryptoSystem()
+//        aliceAccountId = gtv(alicePubkey).merkleHash(GtvMerkleHashCalculator(myCS))
+        val accountsBySigner = node1.client(tokenBridgeBrid).getAccountsBySigner(alicePubkey, null, null)
+        aliceAccountId = accountsBySigner.data[0]["id"]!!.asByteArray()
+        assertThat(aliceAccountId).isNotNull()
+
+        // TODO remove - just check to validate ids
+        val accountById = node1.client(tokenBridgeBrid).getAccountById(aliceAccountId)
+        val assetById = node1.client(tokenBridgeBrid).getAssetById(assetId)
+
+//        bobAccountId = gtv(bobPubkey).merkleHash(GtvMerkleHashCalculator(myCS))
+        bobAccountId = accountsBySigner.data[0]["id"]!!.asByteArray()
+        assertThat(bobAccountId).isNotNull()
+
+//        awaitQueryResult {
+//            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(aliceEvmAddress)?.also {
+//                assertThat(it).isNotNull()
+//                aliceAccountId = it
+//            }
+//            node1.client(tokenBridgeBrid).getAccountIdByEvmAddress(bobEvmAddress)?.also {
+//                assertThat(it).isNotNull()
+//                bobAccountId = it
+//            }
+//        }
     }
 
     @Test
@@ -410,6 +426,8 @@ class Directory1EventReceiverMixIT {
 
         // check the asset balance on Chromia
         awaitQueryResult {
+            val balances = node1.client(tokenBridgeBrid).getAssetBalances(aliceAccountId, null, null)
+            testLogger.info { "Balances: $balances" } // TODO remove
             val balance = node1.client(tokenBridgeBrid).getAssetBalance(aliceAccountId, assetId)
             assertThat(balance?.amount).isEqualTo(totalDepositedAmount)
         }
@@ -417,5 +435,4 @@ class Directory1EventReceiverMixIT {
 
         // TODO: Skipping the `Check eif state for account as well` from the IT tests here
     }
-
 }

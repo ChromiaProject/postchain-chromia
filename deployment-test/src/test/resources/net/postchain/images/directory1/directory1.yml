@@ -1,3 +1,35 @@
+definitions:
+  common.init: &common_init
+    initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
+    genesis_node:
+      - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+      - node1
+      - 9871
+      - "http://node1:7740"
+      - ""
+  config: &common_config
+    config_consensus_strategy: HEADER_HASH
+    blockstrategy:
+      maxblocktime: 2000
+    revolt:
+      fast_revolt_status_timeout: 2000
+    signers:
+      - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+    sync_ext:
+      - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+    gtx:
+      modules:
+        - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+        - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+        - "net.postchain.eif.transaction.signerupdate.directorychain.SignerUpdateGTXModule"
+    icmf:
+      receiver:
+        anchoring:
+          topics:
+            - G_configuration_updated
+            - G_configuration_failed
+            - G_last_anchored_heights
+
 blockchains:
   manager:
     module: management_chain_directory1
@@ -5,14 +37,7 @@ blockchains:
       common:
         allow_blockchain_dependencies: false
         provider_quota_max_actions_per_day: 100
-      common.init:
-        initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
-        genesis_node:
-          - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-          - node1
-          - 9871
-          - "http://node1:7740"
-          - ""
+      common.init: *common_init
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -90,6 +115,51 @@ blockchains:
           global:
             topics:
               - G_get_last_anchored_heights
+  devnet1:
+    module: management_chain_devnet1
+    config:
+      <<: *common_config
+      icmf:
+        receiver:
+          anchoring:
+            topics:
+              - G_configuration_updated
+              - G_configuration_failed
+              - G_last_anchored_heights
+          global:
+            topics:
+              - G_create_cluster
+              - G_create_container
+              - G_upgrade_container
+              - G_stop_container
+              - G_restart_container
+    moduleArgs:
+      common:
+        allow_blockchain_dependencies: false
+        provider_quota_max_actions_per_day: 100
+      common.init: *common_init
+      auth_service:
+        pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
+        include_system_cluster: true
+      housekeeping:
+        # 48h
+        max_empty_container_time: 172800000
+      proposal_blockchain.util:
+        max_config_path_depth: 10
+        max_config_size: 2097152 # 2 MiB
+        max_block_size: 27262976
+        min_inter_block_interval: 1000
+        min_fast_revolt_status_timeout: 2000
+        allowed_dapp_chain_gtx_modules:
+          - "net.postchain.rell.module.RellPostchainModuleFactory"
+          - "net.postchain.gtx.StandardOpsGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+        allowed_dapp_chain_sync_exts:
+          - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+          - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
   mainnet:
     module: management_chain_mainnet
     config:
@@ -125,14 +195,7 @@ blockchains:
       common:
         allow_blockchain_dependencies: false
         provider_quota_max_actions_per_day: 100
-      common.init:
-        initial_provider: x"03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05"
-        genesis_node:
-          - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-          - node1
-          - 9871
-          - "http://node1:7740"
-          - ""
+      common.init: *common_init
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -185,6 +248,15 @@ blockchains:
           max_points: 20
           recovery_time: 5000
           points_at_account_creation: 1
+      lib.ft4.core.accounts.strategies.transfer:
+        rules:
+          - sender_blockchain:
+              - "*"
+            sender: "*"
+            recipient: "*"
+            asset: "*"
+            timeout_days: 10
+            strategy: "open"
       lib.auth:
         auth_pubkey: x"0317FF1ECF25B04026B6F9FA1960BA58070FB1CFC98519F7BC02D71ED1B00B1997"
       economy_chain:

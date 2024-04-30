@@ -1,6 +1,31 @@
+definitions:
+  - &common_args
+    lib.ft4.core.accounts:
+      rate_limit:
+        active: true
+        max_points: 200
+        recovery_time: 5000
+        points_at_account_creation: 100
+    lib.ft4.core.auth:
+      evm_signatures_authorized_operations:
+        - eif.hbridge.link_evm_eoa_account
+    lib.ft4.core.accounts.strategies.transfer:
+      rules:
+        - sender_blockchain:
+            - "*"
+          sender: "*"
+          recipient: "*"
+          asset: "*"
+          timeout_days: 10
+          strategy: "open"
+    lib.ft4.core.admin:
+      admin_pubkey: 03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070
+    lib.access.admin:
+      admin_pubkey: 03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070
+
 blockchains:
-  evm_event_receiver:
-    module: eif_event_receiver_chain
+  eif_event_receiver:
+    module: eif_event_receiver
     config:
       gtx:
         modules:
@@ -21,8 +46,8 @@ blockchains:
             evm_read_offset: 0
             read_offset: 0
             events: !include events.yml
-  evm_token_bridge:
-    module: main
+  hbridge:
+    module: tests.hbridge_it
     config:
       gtx:
         modules:
@@ -35,6 +60,16 @@ blockchains:
           local:
             - topic: L_evm_block_events
               bc-rid: ICMF_SENDER_BRID
+      eif:
+        chains:
+          ethereum:
+            network_id: 1337
+            contracts:
+              - '0x39615b16b74589919c9ce1ea73f1fc5d53141a78'
+            skip_to_height: 0
+            evm_read_offset: 0
+            read_offset: 0
+            events: !include events.yml
     moduleArgs:
       lib.ft4.accounts:
         rate_limit:
@@ -44,8 +79,17 @@ blockchains:
           points_at_account_creation: 100
       lib.ft4.admin:
         admin_pubkey: 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
-      lib.access.admin:
+      lib.ft4.core.admin:
         admin_pubkey: 0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57
+      lib.ft4.core.accounts.strategies.transfer:
+        rules:
+          - sender_blockchain:
+              - "*"
+            sender: "*"
+            recipient: "*"
+            asset: "*"
+            timeout_days: 10
+            strategy: "open"
   transaction_submitter:
     module: transaction_submitter
     moduleArgs:
@@ -72,6 +116,7 @@ blockchains:
         #                validator_contract: "ec_validator_contract"
         #                network_id: 5
         contract_tx_rate_limit: 60000
+        tx_node_submit_timeout: 1800000 # 30m
         tx_timeout: 86400000 #24h
         node_retry_strategy: SUPERMAJORITY
         network_configs:
@@ -82,8 +127,6 @@ blockchains:
       transaction_submitter.anchoring:
         anchoring_interval: 5_000 # 1 per hour
     config:
-      blockstrategy:
-        maxblocktime: 2000
       gtx:
         modules:
           - "net.postchain.eif.transaction.TransactionSubmitterGTXModule"
@@ -95,7 +138,6 @@ blockchains:
             network_id: 1337
             max_gas_price: 4100000000
             min_wallet_balance: 100000000000
-        node_tx_timeout: 86400000 #24h
         gas_limit: 9000000
         node_tx_verification_evm_blocks: 10
         tx_verification_time: 20000

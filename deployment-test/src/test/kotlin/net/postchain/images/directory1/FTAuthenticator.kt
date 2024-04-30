@@ -1,8 +1,8 @@
 package net.postchain.images.directory1
 
-import net.postchain.chain0.lib.ft4.accounts.external.getAccountsBySigner
-import net.postchain.chain0.lib.ft4.auth.external.ftAuthOperation
-import net.postchain.chain0.lib.ft4.auth.external.getAuthFlags
+import net.postchain.chain0.lib.ft4.external.accounts.getAccountsBySigner
+import net.postchain.chain0.lib.ft4.external.auth.ftAuthOperation
+import net.postchain.chain0.lib.ft4.external.auth.getAuthFlags
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.types.WrappedByteArray

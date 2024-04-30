@@ -25,8 +25,6 @@ import net.postchain.chain0.economy_chain.TicketState
 import net.postchain.chain0.economy_chain.createClusterOperation
 import net.postchain.chain0.economy_chain.createContainerOperation
 import net.postchain.chain0.economy_chain.createTagOperation
-import net.postchain.chain0.economy_chain.ec_proposal.getProposalsRange
-import net.postchain.chain0.economy_chain.ec_proposal.makeVoteOperation
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.getClusterCreationStatus
 import net.postchain.chain0.economy_chain.getClusters
@@ -82,7 +80,6 @@ class Directory1EconomyChainMixIT {
             "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3",
             "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0")
     private val PostchainContainer.ecAdmin get() = client(ecBrid, listOf(ecAdminKeyPair))
-    private val PostchainContainer.ec get() = client(ecBrid)
     private val ecAdminSigMaker = cryptoSystem.buildSigMaker(ecAdminKeyPair)
 
     private val userAccountOwnerKeys = KeyPair.of(
@@ -93,17 +90,16 @@ class Directory1EconomyChainMixIT {
     companion object : ManagedModeBase() {
 
         const val EC_NAME = "economy_chain"
-        private const val APP_CLUSTER1 = "appCluster1"
-        private const val APP_CLUSTER2 = "appCluster2"
-        private const val APP_CLUSTER_TAG = "appClusterTag"
-        private const val CONTAINER_UNITS = 2L
-        private const val DURATION_WEEKS = 1L
-        private const val EXTRA_STORAGE_GIB = 0L
-        private const val SCU_PRICE = 1L
-        private const val EXTRA_STORAGE_PRICE = 1L
-        private const val PROVIDER1_VS = "provider1_vs"
-        private const val PROVIDER2_VS = "provider2_vs"
-
+        const val APP_CLUSTER1 = "appCluster1"
+        const val APP_CLUSTER2 = "appCluster2"
+        const val APP_CLUSTER_TAG = "appClusterTag"
+        const val CONTAINER_UNITS = 2L
+        const val DURATION_WEEKS = 1L
+        const val EXTRA_STORAGE_GIB = 0L
+        const val SCU_PRICE = 1L
+        const val EXTRA_STORAGE_PRICE = 1L
+        const val PROVIDER1_VS = "provider1_vs"
+        const val PROVIDER2_VS = "provider2_vs"
 
         private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
         private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
@@ -114,7 +110,6 @@ class Directory1EconomyChainMixIT {
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
-        lateinit var ecBrid: BlockchainRid
         lateinit var userClient: PostchainClient
         lateinit var userAuthenticator: FTAuthenticator
         lateinit var containerName: String
@@ -441,17 +436,6 @@ class Directory1EconomyChainMixIT {
         awaitUntilAsserted {
             val lastAnchoredHeight2 = node2.client(CAC2).getLastAnchoredBlock(dappBrid)!!.blockHeight
             assertThat(lastAnchoredHeight2).isGreaterThan(lastHeightBeforeMoving)
-        }
-    }
-
-    private fun makeVoteOnLatestProposal(node: PostchainContainer) {
-
-        with(node.ec) {
-            val latestProposalId = getProposalsRange(0, Long.MAX_VALUE, true).last().rowid
-
-            transactionBuilder()
-                    .makeVoteOperation(node.providerPubkey, latestProposalId, true)
-                    .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
         }
     }
 }
