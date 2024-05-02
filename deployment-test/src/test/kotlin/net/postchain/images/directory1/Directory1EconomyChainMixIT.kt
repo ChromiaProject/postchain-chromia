@@ -71,7 +71,6 @@ import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -119,7 +118,6 @@ class Directory1EconomyChainMixIT {
         const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
         const val EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER = "EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER"
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
-        const val EVM_TOKEN_BRIDGE_CHAIN_NAME = "hbridge"
         const val EC_CHAIN_NAME = "economy_chain"
 
         const val ETH_ASSET_ADDRESS = "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
@@ -198,13 +196,6 @@ class Directory1EconomyChainMixIT {
         private val bobEvmAddress = bobEvmAddressStr.hexStringToByteArray()
         private lateinit var bobAccountId: ByteArray
 
-        // EIF / accounts
-        private lateinit var userBalance: Uint256
-        private lateinit var withdrawAmount: BigInteger
-        private var accountNumber: Long = 0L
-        private lateinit var authId: Gtv
-
-
         init {
             // Initialize EVM container
             evmContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
@@ -265,8 +256,6 @@ class Directory1EconomyChainMixIT {
             val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
             return artifactJson.get("bytecode").asString
         }
-
-        private fun String.addressToByteArray(): ByteArray = substring(2).hexStringToByteArray()
 
         @JvmStatic
         @AfterAll
