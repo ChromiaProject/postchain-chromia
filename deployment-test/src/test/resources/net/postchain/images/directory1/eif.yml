@@ -80,6 +80,8 @@ blockchains:
       transaction_submitter.anchoring:
         anchoring_interval: 5_000 # 1 per hour
     config:
+      blockstrategy:
+        maxblocktime: 2000
       gtx:
         modules:
           - "net.postchain.eif.transaction.TransactionSubmitterGTXModule"
