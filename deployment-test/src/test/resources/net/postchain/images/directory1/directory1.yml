@@ -115,51 +115,6 @@ blockchains:
           global:
             topics:
               - G_get_last_anchored_heights
-  devnet1:
-    module: management_chain_devnet1
-    config:
-      <<: *common_config
-      icmf:
-        receiver:
-          anchoring:
-            topics:
-              - G_configuration_updated
-              - G_configuration_failed
-              - G_last_anchored_heights
-          global:
-            topics:
-              - G_create_cluster
-              - G_create_container
-              - G_upgrade_container
-              - G_stop_container
-              - G_restart_container
-    moduleArgs:
-      common:
-        allow_blockchain_dependencies: false
-        provider_quota_max_actions_per_day: 100
-      common.init: *common_init
-      auth_service:
-        pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
-        include_system_cluster: true
-      housekeeping:
-        # 48h
-        max_empty_container_time: 172800000
-      proposal_blockchain.util:
-        max_config_path_depth: 10
-        max_config_size: 2097152 # 2 MiB
-        max_block_size: 27262976
-        min_inter_block_interval: 1000
-        min_fast_revolt_status_timeout: 2000
-        allowed_dapp_chain_gtx_modules:
-          - "net.postchain.rell.module.RellPostchainModuleFactory"
-          - "net.postchain.gtx.StandardOpsGTXModule"
-          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
-          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
-          - "net.postchain.d1.iccf.IccfGTXModule"
-          - "net.postchain.eif.EifGTXModule"
-        allowed_dapp_chain_sync_exts:
-          - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
-          - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
   mainnet:
     module: management_chain_mainnet
     config:
