@@ -61,6 +61,10 @@ Configuration:
         fileName: "logs/archiving/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+      - name: EC_EvmContainerAppender
+        fileName: "logs/ec/evm_container.log"
+        PatternLayout:
+          pattern: "%msg%n"
       - name: EC_Node1Appender
         fileName: "logs/ec/node1.log"
         PatternLayout:
@@ -191,6 +195,11 @@ Configuration:
           - ref: Archiving_Node3Appender
 
       # EC tests
+      - name: EC_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EC_EvmContainerAppender
       - name: EC_Node1Logger
         level: info
         additivity: false

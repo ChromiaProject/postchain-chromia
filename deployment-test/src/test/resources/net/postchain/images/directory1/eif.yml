@@ -34,14 +34,11 @@ blockchains:
       sync_ext:
         - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
       eif:
-        snapshot:
-          levels_per_page: 2
-          snapshots_to_keep: 2
         chains:
           ethereum:
             network_id: 1337
             contracts:
-              - '0x39615b16b74589919c9ce1ea73f1fc5d53141a78'
+              - EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER
             skip_to_height: 0
             evm_read_offset: 0
             read_offset: 0

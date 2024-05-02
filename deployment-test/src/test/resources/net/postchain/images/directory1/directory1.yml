@@ -226,6 +226,7 @@ blockchains:
         modules:
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.eif.EifGTXModule"
       icmf:
         receiver:
           anchoring:
@@ -239,15 +240,25 @@ blockchains:
               - L_provider_update
               - L_node_update
               - L_cluster_node_update
+          local:
+            - topic: L_evm_block_events
+              bc-rid: EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER
+      eif:
+        snapshot:
+          levels_per_page: 2
+          snapshots_to_keep: 2
     moduleArgs:
-      lib.ft4.admin:
+      lib.ft4.core.admin:
         admin_pubkey: 0317AC5B309A05B81A68F1A64321A3C6E6799E037C12892838682EBB9A620316A6
-      lib.ft4.accounts:
+      lib.ft4.core.accounts:
         rate_limit:
           active: 1
           max_points: 20
           recovery_time: 5000
           points_at_account_creation: 1
+      lib.ft4.core.auth:
+        evm_signatures_authorized_operations:
+          - eif.hbridge.link_evm_eoa_account
       lib.ft4.core.accounts.strategies.transfer:
         rules:
           - sender_blockchain:
@@ -288,3 +299,4 @@ blockchains:
 
 compile:
   rellVersion: 0.13.10
+

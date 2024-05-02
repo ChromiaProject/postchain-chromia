@@ -1,70 +1,44 @@
 package net.postchain.images.directory1
 
-import net.postchain.chain0.lib.ft4.external.accounts.getAccountsBySigner
 import net.postchain.chain0.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.chain0.lib.ft4.external.auth.getAuthFlags
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.transaction.TransactionBuilder
-import net.postchain.common.types.WrappedByteArray
-import net.postchain.common.wrap
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvByteArray
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.eif.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
+import net.postchain.eif.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.mapper.Name
-import net.postchain.gtv.mapper.Nullable
-import net.postchain.gtv.mapper.toList
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
-class FTAuthenticator(private val client: PostchainClient) {
+class FTAuthenticator(
+        val keyPair: KeyPair,
+        val client: PostchainClient
+) {
 
-    lateinit var accountId: ByteArray; private set
-    private lateinit var authDescriptor: AuthDescriptor; private set
+    val accountId: ByteArray = gtv(keyPair.pubKey.data).merkleHash(hashCalculator)
+    val authDescriptor: Ft4GetAccountMainAuthDescriptorResult = client.getAccountMainAuthDescriptor(accountId)
 
-    fun init() {
-        accountId = findAccountId()
-        authDescriptor = findAuthDescriptor(accountId)
+    companion object {
+        private val hashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
     }
 
     fun transactionBuilder(): TransactionBuilder = client.transactionBuilder()
             .ftAuthOperation(accountId, authDescriptor.id.data)
 
     fun verifyOperationAuthFlags(opName: String) {
-        val operationAuthFlags = client.getAuthFlags(opName)
-        authDescriptor.requireAuthFlags(operationAuthFlags, opName)
+        val opAuthFlags = client.getAuthFlags(opName)
+        authDescriptor.requireAuthFlags(opAuthFlags, opName)
     }
 
-    private fun findAccountId(): ByteArray {
-        val pubKey = client.config.signers.first().pubKey
-        val accountsPage = client.getAccountsBySigner(pubKey.data, null, null)
-        if (accountsPage.data.isEmpty()) throw FTAuthenticatorException("No accounts found for pubkey: $pubKey")
-        return if (accountsPage.data.size > 1) {
-            throw FTAuthenticatorException("More than one account found")
-        } else accountsPage.data.first().asDict()["id"]!!.asByteArray()
-    }
-
-    private fun findAuthDescriptor(accountId: ByteArray): AuthDescriptor {
-        val pubKey = client.config.signers.first().pubKey
-        // Cannot use client.getAccountAuthDescriptorsByParticipantId because it cannot handle that the field "rules" is null
-        val authDescriptors = client.query(
-                "ft4.get_account_auth_descriptors_by_signer",
-                gtv(mapOf("account_id" to GtvByteArray(accountId), "signer" to gtv(pubKey.data)))
-        )
-        return authDescriptors.toList<AuthDescriptor>().find { it.args[1].asByteArray().wrap() == pubKey.wData }
-                ?: throw FTAuthenticatorException("No valid account descriptor found.")
-    }
-
-    data class AuthDescriptor(
-            @Name("id") val id: WrappedByteArray,
-            @Name("args") val args: Gtv,
-            @Name("created") val created: Long,
-            @Name("auth_type") val authType: String,
-            @Name("rules") @Nullable val rules: Gtv?
-    ) {
-        private val flags by lazy { args.asArray().first().asArray().map { it.asString() } }
-
-        fun requireAuthFlags(operationAuthFlags: List<String>, opName: String) {
-            if (!flags.containsAll(operationAuthFlags)) {
-                throw FTAuthenticatorException("No valid account descriptor found. Operation $opName requires the flag(s): $operationAuthFlags, while the flag(s) of the auth descriptor is: $flags")
-            }
+    private fun Ft4GetAccountMainAuthDescriptorResult.requireAuthFlags(operationAuthFlags: List<String>, opName: String) {
+        val flags = args.asArray().first().asArray().map { it.asString() }
+        if (!flags.containsAll(operationAuthFlags)) {
+            throw FTAuthenticatorException(
+                    "No valid account descriptor found. Operation $opName requires the flag(s): $operationAuthFlags, " +
+                            "while the flag(s) of the auth descriptor is: $flags"
+            )
         }
     }
 }
