@@ -144,7 +144,7 @@ class Directory1TransactionSubmitterIT {
         }
 
         private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1EventReceiverMixIT::class.java.getResource(resourcePath)?.readText()
+            val artifactFile = Directory1TransactionSubmitterIT::class.java.getResource(resourcePath)?.readText()
             val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
             return artifactJson.get("bytecode").asString
         }
