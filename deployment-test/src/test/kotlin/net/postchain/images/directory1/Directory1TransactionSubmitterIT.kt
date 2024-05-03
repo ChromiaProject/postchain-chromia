@@ -29,6 +29,7 @@ import net.postchain.eif.contracts.Anchoring
 import net.postchain.eif.contracts.DirectoryChainValidator
 import net.postchain.eif.contracts.ManagedValidator
 import net.postchain.eif.getEthereumAddress
+import net.postchain.eif.transaction_submitter.TransactionStatus
 import net.postchain.eif.transaction_submitter.getTransactions
 import net.postchain.eif.transaction_submitter.signer_update.SignerListUpdateStatus
 import net.postchain.eif.transaction_submitter.signer_update.getCurrentEvmSignerList
@@ -272,7 +273,7 @@ class Directory1TransactionSubmitterIT {
             val currentEvmSignerList = txsClient.getCurrentEvmSignerList(systemAnchoringBrid)
 
             txsClient.getTransactions().forEach {
-                testLogger.info { "TX Submitter transaction: ${it.rowId} - ${it.status} - ${it.functionName}" }
+                testLogger.info { "TX Submitter transaction: ${it.rowId} - ${it.status} - ${it.functionName} - ${it.processedBy.toHex()}" }
             }
 
             if (anchoredHeight > 0) {
@@ -285,6 +286,13 @@ class Directory1TransactionSubmitterIT {
 
             assertThat(currentEvmSignerList.size).isEqualTo(signers.size)
             assertThat(anchoredHeights.size).isGreaterThanOrEqualTo(awaitAnchoredHeights)
+        }
+
+        Awaitility.await().atMost(3, TimeUnit.MINUTES).untilAsserted {
+
+            testLogger.info { "Make sure at least 1 tx is verified..." }
+
+            assertThat(txsClient.getTransactions().count { it.status == TransactionStatus.SUCCESS }).isGreaterThanOrEqualTo(1)
         }
     }
 }
