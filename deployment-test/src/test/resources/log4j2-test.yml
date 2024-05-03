@@ -96,18 +96,22 @@ Configuration:
 
       - name: EvmTxs_EvmContainerAppender
         fileName: "logs/evm_tx_submitter/evm_container.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EvmTxs_Node1Appender
         fileName: "logs/evm_tx_submitter/node1.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EvmTxs_Node2Appender
         fileName: "logs/evm_tx_submitter/node2.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EvmTxs_Node3Appender
         fileName: "logs/evm_tx_submitter/node3.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
   Loggers:
