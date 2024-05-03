@@ -12,6 +12,8 @@ import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
+import net.postchain.chain0.common_proposal.getCommonProposalsRange
+import net.postchain.chain0.common_proposal.makeCommonVoteOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
@@ -153,6 +155,7 @@ open class ManagedModeBase {
 
     var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
     lateinit var chain0Brid: BlockchainRid
+    lateinit var ecBrid: BlockchainRid
 
     lateinit var node1Db: ChainDatabaseCommunicator
     lateinit var node2Db: ChainDatabaseCommunicator
@@ -410,5 +413,17 @@ open class ManagedModeBase {
     )
 
     protected val PostchainContainer.c0 get() = client(chain0Brid)
+    protected val PostchainContainer.ec get() = client(ecBrid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
+
+    protected fun makeVoteOnLatestProposal(node: PostchainContainer) {
+
+        with(node.ec) {
+            val latestProposalId = getCommonProposalsRange(0, Long.MAX_VALUE, true).last().rowid
+
+            transactionBuilder()
+                    .makeCommonVoteOperation(PubKey(node.providerPubkey), latestProposalId, true)
+                    .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
+        }
+    }
 }
