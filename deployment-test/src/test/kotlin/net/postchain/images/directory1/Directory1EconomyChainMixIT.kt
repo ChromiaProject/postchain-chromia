@@ -33,12 +33,10 @@ import net.postchain.chain0.economy_chain.getClusters
 import net.postchain.chain0.economy_chain.getCreateContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.getLeasesByAccount
 import net.postchain.chain0.economy_chain.getPoolBalance
-import net.postchain.chain0.economy_chain.getProviderAccountId
 import net.postchain.chain0.economy_chain.getTagByName
 import net.postchain.chain0.economy_chain.getUpgradeContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain.registerAccountOperation
-import net.postchain.chain0.economy_chain.registerProviderAccountOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
@@ -389,15 +387,6 @@ class Directory1EconomyChainMixIT {
     @Order(5)
     fun `Register FT accounts`() {
         testLogger.info("Registering FT accounts")
-
-        // Register provider account
-        node1.ec.transactionBuilder()
-                .registerProviderAccountOperation(node1KeyPair.pubKey.data)
-                .postTransactionUntilConfirmed("Register provider account")
-        val accountId = node1.ec.getProviderAccountId(node1KeyPair.pubKey.data)
-        assertThat(accountId).isNotNull()
-        testLogger.info("Provider account id ${accountId?.toHex()}")
-        assertThat(node1.ec.getBalance(accountId!!)).isEqualTo(BigInteger.ZERO)
 
         // Register Alice account
         aliceAuthenticator = registerAccount(aliceKeyPair, "Alice")
