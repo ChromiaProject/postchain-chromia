@@ -113,4 +113,3 @@ blockchains:
 
 compile:
   rellVersion: 0.13.10
-  strictGtvConversion: false

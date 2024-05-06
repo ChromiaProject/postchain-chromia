@@ -36,7 +36,7 @@
         <directory.chain.version>1.46.0</directory.chain.version>
         <rell.version>0.13.12</rell.version>
         <rell.maven.plugin.version>0.11.12</rell.maven.plugin.version>
-        <eif.version>0.5.5</eif.version>
+        <eif.version>0.5.6</eif.version>
         <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
