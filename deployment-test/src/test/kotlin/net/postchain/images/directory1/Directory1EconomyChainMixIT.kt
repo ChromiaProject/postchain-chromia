@@ -258,6 +258,7 @@ class Directory1EconomyChainMixIT {
         @JvmStatic
         @AfterAll
         fun tearDown() {
+            evmContainer.stop()
             super.breakdown()
         }
     }
