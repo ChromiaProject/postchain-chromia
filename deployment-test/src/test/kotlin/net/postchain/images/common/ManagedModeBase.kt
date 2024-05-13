@@ -61,6 +61,7 @@ import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
@@ -84,6 +85,7 @@ open class ManagedModeBase {
     lateinit var node1: PostchainContainer
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
+    lateinit var node4: PostchainContainer
 
     val resolvedDockerHost = getResolvedDockerHost()
     protected val dockerClient: DockerClient = DockerClientFactory.create()
@@ -94,7 +96,12 @@ open class ManagedModeBase {
     protected val systemCluster = "system"
     protected val systemContainer = "system"
 
-    fun nodes() = arrayOf(node1, node2, node3)
+    fun nodes() = buildList {
+        if (::node1.isInitialized) add(node1)
+        if (::node2.isInitialized) add(node2)
+        if (::node3.isInitialized) add(node3)
+        if (::node4.isInitialized) add(node4)
+    }.toTypedArray()
 
     fun breakdown() {
         saveSubnodeLogs(dockerClient, logsSubdir)
@@ -142,7 +149,7 @@ open class ManagedModeBase {
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
-                .withExposedPorts(50051, appConfig.getInt("api.port"))
+                .withExposedPorts(50051, appConfig.getInt("api.port"), appConfig.getInt("debug.port"))
                 .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping(this::class.java.getResource("/log")!!.path.substringAfter("test-classes/"), "/opt/chromaway/postchain", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DEBUG", "true")
@@ -160,15 +167,18 @@ open class ManagedModeBase {
     lateinit var node1Db: ChainDatabaseCommunicator
     lateinit var node2Db: ChainDatabaseCommunicator
     lateinit var node3Db: ChainDatabaseCommunicator
+    lateinit var node4Db: ChainDatabaseCommunicator
 
     private lateinit var channel1: ManagedChannel
     private lateinit var channel2: ManagedChannel
     private lateinit var channel3: ManagedChannel
+    private lateinit var channel4: ManagedChannel
 
     fun stopNodes() {
         if (::channel1.isInitialized) channel1.shutdownNow()
         if (::channel2.isInitialized) channel2.shutdownNow()
         if (::channel3.isInitialized) channel3.shutdownNow()
+        if (::channel4.isInitialized) channel4.shutdownNow()
         stopContainers(*nodes())
         postgres.stop()
     }
@@ -186,6 +196,20 @@ open class ManagedModeBase {
     fun stopNode3() {
         if (::channel3.isInitialized) channel3.shutdownNow()
         stopContainers(node3)
+    }
+
+    fun restartNode4() {
+        if (::channel4.isInitialized) channel4.shutdownNow()
+        stopContainers(node4)
+        startContainers(node4)
+        channel4 = createChannel(node4).usePlaintext().build()
+
+        PostchainServiceGrpc.newBlockingStub(channel4)
+                .startBlockchain(
+                        StartBlockchainRequest.newBuilder()
+                                .setChainId(0)
+                                .build()
+                )
     }
 
     fun startNodesAndChain0() {
@@ -215,6 +239,26 @@ open class ManagedModeBase {
             startBlockchain(channel3, chain0Config)
             node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
         }
+
+        // node4
+        if (::node4.isInitialized) {
+            channel4 = createChannel(node4).usePlaintext().build()
+            addPeer(channel4, node1)
+            startBlockchain(channel4, chain0Config)
+            node4Db = postgres.createChainDatabaseCommunicator(0, node4.appConfig.databaseSchema)
+        }
+    }
+
+    fun overrideNode4PeerInfo(peerPubkey: PubKey, peerHost: String, peerPort: Int) {
+        val service = PeerServiceGrpc.newBlockingStub(channel4)
+        service.addPeer(
+                AddPeerRequest.newBuilder()
+                        .setHost(peerHost)
+                        .setPort(peerPort)
+                        .setPubkey(peerPubkey.hex())
+                        .setOverride(true)
+                        .build()
+        )
     }
 
     private fun createChannel(target: PostchainContainer) =
@@ -362,7 +406,7 @@ open class ManagedModeBase {
                 .postTransactionUntilConfirmed("Propose dapp $dappName")
                 .txRid
 
-        // Asserting that node1, node2, node3 are signers of newly added blockchain
+        // Asserting signers of newly added blockchain
         dapps[dappName] = assertChainSigners(txRid, *assertSigners)
         testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
     }
