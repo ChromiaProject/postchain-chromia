@@ -42,13 +42,13 @@
                 <dict>
                     <entry key="modules">
                         <array>
-                            <string>iccf</string>
+                            <string>lib.iccf</string>
                         </array>
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="iccf/module.rell">
-                                <param key="iccf" type="string"/>
+                            <entry key="lib/iccf/module.rell">
+                                <param key="lib.iccf" type="string"/>
                             </entry>
                         </dict>
                     </entry>

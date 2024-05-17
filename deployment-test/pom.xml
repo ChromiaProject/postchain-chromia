@@ -174,9 +174,9 @@
                                 <resource>
                                     <directory>${maven.multiModuleProjectDirectory}/${directory.source}</directory>
                                     <includes>
-                                        <include>messaging/icmf/module.rell</include>
-                                        <include>messaging/icmf/constants.rell</include>
-                                        <include>iccf/module.rell</include>
+                                        <include>lib/icmf/module.rell</include>
+                                        <include>lib/icmf/constants.rell</include>
+                                        <include>lib/iccf/module.rell</include>
                                     </includes>
                                 </resource>
                             </resources>

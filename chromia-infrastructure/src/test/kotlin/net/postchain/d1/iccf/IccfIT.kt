@@ -32,13 +32,13 @@ import java.io.File
 
 class IccfIT : ManagedModeTest() {
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-    private val iccfRellCode = File(RELL_SOURCE_PATH, "iccf/module.rell").readText()
+    private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
     private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
     private val sourceDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_source_1.xml")!!.readText())
     private val targetDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_target_1.xml")!!.readText(), mapOf(
-            "iccf" to gtv(iccfRellCode + iccfRellTestCode)
+            "lib.iccf" to gtv(iccfRellCode + iccfRellTestCode)
     ))
 
     @Test

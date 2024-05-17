@@ -166,11 +166,11 @@ class IcmfSenderIT : ManagedModeTest() {
     }
 
     private fun getIcmfConstantsCode(): Pair<String, Gtv> {
-        return "messaging.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "messaging/icmf/constants.rell").readText())
+        return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
     }
 
     private fun deployDappChain(icmfTopic: String, signers: Set<Int> = setOf(0, 1, 2)): Long {
-        val icmfTestCode = File(RELL_SOURCE_PATH, "messaging/icmf/module.rell").readText() +
+        val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("$icmfTopic", text.to_gtv());
@@ -178,7 +178,7 @@ class IcmfSenderIT : ManagedModeTest() {
                 """
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
-                mapOf("messaging.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
+                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
 
         return startNewBlockchain(
                 signers,
