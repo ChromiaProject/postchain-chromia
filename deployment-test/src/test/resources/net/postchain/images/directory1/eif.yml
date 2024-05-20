@@ -48,7 +48,6 @@ blockchains:
     moduleArgs:
       transaction_submitter:
         manual_admins: [ ] # List of public keys that are allowed to reset failed signer list updates
-        genesis_node: x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57" # This will be the initial signer for system chains
         directory_chain_config:
           blockchain_rid: x"DIRECTORY_CHAIN_BRID_VALUE" # Replace with directory chain brid
           validator_contracts:

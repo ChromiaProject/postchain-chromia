@@ -1,6 +1,6 @@
 module;
 
-import messaging.icmf.*;
+import lib.icmf.*;
 
 entity city { key name; }
 

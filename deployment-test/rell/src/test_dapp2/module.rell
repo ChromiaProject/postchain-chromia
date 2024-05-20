@@ -1,6 +1,6 @@
 module;
 
-import iccf;
+import lib.iccf;
 
 entity book { key name; }
 

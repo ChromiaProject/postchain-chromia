@@ -50,7 +50,6 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
-import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
@@ -181,12 +180,13 @@ class Directory1TransactionSubmitterIT {
         testLogger.info { "Deploy contracts on EVM" }
 
         // Deploy directory chain validator contract
-        val encodedDirectoryValidatorConstructor = FunctionEncoder.encodeConstructor(listOf(Bytes32(chain0Brid.data), DynamicArray(Address::class.java, Address(getEthereumAddress(node1.appConfig.pubKeyByteArray).toHex()))))
+        val encodedDirectoryValidatorConstructor = FunctionEncoder.encodeConstructor(listOf(Bytes32(chain0Brid.data)))
         directoryChainValidator = Contract.deployRemoteCall(DirectoryChainValidator::class.java, web3j, transactionManager, gasProvider, directoryChainValidatorBinary, encodedDirectoryValidatorConstructor).send()
 
         // Deploy validator contract
-        val encodedValidatorConstructor = FunctionEncoder.encodeConstructor(listOf(Bytes32(systemAnchoringBrid.data), DynamicArray(Address::class.java, Address(getEthereumAddress(node1.appConfig.pubKeyByteArray).toHex())), Address(directoryChainValidator.contractAddress)))
+        val encodedValidatorConstructor = FunctionEncoder.encodeConstructor(listOf(Address(directoryChainValidator.contractAddress)))
         validator = Contract.deployRemoteCall(ManagedValidator::class.java, web3j, transactionManager, gasProvider, managedValidatorBinary, encodedValidatorConstructor).send()
+        validator.setBlockchainRid(Bytes32(systemAnchoringBrid.data)).send()
 
         // Deploy anchoring contract
         val encodedAnchoringConstructor = FunctionEncoder.encodeConstructor(listOf(Address(validator.contractAddress), Bytes32(systemAnchoringBrid.data)))

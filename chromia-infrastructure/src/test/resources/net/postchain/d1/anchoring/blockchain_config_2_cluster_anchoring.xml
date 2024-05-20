@@ -59,11 +59,11 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="messaging/node_availability_reporting.rell">
                                 <param key="messaging.node_availability_reporting" type="string"/>
                             </entry>
-                            <entry key="messaging/icmf/module.rell">
-                                <param key="messaging.icmf" type="string"/>
+                            <entry key="lib/icmf/module.rell">
+                                <param key="lib.icmf" type="string"/>
                             </entry>
-                            <entry key="messaging/icmf/constants.rell">
-                                <param key="messaging.icmf.constants" type="string"/>
+                            <entry key="lib/icmf/constants.rell">
+                                <param key="lib.icmf.constants" type="string"/>
                             </entry>
                             <entry key="messaging/configuration_update_message.rell">
                                 <param key="messaging.configuration_update_message" type="string"/>
