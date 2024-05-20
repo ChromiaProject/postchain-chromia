@@ -115,14 +115,14 @@ class Directory1TransactionSubmitterIT {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                     provider1KeyPair,
                     "config-mix")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
                     "config-mix")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
@@ -136,8 +136,8 @@ class Directory1TransactionSubmitterIT {
                     )
                     .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
                     .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_GOERLI_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             removeSubnodeContainers()
             startNodesAndChain0()
