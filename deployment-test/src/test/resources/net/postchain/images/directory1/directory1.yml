@@ -249,4 +249,4 @@ blockchains:
         evm_transaction_submitters_bonus: 0.1
 
 compile:
-  rellVersion: 0.13.10
+  rellVersion: 0.13.12
