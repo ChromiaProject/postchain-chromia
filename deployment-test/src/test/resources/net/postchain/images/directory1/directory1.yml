@@ -238,8 +238,7 @@ blockchains:
         pool_amount_to_mint: 1000000000
         # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
         admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
-        staking_initial_reward_rate: 0.15
-        staking_rate_change_delay_ms: 604800000
+        staking_reward_rate: 0.15
         staking_withdrawal_delay_ms: 1209600000
         staking_delegation_delay_ms: 604800000
         staking_payout_interval_ms: 31536000000 # Good for testing
