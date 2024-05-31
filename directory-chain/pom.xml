@@ -100,9 +100,9 @@
                             <execution>
                                 <id>install-libs</id>
                                 <configuration>
-                                    <source>../../directory-chain/src</source>
-                                    <configPath>../../directory-chain/chromia.yml</configPath>
-                                    <target>../../directory-chain</target>
+                                    <source>${project.parent.basedir}/../directory-chain/src</source>
+                                    <configPath>${project.parent.basedir}/../directory-chain/chromia.yml</configPath>
+                                    <target>${project.parent.basedir}/../directory-chain</target>
                                 </configuration>
                             </execution>
                         </executions>
