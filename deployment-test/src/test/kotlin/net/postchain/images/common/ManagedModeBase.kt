@@ -9,6 +9,7 @@ import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
@@ -29,6 +30,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
@@ -149,7 +151,7 @@ open class ManagedModeBase {
         )
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
-                .withExposedPorts(50051, appConfig.getInt("api.port"), appConfig.getInt("debug.port"))
+                .withExposedPorts(*exposedPorts(appConfig))
                 .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping(this::class.java.getResource("/log")!!.path.substringAfter("test-classes/"), "/opt/chromaway/postchain", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DEBUG", "true")
@@ -469,5 +471,21 @@ open class ManagedModeBase {
                     .makeCommonVoteOperation(PubKey(node.providerPubkey), latestProposalId, true)
                     .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
         }
+    }
+
+    private fun exposedPorts(appConfig: AppConfig): Array<Int> {
+        val ports = mutableListOf(50051)
+
+        val restConfig = RestApiConfig.fromAppConfig(appConfig)
+
+        if (restConfig.port > -1) {
+            ports.add(restConfig.port)
+        }
+
+        if (restConfig.debugPort > -1) {
+            ports.add(restConfig.debugPort)
+        }
+
+        return ports.toTypedArray()
     }
 }
