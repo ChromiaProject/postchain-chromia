@@ -2,6 +2,7 @@ package net.postchain.images.directory1
 
 import assertk.assertThat
 import assertk.assertions.containsAll
+import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
@@ -20,6 +21,7 @@ import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
+import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
 import net.postchain.chain0.economy_chain.ClusterCreationStatus
 import net.postchain.chain0.economy_chain.TagData
@@ -36,9 +38,11 @@ import net.postchain.chain0.economy_chain.getPoolBalance
 import net.postchain.chain0.economy_chain.getTagByName
 import net.postchain.chain0.economy_chain.getUpgradeContainerTicketByTransaction
 import net.postchain.chain0.economy_chain.initOperation
-import net.postchain.chain0.economy_chain.registerAccountOperation
+import net.postchain.chain0.economy_chain.registerDappProviderOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
+import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
+import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.model.BlockchainState
@@ -55,6 +59,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
@@ -393,6 +398,12 @@ class Directory1EconomyChainMixIT {
         aliceAuthenticator = registerAccount(aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmAddress)
 
+        // Claim initial supply
+        aliceAuthenticator.verifyOperationAuthFlags("claim_test_chr")
+        aliceAuthenticator.transactionBuilder()
+                .claimTestChrOperation()
+                .postTransactionUntilConfirmed("Claiming initial supply")
+
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         testLogger.info("Alice account balance is: $aliceBalance")
         assertThat(aliceBalance).isEqualTo(INITIAL_SUPPLY)
@@ -546,6 +557,24 @@ class Directory1EconomyChainMixIT {
 
     @Test
     @Order(12)
+    fun `Register new dapp provider`() {
+        val newDappProvider = cryptoSystem.generateKeyPair()
+
+        aliceAuthenticator.verifyOperationAuthFlags("register_dapp_provider")
+        aliceAuthenticator.transactionBuilder()
+                .registerDappProviderOperation(containerName, newDappProvider.pubKey.data)
+                .postTransactionUntilConfirmed("Registering new dApp provider ${newDappProvider.pubKey}")
+
+        val containerVoterSet = node1.c0.getContainerData(containerName).deployer
+        // Assert new provider is added
+        awaitUntilAsserted {
+            assertThat(node1.c0.getVoterSetMembers(containerVoterSet).map { PubKey(it) })
+                    .containsOnly(node1.provider.pubKey, newDappProvider.pubKey)
+        }
+    }
+
+    @Test
+    @Order(13)
     fun `Upgrade container`() {
         testLogger.info("Upgrade container")
 

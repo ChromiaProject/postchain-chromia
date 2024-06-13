@@ -146,6 +146,8 @@ blockchains:
               - G_upgrade_container
               - G_stop_container
               - G_restart_container
+              - G_register_dapp_provider
+              - G_change_dapp_providers_state
     moduleArgs:
       common:
         allow_blockchain_dependencies: false
@@ -168,7 +170,7 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
           - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
   economy_chain:
-    module: economy_chain
+    module: economy_chain_test
     config:
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
@@ -236,8 +238,6 @@ blockchains:
         asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
         amount_to_mint: 1000000000
         pool_amount_to_mint: 1000000000
-        # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
-        admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
         staking_withdrawal_delay_ms: 1209600000
         staking_delegation_delay_ms: 604800000
         staking_payout_interval_ms: 31536000000 # Good for testing
@@ -245,6 +245,18 @@ blockchains:
         test_chr_pool_refill_limit_millis: 86400000 # 1 day
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
+      economy_chain_test_claim_tchr:
+        asset_name: "tCHR"
+        asset_symbol: "tCHR"
+        asset_decimals: 6
+        amount_to_mint: 1000000000
+        test_chr_refill_limit_millis: 604800000 # 1 week
+      economy_chain_test_admin:
+        # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
+        admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
+      economy_chain_test_auth_server:
+        # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
+        admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
 
 compile:
   rellVersion: 0.13.12
