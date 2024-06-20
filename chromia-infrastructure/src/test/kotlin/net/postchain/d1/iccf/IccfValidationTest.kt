@@ -26,6 +26,7 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
+import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -98,6 +99,8 @@ class IccfValidationTest {
             clusterAnchoringTxProof,
             0L
     ))
+
+    private val dummyOp = OpData("dummy", arrayOf())
 
     @Test
     fun intraClusterIccf() {
@@ -247,10 +250,10 @@ class IccfValidationTest {
         }
     }
 
-    private fun buildExtOpData(invalidConfirmationProof: GtvDictionary): ExtOpData {
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(invalidConfirmationProof)))
+    private fun buildExtOpData(confirmationProof: GtvDictionary): ExtOpData {
+        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         return iccfExtOpData
     }
 
@@ -347,7 +350,7 @@ class IccfValidationTest {
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -388,7 +391,7 @@ class IccfValidationTest {
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(emtpyClusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -429,7 +432,7 @@ class IccfValidationTest {
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTxFromWrongChain.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -465,7 +468,7 @@ class IccfValidationTest {
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
@@ -489,7 +492,7 @@ class IccfValidationTest {
         }
         val iccfGtxOpMissingProofArg = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
@@ -507,7 +510,26 @@ class IccfValidationTest {
         }
         val iccfGtxOpMissingProofArg = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(1))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOpMissingProofArg), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOpMissingProofArg.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
+        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
+
+        assertThrows<GTXOpMistake> {
+            iccfGTXOperation.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun noOtherOperationsInTx() {
+        val iccfContext = IccfGTXModuleContext().apply {
+            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
+            this.clusterManagement = mock {}
+            this.queryProvider = mock {}
+            this.nodeIsReplica = false
+        }
+
+        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {

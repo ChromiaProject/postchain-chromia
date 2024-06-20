@@ -10,6 +10,7 @@ import net.postchain.common.toHex
 import net.postchain.core.TxEContext
 import net.postchain.d1.Validation
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -23,6 +24,8 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxNop
+import net.postchain.gtx.GtxTimeB
 import net.postchain.gtx.data.ExtOpData
 
 class IccfGTXOperation(
@@ -35,10 +38,14 @@ class IccfGTXOperation(
     private val nodeIsReplica = iccfContext.nodeIsReplica
     private val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val myCluster = clusterManagement.getClusterOfBlockchain(opData.blockchainRID)
+    private val nonCustomOps = setOf(ICCF_OP_NAME, GtxNop.OP_NAME, GtxTimeB.OP_NAME)
 
     override fun apply(ctx: TxEContext) = true
 
     override fun checkCorrectness() {
+        if (data.operations.all { nonCustomOps.contains(it.opName) }) {
+            throw GTXOpMistake("Tx must contain other operations than $nonCustomOps", data)
+        }
         val args = data.args
         when (args.size) {
             3 -> verifyIntraClusterIccf(args)
