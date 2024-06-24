@@ -37,7 +37,7 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                     val dict = args as GtvDictionary
                     val topic = dict["topic"]?.asString() ?: throw UserMistake("No topic property supplied")
                     val height = dict["height"]?.asInteger() ?: throw UserMistake("No height property supplied")
-                    val messages = conf.dbOperations.getSentMessagesAfterHeight(ctxt, topic, height)
+                    val messages = conf.dbOperations.getSentMessagesAfterHeight(ctxt, topic, height, conf.messageQueryLimit)
                     gtv(messages.map { gtv(mapOf("body" to it.body, "height" to gtv(it.height))) })
                 }
         )
@@ -47,6 +47,10 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
         val clusterManagement = createClusterManagement(configuration, postchainContext.connectionManager)
         val queryProvider = createQueryProvider(configuration, clusterManagement, postchainContext)
         conf.isSystemChain = configuration.chainID == 0L || isSystemChain(configuration, queryProvider.getChain0Query())
+        conf.messageQueryLimit = configuration.rawConfig["icmf"]?.get("sender")?.let {
+            val queryLimit = IcmfSenderBlockchainConfigData.fromGtv(it).messageQueryLimit.toInt()
+            if (queryLimit > 0) queryLimit else DEFAULT_MESSAGE_QUERY_LIMIT
+        } ?: DEFAULT_MESSAGE_QUERY_LIMIT
     }
 
     override fun initializeDB(ctx: EContext) {

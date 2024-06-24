@@ -17,6 +17,16 @@ config:
       - "net.postchain.d1.icmf.IcmfSenderGTXModule"
 ```
 
+You can also modify the default message query limit of your blockchain. If your chain is sending very large messages it
+may be a good idea to lower it in order to not get spammed with huge queries:
+
+```
+config:
+  icmf:
+    sender:
+      message_query_limit: 100 # Default is 100
+```
+
 ### Rell code
 See instructions on how to install the ICMF rell code library here: https://gitlab.com/chromaway/core/directory-chain
 
