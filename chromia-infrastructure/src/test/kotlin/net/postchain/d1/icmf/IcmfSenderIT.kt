@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import assertk.assertThat
 import assertk.assertions.any
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -106,6 +107,38 @@ class IcmfSenderIT : ManagedModeTest() {
         verifyMessagesMissing(dappChain, 0)
     }
 
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun `message query limit is respected`() {
+        startManagedSystem(3, 0)
+
+        // Query limit is 3
+        val dappChain = deployDappChain(
+                "L_my-topic",
+                configFile = "/net/postchain/d1/icmf/sender/blockchain_config_1_with_query_limit.xml"
+        )
+
+        // Send 2 msgs per block
+        for (i in 0..2) {
+            val blockMessages = listOf("test_first_$i", "test_second_$i")
+            val blockTxs = blockMessages.map {
+                makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
+            }
+            buildBlock(dappChain, i.toLong(), *blockTxs.toTypedArray())
+        }
+
+        val messages = nodes[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
+                .query(QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT, gtv(mapOf("topic" to gtv("L_my-topic"), "height" to gtv(-1))))
+                .get()
+                .asArray()
+
+        // Ensure limit is not cutting off in the middle of a height
+        assertThat(messages).hasSize(4)
+        assertThat(messages.filter { it["height"]!!.asInteger() == 0L }).hasSize(2)
+        assertThat(messages.filter { it["height"]!!.asInteger() == 1L }).hasSize(2)
+        assertThat(messages.filter { it["height"]!!.asInteger() == 2L }).hasSize(0)
+    }
+
     private fun verifyMessages(dappChain: Long,
                                height: Long,
                                topic: String,
@@ -130,7 +163,7 @@ class IcmfSenderIT : ManagedModeTest() {
 
                 val dbOps = IcmfDatabaseOperationsImpl()
 
-                val allMessages = dbOps.getSentMessagesAfterHeight(it, topic, -1)
+                val allMessages = dbOps.getSentMessagesAfterHeight(it, topic, -1, DEFAULT_MESSAGE_QUERY_LIMIT)
                 assertThat(allMessages.size).isEqualTo(expectedAllMessages.size)
                 expectedAllMessages.forEachIndexed { index, expectedMessage ->
                     assertThat(allMessages[index].body.asString()).isEqualTo(expectedMessage)
@@ -169,7 +202,7 @@ class IcmfSenderIT : ManagedModeTest() {
         return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
     }
 
-    private fun deployDappChain(icmfTopic: String, signers: Set<Int> = setOf(0, 1, 2)): Long {
+    private fun deployDappChain(icmfTopic: String, signers: Set<Int> = setOf(0, 1, 2), configFile: String = "/net/postchain/d1/icmf/sender/blockchain_config_1.xml"): Long {
         val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
@@ -177,7 +210,7 @@ class IcmfSenderIT : ManagedModeTest() {
                     }
                 """
         val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
+                javaClass.getResource(configFile)!!.readText(),
                 mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
 
         return startNewBlockchain(
