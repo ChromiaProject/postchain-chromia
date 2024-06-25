@@ -173,9 +173,15 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                 return false
             }
 
-            val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
-            val peers = blockchainConfigProvider.getRelevantPeers(headerData)
+            val peers = try {
+                blockchainConfigProvider.getRelevantPeers(headerData)
+            } catch (e: UserMistake) {
+                logger.warn(e.message)
+                return false
+            }
+
             try {
+                val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
                 Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
             } catch (e: UserMistake) {
                 logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")

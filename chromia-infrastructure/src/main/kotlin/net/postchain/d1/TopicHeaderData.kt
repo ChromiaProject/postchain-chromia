@@ -23,10 +23,16 @@ class TopicHeaderData(val hash: ByteArray, val previousBlockHeight: Long) {
                 blockchainConfigProvider: BlockchainConfigProvider,
                 extraField: String
         ): Map<String, TopicHeaderData>? {
-            val witness = BaseBlockWitness.fromBytes(rawWitness)
-            val peers = blockchainConfigProvider.getRelevantPeers(header)
+
+            val peers = try {
+                blockchainConfigProvider.getRelevantPeers(header)
+            } catch (e: UserMistake) {
+                logger.warn(e.message)
+                return null
+            }
 
             try {
+                val witness = BaseBlockWitness.fromBytes(rawWitness)
                 Validation.validateBlockSignatures(cryptoSystem, header.getPreviousBlockRid(), rawHeader, blockRid, peers, witness)
             } catch (e: UserMistake) {
                 logger.warn("Invalid block header signature when extracting data from extra data '$extraField' for block-rid: ${blockRid.toHex()} in blockchain: ${header.getBlockchainRid().toHex()} at height: ${header.getHeight()}: ${e.message}")
