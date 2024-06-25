@@ -26,23 +26,28 @@ class ManagedBlockchainConfigProvider(
         }
 
         val logPrefix = "getRelevantPeers(brid: ${blockchainRid.toShortHex()}, height: $height)"
+
         val configHash = headerData.getExtra()["config_hash"]?.asByteArray()
         logger.debug { "$logPrefix - extra config_hash: " + configHash?.wrap() }
-        if (configHash != null) {
-            val pendingConfig = nodeManagement.getPendingBlockchainConfigByHash(blockchainRid, configHash)
-            logger.debug { "$logPrefix - pending_signers: ${pendingConfig?.signers?.map{ it.data.toHex() }}" }
-            if (pendingConfig != null) {
-                return pendingConfig.signers.map(::PubKey)
-            }
+
+        if (configHash == null) {
+            return clusterManagement.getBlockchainPeers(blockchainRid, height)
+        }
+
+        val pendingConfig = nodeManagement.getPendingBlockchainConfigByHash(blockchainRid, configHash)
+        logger.debug { "$logPrefix - pending_signers: ${pendingConfig?.signers?.map { it.data.toHex() }}" }
+        if (pendingConfig != null) {
+            return pendingConfig.signers.map(::PubKey)
         }
 
         val config = nodeManagement.getBlockchainConfiguration(blockchainRid, height)
                 ?: throw UserMistake("Config for chain $blockchainRid not found at height $height")
         logger.debug { "$logPrefix - NM API: config.configHash: ${config.configHash}" }
-        if (config.configHash == configHash?.wrap()) {
+        if (config.configHash == configHash.wrap()) {
             return config.signers.map(::PubKey)
         }
 
-        throw UserMistake("Can't find peers for chain $blockchainRid at height $height")
+        throw UserMistake("Can't find peers for chain $blockchainRid at height $height. " +
+                "Block header extra config_hash: ${configHash.wrap()}, expected config hash: ${config.configHash}")
     }
 }

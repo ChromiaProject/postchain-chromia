@@ -2,7 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.d1.MockManagedBlockchainConfigurationProvider
+import net.postchain.d1.config.MockManagedBlockchainConfigurationProvider
 import net.postchain.d1.QueryProviderMocks
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider

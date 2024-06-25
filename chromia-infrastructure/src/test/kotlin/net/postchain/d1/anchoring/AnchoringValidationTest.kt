@@ -4,9 +4,11 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -22,6 +24,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 
@@ -34,7 +37,7 @@ class AnchoringValidationTest {
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val chainID: Long = 1
     private val blockchainRID = BlockchainRid.buildRepeat(1)
-    private val signer = cryptoSystem.generateKeyPair()
+    private val signer = KeyPairHelper.keyPair(0)
     private val blockchainConfigProvider: BlockchainConfigProvider = mock {
         on { getRelevantPeers(any()) } doReturn listOf(signer.pubKey)
     }
@@ -202,12 +205,35 @@ class AnchoringValidationTest {
     }
 
     @Test
+    fun noRelevantPeersFound() {
+        val bcConfigProvider: BlockchainConfigProvider = mock {
+            on { getRelevantPeers(any()) } doThrow (UserMistake("Can't find peers ..."))
+        }
+
+        val txExtension = createAnchorSpecialTxExtension(bcConfigProvider = bcConfigProvider)
+
+        val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
+        ).getRawData()
+
+        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                listOf(
+                        OpData(AnchoringSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                                gtv(blockRid),
+                                blockHeader,
+                                gtv(rawWitness)))
+                )))
+    }
+
+    @Test
     fun invalidSignature() {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
         val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-        val invalidSigner = cryptoSystem.generateKeyPair()
+        val invalidSigner = KeyPairHelper.keyPair(1)
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(invalidSigner).signDigest(blockRid))
         ).getRawData()
@@ -274,10 +300,10 @@ class AnchoringValidationTest {
         assertEquals(GtvEncoder.encodeGtv(GtxOp.fromOpData(opData).toGtv()).size, size)
     }
 
-    private fun createAnchorSpecialTxExtension(isSigner: Boolean = true): AnchoringSpecialTxExtension {
+    private fun createAnchorSpecialTxExtension(isSigner: Boolean = true, bcConfigProvider: BlockchainConfigProvider? = null): AnchoringSpecialTxExtension {
         val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
-        txExtension.blockchainConfigProvider = blockchainConfigProvider
+        txExtension.blockchainConfigProvider = bcConfigProvider ?: blockchainConfigProvider
         txExtension.anchoringReceiver = mock {
             on { getRelevantChains() } doReturn setOf(blockchainRID)
         }
