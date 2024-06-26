@@ -139,12 +139,12 @@ class Directory1MovingMixIT {
                 .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, "s1")
                 // s1/c2/node2
                 .createClusterOperation(node2.providerPubkey, "s2", "SYSTEM_P", listOf(node2.providerPubkey))
-                .createContainerOperation(node2.providerPubkey, "c2", "s2", 1, listOf(node1.providerPubkey, node2.providerPubkey))
+                .createContainerOperation(node2.providerPubkey, "c2", "s2", 1, listOf(node1.providerPubkey))
                 .updateNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, null, null, null, 3)
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "s2")
                 // s3/c3/node3
                 .createClusterOperation(node3.providerPubkey, "s3", "SYSTEM_P", listOf(node3.providerPubkey))
-                .createContainerOperation(node3.providerPubkey, "c3", "s3", 1, listOf(node1.providerPubkey, node3.providerPubkey))
+                .createContainerOperation(node3.providerPubkey, "c3", "s3", 1, listOf(node1.providerPubkey))
                 .updateNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, null, null, null, 3)
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "s3")
                 .postTransactionUntilConfirmed("s1/c1/node1, s2/c2/node2, s3/c3/node3 created")
