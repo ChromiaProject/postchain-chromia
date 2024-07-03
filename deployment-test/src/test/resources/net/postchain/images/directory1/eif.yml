@@ -65,7 +65,7 @@ blockchains:
         chains:
           ethereum:
             network_id: 1337
-            max_gas_price: 4100000000
+            max_gas_price: 300000000000000
             min_wallet_balance: 100000000000
             gas_limit: 9000000
             node_tx_verification_evm_blocks: 10
