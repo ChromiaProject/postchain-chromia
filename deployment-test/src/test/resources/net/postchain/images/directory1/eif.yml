@@ -68,6 +68,7 @@ blockchains:
             max_gas_price: 300000000000000
             min_wallet_balance: 100000000000
             gas_limit: 9000000
+            gas_limit_margin: 0.1
             node_tx_verification_evm_blocks: 10
             tx_verification_time: 20000
       sync_ext:
