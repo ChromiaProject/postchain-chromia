@@ -236,13 +236,12 @@ blockchains:
         asset_symbol: "tCHR"
         asset_decimals: 6
         asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
-        amount_to_mint: 1000000000
         pool_amount_to_mint: 1000000000
         staking_withdrawal_delay_ms: 1209600000
         staking_delegation_delay_ms: 604800000
         staking_payout_interval_ms: 31536000000 # Good for testing
-        rewards_share: 0.1
-        test_chr_pool_refill_limit_millis: 86400000 # 1 day
+        staking_rewards_share: 0.1
+        pool_refill_limit_ms: 86400000 # 1 day
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
       economy_chain_test_claim_tchr:
@@ -257,6 +256,8 @@ blockchains:
       economy_chain_test_auth_server:
         # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
         admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
+      economy_chain_test_mint_on_ras_staking:
+        amount_to_mint: 1000000000
 
 compile:
   rellVersion: 0.13.12
