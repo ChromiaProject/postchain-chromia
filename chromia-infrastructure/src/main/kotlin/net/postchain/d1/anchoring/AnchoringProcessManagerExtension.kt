@@ -1,5 +1,6 @@
 package net.postchain.d1.anchoring
 
+import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
@@ -12,6 +13,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
+import net.postchain.d1.anchoring.check.AnchoringCheck
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.config.ManagedBlockchainConfigProvider
@@ -29,8 +31,11 @@ open class AnchoringProcessManagerExtension(
         blockchainInfrastructure: BlockchainInfrastructure
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
+    companion object : KLogging()
+
     private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage, blockchainInfrastructure)
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
+    private val anchoringCheck = AnchoringCheck(postchainContext.nodeDiagnosticContext, postchainContext.blockQueriesProvider, postchainContext.appConfig)
 
     /**
      * Connect process to cluster anchoring:
@@ -66,6 +71,8 @@ open class AnchoringProcessManagerExtension(
                     txExtension = it
                     anchoringConfig = it.anchoringConfig
                 }
+
+                anchoringCheck.maybeCreateAnchoringCheckCronJob(it, engine.getConfiguration().blockchainRid, engine.getBlockQueries(), cfg.module.getQueries())
             }
 
             // connect process to local dispatcher
@@ -95,6 +102,7 @@ open class AnchoringProcessManagerExtension(
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
+        anchoringCheck.remove(process.blockchainEngine.getConfiguration().blockchainRid)
         localDispatcher.disconnectChain(
                 process.blockchainEngine.getConfiguration().chainID
         )

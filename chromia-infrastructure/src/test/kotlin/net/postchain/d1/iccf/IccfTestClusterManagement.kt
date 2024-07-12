@@ -23,7 +23,8 @@ class IccfTestClusterManagement : ClusterManagement {
             listOf(
                     PubKey("03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"),
                     PubKey("031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"),
-                    PubKey("03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94")
+                    PubKey("03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"),
+                    PubKey("0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D")
             )
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> = when (clusterName) {

@@ -241,7 +241,7 @@ blockchains:
         staking_delegation_delay_ms: 604800000
         staking_payout_interval_ms: 31536000000 # Good for testing
         staking_rewards_share: 0.1
-        pool_refill_limit_ms: 86400000 # 1 day
+        pool_refill_limit_ms: 86400000
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
       economy_chain_test_claim_tchr:
