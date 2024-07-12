@@ -28,7 +28,7 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-private const val GTX_OP_OVERHEAD = 20
+const val GTX_OP_OVERHEAD = 20
 
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.

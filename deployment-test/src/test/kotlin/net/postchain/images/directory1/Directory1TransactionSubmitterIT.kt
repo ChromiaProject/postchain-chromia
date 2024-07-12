@@ -40,6 +40,7 @@ import net.postchain.images.common.ManagedModeBase
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -116,6 +117,9 @@ class Directory1TransactionSubmitterIT {
                     provider1KeyPair,
                     "config-mix")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
@@ -252,6 +256,24 @@ class Directory1TransactionSubmitterIT {
         }
 
         assertAnchoringInProgress(listOf(node1.pubkey, node2.pubkey))
+    }
+
+    @Test
+    @Order(6)
+    fun `Verify anchored block heights`() {
+        val highestBlockHeightAnchoringCheck = node1.c0.getHighestBlockHeightAnchoringCheck()
+        val cac = highestBlockHeightAnchoringCheck.cac!!
+        val sac = highestBlockHeightAnchoringCheck.sac!!
+        val evm = highestBlockHeightAnchoringCheck.evm!!
+
+        testLogger.info { "highestBlockHeightAnchoringCheck: $highestBlockHeightAnchoringCheck" }
+
+        assertTrue(cac.match!!)
+        assertTrue(cac.height!! > 0)
+        assertTrue(sac.match!!)
+        assertTrue(sac.height!! > 0)
+        assertTrue(evm.match!!)
+        assertTrue(evm.height!! > 0)
     }
 
     private fun assertAnchoringInProgress(signers: List<PubKey>, awaitAnchoredHeights: Int = 3) {
