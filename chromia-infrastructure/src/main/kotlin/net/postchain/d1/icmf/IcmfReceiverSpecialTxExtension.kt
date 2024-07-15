@@ -393,14 +393,6 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             bctx: BlockEContext
     ): Boolean {
         if (currentAnchorHeaderData != null && headerBlockRids.isNotEmpty()) {
-            if (currentAnchorHeaderData.anchorHeaderData.keys != headerBlockRids.keys) {
-                logger.warn("Anchor header does not contain the same topics as received header messages")
-            }
-
-            for ((topic, data) in currentAnchorHeaderData.anchorHeaderData) {
-                if (!validatePreviousHeaderHeight(bctx, currentAnchorHeaderData.cluster, topic, data.previousBlockHeight)) return false
-            }
-
             for ((topic, blockRids) in headerBlockRids) {
                 val hash = gtv(blockRids.map { gtv(it) }).merkleHash(hashCalculator)
 
@@ -409,6 +401,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     logger.warn("$ICMF_ANCHOR_HEADERS_EXTRA missing data for topic $topic")
                     return false
                 }
+
+                if (!validatePreviousHeaderHeight(bctx, currentAnchorHeaderData.cluster, topic, anchorHeaderData.previousBlockHeight)) return false
 
                 if (!hash.contentEquals(anchorHeaderData.hash)) {
                     logger.warn("Invalid block-rid hash, expected ${anchorHeaderData.hash.toHex()} but was ${hash.toHex()}")
