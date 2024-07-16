@@ -294,7 +294,7 @@ class Directory1TransactionSubmitterIT {
             val anchoredHeight = anchoring.lastAnchoredHeight().send().value.intValueExact()
             val currentEvmSignerList = txsClient.getCurrentEvmSignerList(systemAnchoringBrid)
 
-            txsClient.getTransactions().forEach {
+            txsClient.getTransactions(null, null, null, null, null, null, count = 50L).forEach {
                 testLogger.info { "TX Submitter transaction: ${it.rowId} - ${it.status} - ${it.functionName} - ${it.processedBy.toHex()}" }
             }
 
@@ -314,7 +314,7 @@ class Directory1TransactionSubmitterIT {
 
             testLogger.info { "Make sure at least 1 tx is verified..." }
 
-            assertThat(txsClient.getTransactions().count { it.status == TransactionStatus.SUCCESS }).isGreaterThanOrEqualTo(1)
+            assertThat(txsClient.getTransactions(null, null, null, null, null, null, count = 50L).count { it.status == TransactionStatus.SUCCESS }).isGreaterThanOrEqualTo(1)
         }
     }
 }
