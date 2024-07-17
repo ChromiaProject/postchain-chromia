@@ -9,6 +9,7 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
+import net.postchain.containers.infra.MasterSyncInfra
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
@@ -18,6 +19,8 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.config.ManagedBlockchainConfigProvider
 import net.postchain.d1.nm_api.NodeManagementImpl
+import net.postchain.d1.query.BlockQueriesAdapter
+import net.postchain.d1.query.MasterClient
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModule
@@ -28,7 +31,7 @@ import kotlin.math.min
 
 open class AnchoringProcessManagerExtension(
         postchainContext: PostchainContext,
-        blockchainInfrastructure: BlockchainInfrastructure
+        private val blockchainInfrastructure: BlockchainInfrastructure
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
     companion object : KLogging()
@@ -46,6 +49,7 @@ open class AnchoringProcessManagerExtension(
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
+        anchoringCheck.runningChainsBlockClients[cfg.blockchainRid] = BlockQueriesAdapter(engine.getBlockQueries())
 
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // create receiver when blockchain has anchoring STE
@@ -103,6 +107,7 @@ open class AnchoringProcessManagerExtension(
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
         anchoringCheck.remove(process.blockchainEngine.getConfiguration().blockchainRid)
+        anchoringCheck.runningChainsBlockClients.remove(process.blockchainEngine.blockchainRid)
         localDispatcher.disconnectChain(
                 process.blockchainEngine.getConfiguration().chainID
         )
@@ -129,10 +134,19 @@ open class AnchoringProcessManagerExtension(
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId
         localDispatcher.connectSubnodeChain(process.chainId, process.blockchainRid)
+
+        // Should always be true
+        if (blockchainInfrastructure is MasterSyncInfra) {
+            anchoringCheck.runningChainsBlockClients[process.blockchainRid] = MasterClient(
+                    blockchainInfrastructure.masterConnectionManager.masterSubQueryManager,
+                    process.blockchainRid
+            )
+        }
     }
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {
         localDispatcher.disconnectSubnodeChain(process.chainId)
         remoteProcessChainIds.remove(process.blockchainRid)
+        anchoringCheck.runningChainsBlockClients.remove(process.blockchainRid)
     }
 }
