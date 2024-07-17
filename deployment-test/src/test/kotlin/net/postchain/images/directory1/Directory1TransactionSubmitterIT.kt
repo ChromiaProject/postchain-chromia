@@ -1,21 +1,27 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
+import net.postchain.chain0.common.queries.getBlockchains
+import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.evm_transaction_submitter.getEvmTransactionSubmitterChainRid
 import net.postchain.chain0.evm_transaction_submitter.initEvmTransactionSubmitterChainOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.proposal.voting.createVoterSetOperation
+import net.postchain.chain0.proposal_container.proposeContainerOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
@@ -75,10 +81,13 @@ class Directory1TransactionSubmitterIT {
         private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
         private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
         private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-        override val logsSubdir = "txs"
+        override val logsSubdir = "evm_tx_submitter"
         private val provider1KeyPair = KeyPair.of(
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
+
+        private val dappContainer = "dappContainer"
+        private val dappContainerVoterSet = "dappContainer_vs"
 
         private val evmContainer: GethContainer
         private val web3j: Web3j
@@ -117,6 +126,8 @@ class Directory1TransactionSubmitterIT {
                     provider1KeyPair,
                     "config-mix")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
                     .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
                     .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
                     .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
@@ -126,6 +137,11 @@ class Directory1TransactionSubmitterIT {
                     KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
                     "config-mix")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
@@ -142,6 +158,11 @@ class Directory1TransactionSubmitterIT {
                     .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
 
             removeSubnodeContainers()
             startNodesAndChain0()
@@ -258,22 +279,75 @@ class Directory1TransactionSubmitterIT {
         assertAnchoringInProgress(listOf(node1.pubkey, node2.pubkey))
     }
 
+    // In order to verify that anchoring check works on both subnode and non-subnode chains we start a dapp in a container
     @Test
     @Order(6)
+    fun `Launch new dApp`() {
+        testLogger.info { "Add node3 with subnode arch" }
+        val newProviders = listOf(
+                ProviderInfo(node3.provider.pubKey.wData, "provider3", "http://provider3.com")
+        )
+        node1.client(chain0Brid, listOf(node1.provider)).transactionBuilder().addNop()
+                .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
+                .postTransactionUntilConfirmed("System provider3 registered")
+
+        voteOnAllProposals(listOf(node2.provider))
+
+        node1.client(chain0Brid, listOf(node3.provider)).transactionBuilder().addNop()
+                .registerNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster), 2)
+                .postTransactionUntilConfirmed("node3 added to the system cluster")
+
+        testLogger.info { "Create dApp container" }
+        node1.c0.transactionBuilder()
+                .createVoterSetOperation(node1.providerPubkey, dappContainerVoterSet, 1, listOf(node1.providerPubkey), "SYSTEM_P")
+                .proposeContainerOperation(
+                        node1.providerPubkey, systemCluster, dappContainer, dappContainerVoterSet, ""
+                )
+                .postTransactionUntilConfirmed("$dappContainer container created")
+
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
+
+        awaitUntilAsserted {
+            assertThat(node1.c0.getContainers().map { it.name }).contains(dappContainer)
+        }
+
+        testLogger.info { "Deploy dApp" }
+        deployDapp("test_dapp", dappContainer)
+
+        nodes().forEach { node ->
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(5)
+        }
+
+        assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities")
+    }
+
+    @Test
+    @Order(7)
     fun `Verify anchored block heights`() {
-        val highestBlockHeightAnchoringCheck = node1.c0.getHighestBlockHeightAnchoringCheck()
-        val cac = highestBlockHeightAnchoringCheck.cac!!
-        val sac = highestBlockHeightAnchoringCheck.sac!!
-        val evm = highestBlockHeightAnchoringCheck.evm!!
+        nodes().forEach { node ->
+            val dappClient = node.client(dapps["test_dapp"]!!)
+            awaitUntilAsserted {
+                val highestBlockHeightAnchoringCheck = dappClient.getHighestBlockHeightAnchoringCheck()
+                testLogger.info { "highestBlockHeightAnchoringCheck: $highestBlockHeightAnchoringCheck, node: ${node.pubkey}" }
 
-        testLogger.info { "highestBlockHeightAnchoringCheck: $highestBlockHeightAnchoringCheck" }
+                assertThat(highestBlockHeightAnchoringCheck.cac).isNotNull()
+                val cac = highestBlockHeightAnchoringCheck.cac!!
+                assertThat(highestBlockHeightAnchoringCheck.sac).isNotNull()
+                val sac = highestBlockHeightAnchoringCheck.sac!!
+                assertThat(highestBlockHeightAnchoringCheck.evm).isNotNull()
+                val evm = highestBlockHeightAnchoringCheck.evm!!
 
-        assertTrue(cac.match!!)
-        assertTrue(cac.height!! > 0)
-        assertTrue(sac.match!!)
-        assertTrue(sac.height!! > 0)
-        assertTrue(evm.match!!)
-        assertTrue(evm.height!! > 0)
+                assertThat(cac.error).isNull()
+                assertTrue(cac.match!!)
+                assertTrue(cac.height!! > 0)
+                assertThat(sac.error).isNull()
+                assertTrue(sac.match!!)
+                assertTrue(sac.height!! > 0)
+                assertThat(evm.error).isNull()
+                assertTrue(evm.match!!)
+                assertTrue(evm.height!! > 0)
+            }
+        }
     }
 
     private fun assertAnchoringInProgress(signers: List<PubKey>, awaitAnchoredHeights: Int = 3) {

@@ -9,6 +9,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
+import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.rest.AnchoringChainCheck
 import net.postchain.concurrent.util.get
@@ -30,6 +31,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, private val blockQueriesProvider: BlockQueriesProvider, private val appConfig: AppConfig, private val anchoringCheckJobs: MutableMap<BlockchainRid, MutableList<Job>> = mutableMapOf()) {
 
     companion object : KLogging()
+
+    val runningChainsBlockClients = ConcurrentHashMap<BlockchainRid, PostchainBlockClient>()
 
     private var cacToAnchoringReceiver = ConcurrentHashMap<BlockchainRid, AnchoringReceiver>()
 
@@ -113,7 +116,10 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
             }
 
     private fun getBlockchainRids(clusterAnchorChainRid: BlockchainRid): Set<BlockchainRid> {
-        return cacToAnchoringReceiver[clusterAnchorChainRid]?.getRelevantChains()?.minus(clusterAnchorChainRid)?.toSet()
+        return cacToAnchoringReceiver[clusterAnchorChainRid]?.getRelevantChains()
+                ?.minus(clusterAnchorChainRid)
+                ?.toSet()
+                ?.intersect(runningChainsBlockClients.keys)
                 ?: setOf()
     }
 
@@ -122,14 +128,16 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
     }
 
     private fun checkBlockHeightAnchoredInCAC(clusterAnchorBlockQueries: BlockQueries, blockchainRid: BlockchainRid, cacBlockHeight: Long): AnchoringChainCheck {
+        val bcBlockClient = runningChainsBlockClients[blockchainRid]
+                ?: return AnchoringChainCheck(error = "Unable to get block client for blockchain")
         var error: String
         try {
             val bcBlockAnchorInCac = clusterAnchorBlockQueries.query("get_anchor_block_by_transaction_block_height", gtv(mapOf("blockchain_rid" to gtv(blockchainRid.data), Pair("transaction_block_height", gtv(cacBlockHeight))))).get()
             if (!bcBlockAnchorInCac.isNull()) {
                 val bcBlockHeightAnchoredInCac = bcBlockAnchorInCac["block_height"]?.asInteger()
-                val bcBlockAtHeight = blockQueriesProvider.getBlockQueries(blockchainRid)!!.getBlockAtHeight(bcBlockHeightAnchoredInCac!!, false).get()
+                val bcBlockAtHeight = bcBlockClient.blockAtHeight(bcBlockHeightAnchoredInCac!!)
                 if (bcBlockAtHeight != null) {
-                    val match = bcBlockAtHeight.header.blockRID.contentEquals(bcBlockAnchorInCac["block_rid"]?.asByteArray())
+                    val match = bcBlockAtHeight.rid.data.contentEquals(bcBlockAnchorInCac["block_rid"]?.asByteArray())
                     return AnchoringChainCheck(bcBlockHeightAnchoredInCac, match)
                 } else {
                     error = "Blockchain is behind CAC last anchored block."
