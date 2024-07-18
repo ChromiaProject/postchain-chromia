@@ -120,6 +120,7 @@ class Directory1EconomyChainMixIT {
 
         const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
         const val EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER = "EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER"
+        const val EIF_EC_STRATEGY_SENDER_BLOCKCHAIN = "EIF_EC_STRATEGY_SENDER_BLOCKCHAIN"
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
         const val EC_CHAIN_NAME = "economy_chain"
 
@@ -356,12 +357,23 @@ class Directory1EconomyChainMixIT {
     @Order(4)
     fun `Deploy Economy Chain`() {
         testLogger.info("Deploying Economy Chain")
+
+        val senderVirtualBrid = gtv(
+                gtv("EVM"),
+                gtv(evmContainerNetworkId),
+                gtv(bridgeAddress.replace("^0x".toRegex(), ""))
+        ).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!
                 .readText()
                 // inject Event Receiver RID
                 .replace(
                         "<string>$EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER</string>",
                         "<bytea>${eventReceiverBrid.toHex()}</bytea>"
+                )
+                .replace(
+                        "<string>$EIF_EC_STRATEGY_SENDER_BLOCKCHAIN</string>",
+                        "<string>\"${senderVirtualBrid.toHex()}\"</string>"
                 )
                 // use `TST TestToken ERC-20` instead of `CHR Chromia ERC-20`
                 .replace(ETH_ASSET_ADDRESS, testTokenAddress.substring(2))
