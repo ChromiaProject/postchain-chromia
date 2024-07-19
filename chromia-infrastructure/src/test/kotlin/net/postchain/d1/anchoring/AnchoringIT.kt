@@ -210,6 +210,48 @@ class AnchoringIT : ManagedModeTest() {
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
+    fun verifyLastClusterAnchoredHeightWithMultipleCACs() {
+        startManagedSystem(4, 0)
+        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+
+        val dappChain = startDappChain()
+
+        val dappChain2 = startDappChain()
+
+        val anchorChain2 = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+
+        // --------------------
+        // Dapp chain: Build 4 blocks
+        // --------------------
+        for (height in 0..3) {
+            buildBlock(dappChain, height.toLong())
+            buildBlock(dappChain2, height.toLong())
+        }
+
+        val blockchainRID: BlockchainRid = ChainUtil.ridOf(dappChain)
+        val blockchainRID2: BlockchainRid = ChainUtil.ridOf(dappChain2)
+
+        // --------------------
+        // Anchor chain: Build first anchor block
+        // --------------------
+
+        buildBlock(anchorChain, 0)
+        buildBlock(anchorChain2, 0)
+
+        // --------------------
+        // Anchor chain: Actual test
+        // --------------------
+        val expectedLastAnchoredHeight = mutableMapOf(
+                blockchainRID to AnchoringChainCheck(3L, true),
+                blockchainRID2 to AnchoringChainCheck(3L, true)
+        )
+        verifyLastCusterAnchoredHeight(anchorChain, 0, expectedLastAnchoredHeight)
+        verifyLastCusterAnchoredHeight(anchorChain, 1, expectedLastAnchoredHeight)
+        verifyLastCusterAnchoredHeight(anchorChain, 2, expectedLastAnchoredHeight)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
     fun verifyNodeWithDappChainWithLowerHeightThanLastClusterAnchoredHeight() {
         startManagedSystem(4, 0)
         val peerInfoMap = nodes.first().postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
