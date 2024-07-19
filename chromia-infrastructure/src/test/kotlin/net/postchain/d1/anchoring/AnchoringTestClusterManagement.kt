@@ -31,7 +31,7 @@ class AnchoringTestClusterManagement : ClusterManagement {
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
         return when (clusterName) {
             "clusterA" -> listOf(ChainUtil.ridOf(1L), ChainUtil.ridOf(2L))
-            "clusterB" -> listOf(ChainUtil.ridOf(3L))
+            "clusterB" -> listOf(ChainUtil.ridOf(3L), ChainUtil.ridOf(4L))
             else -> emptyList()
         }
     }
@@ -39,7 +39,7 @@ class AnchoringTestClusterManagement : ClusterManagement {
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String {
         return when (ChainUtil.iidOf(blockchainRid)) {
             1L, 2L -> "clusterA"
-            3L -> "clusterB"
+            3L, 4L -> "clusterB"
             else -> "unknown_cluster"
         }
     }

@@ -28,13 +28,18 @@ import net.postchain.gtv.GtvFactory.gtv
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
-class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, private val blockQueriesProvider: BlockQueriesProvider, private val appConfig: AppConfig, private val anchoringCheckJobs: MutableMap<BlockchainRid, MutableList<Job>> = mutableMapOf()) {
+class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, private val blockQueriesProvider: BlockQueriesProvider, private val appConfig: AppConfig) {
 
     companion object : KLogging()
 
     val runningChainsBlockClients = ConcurrentHashMap<BlockchainRid, PostchainBlockClient>()
 
-    private var cacToAnchoringReceiver = ConcurrentHashMap<BlockchainRid, AnchoringReceiver>()
+    private val cacToAnchoringReceiver = ConcurrentHashMap<BlockchainRid, AnchoringReceiver>()
+
+    private var systemAnchoringBrid: BlockchainRid? = null
+    private var cacCheckJob: Job? = null
+    private var sacCheckJob: Job? = null
+    private var evmCheckJob: Job? = null
 
     fun maybeCreateAnchoringCheckCronJob(anchoringSpecialTxExtension: AnchoringSpecialTxExtension, anchorChainRid: BlockchainRid, anchorBlockQueries: BlockQueries, queries: Set<String>) {
         if (queries.contains("get_anchor_block_by_transaction_block_height")) {
@@ -42,32 +47,44 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
             val isClusterAnchoringReceiver = anchoringSpecialTxExtension.anchoringReceiver is ClusterAnchoringReceiver
             if (isClusterAnchoringReceiver && anchoringCheckConfig.clusterAnchorCheckIntervalMs >= 0) {
                 cacToAnchoringReceiver[anchorChainRid] = anchoringSpecialTxExtension.anchoringReceiver
-                anchoringCheckJobs[anchorChainRid] = mutableListOf(checkHighestBlockHeightsAnchoredInCAC(anchorChainRid, anchorBlockQueries, anchoringCheckConfig.clusterAnchorCheckIntervalMs))
+                val currentJob = cacCheckJob
+                if (currentJob == null) {
+                    cacCheckJob = checkHighestBlockHeightsAnchoredInCAC(anchoringCheckConfig.clusterAnchorCheckIntervalMs)
+                }
             }
             val isSystemAnchoringReceiver = anchoringSpecialTxExtension.anchoringReceiver is SystemAnchoringReceiver
-            if (isSystemAnchoringReceiver && anchoringCheckConfig.systemAnchorCheckIntervalMs >= 0) {
-                anchoringCheckJobs.getOrPut(anchorChainRid, ::mutableListOf) += checkHighestBlockHeightsAnchoredInSAC(anchorBlockQueries, anchoringCheckConfig.systemAnchorCheckIntervalMs)
-            }
-            if (isSystemAnchoringReceiver && anchoringCheckConfig.evmAnchorCheckIntervalMs >= 0) {
-                if (anchoringCheckConfig.rpcUrls.isNotEmpty() && anchoringCheckConfig.anchoringContractAddress.isNotEmpty()) {
-                    anchoringCheckJobs.getOrPut(anchorChainRid, ::mutableListOf) += checkHighestBlockHeightsAnchoredInEVM(anchorBlockQueries, anchoringCheckConfig)
-                } else {
-                    logger.error("EVM anchoring check is not possible due to missing configuration, rpcUrls: ${anchoringCheckConfig.rpcUrls} , anchoringContractAddress: ${anchoringCheckConfig.anchoringContractAddress}")
+            if (isSystemAnchoringReceiver) {
+                systemAnchoringBrid = anchorChainRid
+                if (anchoringCheckConfig.systemAnchorCheckIntervalMs >= 0) {
+                    sacCheckJob = checkHighestBlockHeightsAnchoredInSAC(anchorBlockQueries, anchoringCheckConfig.systemAnchorCheckIntervalMs)
+                }
+                if (anchoringCheckConfig.evmAnchorCheckIntervalMs >= 0) {
+                    if (anchoringCheckConfig.rpcUrls.isNotEmpty() && anchoringCheckConfig.anchoringContractAddress.isNotEmpty()) {
+                        evmCheckJob = checkHighestBlockHeightsAnchoredInEVM(anchorBlockQueries, anchoringCheckConfig)
+                    } else {
+                        logger.error("EVM anchoring check is not possible due to missing configuration, rpcUrls: ${anchoringCheckConfig.rpcUrls} , anchoringContractAddress: ${anchoringCheckConfig.anchoringContractAddress}")
+                    }
                 }
             }
         }
     }
 
-    private fun checkHighestBlockHeightsAnchoredInCAC(clusterAnchorChainRid: BlockchainRid, clusterAnchorBlockQueries: BlockQueries, verifyLastAnchoredHeightIntervalMs: Long) =
-            CoroutineScope(Dispatchers.IO).launch(CoroutineName("check-cluster-anchoring-$clusterAnchorChainRid") + MDCContext()) {
+    private fun checkHighestBlockHeightsAnchoredInCAC(verifyLastAnchoredHeightIntervalMs: Long) =
+            CoroutineScope(Dispatchers.IO).launch(CoroutineName("check-cluster-anchoring") + MDCContext()) {
                 while (isActive) {
                     try {
-                        val blockchains = getBlockchainRids(clusterAnchorChainRid)
-                        val lastCacBlockHeight = clusterAnchorBlockQueries.getLastBlockHeight().get()
-                        if (lastCacBlockHeight >= 0) {
-                            val cacChecks = blockchains.associateWith { checkBlockHeightAnchoredInCAC(clusterAnchorBlockQueries, it, lastCacBlockHeight) }
-                            nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK] = EagerDiagnosticValue(cacChecks)
+                        val cacChecks = mutableMapOf<BlockchainRid, AnchoringChainCheck>()
+                        for (clusterAnchorChainRid in cacToAnchoringReceiver.keys) {
+                            val blockchains = getBlockchainRids(clusterAnchorChainRid)
+                            val cacBlockQueries = blockQueriesProvider.getBlockQueries(clusterAnchorChainRid)
+                            if (cacBlockQueries != null) {
+                                val lastCacBlockHeight = cacBlockQueries.getLastBlockHeight().get()
+                                if (lastCacBlockHeight >= 0) {
+                                    cacChecks.putAll(blockchains.associateWith { checkBlockHeightAnchoredInCAC(cacBlockQueries, it, lastCacBlockHeight) })
+                                }
+                            }
                         }
+                        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK] = EagerDiagnosticValue(cacChecks)
                         delay(verifyLastAnchoredHeightIntervalMs)
                     } catch (e: CancellationException) {
                         break
@@ -215,7 +232,16 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
     }
 
     fun remove(blockchainRid: BlockchainRid) {
-        anchoringCheckJobs.remove(blockchainRid)?.forEach { it.cancel() }
-        cacToAnchoringReceiver.remove(blockchainRid)
+        if (blockchainRid == systemAnchoringBrid) {
+            sacCheckJob?.cancel()
+            evmCheckJob?.cancel()
+        } else {
+            cacToAnchoringReceiver.remove(blockchainRid)?.also {
+                if (cacToAnchoringReceiver.isEmpty()) {
+                    cacCheckJob?.cancel()
+                    cacCheckJob = null
+                }
+            }
+        }
     }
 }
