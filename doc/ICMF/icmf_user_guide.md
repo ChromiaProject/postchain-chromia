@@ -73,3 +73,15 @@ config:
           topic: "L_topic2"
         - etc.
 ```
+
+### Combining ICMF with other extensions
+
+ICMF will normally try to fit as many messages as possible into the block. When running in combination with other
+extensions it might be necessary to tweak the amount of space that it leaves for them to inject operations.
+
+```
+config:
+  icmf:
+    receiver:
+      special-tx-margin-bytes: 102400 # Default 100 KiB
+```
