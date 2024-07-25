@@ -56,14 +56,8 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 val maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize
-                if (maxBlockSize < MAX_MESSAGE_SIZE + TX_SIZE_MARGIN) {
-                    logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + TX_SIZE_MARGIN}")
-                }
                 val gtxConfig = configuration.rawConfig[KEY_GTX] ?: gtv(mapOf())
                 val maxTxSize = gtxConfig.toObject<GtxConfigurationData>().maxTxSize
-                if (maxTxSize < MAX_MESSAGE_SIZE + TX_SIZE_MARGIN) {
-                    logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + TX_SIZE_MARGIN}")
-                }
                 txExt.maxTxSize = min(maxBlockSize, maxTxSize)
 
                 val queryProvider = createQueryProvider(configuration, clusterManagement)
@@ -72,6 +66,14 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                         ?: throw UserMistake("Missing configuration key icmf/receiver")
                 val config = IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig)
                 txExt.icmfReceiverBlockchainConfigData = config
+                txExt.specialTxSizeMargin = config.specialTxMarginBytes
+
+                if (maxBlockSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
+                    logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+                }
+                if (maxTxSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
+                    logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+                }
 
                 if (config.global != null) {
                     if (!config.global.topics.isNullOrEmpty()) {
