@@ -5,15 +5,16 @@ import net.postchain.core.Shutdownable
 import net.postchain.d1.query.ChromiaQueryProvider
 
 class IntraClusterTopicIcmfReceiver(
-        origins: List<Pair<String, BlockchainRid>>,
+        origins: List<LocalIcmfOrigin>,
         queryProvider: ChromiaQueryProvider,
 ) : IcmfReceiver<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
 
     private val pipes: List<IntraClusterTopicPipe> = origins.map {
         IntraClusterTopicPipe(
                 queryProvider,
-                TopicRoute(it.first, listOf(it.second)),
-                it.second
+                TopicRoute(it.topic, listOf(it.blockchainRid)),
+                it.blockchainRid,
+                it.skipToHeight
         )
     }
 
@@ -23,3 +24,9 @@ class IntraClusterTopicIcmfReceiver(
         pipes.forEach { it.shutdown() }
     }
 }
+
+data class LocalIcmfOrigin(
+        val topic: String,
+        val blockchainRid: BlockchainRid,
+        val skipToHeight: Long = 0
+)
