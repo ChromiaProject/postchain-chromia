@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
@@ -51,6 +52,7 @@ import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
 import net.postchain.chain0.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.chain0.lib.ft4.external.accounts.updateMainAuthDescriptorOperation
+import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.model.ProviderInfo
@@ -60,6 +62,7 @@ import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -67,6 +70,8 @@ import net.postchain.common.wrap
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -81,6 +86,7 @@ import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -417,7 +423,7 @@ class Directory1EconomyChainMixIT {
         testLogger.info("Registering FT accounts")
 
         // Register Alice account
-        aliceAuthenticator = registerAccount(aliceKeyPair, "Alice")
+        aliceAuthenticator = registerAccount(ecBrid, aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmAddress)
 
         // Claim initial supply
@@ -566,19 +572,51 @@ class Directory1EconomyChainMixIT {
     @Order(11)
     fun `Deploy dapp`() {
         testLogger.info("Deploying dapp to c1")
-        deployDapp("test_dapp", containerName, assertSigners = arrayOf(node1))
-        dappBrid = dapps["test_dapp"]!!
-
-        // Making sure about 5 blocks of dapp are built
-        val dappClient = node1.client(dappBrid)
-        val height = dappClient.currentBlockHeight()
-        awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 4)
-        }
+        deployDapp("test_cross_chain_transfer", containerName, assertSigners = arrayOf(node1))
+        dappBrid = dapps["test_cross_chain_transfer"]!!
     }
 
     @Test
     @Order(12)
+    fun `Perform cross-chain transfers between EC and dapp`() {
+        testLogger.info("Initializing cross chain transfer dApp")
+        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
+                ClusterManagementImpl(node1.c0),
+                mapOf(
+                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo()),
+                        APP_CLUSTER1 to listOf(node1.peerInfo())
+                )
+        ))
+        val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
+        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+
+        val aliceDappAuthenticator = registerAccount(dappBrid, aliceKeyPair, "Alice")
+
+        node1.tx(dappBrid, "init", gtv(ecBrid), gtv(assetId))
+
+        testLogger.info("Transfer tCHR to dApp from EC")
+        val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
+        val initialDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
+        assertThat(initialDappAliceBalance).isNull()
+
+        performCrossChainTransfer(iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, dappBrid)
+
+        val afterTransferEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
+        val afterTransferDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)!!.amount
+        assertThat(initialEcAliceBalance - afterTransferEcAliceBalance).isEqualTo(BigInteger.TEN)
+        assertThat(afterTransferDappAliceBalance).isEqualTo(BigInteger.TEN)
+
+        testLogger.info("Transfer tCHR to EC from dApp")
+        performCrossChainTransfer(iccfProofTxMaterialBuilder, merkleHashCalculator, aliceDappAuthenticator, dappBrid, ecBrid)
+
+        val afterTransferBackEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
+        val afterTransferBackDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
+        assertThat(afterTransferBackEcAliceBalance).isEqualTo(initialEcAliceBalance)
+        assertThat(afterTransferBackDappAliceBalance).isNull()
+    }
+
+    @Test
+    @Order(13)
     fun `Register new dapp provider`() {
         val newDappProvider = cryptoSystem.generateKeyPair()
 
@@ -596,7 +634,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(13)
+    @Order(14)
     fun `Upgrade container`() {
         testLogger.info("Upgrade container")
 
@@ -670,7 +708,7 @@ class Directory1EconomyChainMixIT {
     }
 
     @Test
-    @Order(14)
+    @Order(15)
     fun `Link provider account to evm EOA account and update auth description signer with evm address`() {
         val metamaskPrivateKey = "8AA1F227F18B049D72C53B4565F2FC9D3D9A60DAAB938977CEFC3C9393D560D8"
         val evmKeyPair = ECKeyPair.create(BigInteger(metamaskPrivateKey, 16))
@@ -699,12 +737,12 @@ class Directory1EconomyChainMixIT {
         assertThat(newAccountMainAuthDescriptor.args[1].asByteArray().toHex()).isEqualTo(addressString.uppercase())
     }
 
-    private fun registerAccount(userKeyPair: KeyPair, username: String): FTAuthenticator {
-        node1.client(ecBrid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
+    private fun registerAccount(blockchainRid: BlockchainRid, userKeyPair: KeyPair, username: String): FTAuthenticator {
+        node1.client(blockchainRid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
                 .registerAccountOperation(userKeyPair.pubKey)
                 .postTransactionUntilConfirmed("Register $username account")
 
-        return FTAuthenticator(userKeyPair, node1.client(ecBrid, listOf(userKeyPair)))
+        return FTAuthenticator(userKeyPair, node1.client(blockchainRid, listOf(userKeyPair)))
     }
 
     private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair): Signature {
@@ -778,5 +816,52 @@ class Directory1EconomyChainMixIT {
                 BigInteger(signatureData.v).longValueExact()
         )
         return signature
+    }
+
+    private fun performCrossChainTransfer(
+            iccfProofTxMaterialBuilder: IccfProofTxMaterialBuilder,
+            hashCalculator: GtvMerkleHashCalculator,
+            sourceAccountAuthenticator: FTAuthenticator,
+            sourceChain: BlockchainRid,
+            destinationChain: BlockchainRid
+    ) {
+        val initTransferTxRid = sourceAccountAuthenticator.transactionBuilder()
+                .initTransferOperation(sourceAccountAuthenticator.accountId, assetId, BigInteger.TEN, listOf(destinationChain.data), Long.MAX_VALUE)
+                .postAwaitConfirmation().txRid
+
+        val initTransferTx = GtvDecoder.decodeGtv(node1.client(sourceChain).getTransaction(initTransferTxRid))
+
+        val initTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    initTransferTxRid,
+                    initTransferTx.merkleHash(hashCalculator),
+                    listOf(aliceKeyPair.pubKey),
+                    sourceChain,
+                    destinationChain,
+                    forceIntraNetworkIccfOperation = true
+            )
+        }!!
+
+        val applyTransferTxRid = initTxProof.txBuilder
+                .addOperation("ft4.crosschain.apply_transfer", initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
+                .postAwaitConfirmation().txRid
+
+        val applyTransferTx = GtvDecoder.decodeGtv(node1.client(destinationChain).getTransaction(applyTransferTxRid))
+
+        val applyTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    applyTransferTxRid,
+                    applyTransferTx.merkleHash(hashCalculator),
+                    listOf(),
+                    destinationChain,
+                    sourceChain,
+                    forceIntraNetworkIccfOperation = true
+            )
+        }!!
+
+        applyTxProof.txBuilder
+                .addOperation("ft4.crosschain.complete_transfer", applyTransferTx, gtv(1))
+                .postAwaitConfirmation()
+
     }
 }
