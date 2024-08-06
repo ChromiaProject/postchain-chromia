@@ -1,0 +1,30 @@
+// Taken from https://gitlab.com/chromaway/ft4-lib/-/blob/development/examples/crosschain-cli-example/src/chain2/module.rell
+
+import lib.ft4.accounts;
+import lib.ft4.auth;
+import lib.ft4.assets;
+import lib.ft4.crosschain;
+
+@extend(auth.auth_handler)
+function () = auth.add_auth_handler(
+    flags = []
+);
+
+operation init(test_asset_issuing_chain: byte_array, asset_id: byte_array) {
+    crosschain.Unsafe.register_crosschain_asset(
+        asset_id,
+        "tCHR",
+        "tCHR",
+        6,
+        test_asset_issuing_chain,
+        "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png",
+        "ft4",
+        x"",
+        test_asset_issuing_chain
+    );
+}
+
+operation register_account(pubkey) {
+    val auth_descriptor = accounts.single_sig_auth_descriptor(pubkey, set(["A", "T"]));
+    accounts.create_account_with_auth(auth_descriptor);
+}

@@ -2,7 +2,6 @@ blockchains:
   test_dapp:
     module: test_dapp
     config:
-      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 1000
         maxblocktransactions: 500
@@ -15,7 +14,6 @@ blockchains:
   test_dapp2:
     module: test_dapp2
     config:
-      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -36,7 +34,6 @@ blockchains:
   test_dapp3:
     module: test_dapp3
     config:
-      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -49,7 +46,6 @@ blockchains:
   test_dapp5:
     module: test_dapp5
     config:
-      config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2001
         maxblocktransactions: 501
@@ -59,3 +55,19 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+  test_cross_chain_transfer:
+    module: test_cross_chain_transfer
+    config:
+      blockstrategy:
+        maxblocktime: 1000
+      gtx:
+        modules:
+          - "net.postchain.d1.iccf.IccfGTXModule"
+
+libs:
+  ft4:
+    registry: https://gitlab.com/chromaway/ft4-lib.git
+    path: rell/src/lib/ft4
+    tagOrBranch: v1.0.0r
+    rid: x"FA487D75E63B6B58381F8D71E0700E69BEDEAD3A57D1E6C1A9ABB149FAC9E65F"
+    insecure: false

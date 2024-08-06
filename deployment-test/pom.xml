@@ -254,11 +254,12 @@
                         <id>compile-test-dapps</id>
                         <phase>generate-test-resources</phase>
                         <goals>
+                            <goal>rell-install</goal>
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
                             <rootFolder>${project.basedir}/..</rootFolder>
-                            <configFile>deployment-test/rell/config.yml</configFile>
+                            <configFile>deployment-test/rell/chromia.yml</configFile>
                             <source>deployment-test/target/rell/src</source>
                             <target>deployment-test/target/test-classes/directory1deployment</target>
                         </configuration>
