@@ -41,10 +41,16 @@ import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain.registerDappProviderOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
+import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
 import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
 import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
+import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
+import net.postchain.chain0.lib.ft4.core.accounts.AuthType
+import net.postchain.chain0.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
+import net.postchain.chain0.lib.ft4.external.accounts.getAccountMainAuthDescriptor
+import net.postchain.chain0.lib.ft4.external.accounts.updateMainAuthDescriptorOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.model.ProviderInfo
@@ -67,6 +73,7 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
+import net.postchain.eif.hbridge.getEoaAddressesForAccount
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
@@ -76,6 +83,7 @@ import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -95,6 +103,8 @@ import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.crypto.Credentials
+import org.web3j.crypto.ECKeyPair
+import org.web3j.crypto.Keys
 import org.web3j.crypto.Sign
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
@@ -659,6 +669,36 @@ class Directory1EconomyChainMixIT {
         }
     }
 
+    @Test
+    @Order(14)
+    fun `Link provider account to evm EOA account and update auth description signer with evm address`() {
+        val metamaskPrivateKey = "8AA1F227F18B049D72C53B4565F2FC9D3D9A60DAAB938977CEFC3C9393D560D8"
+        val evmKeyPair = ECKeyPair.create(BigInteger(metamaskPrivateKey, 16))
+        val addressString = Keys.getAddress(evmKeyPair.publicKey)
+        val addressByteArray = addressString.hexStringToByteArray()
+        val accountId = gtv(node1KeyPair.pubKey.data).merkleHash(hashCalculator)
+
+        val accountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
+
+        val updateMainAuthDescriptorSignature = getUpdateMainAuthDescriptorSignature(addressByteArray, accountMainAuthDescriptor, evmKeyPair)
+        val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair)
+
+        node1.client(ecBrid, listOf(node1KeyPair)).transactionBuilder().addNop()
+                .evmSignaturesOperation(listOf(addressByteArray), listOf(linkEvmEoaAccountSignature))
+                .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
+                .linkEvmEoaAccountOperation(addressByteArray)
+                .evmSignaturesOperation(listOf(addressByteArray), listOf(updateMainAuthDescriptorSignature))
+                .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
+                .updateMainAuthDescriptorOperation(AuthDescriptor(AuthType.S, listOf(gtv(gtv("A"), gtv("T")), gtv(addressByteArray)), GtvNull))
+                .postTransactionUntilConfirmed("Link EVM account and update auth description signer with evm address")
+
+        val eoaAddressesForAccount = node1.client(ecBrid).getEoaAddressesForAccount(accountId)
+        assertThat(eoaAddressesForAccount[0].toHex()).isEqualTo(addressString.uppercase())
+
+        val newAccountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
+        assertThat(newAccountMainAuthDescriptor.args[1].asByteArray().toHex()).isEqualTo(addressString.uppercase())
+    }
+
     private fun registerAccount(userKeyPair: KeyPair, username: String): FTAuthenticator {
         node1.client(ecBrid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
                 .registerAccountOperation(userKeyPair.pubKey)
@@ -667,9 +707,9 @@ class Directory1EconomyChainMixIT {
         return FTAuthenticator(userKeyPair, node1.client(ecBrid, listOf(userKeyPair)))
     }
 
-    private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray) {
+    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair): Signature {
         val opName = "eif.hbridge.link_evm_eoa_account"
-        val opArgs = gtv(listOf(gtv(userEvmAddress)))
+        val opArgs = gtv(listOf(gtv(addressByteArray)))
 
         val nonce = gtv(listOf(
                 gtv(ecBrid.data),
@@ -678,24 +718,65 @@ class Directory1EconomyChainMixIT {
                 gtv(0),
         )).merkleHash(hashCalculator)
 
-        val template = node1.client(ecBrid, listOf(ecAdminKeyPair)).getAuthMessageTemplate(opName, opArgs)
+        val template = node1.client(ecBrid).getAuthMessageTemplate(opName, opArgs)
         val message = template.replace("{blockchain_rid}", ecBrid.toHex().uppercase())
                 .replace("{nonce}", nonce.toHex().uppercase())
 
         val evmSig = Sign.signPrefixedMessage(
                 message.toByteArray(StandardCharsets.UTF_8),
-                evmContainerCredentials.ecKeyPair
+                evmKeyPair
         )
         val signature = Signature(
                 evmSig.r.wrap(),
                 evmSig.s.wrap(),
                 BigInteger(evmSig.v).longValueExact()
         )
+        return signature
+    }
+
+    private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray) {
+        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair)
 
         userAuthenticator.client.transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(userEvmAddress), listOf(signature))
                 .ftAuthOperation(aliceAuthenticator.accountId, aliceAuthenticator.authDescriptor.id.data)
                 .linkEvmEoaAccountOperation(userEvmAddress)
                 .postTransactionUntilConfirmed("Link EVM account")
+    }
+
+    private fun getUpdateMainAuthDescriptorSignature(addressByteArray: ByteArray, accountMainAuthDescriptor: Ft4GetAccountMainAuthDescriptorResult, keyPair: ECKeyPair): Signature {
+        val updateMainAuthDescriptorOpName = "ft4.update_main_auth_descriptor"
+        val authDescriptorArgs = gtv(gtv(gtv("A"), gtv("T")), gtv(addressByteArray))
+        val authDescriptor = gtv(
+                gtv(AuthType.S.ordinal.toLong()),
+                authDescriptorArgs,
+                GtvNull)
+        val updateMainAuthDescriptorOpArgs = listOf(authDescriptor)
+        val authMessageTemplate = node1.client(ecBrid).getAuthMessageTemplate(updateMainAuthDescriptorOpName, gtv(updateMainAuthDescriptorOpArgs))
+
+        val ecRid = node1.c0.getEconomyChainRid()
+        val nonce = gtv(
+                gtv(ecRid!!),
+                gtv(updateMainAuthDescriptorOpName),
+                gtv(updateMainAuthDescriptorOpArgs),
+                gtv(0),
+        ).merkleHash(hashCalculator)
+        val authDescriptorAccountId = accountMainAuthDescriptor.accountId
+
+        val authMessage = authMessageTemplate
+                .replace("{blockchain_rid}", ecRid.toHex())
+                .replace("{nonce}", nonce.toHex().uppercase())
+                .replace("{account_id}", authDescriptorAccountId.toHex().uppercase())
+
+        val signatureData = Sign.signPrefixedMessage(
+                authMessage.toByteArray(StandardCharsets.UTF_8),
+                keyPair
+        )
+        val signature = Signature(
+                signatureData.r.wrap(),
+                signatureData.s.wrap(),
+                BigInteger(signatureData.v).longValueExact()
+        )
+        return signature
     }
 }
