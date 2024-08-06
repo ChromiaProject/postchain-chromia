@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThan
 import assertk.assertions.isTrue
@@ -150,16 +151,16 @@ class IcmfReceiverIT : ManagedModeTest() {
         })
     }
 
-    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid) {
+    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid, messageHeight: Long = 0) {
         QueryProviderMocks.clearMocks()
 
         QueryProviderMocks.addMockQueries(senderBrid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic") else null
+                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic", messageHeight) else null
 
             override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
-                        gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(0)))))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"]!!.asInteger() < messageHeight)
+                        gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(messageHeight)))))
                     else
                         gtv(listOf())
         })
@@ -574,6 +575,61 @@ class IcmfReceiverIT : ManagedModeTest() {
                     assertThat(message.sender).isEqualTo(directoryChainBrid)
                     assertThat(message.topic).isEqualTo("my-topic")
                     assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun skipToHeight() {
+        setupNonAnchoredQueriesMock()
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_skip_to_height_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).isEmpty()
+                }
+            }
+        }
+
+        setupNonAnchoredQueriesMock(messageHeight = 1)
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).hasSize(1)
+                    val message = messages[0]
+                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.height).isEqualTo(1)
                 }
             }
         }

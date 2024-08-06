@@ -293,15 +293,15 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 MessageHashOp.OP_NAME -> {
                     val messageHashOp = MessageHashOp.fromOpData(op) ?: return false
 
+                    if (currentHeaderData == null) {
+                        logger.warn("got ${MessageHashOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME} or ${NonAnchoredHeaderOp.OP_NAME}")
+                        return false
+                    }
+
                     if (currentAnchorHeaderData != null) {
                         if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
                     } else {
-                        if (!validateLocalMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
-                    }
-
-                    if (currentHeaderData == null) {
-                        logger.warn("got ${MessageHashOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME}")
-                        return false
+                        if (!validateLocalMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic, currentHeaderData.height)) return false
                     }
 
                     val topicData = currentHeaderData.icmfHeaderData[messageHashOp.topic]
@@ -385,14 +385,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         return true
     }
 
-    private fun validateLocalMessageSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
-        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender.data) && it.topic == topic } == true
+    private fun validateLocalMessageSenderAndTopic(sender: BlockchainRid, topic: String, height: Long): Boolean {
+        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender.data) && it.topic == topic && height >= it.skipToHeight } == true
                 || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
                 || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)) {
             return true
         }
 
-        logger.warn("Blockchain $sender is not allowed to send us local non-anchored messages on topic $topic")
+        logger.warn("Blockchain $sender is not allowed to send us local non-anchored messages on topic $topic at height $height")
         return false
     }
 

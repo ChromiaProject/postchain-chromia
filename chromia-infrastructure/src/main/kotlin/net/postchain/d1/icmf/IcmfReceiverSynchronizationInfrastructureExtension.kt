@@ -118,9 +118,11 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
                         } ?: throw ProgrammerMistake("Unable to resolve directory chain blockchain RID")
                         txExt.directoryChainBrid = directoryChainBrid
-                        directoryChainConfig.topics.map { it to directoryChainBrid }
+                        directoryChainConfig.topics.map { LocalIcmfOrigin(it, directoryChainBrid) }
                     } ?: listOf()
-                    val localOrigins = config.local?.map { it.topic to BlockchainRid(it.blockchainRid) } ?: listOf()
+                    val localOrigins = config.local?.map {
+                        LocalIcmfOrigin(it.topic, BlockchainRid(it.blockchainRid), it.skipToHeight)
+                    } ?: listOf()
                     val intraClusterTopicIcmfReceiver = IntraClusterTopicIcmfReceiver(
                             directoryChainOrigins + localOrigins,
                             queryProvider

@@ -47,7 +47,11 @@ data class IcmfReceiverSpecificBlockChainConfig(
         val blockchainRid: ByteArray,
 
         @Name("topic")
-        val topic: String
+        val topic: String,
+
+        @Name("skip-to-height")
+        @DefaultValue(0)
+        val skipToHeight: Long
 )
 
 data class IcmfReceiverTopicsConfig(

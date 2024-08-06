@@ -71,6 +71,7 @@ config:
           topic: "L_topic1"
         - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000002"
           topic: "L_topic2"
+          skip-to-height: 10 # Skip any messages sent by chain on this topic until this height
         - etc.
 ```
 
