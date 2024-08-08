@@ -32,7 +32,7 @@ class AnchoringSubnodePipe(
         val r = try {
             client.blockAtHeight(fromHeight)
         } catch (e: Exception) {
-            logger.warn(e) { "Block fetching from sub node failed: $e" }
+            logger.warn(e) { "Block fetching from subnode failed for $blockchainRid at height $fromHeight: $e" }
             null
         }?.let {
             listOf(AnchoringPacket(
