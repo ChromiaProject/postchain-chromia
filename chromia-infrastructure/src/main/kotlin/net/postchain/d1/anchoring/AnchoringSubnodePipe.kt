@@ -45,19 +45,6 @@ class AnchoringSubnodePipe(
 
         return r ?: listOf()
     }
-//            try {
-//                client.blocksFromHeight(fromHeight, limit, false)
-//            } catch (e: Exception) {
-//                logger.warn(e) { "Block fetching from sub node failed: $e" }
-//                listOf()
-//            }.let { blockDetails ->
-//                blockDetails.map { AnchoringPacket(
-//                        it.height,
-//                        it.rid.data,
-//                        it.header.data,
-//                        it.witness.data
-//                ) }
-//            }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
