@@ -110,13 +110,13 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                         }
                         ops.add(opData)
                         opsCount++
+                        currentHeight++
                         currentSize += size
 
                         if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
                             break@pipePacketsIt
                         }
                     }
-                    currentHeight += clusterAnchorPackets.size
                 }
             }
         }

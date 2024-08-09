@@ -31,7 +31,7 @@ class AnchoringSubnodePipe(
     override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> = try {
         client.blocksFromHeight(fromHeight, limit).map {
             AnchoringPacket(
-                    fromHeight,
+                    it.height,
                     it.rid.data,
                     it.header.data,
                     it.witness.data
