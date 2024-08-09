@@ -52,6 +52,8 @@ import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
 import net.postchain.chain0.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.chain0.lib.ft4.external.accounts.updateMainAuthDescriptorOperation
+import net.postchain.chain0.lib.ft4.external.crosschain.APPLY_TRANSFER
+import net.postchain.chain0.lib.ft4.external.crosschain.COMPLETE_TRANSFER
 import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerState
@@ -78,9 +80,11 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
+import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
 import net.postchain.eif.hbridge.getEoaAddressesForAccount
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
+import net.postchain.eif.lib.ft4.external.accounts.UPDATE_MAIN_AUTH_DESCRIPTOR
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
@@ -746,7 +750,7 @@ class Directory1EconomyChainMixIT {
     }
 
     private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair): Signature {
-        val opName = "eif.hbridge.link_evm_eoa_account"
+        val opName = LINK_EVM_EOA_ACCOUNT
         val opArgs = gtv(listOf(gtv(addressByteArray)))
 
         val nonce = gtv(listOf(
@@ -783,19 +787,18 @@ class Directory1EconomyChainMixIT {
     }
 
     private fun getUpdateMainAuthDescriptorSignature(addressByteArray: ByteArray, accountMainAuthDescriptor: Ft4GetAccountMainAuthDescriptorResult, keyPair: ECKeyPair): Signature {
-        val updateMainAuthDescriptorOpName = "ft4.update_main_auth_descriptor"
         val authDescriptorArgs = gtv(gtv(gtv("A"), gtv("T")), gtv(addressByteArray))
         val authDescriptor = gtv(
                 gtv(AuthType.S.ordinal.toLong()),
                 authDescriptorArgs,
                 GtvNull)
         val updateMainAuthDescriptorOpArgs = listOf(authDescriptor)
-        val authMessageTemplate = node1.client(ecBrid).getAuthMessageTemplate(updateMainAuthDescriptorOpName, gtv(updateMainAuthDescriptorOpArgs))
+        val authMessageTemplate = node1.client(ecBrid).getAuthMessageTemplate(UPDATE_MAIN_AUTH_DESCRIPTOR, gtv(updateMainAuthDescriptorOpArgs))
 
         val ecRid = node1.c0.getEconomyChainRid()
         val nonce = gtv(
                 gtv(ecRid!!),
-                gtv(updateMainAuthDescriptorOpName),
+                gtv(UPDATE_MAIN_AUTH_DESCRIPTOR),
                 gtv(updateMainAuthDescriptorOpArgs),
                 gtv(0),
         ).merkleHash(hashCalculator)
@@ -843,7 +846,7 @@ class Directory1EconomyChainMixIT {
         }!!
 
         val applyTransferTxRid = initTxProof.txBuilder
-                .addOperation("ft4.crosschain.apply_transfer", initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
+                .addOperation(APPLY_TRANSFER, initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
                 .postAwaitConfirmation().txRid
 
         val applyTransferTx = GtvDecoder.decodeGtv(node1.client(destinationChain).getTransaction(applyTransferTxRid))
@@ -860,7 +863,7 @@ class Directory1EconomyChainMixIT {
         }!!
 
         applyTxProof.txBuilder
-                .addOperation("ft4.crosschain.complete_transfer", applyTransferTx, gtv(1))
+                .addOperation(COMPLETE_TRANSFER, applyTransferTx, gtv(1))
                 .postAwaitConfirmation()
 
     }
