@@ -145,10 +145,38 @@ class AnchoringSpecialTxExtensionTest {
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
 
-        // 23 packages will fit in total size
+        // 45 packages will fit in total size
         assertThat(ops.size).isEqualTo(45)
         // 3 times b/c mightHaveNewPackets = true
         verify(pipe1, times(3)).fetchNextRange(any(), any())
         verify(pipe2, times(1)).fetchNextRange(any(), any())
+    }
+
+    @Test
+    fun `read entire first range and part of second range from pipe1 and part of the first range from pipe2 until maxBlocksPerChain is reached`() {
+        // setting the maxBlocksPerChain = 33
+        sut.anchoringConfig = AnchoringBlockchainConfigData(33, 1000, 100)
+
+        // chain1 / 40 packets are available
+        val range10 = generatePackets(0 until 20, brid1)
+        val range11 = generatePackets(20 until 40, brid1)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range10, range11, emptyList())
+
+        // chain2 / 30 packets are available
+        val range20 = generatePackets(0 until 20, brid2)
+        val range21 = generatePackets(20 until 30, brid2)
+        whenever(pipe2.fetchNextRange(any(), any())).doReturn(range20, range21, emptyList())
+
+        // we can read all the packages
+        val sizeOf45 = (range10 + range11 + range20 + range21).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf45.toLong() + TX_SIZE_MARGIN
+
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
+
+        // 63 packages will fit in total size
+        assertThat(ops.size).isEqualTo(33 + 30)
+        verify(pipe1, times(2)).fetchNextRange(any(), any())
+        // 3 times b/c mightHaveNewPackets = true
+        verify(pipe2, times(3)).fetchNextRange(any(), any())
     }
 }
