@@ -90,7 +90,7 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     @Test
-    fun `read a few packets from the first range from pipe1 until size limit is reached`() {
+    fun `read part of the first range from pipe1 until size limit is reached`() {
         // 40 packets are available
         val range0 = generatePackets(0 until 20, brid1)
         val range1 = generatePackets(20 until 40, brid1)
@@ -109,7 +109,7 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     @Test
-    fun `read entire first range and part of second range from pipe1 until size limit is reached`() {
+    fun `read first range and part of the second range from pipe1 until size limit is reached`() {
         // 40 packets are available
         val range0 = generatePackets(0 until 20, brid1)
         val range1 = generatePackets(20 until 40, brid1)
@@ -153,7 +153,7 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     @Test
-    fun `read entire first range and part of second range from pipe1 and part of the first range from pipe2 until maxBlocksPerChain is reached`() {
+    fun `read first range and part of the second range from pipe1 and part of the first range from pipe2 until maxBlocksPerChain is reached`() {
         // setting the maxBlocksPerChain = 33
         sut.anchoringConfig = AnchoringBlockchainConfigData(33, 1000, 100)
 
