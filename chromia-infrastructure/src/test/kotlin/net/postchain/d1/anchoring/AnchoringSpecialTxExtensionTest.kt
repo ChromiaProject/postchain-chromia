@@ -4,19 +4,16 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -25,43 +22,61 @@ class AnchoringSpecialTxExtensionTest {
 
     lateinit var anchoringReceiverFactory: AnchoringReceiverFactory
     lateinit var sut: AnchoringSpecialTxExtension
-    lateinit var module: GTXModule
-    lateinit var pipe: AnchoringPipe
 
-    var mightHaveNewPackets = true
+    // anchoring chain
+    private val blockchainRid0 = BlockchainRid.ZERO_RID
+    private lateinit var module0: GTXModule
+
+    // chain1
+    private val blockchainRid1 = BlockchainRid.buildRepeat(1)
+    private lateinit var pipe1: AnchoringPipe
+
+    // chain2
+    private val blockchainRid2 = BlockchainRid.buildRepeat(2)
+    private lateinit var pipe2: AnchoringPipe
+
+    private var mightHaveNewPackets = true
 
     @BeforeEach
     fun beforeEach() {
 
-        val blockchainRidMock = BlockchainRid.ZERO_RID
-
-        pipe = mock<AnchoringPipe> {
-            on { blockchainRid } doReturn blockchainRidMock
+        pipe1 = mock {
+            on { blockchainRid } doReturn blockchainRid1
             on { mightHaveNewPackets() } doReturn mightHaveNewPackets
         }
-        val anchoringReceiver = mock<AnchoringReceiver> {
-            on { getRelevantPipes() } doReturn listOf(pipe)
+
+        pipe2 = mock {
+            on { blockchainRid } doReturn blockchainRid2
+            on { mightHaveNewPackets() } doReturn mightHaveNewPackets
         }
 
-        anchoringReceiverFactory = mock<AnchoringReceiverFactory> {
+        val anchoringReceiver: AnchoringReceiver = mock {
+            on { getRelevantPipes() } doReturn listOf(pipe1, pipe1)
+        }
+
+        anchoringReceiverFactory = mock {
             on { create(any(), any()) } doReturn anchoringReceiver
         }
-        sut = AnchoringSpecialTxExtension(anchoringReceiverFactory)
 
+        sut = AnchoringSpecialTxExtension(anchoringReceiverFactory)
         sut.isSigner = { true }
-        sut.clusterManagement = mock<ClusterManagement>()
-        sut.blockchainConfigProvider = mock<BlockchainConfigProvider>()
+        sut.clusterManagement = mock()
+        sut.blockchainConfigProvider = mock()
         sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100)
 
-        sut.createReceiver(blockchainRidMock)
+        sut.createReceiver(blockchainRid0)
 
-        module = mock<GTXModule>()
-        `when`(module.query(any(), eq("get_last_anchored_block"), any())).thenReturn(gtv(
-                "block_rid" to gtv(BlockchainRid.buildRepeat(0)),
-                "block_height" to gtv(0)
-        ))
-
-        sut.init(module, 0L, blockchainRidMock, mock<CryptoSystem>())
+        module0 = mock {
+            on { query(any(), eq("get_last_anchored_block"), eq(gtv("blockchain_rid" to gtv(blockchainRid0)))) } doReturn gtv(
+                    "block_rid" to gtv(blockchainRid1),
+                    "block_height" to gtv(0)
+            )
+            on { query(any(), eq("get_last_anchored_block"), eq(gtv("blockchain_rid" to gtv(blockchainRid1)))) } doReturn gtv(
+                    "block_rid" to gtv(blockchainRid2),
+                    "block_height" to gtv(0)
+            )
+        }
+        sut.init(module0, 0L, blockchainRid0, mock())
     }
 
     private fun generatePackets(blocks: IntRange) = blocks.map {
@@ -73,10 +88,10 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     @Test
-    fun `read until size limit is reached`() {
+    fun `read a few packets from the first packet range from pipe1 until size limit is reached`() {
         // 50 packets are available
         val packets = generatePackets(0 until 50)
-        whenever(pipe.fetchNextRange(any(), any())).doReturn(packets)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(packets)
 
         // read 3 out of 50 packets
         val sizeOf3 = packets.take(3).sumOf { sut.buildOpData(it).second }
@@ -86,6 +101,7 @@ class AnchoringSpecialTxExtensionTest {
 
         // 3 packages will fit in total size
         assertThat(ops.size).isEqualTo(3)
-        verify(pipe, times(1)).fetchNextRange(any(), any())
+        verify(pipe1, times(1)).fetchNextRange(any(), any())
+        verify(pipe2, never()).fetchNextRange(any(), any())
     }
 }
