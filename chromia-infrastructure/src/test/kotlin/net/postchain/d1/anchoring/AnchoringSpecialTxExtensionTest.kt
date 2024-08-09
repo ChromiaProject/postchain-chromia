@@ -88,13 +88,14 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     @Test
-    fun `read a few packets from the first packet range from pipe1 until size limit is reached`() {
-        // 50 packets are available
-        val packets = generatePackets(0 until 50)
-        whenever(pipe1.fetchNextRange(any(), any())).doReturn(packets)
+    fun `read a few packets from the first range from pipe1 until size limit is reached`() {
+        // 40 packets are available
+        val range0 = generatePackets(0 until 20)
+        val range1 = generatePackets(20 until 40)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
 
-        // read 3 out of 50 packets
-        val sizeOf3 = packets.take(3).sumOf { sut.buildOpData(it).second }
+        // read 3 out of 40 packets
+        val sizeOf3 = range0.take(3).sumOf { sut.buildOpData(it).second }
         sut.maxTxSize = sizeOf3.toLong() + TX_SIZE_MARGIN
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
@@ -102,6 +103,25 @@ class AnchoringSpecialTxExtensionTest {
         // 3 packages will fit in total size
         assertThat(ops.size).isEqualTo(3)
         verify(pipe1, times(1)).fetchNextRange(any(), any())
+        verify(pipe2, never()).fetchNextRange(any(), any())
+    }
+
+    @Test
+    fun `read entire first range and part of second range from pipe1 until size limit is reached`() {
+        // 50 packets are available
+        val range0 = generatePackets(0 until 20)
+        val range1 = generatePackets(20 until 40)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
+
+        // read 23 (MAX_PACKETS_PER_REQUEST + 3) out of 50 packets
+        val sizeOf23 = (range0 + range1).take(23).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf23.toLong() + TX_SIZE_MARGIN
+
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
+
+        // 23 packages will fit in total size
+        assertThat(ops.size).isEqualTo(23)
+        verify(pipe1, times(2)).fetchNextRange(any(), any())
         verify(pipe2, never()).fetchNextRange(any(), any())
     }
 }
