@@ -319,9 +319,9 @@
 
             <!-- EIF / contracts / generate abi and java stubs -->
             <plugin>
-                <groupId>com.github.longdt</groupId>
+                <groupId>org.web3j</groupId>
                 <artifactId>web3j-maven-plugin</artifactId>
-                <version>4.8.10</version>
+                <version>${web3j-plugin.version}</version>
                 <configuration>
                     <packageName>net.postchain.eif.contracts</packageName>
                     <nativeJavaType>false</nativeJavaType>
