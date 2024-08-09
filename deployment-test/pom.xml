@@ -321,7 +321,7 @@
             <plugin>
                 <groupId>com.github.longdt</groupId>
                 <artifactId>web3j-maven-plugin</artifactId>
-                <version>4.8.10</version>
+                <version>${web3j-plugin.version}</version>
                 <configuration>
                     <packageName>net.postchain.eif.contracts</packageName>
                     <nativeJavaType>false</nativeJavaType>
