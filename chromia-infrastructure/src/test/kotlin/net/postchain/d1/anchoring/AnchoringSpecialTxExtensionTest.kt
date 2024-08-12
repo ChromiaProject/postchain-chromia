@@ -4,88 +4,179 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BlockEContext
-import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.config.BlockchainConfigProvider
-import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
-class AnchoringSpecialTxExtensionTest() {
+class AnchoringSpecialTxExtensionTest {
 
     lateinit var anchoringReceiverFactory: AnchoringReceiverFactory
-    lateinit var anchoringSpecialTxExtension: AnchoringSpecialTxExtension
-    lateinit var module: GTXModule
-    lateinit var pipe: AnchoringPipe
+    lateinit var sut: AnchoringSpecialTxExtension
 
-    var mightHaveNewPackets = true
+    // anchoring chain
+    private val blockchainRid0 = BlockchainRid.ZERO_RID
+    private lateinit var module0: GTXModule
+
+    // chain1
+    private val brid1 = BlockchainRid.buildRepeat(1)
+    private lateinit var pipe1: AnchoringPipe
+
+    // chain2
+    private val brid2 = BlockchainRid.buildRepeat(2)
+    private lateinit var pipe2: AnchoringPipe
+
+    private var mightHaveNewPackets = true
 
     @BeforeEach
-    fun beforeEeach() {
+    fun beforeEach() {
 
-        val blockchainRidMock = BlockchainRid.buildRepeat(0)
-
-        pipe = mock<AnchoringPipe> {
-            on { blockchainRid } doReturn blockchainRidMock
+        pipe1 = mock {
+            on { chainID } doReturn 1
+            on { blockchainRid } doReturn brid1
             on { mightHaveNewPackets() } doReturn mightHaveNewPackets
-            on { fetchNextRange(any(), any()) } doReturn listOf(AnchoringPacket(0, "".toByteArray(), GtvEncoder.encodeGtv(gtv("header")), GtvEncoder.encodeGtv(GtvArray(arrayOf()))))
         }
-        val anchoringReceiver = mock<AnchoringReceiver> {
-            on { getRelevantPipes() } doReturn listOf(pipe)
+
+        pipe2 = mock {
+            on { chainID } doReturn 2
+            on { blockchainRid } doReturn brid2
+            on { mightHaveNewPackets() } doReturn mightHaveNewPackets
         }
-        module = mock<GTXModule>()
-        anchoringReceiverFactory = mock<AnchoringReceiverFactory> {
+
+        val anchoringReceiver: AnchoringReceiver = mock {
+            on { getRelevantPipes() } doReturn listOf(pipe1, pipe2)
+        }
+
+        anchoringReceiverFactory = mock {
             on { create(any(), any()) } doReturn anchoringReceiver
         }
-        anchoringSpecialTxExtension = AnchoringSpecialTxExtension(anchoringReceiverFactory)
 
-        anchoringSpecialTxExtension.isSigner = { true }
-        anchoringSpecialTxExtension.clusterManagement = mock<ClusterManagement>()
-        anchoringSpecialTxExtension.blockchainConfigProvider = mock< BlockchainConfigProvider>()
-        anchoringSpecialTxExtension.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100)
+        sut = AnchoringSpecialTxExtension(anchoringReceiverFactory)
+        sut.isSigner = { true }
+        sut.clusterManagement = mock()
+        sut.blockchainConfigProvider = mock()
+        sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100)
 
-        anchoringSpecialTxExtension.createReceiver(blockchainRidMock)
+        sut.createReceiver(blockchainRid0)
 
-        anchoringSpecialTxExtension.init(module, 0L, blockchainRidMock, mock<CryptoSystem>())
+        module0 = mock {
+            on { query(any(), eq("get_last_anchored_block"), eq(gtv("blockchain_rid" to gtv(brid1)))) } doReturn gtv(
+                    "block_rid" to gtv(brid1),
+                    "block_height" to gtv(0)
+            )
+            on { query(any(), eq("get_last_anchored_block"), eq(gtv("blockchain_rid" to gtv(brid2)))) } doReturn gtv(
+                    "block_rid" to gtv(brid2),
+                    "block_height" to gtv(0)
+            )
+        }
+        sut.init(module0, 0L, blockchainRid0, mock())
+    }
 
-        Mockito.`when`(module.query(any(), eq("get_last_anchored_block"), any())).thenReturn(gtv(
-                "block_rid" to gtv(BlockchainRid.buildRepeat(0)),
-                "block_height" to gtv(0)
-        ))
+    private fun generatePackets(blocks: IntRange, brid: BlockchainRid) = blocks.map {
+        AnchoringPacket(
+                it.toLong(),
+                GtvEncoder.encodeGtv(gtv("blockRid - %010d".format(it))),
+                GtvEncoder.encodeGtv(gtv("header - $brid - %010d".format(it))),
+                byteArrayOf())
     }
 
     @Test
-    fun `read until size limit is reached`() {
+    fun `read part of the first range from pipe1 until size limit is reached`() {
+        // 40 packets are available
+        val range0 = generatePackets(0 until 20, brid1)
+        val range1 = generatePackets(20 until 40, brid1)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
 
-        anchoringSpecialTxExtension.maxTxSize = TX_SIZE_MARGIN + 200L
-        mockFetchNext(1)
+        // read 3 out of 40 packets
+        val sizeOf3 = range0.take(3).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf3.toLong() + TX_SIZE_MARGIN
 
-        val ops = anchoringSpecialTxExtension.createSpecialOperations(SpecialTransactionPosition.Begin, mock<BlockEContext>())
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
 
-        // 3 packages will fit in total size (with this package content)
+        // 3 packages will fit in total size
         assertThat(ops.size).isEqualTo(3)
-
-        // We will fetch next 4 times before we realize the size it too large
-        verify(pipe, times(4)).fetchNextRange(any(), any())
+        verify(pipe1, times(1)).fetchNextRange(any(), any())
+        verify(pipe2, never()).fetchNextRange(any(), any())
     }
 
-    private fun mockFetchNext(nbrOfPackets: Int) {
+    @Test
+    fun `read first range and part of the second range from pipe1 until size limit is reached`() {
+        // 40 packets are available
+        val range0 = generatePackets(0 until 20, brid1)
+        val range1 = generatePackets(20 until 40, brid1)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
 
-        val packets = mutableListOf<AnchoringPacket>()
-        for (i in 0 until nbrOfPackets) {
-            packets.add(AnchoringPacket(0, "".toByteArray(), GtvEncoder.encodeGtv(gtv("header")), GtvEncoder.encodeGtv(GtvArray(arrayOf()))))
-        }
-        Mockito.`when`(pipe.fetchNextRange(any(), any())).doReturn(packets)
+        // read 23 (MAX_PACKETS_PER_REQUEST + 3) out of 40 packets
+        val sizeOf23 = (range0 + range1).take(23).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf23.toLong() + TX_SIZE_MARGIN
+
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
+
+        // 23 packages will fit in total size
+        assertThat(ops.size).isEqualTo(23)
+        verify(pipe1, times(2)).fetchNextRange(any(), any())
+        verify(pipe2, never()).fetchNextRange(any(), any())
+    }
+
+    @Test
+    fun `read two ranges from pipe1 and part of the first range from pipe2 until size limit is reached`() {
+        // chain1 / 40 packets are available
+        val range10 = generatePackets(0 until 20, brid1)
+        val range11 = generatePackets(20 until 40, brid1)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range10, range11, emptyList())
+
+        // chain2 / 40 packets are available
+        val range20 = generatePackets(0 until 20, brid2)
+        val range21 = generatePackets(20 until 40, brid2)
+        whenever(pipe2.fetchNextRange(any(), any())).doReturn(range20, range21, emptyList())
+
+        // read 45 packets in total
+        val sizeOf45 = (range10 + range11 + range20 + range21).take(45).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf45.toLong() + TX_SIZE_MARGIN
+
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
+
+        // 45 packages will fit in total size
+        assertThat(ops.size).isEqualTo(45)
+        // 3 times b/c mightHaveNewPackets = true
+        verify(pipe1, times(3)).fetchNextRange(any(), any())
+        verify(pipe2, times(1)).fetchNextRange(any(), any())
+    }
+
+    @Test
+    fun `read first range and part of the second range from pipe1 and part of the first range from pipe2 until maxBlocksPerChain is reached`() {
+        // setting the maxBlocksPerChain = 33
+        sut.anchoringConfig = AnchoringBlockchainConfigData(33, 1000, 100)
+
+        // chain1 / 40 packets are available
+        val range10 = generatePackets(0 until 20, brid1)
+        val range11 = generatePackets(20 until 40, brid1)
+        whenever(pipe1.fetchNextRange(any(), any())).doReturn(range10, range11, emptyList())
+
+        // chain2 / 30 packets are available
+        val range20 = generatePackets(0 until 20, brid2)
+        val range21 = generatePackets(20 until 30, brid2)
+        whenever(pipe2.fetchNextRange(any(), any())).doReturn(range20, range21, emptyList())
+
+        // we can read all the packages
+        val sizeOf45 = (range10 + range11 + range20 + range21).sumOf { sut.buildOpData(it).second }
+        sut.maxTxSize = sizeOf45.toLong() + TX_SIZE_MARGIN
+
+        val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
+
+        // 63 packages will fit in total size
+        assertThat(ops.size).isEqualTo(33 + 30)
+        verify(pipe1, times(2)).fetchNextRange(any(), any())
+        // 3 times b/c mightHaveNewPackets = true
+        verify(pipe2, times(3)).fetchNextRange(any(), any())
     }
 }

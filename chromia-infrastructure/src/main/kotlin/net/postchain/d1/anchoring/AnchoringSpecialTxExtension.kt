@@ -37,6 +37,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
+        const val MAX_PACKETS_PER_REQUEST = 20L
     }
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
@@ -98,7 +99,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             var opsCount = 0
             var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
             pipePacketsIt@ while (pipe.mightHaveNewPackets()) {
-                val clusterAnchorPackets = pipe.fetchNextRange(currentHeight + 1, anchoringConfig.maxBlocksPerChain)
+                val clusterAnchorPackets = pipe.fetchNextRange(currentHeight + 1, MAX_PACKETS_PER_REQUEST)
                 if (clusterAnchorPackets.isEmpty()) {
                     break // Nothing more to find
                 } else {
@@ -109,13 +110,13 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                         }
                         ops.add(opData)
                         opsCount++
+                        currentHeight++
                         currentSize += size
 
                         if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
                             break@pipePacketsIt
                         }
                     }
-                    currentHeight += clusterAnchorPackets.size
                 }
             }
         }

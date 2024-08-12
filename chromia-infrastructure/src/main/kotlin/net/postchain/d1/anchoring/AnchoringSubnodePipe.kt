@@ -28,36 +28,19 @@ class AnchoringSubnodePipe(
 
     override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
 
-    override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> {
-        val r = try {
-            client.blockAtHeight(fromHeight)
-        } catch (e: Exception) {
-            logger.warn(e) { "Block fetching from sub node failed: $e" }
-            null
-        }?.let {
-            listOf(AnchoringPacket(
-                    fromHeight,
+    override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> = try {
+        client.blocksFromHeight(fromHeight, limit).map {
+            AnchoringPacket(
+                    it.height,
                     it.rid.data,
                     it.header.data,
                     it.witness.data
-            ))
+            )
         }
-
-        return r ?: listOf()
+    } catch (e: Exception) {
+        logger.warn(e) { "Fetching the block range starting from height $fromHeight for $blockchainRid from the subnode failed: $e" }
+        listOf()
     }
-//            try {
-//                client.blocksFromHeight(fromHeight, limit, false)
-//            } catch (e: Exception) {
-//                logger.warn(e) { "Block fetching from sub node failed: $e" }
-//                listOf()
-//            }.let { blockDetails ->
-//                blockDetails.map { AnchoringPacket(
-//                        it.height,
-//                        it.rid.data,
-//                        it.header.data,
-//                        it.witness.data
-//                ) }
-//            }
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
