@@ -12,4 +12,6 @@ interface ClusterManagement {
     fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String
     fun getClusterAnchoringChains(): Collection<BlockchainRid>
     fun getSystemAnchoringChain(): BlockchainRid?
+    fun getRemovedClusterBlockchains(clusterName: String, removedAfter: Long): Collection<BlockchainRid>
+    fun getRemovedClusterAnhcoringChains(removedAfter: Long): Collection<BlockchainRid>
 }

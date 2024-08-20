@@ -51,4 +51,7 @@ class AnchoringTestClusterManagement : ClusterManagement {
     override fun getSystemAnchoringChain(): BlockchainRid {
         return ChainUtil.ridOf(1)
     }
+
+    override fun getRemovedClusterBlockchains(clusterName: String, removedAfter: Long): Collection<BlockchainRid> = listOf()
+    override fun getRemovedClusterAnhcoringChains(removedAfter: Long): Collection<BlockchainRid> = listOf()
 }

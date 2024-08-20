@@ -46,6 +46,7 @@
                     <mainModules>
                         <mainModule>cm_api</mainModule>
                         <mainModule>nm_api</mainModule>
+                        <mainModule>version</mainModule>
                     </mainModules>
                 </configuration>
                 <executions>

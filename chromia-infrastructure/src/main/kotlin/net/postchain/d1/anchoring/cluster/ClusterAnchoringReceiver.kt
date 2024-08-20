@@ -19,8 +19,10 @@ class ClusterAnchoringReceiver(
         return localPipes.values.filter { it.blockchainRid in getRelevantChains() }
     }
 
-    override fun getRelevantChains(): Set<BlockchainRid> {
-        val activeClusterChains = clusterManagement.getActiveBlockchains(cluster).toSet()
+    override fun getRelevantChains(includeRemovedChainsSince: Long?): Set<BlockchainRid> {
+        val activeClusterChains = (if (includeRemovedChainsSince != null) {
+            clusterManagement.getActiveBlockchains(cluster) + clusterManagement.getRemovedClusterBlockchains(cluster, includeRemovedChainsSince)
+        } else clusterManagement.getActiveBlockchains(cluster)).toSet()
         return if (systemAnchoringChain != null) {
             activeClusterChains - systemAnchoringChain
         } else {

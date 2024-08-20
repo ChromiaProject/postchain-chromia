@@ -42,5 +42,7 @@ class IccfTestClusterManagement : ClusterManagement {
     override fun getClusterAnchoringChains(): Collection<BlockchainRid> = listOf(ChainUtil.ridOf(2))
 
     override fun getSystemAnchoringChain(): BlockchainRid = ChainUtil.ridOf(1)
+    override fun getRemovedClusterBlockchains(clusterName: String, removedAfter: Long): Collection<BlockchainRid> = listOf()
+    override fun getRemovedClusterAnhcoringChains(removedAfter: Long): Collection<BlockchainRid> = listOf()
 
 }

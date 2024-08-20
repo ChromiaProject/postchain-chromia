@@ -51,4 +51,6 @@ class IcmfTestClusterManagement : ClusterManagement {
     override fun getClusterAnchoringChains(): Collection<BlockchainRid> = listOf(clusterAnchoringChainRid)
 
     override fun getSystemAnchoringChain(): BlockchainRid = systemAnchoringChainRid
+    override fun getRemovedClusterBlockchains(clusterName: String, removedAfter: Long): Collection<BlockchainRid> = listOf()
+    override fun getRemovedClusterAnhcoringChains(removedAfter: Long): Collection<BlockchainRid> = listOf()
 }
