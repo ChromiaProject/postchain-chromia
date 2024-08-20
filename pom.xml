@@ -31,10 +31,10 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.17.2</postchain.version>
+        <postchain.version>3.17.4</postchain.version>
         <postchain.client.version>3.16.0</postchain.client.version>
         <directory.chain.version>1.55.15</directory.chain.version>
-        <rell.version>0.13.14</rell.version>
+        <rell.version>0.14.0</rell.version>
         <rell.maven.plugin.version>0.12.0</rell.maven.plugin.version>
         <eif.version>0.5.34</eif.version>
         <web3j.version>4.12.0</web3j.version>
