@@ -305,7 +305,7 @@ class AnchoringValidationTest {
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.blockchainConfigProvider = bcConfigProvider ?: blockchainConfigProvider
         txExtension.anchoringReceiver = mock {
-            on { getRelevantChains() } doReturn setOf(blockchainRID)
+            on { getRelevantChains(any()) } doReturn setOf(blockchainRID)
         }
         txExtension.isSigner = { isSigner }
         return txExtension

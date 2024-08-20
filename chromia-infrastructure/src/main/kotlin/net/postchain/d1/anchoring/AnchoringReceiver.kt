@@ -7,5 +7,5 @@ interface AnchoringReceiver {
     val localPipes: ConcurrentMap<Long, AnchoringPipe>
     fun getRelevantPipes(): List<AnchoringPipe>
 
-    fun getRelevantChains(): Set<BlockchainRid>
+    fun getRelevantChains(includeRemovedChainsSince: Long? = null): Set<BlockchainRid>
 }

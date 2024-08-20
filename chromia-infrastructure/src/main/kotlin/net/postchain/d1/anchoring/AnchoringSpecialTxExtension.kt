@@ -27,6 +27,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import java.time.Duration
 
 const val GTX_OP_OVERHEAD = 20
 
@@ -38,6 +39,8 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
         const val MAX_PACKETS_PER_REQUEST = 20L
+
+        val REMOVED_BLOCKCHAIN_GRACE_PERIOD: Duration = Duration.ofHours(1L)
     }
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
@@ -156,7 +159,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             ops: List<OpData>
     ): Boolean {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
-        val relevantChains = anchoringReceiver.getRelevantChains()
+        val relevantChains = anchoringReceiver.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
 
         for (op in ops) {
             val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
