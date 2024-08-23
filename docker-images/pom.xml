@@ -15,6 +15,7 @@
     <modules>
         <module>chromia-server</module>
         <module>chromia-subnode</module>
+        <module>custom-subnode-one</module>
     </modules>
 
     <properties>
