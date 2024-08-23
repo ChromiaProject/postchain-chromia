@@ -10,5 +10,5 @@ export PSQL_MEMORY_SHARE=35
 echo "Configuring and starting Postgres"
 bash postgres-entrypoint.sh postgres
 
-echo "Starting Postchain node"
+echo "Starting custom subnode image one"
 exec java -Duser.language=en -Duser.country=US -XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/libs/*" net.postchain.server.AppKt run-subnode
