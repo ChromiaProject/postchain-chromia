@@ -97,6 +97,11 @@ Configuration:
         append: false
         PatternLayout:
           pattern: "%msg%n"
+      - name: EvmTxs_Node4Appender
+        fileName: "logs/evm_tx_submitter/node4.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
   Loggers:
 
     Root:
@@ -224,3 +229,8 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: EvmTxs_Node3Appender
+      - name: EvmTxs_Node4Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node4Appender

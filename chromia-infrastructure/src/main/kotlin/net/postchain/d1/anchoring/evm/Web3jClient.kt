@@ -2,7 +2,7 @@ package net.postchain.d1.anchoring.evm
 
 import net.postchain.client.impl.PostchainClientImpl.Companion.logger
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.eif.Web3jServiceFactory.buildServices
+import net.postchain.eif.web3j.Web3jServiceFactory.buildServices
 import net.postchain.eif.contracts.Anchoring
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteFunctionCall

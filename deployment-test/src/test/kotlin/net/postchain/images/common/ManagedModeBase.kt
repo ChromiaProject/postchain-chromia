@@ -200,9 +200,40 @@ open class ManagedModeBase {
         stopContainers(node3)
     }
 
-    fun restartNode4() {
+    fun restartNode2(containerProvider: (() -> PostchainContainer)? = null) {
+        if (::channel2.isInitialized) channel2.shutdownNow()
+        stopContainers(node2)
+        node2 = containerProvider?.invoke() ?: node2
+        startContainers(node2)
+        channel2 = createChannel(node2).usePlaintext().build()
+
+        PostchainServiceGrpc.newBlockingStub(channel2)
+                .startBlockchain(
+                        StartBlockchainRequest.newBuilder()
+                                .setChainId(0)
+                                .build()
+                )
+    }
+
+    fun restartNode3(containerProvider: (() -> PostchainContainer)? = null) {
+        if (::channel3.isInitialized) channel3.shutdownNow()
+        stopContainers(node3)
+        node3 = containerProvider?.invoke() ?: node3
+        startContainers(node3)
+        channel3 = createChannel(node3).usePlaintext().build()
+
+        PostchainServiceGrpc.newBlockingStub(channel3)
+                .startBlockchain(
+                        StartBlockchainRequest.newBuilder()
+                                .setChainId(0)
+                                .build()
+                )
+    }
+
+    fun restartNode4(containerProvider: (() -> PostchainContainer)? = null) {
         if (::channel4.isInitialized) channel4.shutdownNow()
         stopContainers(node4)
+        node4 = containerProvider?.invoke() ?: node4
         startContainers(node4)
         channel4 = createChannel(node4).usePlaintext().build()
 
@@ -226,23 +257,30 @@ open class ManagedModeBase {
         testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
         node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
 
-        // node2
+        initNode2()
+        initNode3()
+        initNode4()
+    }
+
+    fun initNode2() {
         if (::node2.isInitialized) {
             channel2 = createChannel(node2).usePlaintext().build()
             addPeer(channel2, node1)
             startBlockchain(channel2, chain0Config)
             node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
         }
+    }
 
-        // node3
+    fun initNode3() {
         if (::node3.isInitialized) {
             channel3 = createChannel(node3).usePlaintext().build()
             addPeer(channel3, node1)
             startBlockchain(channel3, chain0Config)
             node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
         }
+    }
 
-        // node4
+    fun initNode4() {
         if (::node4.isInitialized) {
             channel4 = createChannel(node4).usePlaintext().build()
             addPeer(channel4, node1)
@@ -317,6 +355,14 @@ open class ManagedModeBase {
         }
 
         txBuilder.postTransactionUntilConfirmed("providers vote on all proposals")
+    }
+
+    protected fun assertNumberOfChainSigners(blockchainRid: BlockchainRid, expected: Int) {
+        awaitQueryResult {
+            val currentHeight = node1.client(blockchainRid).currentBlockHeight()
+            val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).size
+            assertThat(actual).isEqualTo(expected)
+        }
     }
 
     protected fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
