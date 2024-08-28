@@ -24,7 +24,6 @@ import net.postchain.common.toHex
 import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.eif.contracts.Anchoring
 import net.postchain.eif.contracts.DirectoryChainValidator
 import net.postchain.eif.contracts.ManagedValidator
 import net.postchain.eif.transaction_submitter.TransactionStatus
@@ -115,12 +114,10 @@ class Directory1TransactionSubmitterRetryIT {
         private val gasProvider = DefaultGasProvider()
 
         private lateinit var directoryChainValidator: DirectoryChainValidator
-        private lateinit var anchoring: Anchoring
         private lateinit var validator: ManagedValidator
 
         private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
         private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
-        private val anchoringBinary = getBinaryFromArtifactResource("/artifacts/contracts/anchoring/Anchoring.sol/Anchoring.json")
 
         private lateinit var txsClient: PostchainClient
         private var txId: Long = -1
@@ -156,10 +153,6 @@ class Directory1TransactionSubmitterRetryIT {
             return postchainServer(hostname, Slf4jLogConsumer(logger, true),
                     keyPair,
                     "config-no-subnodes")
-                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
         }
 
@@ -220,10 +213,6 @@ class Directory1TransactionSubmitterRetryIT {
         val encodedValidatorConstructor = FunctionEncoder.encodeConstructor(listOf(Address(directoryChainValidator.contractAddress)))
         validator = Contract.deployRemoteCall(ManagedValidator::class.java, web3j, transactionManager, gasProvider, managedValidatorBinary, encodedValidatorConstructor).send()
         validator.setBlockchainRid(Bytes32(systemAnchoringBrid.data)).send()
-
-        // Deploy anchoring contract
-        val encodedAnchoringConstructor = FunctionEncoder.encodeConstructor(listOf(Address(validator.contractAddress), Bytes32(systemAnchoringBrid.data)))
-        anchoring = Contract.deployRemoteCall(Anchoring::class.java, web3j, transactionManager, gasProvider, anchoringBinary, encodedAnchoringConstructor).send()
     }
 
     @Test
@@ -237,7 +226,6 @@ class Directory1TransactionSubmitterRetryIT {
                 .replace("DIRECTORY_CHAIN_VALIDATOR_VALUE", directoryChainValidator.contractAddress.substring(2))
                 .replace("x\"DIRECTORY_CHAIN_BRID_VALUE\"", chain0Brid.toHex())
                 .replace("x\"SYSTEM_ANCHORING_CHAIN_BRID_VALUE\"", systemAnchoringBrid.toHex())
-                .replace("ANCHORING_CONTRACT_VALUE", anchoring.contractAddress.substring(2))
                 .replace("VALIDATOR_CONTRACT_VALUE", validator.contractAddress.substring(2))
                 .replace("<string>SUPERMAJORITY</string>", "<string>ALL</string>")
                 .replace("<entry key=\"tx_node_submit_timeout\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_node_submit_timeout\"><int>20000</int>")
@@ -322,13 +310,11 @@ class Directory1TransactionSubmitterRetryIT {
             createTxsPostchainContainer("node2", node2Logger.underlyingLogger,
                     provider2KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
         }
 
         restartNode3 {
             createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
         }
     }
 
@@ -362,10 +348,10 @@ class Directory1TransactionSubmitterRetryIT {
             assertThat(status).isEqualTo(TransactionStatus.SUCCESS)
         }
 
-            val txHash = txsClient.getEvmTransaction(txId).txHash
+        val txHash = txsClient.getEvmTransaction(txId).txHash
 
-            val receiptOpt = web3j.ethGetTransactionReceipt(txHash).send().transactionReceipt
-            assertThat(receiptOpt.isPresent).isTrue()
+        val receiptOpt = web3j.ethGetTransactionReceipt(txHash).send().transactionReceipt
+        assertThat(receiptOpt.isPresent).isTrue()
 
         testLogger.info("TX is SUCCESS and confirmed on EVM")
     }
