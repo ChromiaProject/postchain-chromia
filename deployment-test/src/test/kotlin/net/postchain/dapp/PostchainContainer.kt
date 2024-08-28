@@ -1,5 +1,8 @@
 package net.postchain.dapp
 
+import com.github.dockerjava.api.model.ExposedPort
+import io.grpc.ManagedChannel
+import io.grpc.ManagedChannelBuilder
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
@@ -41,10 +44,9 @@ class PostchainContainer(
     val nodeKeyPair = KeyPair.of(appConfig.pubKey, appConfig.privKey)
     val pubkey get() = nodeKeyPair.pubKey
     val privkey get() = nodeKeyPair.privKey
-
     private val apiPort: Int = appConfig.getInt("api.port")
-
     private val bridMap = mutableMapOf<Long, String>()
+    lateinit var channel: ManagedChannel
 
     companion object {
         const val POSTCHAIN_PATH = "/opt/chromaway/postchain"
@@ -116,6 +118,22 @@ class PostchainContainer(
             AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers)))
 
     fun peerInfo(): D1PeerInfo = D1PeerInfo(apiPath(), pubkey)
+
+    override fun start() {
+        super.start()
+
+        if (this.containerInfo.networkSettings.ports.bindings.containsKey(ExposedPort(50051))) {
+            channel = ManagedChannelBuilder.forTarget("${this.host}:${this.getMappedPort(50051)}")
+                    .usePlaintext().build()
+        }
+    }
+
+    override fun stop() {
+        if (::channel.isInitialized) {
+            channel.shutdownNow()
+        }
+        super.stop()
+    }
 }
 
 fun parseConfig(url: URL, configOverrides: Map<String, Any?>? = null): AppConfig {

@@ -25,6 +25,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.dapp.stopContainers
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -155,9 +156,7 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsIT {
                 .postTransactionUntilConfirmed("Remove node3")
 
         testLogger.info("Stop node2 and node3")
-        stopNode2()
-        stopNode3()
-
+        stopContainers(node2, node3)
 
         testLogger.info("Resume chain")
         node1.c0.transactionBuilder()

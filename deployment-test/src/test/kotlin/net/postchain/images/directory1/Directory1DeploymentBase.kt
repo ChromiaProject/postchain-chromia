@@ -89,7 +89,7 @@ abstract class Directory1DeploymentBase {
     @Test
     @Order(1)
     fun `Chain0 dapp is deployed`() {
-        node1Db.awaitBlockHeight(0)
+        getDb(node1).awaitBlockHeight(0)
     }
 
     @Test
@@ -427,8 +427,8 @@ abstract class Directory1DeploymentBase {
         val dappBrid = dapps["test_dapp"]!!
         val dapp3Brid = dapps["test_dapp3"]!!
         val dapp5Brid = dapps["test_dapp5"]!!
-        val chainId = node1Db.getChainId(dappBrid)
-        val chain3Id = node1Db.getChainId(dapp3Brid)
+        val chainId = getDb(node1).getChainId(dappBrid)
+        val chain3Id = getDb(node1).getChainId(dapp3Brid)
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
         verifyBlockchainState(node1, dapp3Brid, BlockchainState.RUNNING)
         verifyBlockchainState(node1, dapp5Brid, BlockchainState.RUNNING)
@@ -445,9 +445,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chains are deleted from DB
         awaitUntilAsserted {
-            assertThat(node1Db.getChainId(dappBrid)).isNull()
-            assertThat(node2Db.getChainId(dappBrid)).isNull()
-            assertThat(node3Db.getChainId(dappBrid)).isNull()
+            assertThat(getDb(node1).getChainId(dappBrid)).isNull()
+            assertThat(getDb(node2).getChainId(dappBrid)).isNull()
+            assertThat(getDb(node3).getChainId(dappBrid)).isNull()
         }
 
         // Verify that removed chain is deleted from subnode DBs
@@ -476,9 +476,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chains are deleted from DB
         awaitUntilAsserted {
-            assertThat(node1Db.getChainId(dapp3Brid)).isNull()
-            assertThat(node2Db.getChainId(dapp3Brid)).isNull()
-            assertThat(node3Db.getChainId(dapp3Brid)).isNull()
+            assertThat(getDb(node1).getChainId(dapp3Brid)).isNull()
+            assertThat(getDb(node2).getChainId(dapp3Brid)).isNull()
+            assertThat(getDb(node3).getChainId(dapp3Brid)).isNull()
         }
 
         // Verify that removed chain is deleted from subnode DBs

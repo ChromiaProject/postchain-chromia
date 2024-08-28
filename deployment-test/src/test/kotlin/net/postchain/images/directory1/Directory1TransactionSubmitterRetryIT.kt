@@ -104,7 +104,6 @@ class Directory1TransactionSubmitterRetryIT {
                     start()
                 }
 
-        // Web3j
         private val web3j: Web3j = Web3j.build(HttpService(evmContainer.getExternalGethUrl()))
         private val transactionManager: TransactionManager = FastRawTransactionManager(
                 web3j,
@@ -168,7 +167,7 @@ class Directory1TransactionSubmitterRetryIT {
     @Order(1)
     fun `Setup the network`() {
         testLogger.info("Setup the network")
-        node1Db.awaitBlockHeight(0)
+        getDb(node1).awaitBlockHeight(0)
         with(node1.c0) {
             val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
             val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
@@ -306,13 +305,13 @@ class Directory1TransactionSubmitterRetryIT {
 
         testLogger.info("Restart node2-3 with valid rpc endpoints")
 
-        restartNode2 {
+        node2 = restartNode(node2) {
             createTxsPostchainContainer("node2", node2Logger.underlyingLogger,
                     provider2KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
         }
 
-        restartNode3 {
+        node3 = restartNode(node3) {
             createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
         }
@@ -336,7 +335,7 @@ class Directory1TransactionSubmitterRetryIT {
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
 
         node4.start()
-        initNode4()
+        addPeerAndStartBlockchain(node4, node1, chain0Config)
 
         Awaitility.await().atMost(3, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted {
 

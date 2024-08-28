@@ -7,7 +7,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import mu.KotlinLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -98,12 +97,23 @@ open class ManagedModeBase {
     protected val systemCluster = "system"
     protected val systemContainer = "system"
 
+    var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
+    lateinit var chain0Brid: BlockchainRid
+    lateinit var ecBrid: BlockchainRid
+    private var nodeDbs = mutableMapOf<PostchainContainer, ChainDatabaseCommunicator>()
+
+    protected val PostchainContainer.c0 get() = client(chain0Brid)
+    protected val PostchainContainer.ec get() = client(ecBrid)
+    protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
+
     fun nodes() = buildList {
         if (::node1.isInitialized) add(node1)
         if (::node2.isInitialized) add(node2)
         if (::node3.isInitialized) add(node3)
         if (::node4.isInitialized) add(node4)
     }.toTypedArray()
+
+    fun nodesExceptGenesis() = nodes().filter { it != node1 }
 
     fun breakdown() {
         saveSubnodeLogs(dockerClient, logsSubdir)
@@ -162,87 +172,30 @@ open class ManagedModeBase {
                 .withCommand("run-server")
     }
 
-    var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
-    lateinit var chain0Brid: BlockchainRid
-    lateinit var ecBrid: BlockchainRid
-
-    lateinit var node1Db: ChainDatabaseCommunicator
-    lateinit var node2Db: ChainDatabaseCommunicator
-    lateinit var node3Db: ChainDatabaseCommunicator
-    lateinit var node4Db: ChainDatabaseCommunicator
-
-    private lateinit var channel1: ManagedChannel
-    private lateinit var channel2: ManagedChannel
-    private lateinit var channel3: ManagedChannel
-    private lateinit var channel4: ManagedChannel
+    fun getDb(node: PostchainContainer): ChainDatabaseCommunicator =
+        nodeDbs.getOrPut(node) {
+            postgres.createChainDatabaseCommunicator(0, node.appConfig.databaseSchema)
+        }
 
     fun stopNodes() {
-        if (::channel1.isInitialized) channel1.shutdownNow()
-        if (::channel2.isInitialized) channel2.shutdownNow()
-        if (::channel3.isInitialized) channel3.shutdownNow()
-        if (::channel4.isInitialized) channel4.shutdownNow()
         stopContainers(*nodes())
         postgres.stop()
+        nodeDbs.clear()
     }
 
-    fun stopNode1() {
-        if (::channel1.isInitialized) channel1.shutdownNow()
-        stopContainers(node1)
-    }
+    fun restartNode(node: PostchainContainer, containerProvider: (() -> PostchainContainer)? = null): PostchainContainer {
+        stopContainers(node)
+        val startNode = containerProvider?.invoke() ?: node
+        startContainers(startNode)
 
-    fun stopNode2() {
-        if (::channel2.isInitialized) channel2.shutdownNow()
-        stopContainers(node2)
-    }
-
-    fun stopNode3() {
-        if (::channel3.isInitialized) channel3.shutdownNow()
-        stopContainers(node3)
-    }
-
-    fun restartNode2(containerProvider: (() -> PostchainContainer)? = null) {
-        if (::channel2.isInitialized) channel2.shutdownNow()
-        stopContainers(node2)
-        node2 = containerProvider?.invoke() ?: node2
-        startContainers(node2)
-        channel2 = createChannel(node2).usePlaintext().build()
-
-        PostchainServiceGrpc.newBlockingStub(channel2)
+        PostchainServiceGrpc.newBlockingStub(startNode.channel)
                 .startBlockchain(
                         StartBlockchainRequest.newBuilder()
                                 .setChainId(0)
                                 .build()
                 )
-    }
 
-    fun restartNode3(containerProvider: (() -> PostchainContainer)? = null) {
-        if (::channel3.isInitialized) channel3.shutdownNow()
-        stopContainers(node3)
-        node3 = containerProvider?.invoke() ?: node3
-        startContainers(node3)
-        channel3 = createChannel(node3).usePlaintext().build()
-
-        PostchainServiceGrpc.newBlockingStub(channel3)
-                .startBlockchain(
-                        StartBlockchainRequest.newBuilder()
-                                .setChainId(0)
-                                .build()
-                )
-    }
-
-    fun restartNode4(containerProvider: (() -> PostchainContainer)? = null) {
-        if (::channel4.isInitialized) channel4.shutdownNow()
-        stopContainers(node4)
-        node4 = containerProvider?.invoke() ?: node4
-        startContainers(node4)
-        channel4 = createChannel(node4).usePlaintext().build()
-
-        PostchainServiceGrpc.newBlockingStub(channel4)
-                .startBlockchain(
-                        StartBlockchainRequest.newBuilder()
-                                .setChainId(0)
-                                .build()
-                )
+        return startNode
     }
 
     fun startNodesAndChain0() {
@@ -251,46 +204,23 @@ open class ManagedModeBase {
         startContainers(*nodes())
 
         // node1
-        channel1 = createChannel(node1).usePlaintext().build()
-        chain0Brid = startBlockchain(channel1, chain0Config)
+        chain0Brid = startBlockchain(node1.channel, chain0Config)
                 .let { BlockchainRid.buildFromHex(it) }
         testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
-        node1Db = postgres.createChainDatabaseCommunicator(0, node1.appConfig.databaseSchema)
 
-        initNode2()
-        initNode3()
-        initNode4()
-    }
-
-    fun initNode2() {
-        if (::node2.isInitialized) {
-            channel2 = createChannel(node2).usePlaintext().build()
-            addPeer(channel2, node1)
-            startBlockchain(channel2, chain0Config)
-            node2Db = postgres.createChainDatabaseCommunicator(0, node2.appConfig.databaseSchema)
+        // Other nodes if started
+        nodesExceptGenesis().forEach {
+            addPeerAndStartBlockchain(it, node1, chain0Config)
         }
     }
 
-    fun initNode3() {
-        if (::node3.isInitialized) {
-            channel3 = createChannel(node3).usePlaintext().build()
-            addPeer(channel3, node1)
-            startBlockchain(channel3, chain0Config)
-            node3Db = postgres.createChainDatabaseCommunicator(0, node3.appConfig.databaseSchema)
-        }
-    }
-
-    fun initNode4() {
-        if (::node4.isInitialized) {
-            channel4 = createChannel(node4).usePlaintext().build()
-            addPeer(channel4, node1)
-            startBlockchain(channel4, chain0Config)
-            node4Db = postgres.createChainDatabaseCommunicator(0, node4.appConfig.databaseSchema)
-        }
+    fun addPeerAndStartBlockchain(node: PostchainContainer, peer: PostchainContainer, config: String) {
+        addPeer(node.channel, peer)
+        startBlockchain(node.channel, config)
     }
 
     fun overrideNode4PeerInfo(peerPubkey: PubKey, peerHost: String, peerPort: Int) {
-        val service = PeerServiceGrpc.newBlockingStub(channel4)
+        val service = PeerServiceGrpc.newBlockingStub(node4.channel)
         service.addPeer(
                 AddPeerRequest.newBuilder()
                         .setHost(peerHost)
@@ -301,10 +231,7 @@ open class ManagedModeBase {
         )
     }
 
-    private fun createChannel(target: PostchainContainer) =
-            ManagedChannelBuilder.forTarget("${target.host}:${target.getMappedPort(50051)}")
-
-    private fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
+    fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
         val service = PeerServiceGrpc.newBlockingStub(channel)
         service.addPeer(
                 AddPeerRequest.newBuilder()
@@ -315,7 +242,7 @@ open class ManagedModeBase {
         )
     }
 
-    private fun startBlockchain(channel: ManagedChannel, config: String): String {
+    fun startBlockchain(channel: ManagedChannel, config: String): String {
         return PostchainServiceGrpc.newBlockingStub(channel)
                 .initializeBlockchain(
                         InitializeBlockchainRequest.newBuilder()
@@ -503,10 +430,6 @@ open class ManagedModeBase {
             "<string>net.postchain.gtx.StandardOpsGTXModule</string>",
             "<string>net.postchain.gtx.StandardOpsGTXModule</string>\n<string>unknown_module</string>"
     )
-
-    protected val PostchainContainer.c0 get() = client(chain0Brid)
-    protected val PostchainContainer.ec get() = client(ecBrid)
-    protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
 
     protected fun makeVoteOnLatestProposal(node: PostchainContainer) {
 
