@@ -94,7 +94,7 @@ class Directory1MovingMixIT {
     @Test
     @Order(1)
     fun `Setup the network`() {
-        node1Db.awaitBlockHeight(0)
+        getDb(node1).awaitBlockHeight(0)
         with(node1.c0) {
             val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
             val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())

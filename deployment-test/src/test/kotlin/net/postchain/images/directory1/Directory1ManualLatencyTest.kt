@@ -121,7 +121,7 @@ class Directory1ManualLatencyTest {
     @Test
     @Order(1)
     fun `Setup the network`() {
-        node1Db.awaitBlockHeight(0)
+        getDb(node1).awaitBlockHeight(0)
         with(node1.c0) {
             val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
             val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
@@ -189,7 +189,7 @@ class Directory1ManualLatencyTest {
         overrideNode4PeerInfo(node1.pubkey, TOXI_PROXY_HOST, node1Proxy.originalProxyPort)
         overrideNode4PeerInfo(node2.pubkey, TOXI_PROXY_HOST, node2Proxy.originalProxyPort)
         overrideNode4PeerInfo(node3.pubkey, TOXI_PROXY_HOST, node3Proxy.originalProxyPort)
-        restartNode4() // Restart node to apply new peer information
+        restartNode(node4) // Restart node to apply new peer information
 
         /* OVERRIDE WITH PREFERRED PROXY CONDITIONS */
         testLogger.info("Add latencies")
