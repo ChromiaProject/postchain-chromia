@@ -44,6 +44,7 @@ blockchains:
         #                network_id: 1337
         contract_tx_rate_limit: 60000
         tx_node_submit_timeout: 1800000 # 30m
+        tx_verification_timeout: 5400000
         tx_timeout: 86400000 #24h
         node_retry_strategy: SUPERMAJORITY
         network_configs:
