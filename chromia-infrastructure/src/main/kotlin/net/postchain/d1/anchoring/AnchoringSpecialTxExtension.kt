@@ -1,5 +1,11 @@
 package net.postchain.d1.anchoring
 
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
@@ -13,6 +19,7 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.PubKey
 import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
@@ -161,6 +168,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
         val relevantChains = anchoringReceiver.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
 
+        val signatureVerificationJobs = mutableListOf<Pair<Collection<PubKey>, AnchoringOpData>>()
         for (op in ops) {
             val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
 
@@ -183,14 +191,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                 logger.warn(e.message)
                 return false
             }
-
-            try {
-                val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
-                Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
-            } catch (e: UserMistake) {
-                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")
-                return false
-            }
+            signatureVerificationJobs.add(peers to anchorOpData)
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
 
@@ -202,6 +203,27 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                 return false
             }
         }
+
+        val allSignaturesValid = runBlocking {
+            coroutineScope {
+                val context = Dispatchers.Default + CoroutineName("anchoring-signature-validation") + MDCContext()
+                signatureVerificationJobs.map { (peers, anchorOpData) ->
+                    async(context) {
+                        val headerData = anchorOpData.headerData
+                        val blockRid = anchorOpData.blockRid
+                        try {
+                            val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
+                            Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers, witness)
+                            true
+                        } catch (e: UserMistake) {
+                            logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}: ${e.message}")
+                            false
+                        }
+                    }
+                }.all { it.await() }
+            }
+        }
+        if (!allSignaturesValid) return false
 
         val relevantPipes = anchoringReceiver.getRelevantPipes()
         // Go through it chain by chain
