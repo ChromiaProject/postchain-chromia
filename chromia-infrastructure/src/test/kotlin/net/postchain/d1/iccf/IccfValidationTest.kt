@@ -7,6 +7,7 @@ import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BATCH_BLOCK_HEADER
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK_HEADER
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
@@ -97,6 +98,36 @@ class IccfValidationTest {
             GtvEncoder.encodeGtv(clusterAnchoringBlockHeader),
             clusterAnchoringBlockWitness,
             clusterAnchoringTxProof,
+            0L
+    ))
+
+    private val batchClusterAnchoringTx = Gtx(
+            GtxBody(clusterAnchoringChainRid, listOf(GtxOp(OP_BATCH_BLOCK_HEADER, gtv(
+                    gtv(gtv(sourceBlockRid), sourceBlockHeader, gtv(sourceBlockWitness.getRawData()))
+            ))), listOf()),
+            listOf()
+    )
+    private val batchClusterAnchoringTxHash = batchClusterAnchoringTx.toGtv().merkleHash(hashCalculator)
+    private val batchClusterAnchoringTxProof = gtv(gtv(batchClusterAnchoringTxHash)).generateProof(listOf(0), hashCalculator)
+    private val batchClusterAnchoringBlockHeader = BlockHeaderData(
+            gtv(clusterAnchoringChainRid),
+            gtv(clusterAnchoringChainRid),
+            gtv(batchClusterAnchoringTxProof.merkleHash(hashCalculator)),
+            gtv(0),
+            gtv(0),
+            GtvNull,
+            gtv(mapOf())
+    ).toGtv()
+    private val batchClusterAnchoringBlockRid = batchClusterAnchoringBlockHeader.merkleHash(hashCalculator)
+    private val batchClusterAnchoringBlockWitness = BaseBlockWitness.fromSignatures(clusterAnchoringChainSigners.map {
+        cryptoSystem.buildSigMaker(it).signDigest(batchClusterAnchoringBlockRid)
+    }.toTypedArray())
+
+    private val batchClusterAnchoringConfirmationProof = GtvObjectMapper.toGtvDictionary(ConfirmationProof(
+            batchClusterAnchoringTxHash,
+            GtvEncoder.encodeGtv(batchClusterAnchoringBlockHeader),
+            batchClusterAnchoringBlockWitness,
+            batchClusterAnchoringTxProof,
             0L
     ))
 
@@ -349,6 +380,42 @@ class IccfValidationTest {
         }
 
         val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
+        val iccfContext = IccfGTXModuleContext().apply {
+            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
+            this.clusterManagement = clusterManagement
+            this.queryProvider = chromiaQueryProvider
+            this.nodeIsReplica = false
+        }
+        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
+
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun intraNetworkIccfWithBatchAnchoring() {
+        val clusterManagement: ClusterManagement = mock {
+            on { getClusterOfBlockchain(sourceBlockchainRid) } doReturn "clusterA"
+            on { getClusterOfBlockchain(targetBlockchainRid) } doReturn "clusterB"
+            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+            on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
+            on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
+        }
+        val systemAnchoringClient: PostchainBlockClient = mock {
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(batchClusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(true)
+        }
+        val chromiaQueryProvider: ChromiaQueryProvider = mock {
+            on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
+        }
+
+        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(batchClusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(batchClusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
