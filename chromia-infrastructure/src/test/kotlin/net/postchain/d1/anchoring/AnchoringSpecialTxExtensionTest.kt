@@ -64,7 +64,7 @@ class AnchoringSpecialTxExtensionTest {
         sut.isSigner = { true }
         sut.clusterManagement = mock()
         sut.blockchainConfigProvider = mock()
-        sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100)
+        sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100, false)
 
         sut.createReceiver(blockchainRid0)
 
@@ -97,7 +97,8 @@ class AnchoringSpecialTxExtensionTest {
         whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
 
         // read 3 out of 40 packets
-        val sizeOf3 = range0.take(3).sumOf { sut.buildOpData(it).second }
+        val multiOpAnchoringSpecialTxBuilder = MultiOpAnchoringSpecialTxBuilder()
+        val sizeOf3 = range0.take(3).sumOf { multiOpAnchoringSpecialTxBuilder.calculateRequiredSize(it) }
         sut.maxTxSize = sizeOf3.toLong() + TX_SIZE_MARGIN
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
@@ -116,7 +117,8 @@ class AnchoringSpecialTxExtensionTest {
         whenever(pipe1.fetchNextRange(any(), any())).doReturn(range0, range1)
 
         // read 23 (MAX_PACKETS_PER_REQUEST + 3) out of 40 packets
-        val sizeOf23 = (range0 + range1).take(23).sumOf { sut.buildOpData(it).second }
+        val multiOpAnchoringSpecialTxBuilder = MultiOpAnchoringSpecialTxBuilder()
+        val sizeOf23 = (range0 + range1).take(23).sumOf { multiOpAnchoringSpecialTxBuilder.calculateRequiredSize(it) }
         sut.maxTxSize = sizeOf23.toLong() + TX_SIZE_MARGIN
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
@@ -140,7 +142,8 @@ class AnchoringSpecialTxExtensionTest {
         whenever(pipe2.fetchNextRange(any(), any())).doReturn(range20, range21, emptyList())
 
         // read 45 packets in total
-        val sizeOf45 = (range10 + range11 + range20 + range21).take(45).sumOf { sut.buildOpData(it).second }
+        val multiOpAnchoringSpecialTxBuilder = MultiOpAnchoringSpecialTxBuilder()
+        val sizeOf45 = (range10 + range11 + range20 + range21).take(45).sumOf { multiOpAnchoringSpecialTxBuilder.calculateRequiredSize(it) }
         sut.maxTxSize = sizeOf45.toLong() + TX_SIZE_MARGIN
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())
@@ -155,7 +158,7 @@ class AnchoringSpecialTxExtensionTest {
     @Test
     fun `read first range and part of the second range from pipe1 and part of the first range from pipe2 until maxBlocksPerChain is reached`() {
         // setting the maxBlocksPerChain = 33
-        sut.anchoringConfig = AnchoringBlockchainConfigData(33, 1000, 100)
+        sut.anchoringConfig = AnchoringBlockchainConfigData(33, 1000, 100, false)
 
         // chain1 / 40 packets are available
         val range10 = generatePackets(0 until 20, brid1)
@@ -168,7 +171,8 @@ class AnchoringSpecialTxExtensionTest {
         whenever(pipe2.fetchNextRange(any(), any())).doReturn(range20, range21, emptyList())
 
         // we can read all the packages
-        val sizeOf45 = (range10 + range11 + range20 + range21).sumOf { sut.buildOpData(it).second }
+        val multiOpAnchoringSpecialTxBuilder = MultiOpAnchoringSpecialTxBuilder()
+        val sizeOf45 = (range10 + range11 + range20 + range21).sumOf { multiOpAnchoringSpecialTxBuilder.calculateRequiredSize(it) }
         sut.maxTxSize = sizeOf45.toLong() + TX_SIZE_MARGIN
 
         val ops = sut.createSpecialOperations(SpecialTransactionPosition.Begin, mock())

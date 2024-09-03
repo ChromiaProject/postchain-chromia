@@ -28,6 +28,8 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 
 class IccfIT : ManagedModeTest() {
@@ -71,12 +73,16 @@ class IccfIT : ManagedModeTest() {
         assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
-    @Test
-    fun intraNetwork() {
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml",
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_batch.xml"
+    ])
+    fun intraNetwork(clusterAnchoringConfig: String) {
         startManagedSystem(4, 0)
 
         val systemAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig(clusterAnchoringConfig)))
 
         val sourceChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))

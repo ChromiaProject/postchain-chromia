@@ -143,16 +143,32 @@ class IccfGTXOperation(
 
     private fun verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx: Gtx, clusterAnchoringTxOpIndex: Int, sourceBlockRid: Hash, sourceTxConfirmationProof: ConfirmationProof) {
         val clusterAnchoringTxOperations = clusterAnchoringTx.gtxBody.operations
-        val anchoringTxOp = if (clusterAnchoringTxOperations.size >= clusterAnchoringTxOpIndex + 1) {
-            clusterAnchoringTxOperations[clusterAnchoringTxOpIndex]
+
+        if (clusterAnchoringTxOperations.firstOrNull()?.opName == AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER) {
+            val batchAnchoringBlocks = clusterAnchoringTxOperations.first().args[0].asArray()
+            val anchorBlockElement = if (batchAnchoringBlocks.size >= clusterAnchoringTxOpIndex + 1) {
+                batchAnchoringBlocks[clusterAnchoringTxOpIndex]
+            } else {
+                throw UserMistake("Invalid index in cluster anchoring batch operation")
+            }
+
+            if (!sourceBlockRid.contentEquals(anchorBlockElement[0].asByteArray())
+                    || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchorBlockElement[1]))
+            ) {
+                throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            }
         } else {
-            throw UserMistake("Invalid operation index in cluster anchoring TX")
-        }
-        if (anchoringTxOp.opName != AnchoringSpecialTxExtension.OP_BLOCK_HEADER
-                || !sourceBlockRid.contentEquals(anchoringTxOp.args[0].asByteArray())
-                || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchoringTxOp.args[1]))
-        ) {
-            throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            val anchoringTxOp = if (clusterAnchoringTxOperations.size >= clusterAnchoringTxOpIndex + 1) {
+                clusterAnchoringTxOperations[clusterAnchoringTxOpIndex]
+            } else {
+                throw UserMistake("Invalid operation index in cluster anchoring TX")
+            }
+            if (anchoringTxOp.opName != AnchoringSpecialTxExtension.OP_BLOCK_HEADER
+                    || !sourceBlockRid.contentEquals(anchoringTxOp.args[0].asByteArray())
+                    || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchoringTxOp.args[1]))
+            ) {
+                throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            }
         }
     }
 

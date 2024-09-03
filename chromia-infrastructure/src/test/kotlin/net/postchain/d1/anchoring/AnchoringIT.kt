@@ -11,6 +11,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK_HEADER
+import net.postchain.d1.anchoring.MultiOpAnchoringSpecialTxBuilder.Companion.GTX_OP_OVERHEAD
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.getClusterAnchoringChainConfig
 import net.postchain.d1.getSystemAnchoringChainConfig
@@ -39,6 +40,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.concurrent.TimeUnit
 
 /**
@@ -58,12 +61,18 @@ class AnchoringIT : ManagedModeTest() {
      * Simple happy test to see that we can run 3 nodes with:
      * - a normal chain and
      * - an anchor chain.
+     *
+     * Test is run without and then with batch mode
      */
-    @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
-    fun happyAnchor() {
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml",
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_batch.xml"
+    ])
+    fun happyAnchor(configFile: String) {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain = startClusterAnchoringChain(configFile)
 
         val dappChain = startDappChain()
 
