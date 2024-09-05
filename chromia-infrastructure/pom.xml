@@ -25,7 +25,7 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
+            <artifactId>postchain-spi</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
