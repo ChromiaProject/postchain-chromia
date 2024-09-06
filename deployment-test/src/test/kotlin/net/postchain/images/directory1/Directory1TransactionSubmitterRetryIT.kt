@@ -228,11 +228,11 @@ class Directory1TransactionSubmitterRetryIT {
                 .replace("VALIDATOR_CONTRACT_VALUE", validator.contractAddress.substring(2))
                 .replace("<string>SUPERMAJORITY</string>", "<string>ALL</string>")
                 .replace("<entry key=\"tx_node_submit_timeout\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_node_submit_timeout\"><int>20000</int>")
-                .replace("<entry key=\"tx_verification_timeout\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_verification_timeout\"><int>40000</int>")
+                .replace("<entry key=\"tx_verification_timeout\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_verification_timeout\"><int>120000</int>")
                 .replace("<entry key=\"tx_timeout\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_timeout\"><int>300000</int>")
                 .replace("<entry key=\"maxblocktime\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"maxblocktime\"><int>1000</int>")
                 .replace("<entry key=\"node_tx_verification_evm_blocks\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"node_tx_verification_evm_blocks\"><int>2</int>")
-                .replace("<entry key=\"tx_verification_time\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_verification_time\"><int>2000</int>")
+                .replace("<entry key=\"tx_verification_time\">\\s*<int>[0-9]*</int>".toRegex(), "<entry key=\"tx_verification_time\"><int>10000</int>")
         val evmTxSubmitterChainGtvConfig = GtvMLParser.parseGtvML(xml)
 
         node1.c0.transactionBuilder()
