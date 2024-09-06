@@ -44,7 +44,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ArchivingMixIT {
+class Directory1ArchivingMixSlowIntegrationTest {
 
     companion object : ManagedModeBase() {
 

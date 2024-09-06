@@ -45,7 +45,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1DeploymentUpdatingSignersOfPausedChainsIT {
+class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
 
     companion object : ManagedModeBase() {
         val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")

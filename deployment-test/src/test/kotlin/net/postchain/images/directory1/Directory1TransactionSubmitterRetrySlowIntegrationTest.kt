@@ -72,7 +72,7 @@ import net.postchain.eif.transaction_submitter.getTransaction as getEvmTransacti
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterRetryIT {
+class Directory1TransactionSubmitterRetrySlowIntegrationTest {
 
     companion object : ManagedModeBase() {
 
@@ -143,7 +143,7 @@ class Directory1TransactionSubmitterRetryIT {
         }
 
         private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1TransactionSubmitterRetryIT::class.java.getResource(resourcePath)?.readText()
+            val artifactFile = Directory1TransactionSubmitterRetrySlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
             val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
             return artifactJson.get("bytecode").asString
         }

@@ -129,7 +129,7 @@ import java.nio.charset.StandardCharsets
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1EconomyChainMixIT {
+class Directory1EconomyChainMixSlowIntegrationTest {
 
     private val ecAdminKeyPair = KeyPair.of(
             "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3",
@@ -276,7 +276,7 @@ class Directory1EconomyChainMixIT {
         }
 
         private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1EconomyChainMixIT::class.java.getResource(resourcePath)?.readText()
+            val artifactFile = Directory1EconomyChainMixSlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
             val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
             return artifactJson.get("bytecode").asString
         }

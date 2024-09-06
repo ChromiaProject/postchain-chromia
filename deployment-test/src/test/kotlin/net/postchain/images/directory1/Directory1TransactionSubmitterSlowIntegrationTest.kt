@@ -71,7 +71,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterIT {
+class Directory1TransactionSubmitterSlowIntegrationTest {
 
     companion object : ManagedModeBase() {
 
@@ -169,7 +169,7 @@ class Directory1TransactionSubmitterIT {
         }
 
         private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1TransactionSubmitterIT::class.java.getResource(resourcePath)?.readText()
+            val artifactFile = Directory1TransactionSubmitterSlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
             val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
             return artifactJson.get("bytecode").asString
         }

@@ -61,7 +61,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @Disabled
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ManualLatencyTest {
+class Directory1ManualLatencySlowIntegrationTest {
 
     companion object : ManagedModeBase() {
         const val TEST_CLUSTER = "test_cluster"
