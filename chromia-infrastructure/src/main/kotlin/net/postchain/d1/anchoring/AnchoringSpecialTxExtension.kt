@@ -11,6 +11,7 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -48,6 +49,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     }
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER, OP_BATCH_BLOCK_HEADER)
+    private val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
 
     lateinit var isSigner: () -> Boolean
     lateinit var anchoringReceiver: AnchoringReceiver
@@ -62,6 +64,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     private lateinit var cryptoSystem: CryptoSystem
 
     override fun getRelevantOps() = _relevantOps
+
 
     override fun init(
             module: GTXModule,
@@ -146,6 +149,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     ): Boolean {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
         val relevantChains = anchoringReceiver.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
+        pruneCachedPeers(relevantChains)
 
         val validatedAnchoringOps = if (anchoringConfig.batchMode) {
             if (ops.size != 1) {
@@ -179,7 +183,12 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             }
 
             val peers = try {
-                blockchainConfigProvider.getRelevantPeers(headerData)
+                val configHash = headerData.getExtra()["config_hash"]?.asByteArray()
+                if (configHash != null) {
+                    getCachedPeers(headerData, bcRid, configHash)
+                } else {
+                    blockchainConfigProvider.getRelevantPeers(headerData)
+                }
             } catch (e: UserMistake) {
                 logger.warn(e.message)
                 return false
@@ -237,6 +246,25 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             }
         }
         return true
+    }
+
+    private fun getCachedPeers(headerData: BlockHeaderData, bcRid: BlockchainRid, configHash: ByteArray): Collection<PubKey> {
+        peerCache[bcRid]?.let { (cachedConfigHash, peers) ->
+            if (cachedConfigHash.contentEquals(configHash)) {
+                logger.debug { "Retrieved cached peers for blockchain: $bcRid and config hash: ${configHash.toHex()}" }
+                return peers
+            }
+        }
+
+        val peers = blockchainConfigProvider.getRelevantPeers(headerData)
+        peerCache[bcRid] = configHash to peers
+        return peers
+    }
+
+    private fun pruneCachedPeers(relevantChains: Set<BlockchainRid>) {
+        (peerCache.keys - relevantChains).forEach {
+            peerCache.remove(it)
+        }
     }
 
     /**
