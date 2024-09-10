@@ -1,5 +1,6 @@
 package net.postchain.d1.query
 
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
@@ -18,13 +19,12 @@ class MasterClient(
         ).toCompletableFuture().get()?.let(::transformBlockDetail)
     }
 
-    fun blocksFromHeight(fromHeight: Long, limit: Long, transactionsData: Boolean = false): List<BlockDetail> {
+    fun blocksFromHeight(fromHeight: Long, limit: Long): List<DatabaseAccess.BlockInfoExt> {
         return queryManager.blocksFromHeight(
                 targetBlockchainRid,
                 fromHeight,
-                limit,
-                transactionsData
-        ).toCompletableFuture().get()?.map(::transformBlockDetail) ?: listOf()
+                limit
+        ).toCompletableFuture().get() ?: listOf()
     }
 
     override fun query(name: String, args: Gtv): Gtv = queryManager.query(
