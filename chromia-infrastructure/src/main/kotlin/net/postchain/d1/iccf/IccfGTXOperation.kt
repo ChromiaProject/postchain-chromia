@@ -144,8 +144,9 @@ class IccfGTXOperation(
     private fun verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx: Gtx, clusterAnchoringTxOpIndex: Int, sourceBlockRid: Hash, sourceTxConfirmationProof: ConfirmationProof) {
         val clusterAnchoringTxOperations = clusterAnchoringTx.gtxBody.operations
 
-        if (clusterAnchoringTxOperations.firstOrNull()?.opName == AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER) {
-            val batchAnchoringBlocks = clusterAnchoringTxOperations.first().args[0].asArray()
+        val batchOp = clusterAnchoringTxOperations.find { it.opName == AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER }
+        if (batchOp != null) {
+            val batchAnchoringBlocks = batchOp.args[0].asArray()
             val anchorBlockElement = if (batchAnchoringBlocks.size >= clusterAnchoringTxOpIndex + 1) {
                 batchAnchoringBlocks[clusterAnchoringTxOpIndex]
             } else {
