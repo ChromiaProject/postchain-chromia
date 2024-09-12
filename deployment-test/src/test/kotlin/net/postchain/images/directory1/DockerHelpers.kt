@@ -1,9 +1,11 @@
 package net.postchain.images.directory1
 
+import mu.KotlinLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_HOST
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_HOST
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_USER
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.parseConfig
@@ -14,6 +16,8 @@ import java.net.InetAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
+
+val testLogger = KotlinLogging.logger("TestLogger")
 
 internal fun getResolvedDockerHost(): URI? {
     return if (System.getenv("DOCKER_HOST") != null) {
@@ -27,20 +31,30 @@ internal fun getResolvedDockerHost(): URI? {
 
 internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     val dockerHost = getResolvedDockerHost()
-    val configOverrides = if (dockerHost != null) {
-        mapOf(
-                fullKey(KEY_MASTER_HOST) to dockerHost.host,
-                fullKey(KEY_SUBNODE_HOST) to dockerHost.host,
-                fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
-        )
-    } else {
-        mapOf(
-                fullKey(KEY_MASTER_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
-                fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1"),
-                fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
-        )
+    val configOverrides = mutableMapOf<String, String>(
+            fullKey(KEY_MASTER_HOST) to (dockerHost?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")),
+            fullKey(KEY_SUBNODE_HOST) to (dockerHost?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")),
+            fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
+    )
+    getSubnodeUser()?.apply {
+        testLogger.info { "Postchain subnode user set to: $this" }
+        configOverrides.put(fullKey(KEY_SUBNODE_USER), this)
     }
+    testLogger.info { "Config overrides: $configOverrides" }
     return parseConfig(resource, configOverrides)
+}
+
+fun getSubnodeUser(): String? {
+    return System.getenv("POSTCHAIN_SUBNODE_USER") ?: try {
+        val unixSystem = com.sun.security.auth.module.UnixSystem()
+        "${unixSystem.uid}:${unixSystem.gid}"
+    } catch (e: Exception) {
+        testLogger.warn("Unable to fetch current user id: $e")
+        null
+    } catch (le: LinkageError) {
+        testLogger.warn("Fetching current user id is unsupported: $le")
+        null
+    }
 }
 
 internal fun saveSubnodeLogs(dockerClient: DockerClient, subdir: String = "") {

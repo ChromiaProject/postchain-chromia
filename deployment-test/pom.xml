@@ -416,6 +416,13 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <environmentVariables>
+                                <!-- Set our subnode to use the daemon user and group. This will be accepted by initdb
+                                since the user exists in the host mounted /etc/passwd file. -->
+                                <POSTCHAIN_SUBNODE_USER>1:1</POSTCHAIN_SUBNODE_USER>
+                            </environmentVariables>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
@@ -458,6 +465,10 @@
                             <systemPropertyVariables>
                                 <DOCKER_HOST_MASTER>host.docker.internal</DOCKER_HOST_MASTER>
                             </systemPropertyVariables>
+                            <environmentVariables>
+                                <!-- Mac users aren't always in /etc/passwd - set it to 1:1 for sub nodes. -->
+                                <POSTCHAIN_SUBNODE_USER>1:1</POSTCHAIN_SUBNODE_USER>
+                            </environmentVariables>
                         </configuration>
                     </plugin>
                 </plugins>
