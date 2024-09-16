@@ -7,6 +7,12 @@ set -eu
 JAVA_MEMORY_SHARE=35
 export PSQL_MEMORY_SHARE=35
 
+# Exit container if run as root
+if [ "$(id -u)" = '0' ]; then
+  echo "Do not run this container as root"
+  exit 1
+fi
+
 echo "Configuring and starting Postgres"
 bash postgres-entrypoint.sh postgres
 
