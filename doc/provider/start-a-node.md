@@ -75,10 +75,13 @@ Example:
 ```shell
 docker run -d --name postchain \
     --restart unless-stopped \
+    --security-opt=no-new-privileges \
+    --cap-drop ALL --cap-add FOWNER --cap-add CHOWN --cap-add DAC_OVERRIDE \
     --user $(id -u):$(id -g) \
     --group-add $(cut -d: -f3 < <(getent group docker)) \
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --mount type=bind,source="/etc/passwd",target=/etc/passwd,readonly \
+    --mount type=bind,source="/etc/group",target=/etc/group,readonly \
     --mount type=bind,source=/var/lib/chromaway/postchain/subnode,target=/var/lib/chromaway/postchain/subnode \
     --mount type=bind,source="$(pwd)/config",target=/config,readonly \
     --mount type=bind,source="$(pwd)/build",target=/build,readonly \
@@ -86,10 +89,11 @@ docker run -d --name postchain \
     -e POSTCHAIN_DEBUG=true \
     -e POSTCHAIN_CONFIG=/config/node-config.properties \
     -e POSTCHAIN_BLOCKCHAIN_CONFIG=/build/bc-config.xml \
+    -e POSTCHAIN_SUBNODE_USER=$(id -u):$(id -g) \    
     -p 9870:9870/tcp \
     -p 7740:7740/tcp \
     -p 9880:9880/tcp \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.7.0 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.19.0 \
     run-node
 ```
 
@@ -114,7 +118,8 @@ Subnode disk quotas can be enforced with either ext4 or ZFS.
 ### ext4
 
 Ext4 disk quotas can be used with a native master node, or a master node running in a Docker container with 
-`chromaway/chromia-server` image started with `--privileged` and run as root. To enable this:
+`chromaway/chromia-server` image started with `--cap-add SYS_ADMIN`, access to the device with the ext4 file system 
+(usually same as `container.host-mount-device`, see above), and run as root. To enable this:
 
 Create an ext4 file system with project quotas enabled and mount it with project quota enabled:
 
@@ -134,9 +139,13 @@ Start master node container:
 
 ```shell
 docker run -d --name postchain \
-    --privileged \
     --restart unless-stopped \
+    --security-opt=no-new-privileges \
+    --cap-drop ALL --cap-add FOWNER --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add SYS_ADMIN \
+    --device ${POSTCHAIN_HOST_MOUNT_DEVICE} \    
     --volume /var/run/docker.sock:/var/run/docker.sock \
+    --mount type=bind,source="/etc/passwd",target=/etc/passwd,readonly \
+    --mount type=bind,source="/etc/group",target=/etc/group,readonly \
     --mount type=bind,source=/mnt/chromaway/postchain,target=/mnt/chromaway/postchain \
     --mount type=bind,source="$(pwd)/config",target=/config,readonly \
     --mount type=bind,source="$(pwd)/build",target=/build,readonly \
@@ -148,7 +157,7 @@ docker run -d --name postchain \
     -p 9870:9870/tcp \
     -p 7740:7740/tcp \
     -p 9880:9880/tcp \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.7.2 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.19.0 \
     run-node
 ```
 
