@@ -5,6 +5,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
+import com.github.dockerjava.api.model.Capability
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import mu.KotlinLogging
@@ -170,6 +171,12 @@ open class ManagedModeBase {
                 .withEnv("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", 30_000.toString())
                 .withLogConsumer(logConsumer)
                 .withCommand("run-server")
+                .withCreateContainerCmdModifier { cmd ->
+                    cmd.hostConfig!!
+                            .withCapDrop(Capability.ALL)
+                            .withCapAdd(Capability.CHOWN, Capability.FOWNER, Capability.DAC_OVERRIDE)
+                            .withSecurityOpts(listOf("no-new-privileges:true"))
+                }
     }
 
     fun getDb(node: PostchainContainer): ChainDatabaseCommunicator =
