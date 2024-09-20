@@ -2,6 +2,7 @@ package net.postchain.d1.iccf
 
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.chromia.model.BlockchainState
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -34,6 +35,7 @@ class IccfGTXOperation(
 ) : GTXOperation(opData) {
     private val cryptoSystem = iccfContext.cryptoSystem
     private val clusterManagement = iccfContext.clusterManagement
+    private val nodeManagement = iccfContext.nodeManagement
     private val queryProvider = iccfContext.queryProvider
     private val nodeIsReplica = iccfContext.nodeIsReplica
     private val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
@@ -117,6 +119,9 @@ class IccfGTXOperation(
     }
 
     private fun verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid: BlockchainRid) {
+        // Skip validation if the chain has been removed
+        if (nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED) return
+
         val sourceCluster = clusterManagement.getClusterOfBlockchain(sourceBlockchainRid)
         if (myCluster != sourceCluster) {
             throw UserMistake("Source blockchain is not in our cluster but no cluster anchoring proof was supplied.")
@@ -135,6 +140,9 @@ class IccfGTXOperation(
     }
 
     private fun verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid: BlockchainRid, clusterAnchoringTx: Gtx) {
+        // Skip validation if the chain has been removed
+        if (nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED) return
+
         val sourceCluster = clusterManagement.getClusterOfBlockchain(sourceBlockchainRid)
         if (clusterAnchoringTx.gtxBody.blockchainRid != clusterManagement.getClusterInfo(sourceCluster).anchoringChain) {
             throw UserMistake("Cluster anchoring tx is not from the cluster anchoring chain of source cluster: $sourceCluster")

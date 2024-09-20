@@ -1,9 +1,11 @@
 package net.postchain.d1.nm_api
 
+import net.postchain.chromia.model.BlockchainState
 import net.postchain.chromia.nm_api.BlockchainConfigurationInfo
 import net.postchain.chromia.nm_api.NmGetPendingBlockchainConfigurationByHashResult
 import net.postchain.chromia.nm_api.nmApiVersion
 import net.postchain.chromia.nm_api.nmGetBlockchainConfigurationInfo
+import net.postchain.chromia.nm_api.nmGetBlockchainState
 import net.postchain.chromia.nm_api.nmGetManagementChain
 import net.postchain.chromia.nm_api.nmGetPendingBlockchainConfigurationByHash
 import net.postchain.client.core.PostchainQuery
@@ -27,5 +29,9 @@ class NodeManagementImpl(private val query: PostchainQuery) : NodeManagement {
         } else {
             query.nmGetBlockchainConfigurationInfo(blockchainRid, height)
         }
+    }
+
+    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
+        return BlockchainState.valueOf(query.nmGetBlockchainState(blockchainRid))
     }
 }
