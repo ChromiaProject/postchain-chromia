@@ -464,6 +464,7 @@
                         <configuration>
                             <systemPropertyVariables>
                                 <DOCKER_HOST_MASTER>host.docker.internal</DOCKER_HOST_MASTER>
+                                <SET_DOCKER_MASTER_USER>false</SET_DOCKER_MASTER_USER>
                             </systemPropertyVariables>
                             <environmentVariables>
                                 <!-- Mac users aren't always in /etc/passwd - set it to 1:1 for sub nodes. -->

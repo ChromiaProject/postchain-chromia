@@ -54,6 +54,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
+import net.postchain.images.directory1.getMasterContainerUser
 import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -153,6 +154,7 @@ open class ManagedModeBase {
 
     fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
         val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
+
         return PostchainContainer(
                 DockerImages.chromiaServerImage(),
                 appConfig,
@@ -176,6 +178,11 @@ open class ManagedModeBase {
                             .withCapDrop(Capability.ALL)
                             .withCapAdd(Capability.CHOWN, Capability.FOWNER, Capability.DAC_OVERRIDE)
                             .withSecurityOpts(listOf("no-new-privileges:true"))
+                            .apply {
+                                getMasterContainerUser()?.let { userSpec ->
+                                    cmd.withUser(userSpec)
+                                }
+                            }
                 }
     }
 
