@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.BaseBlockQueries
 import net.postchain.client.core.PostchainQuery
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.d1.RELL_SOURCE_PATH
@@ -13,8 +14,10 @@ import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoringTransactionForBlockRid
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.mminfra.MockManagedNodeDataSource
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -33,6 +36,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 
 class IccfIT : ManagedModeTest() {
+
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
     private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
@@ -43,6 +47,18 @@ class IccfIT : ManagedModeTest() {
             "lib.iccf" to gtv(iccfRellCode + iccfRellTestCode)
     ))
     private val signers = setOf(0, 1, 2, 3)
+
+    override fun createManagedNodeDataSource(): MockManagedNodeDataSource {
+        return object : MockManagedNodeDataSource() {
+            override fun query(name: String, args: Gtv): Gtv {
+                val brid = BlockchainRid(args.asDict()["blockchain_rid"]!!.asByteArray())
+                return when (name) {
+                    "nm_get_blockchain_state" -> gtv(getBlockchainState(brid).name)
+                    else -> super.query(name, args)
+                }
+            }
+        }
+    }
 
     @Test
     fun intraCluster() {

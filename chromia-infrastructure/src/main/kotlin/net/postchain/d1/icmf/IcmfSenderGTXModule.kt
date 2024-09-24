@@ -4,12 +4,13 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.chromia.cm_api.cmGetSystemChains
 import net.postchain.client.core.PostchainQuery
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.d1.ChromiaQueryProviderFactory
-import net.postchain.d1.ClusterManagementFactory
+import net.postchain.d1.PostchainQueryFactory
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvDictionary
@@ -67,7 +68,7 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
     }
 
     private fun createClusterManagement(configuration: BlockchainConfiguration, connectionManager: ConnectionManager): ClusterManagement =
-            ClusterManagementFactory.create(configuration, connectionManager)
+            ClusterManagementImpl(PostchainQueryFactory.create(configuration, connectionManager))
 
     private fun createQueryProvider(
             configuration: BlockchainConfiguration,

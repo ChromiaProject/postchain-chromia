@@ -11,6 +11,7 @@ import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.impl.TryNextOnErrorRequestStrategyFactory
 import net.postchain.client.request.EndpointPool
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -19,7 +20,7 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.ChromiaQueryProviderFactory
-import net.postchain.d1.ClusterManagementFactory
+import net.postchain.d1.PostchainQueryFactory
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
@@ -145,7 +146,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     }
 
     open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement =
-            ClusterManagementFactory.create(configuration, postchainContext.connectionManager)
+            ClusterManagementImpl(PostchainQueryFactory.create(configuration, postchainContext.connectionManager))
 
     open fun createBlockchainConfigProvider(configuration: ManagedDataSourceAware, clusterManagement: ClusterManagement): BlockchainConfigProvider =
             ManagedBlockchainConfigProvider(

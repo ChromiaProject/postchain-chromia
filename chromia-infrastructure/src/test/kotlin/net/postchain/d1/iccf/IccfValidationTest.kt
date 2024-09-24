@@ -3,6 +3,7 @@ package net.postchain.d1.iccf
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.chromia.model.BlockchainState
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -12,6 +13,7 @@ import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
+import net.postchain.d1.nm_api.NodeManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -38,6 +40,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 
 class IccfValidationTest {
+
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val sourceBlockchainRid = BlockchainRid.buildRepeat(0)
@@ -139,6 +142,9 @@ class IccfValidationTest {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val clusterAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -154,6 +160,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -171,12 +178,16 @@ class IccfValidationTest {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {}
 
         val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = true
         }
@@ -194,12 +205,16 @@ class IccfValidationTest {
             on { getClusterOfBlockchain(sourceBlockchainRid) } doReturn "clusterA"
             on { getClusterOfBlockchain(targetBlockchainRid) } doReturn "clusterB"
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val chromiaQueryProvider: ChromiaQueryProvider = mock {}
 
         val iccfExtOpData = buildExtOpData(confirmationProof)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -216,6 +231,9 @@ class IccfValidationTest {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn listOf(cryptoSystem.generateKeyPair().pubKey, cryptoSystem.generateKeyPair().pubKey)
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val clusterAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -231,6 +249,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -246,6 +265,9 @@ class IccfValidationTest {
         val clusterManagement: ClusterManagement = mock {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
             on {
@@ -271,6 +293,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -293,6 +316,9 @@ class IccfValidationTest {
         val clusterManagement: ClusterManagement = mock {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
         }
         val clusterAnchoringClient: PostchainBlockClient = mock {
             on {
@@ -318,6 +344,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -334,6 +361,9 @@ class IccfValidationTest {
             on { getClusterOfBlockchain(any()) } doReturn "clusterA"
             on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val clusterAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -349,6 +379,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -368,6 +399,9 @@ class IccfValidationTest {
             on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val systemAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -379,12 +413,20 @@ class IccfValidationTest {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(clusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -404,6 +446,9 @@ class IccfValidationTest {
             on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val systemAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -415,12 +460,20 @@ class IccfValidationTest {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(batchClusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(batchClusterAnchoringConfirmationProof)))
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(batchClusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(batchClusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -440,6 +493,9 @@ class IccfValidationTest {
             on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val systemAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -451,17 +507,25 @@ class IccfValidationTest {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
-        val emtpyClusterAnchoringTx = Gtx(
+        val emptyClusterAnchoringTx = Gtx(
                 GtxBody(clusterAnchoringChainRid, listOf(), listOf()),
                 listOf()
         )
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(emtpyClusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(emptyClusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -481,6 +545,9 @@ class IccfValidationTest {
             on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val systemAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -497,12 +564,20 @@ class IccfValidationTest {
                 listOf()
         )
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTxFromWrongChain.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(clusterAnchoringTxFromWrongChain.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -522,6 +597,9 @@ class IccfValidationTest {
             on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
             on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
         }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.RUNNING
+        }
         val systemAnchoringClient: PostchainBlockClient = mock {
             on {
                 query("is_block_anchored", gtv(mapOf(
@@ -533,12 +611,20 @@ class IccfValidationTest {
             on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
         }
 
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)), gtv(clusterAnchoringTx.encode()), gtv(0), gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(clusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
         val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
         val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
@@ -554,6 +640,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = mock {}
+            this.nodeManagement = mock {}
             this.queryProvider = mock {}
             this.nodeIsReplica = false
         }
@@ -572,6 +659,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = mock {}
+            this.nodeManagement = mock {}
             this.queryProvider = mock {}
             this.nodeIsReplica = false
         }
@@ -590,6 +678,7 @@ class IccfValidationTest {
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
             this.clusterManagement = mock {}
+            this.nodeManagement = mock {}
             this.queryProvider = mock {}
             this.nodeIsReplica = false
         }
@@ -601,6 +690,88 @@ class IccfValidationTest {
 
         assertThrows<GTXOpMistake> {
             iccfGTXOperation.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun acceptIntraClusterProofsFromRemovedChains() {
+        val clusterManagement: ClusterManagement = mock {
+            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
+        }
+        val clusterAnchoringClient: PostchainBlockClient = mock {
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
+        }
+        val chromiaQueryProvider: ChromiaQueryProvider = mock {
+            on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
+        }
+
+        val iccfExtOpData = buildExtOpData(confirmationProof)
+        val iccfContext = IccfGTXModuleContext().apply {
+            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
+            this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
+            this.queryProvider = chromiaQueryProvider
+            this.nodeIsReplica = false
+        }
+        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
+
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun acceptIntraNetworkProofsFromRemovedChainsOnlyWhenSyncing() {
+        val clusterManagement: ClusterManagement = mock {
+            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+            on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
+        }
+        val systemAnchoringClient: PostchainBlockClient = mock {
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
+                ))
+            } doReturn gtv(true)
+        }
+        val chromiaQueryProvider: ChromiaQueryProvider = mock {
+            on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
+        }
+
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(clusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
+        val iccfContext = IccfGTXModuleContext().apply {
+            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
+            this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
+            this.queryProvider = chromiaQueryProvider
+            this.nodeIsReplica = false
+        }
+        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
+
+        assertThrows<UserMistake> {
+            iccfGTXOperation.checkCorrectness()
+        }
+
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectnessWhileSyncing()
         }
     }
 }
