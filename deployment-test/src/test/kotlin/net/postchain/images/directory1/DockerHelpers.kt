@@ -1,5 +1,6 @@
 package net.postchain.images.directory1
 
+import com.sun.security.auth.module.UnixSystem
 import mu.KotlinLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
@@ -44,9 +45,21 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     return parseConfig(resource, configOverrides)
 }
 
+internal fun getMasterContainerUser(): String? = if (System.getProperty("SET_DOCKER_MASTER_USER", "true").toBoolean())
+    try {
+        val unixSystem = UnixSystem()
+        if (unixSystem.uid == 0L) null else "${unixSystem.uid}:${unixSystem.gid}"
+    } catch (e: Exception) {
+        testLogger.warn("Unable to fetch current user id: $e")
+        null
+    } catch (le: LinkageError) {
+        testLogger.warn("Fetching current user id is unsupported: $le")
+        null
+    } else null
+
 fun getSubnodeUser(): String? {
     return System.getenv("POSTCHAIN_SUBNODE_USER") ?: try {
-        val unixSystem = com.sun.security.auth.module.UnixSystem()
+        val unixSystem = UnixSystem()
         "${unixSystem.uid}:${unixSystem.gid}"
     } catch (e: Exception) {
         testLogger.warn("Unable to fetch current user id: $e")
