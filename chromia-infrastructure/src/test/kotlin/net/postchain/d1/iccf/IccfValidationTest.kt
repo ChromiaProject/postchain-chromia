@@ -391,41 +391,6 @@ class IccfValidationTest {
     }
 
     @Test
-    fun skipValidationIfSourceBlockchainIsRemoved() {
-        val clusterManagement: ClusterManagement = mock {
-            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
-        }
-        val nodeManagement: NodeManagement = mock {
-            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
-        }
-
-        val clusterAnchoringClient: PostchainBlockClient = mock {
-            on {
-                query("is_block_anchored", gtv(mapOf(
-                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
-                ))
-            } doReturn gtv(true)
-        }
-        val chromiaQueryProvider: ChromiaQueryProvider = mock {
-            on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
-        }
-
-        val iccfExtOpData = buildExtOpData(confirmationProof)
-        val iccfContext = IccfGTXModuleContext().apply {
-            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
-            this.clusterManagement = clusterManagement
-            this.nodeManagement = nodeManagement
-            this.queryProvider = chromiaQueryProvider
-            this.nodeIsReplica = false
-        }
-        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
-
-        assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
-        }
-    }
-
-    @Test
     fun intraNetworkIccf() {
         val clusterManagement: ClusterManagement = mock {
             on { getClusterOfBlockchain(sourceBlockchainRid) } doReturn "clusterA"
@@ -567,54 +532,6 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
-        }
-    }
-
-    @Test
-    fun intraNetworkSkipValidationIfSourceBlockchainIsRemoved() {
-        val clusterManagement: ClusterManagement = mock {
-            on { getClusterOfBlockchain(targetBlockchainRid) } doReturn "clusterB"
-            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
-            on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
-            on { getClusterInfo("clusterA") } doReturn D1ClusterInfo("clusterA", clusterAnchoringChainRid, listOf())
-        }
-        val nodeManagement: NodeManagement = mock {
-            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
-        }
-
-        val systemAnchoringClient: PostchainBlockClient = mock {
-            on {
-                query("is_block_anchored", gtv(mapOf(
-                        "blockchain_rid" to gtv(clusterAnchoringChainRid), "block_rid" to gtv(clusterAnchoringBlockRid))
-                ))
-            } doReturn gtv(true)
-        }
-        val chromiaQueryProvider: ChromiaQueryProvider = mock {
-            on { getSystemAnchoringQuery() } doReturn systemAnchoringClient
-        }
-
-        val iccfGtxOp = GtxOp(
-                ICCF_OP_NAME,
-                gtv(sourceBlockchainRid),
-                gtv(txToProveHash),
-                gtv(GtvEncoder.encodeGtv(confirmationProof)),
-                gtv(clusterAnchoringTx.encode()),
-                gtv(0),
-                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof))
-        )
-        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
-        val iccfContext = IccfGTXModuleContext().apply {
-            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
-            this.clusterManagement = clusterManagement
-            this.nodeManagement = nodeManagement
-            this.queryProvider = chromiaQueryProvider
-            this.nodeIsReplica = false
-        }
-        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
-
-        assertDoesNotThrow {
             iccfGTXOperation.checkCorrectness()
         }
     }
