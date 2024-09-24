@@ -44,14 +44,21 @@ class IccfGTXOperation(
 
     override fun apply(ctx: TxEContext) = true
 
+    override fun checkCorrectnessWhileSyncing() {
+        verifyIccf(data.args, true)
+    }
+
     override fun checkCorrectness() {
+        verifyIccf(data.args, false)
+    }
+
+    private fun verifyIccf(args: Array<out Gtv>, isSyncing: Boolean) {
         if (data.operations.all { nonCustomOps.contains(it.opName) }) {
             throw GTXOpMistake("Tx must contain other operations than $nonCustomOps", data)
         }
-        val args = data.args
         when (args.size) {
             3 -> verifyIntraClusterIccf(args)
-            6 -> verifyIntraNetworkIccf(args)
+            6 -> verifyIntraNetworkIccf(args, isSyncing)
             else -> {
                 throw GTXOpMistake("Wrong number of arguments", data)
             }
@@ -60,13 +67,27 @@ class IccfGTXOperation(
 
     private fun verifyIntraClusterIccf(args: Array<out Gtv>) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
-        verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid)
+        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
+
+        // This can't be verified if chain is removed but anchoring check will fail anyway so that's fine
+        // It's still worth doing this check if not removed (to save time and get a better error message)
+        if (!sourceIsRemoved) {
+            verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid)
+        }
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
         verifySourceBlockAnchoredInClusterAnchoringChain(sourceBlockchainRid, sourceBlockRid)
     }
 
-    private fun verifyIntraNetworkIccf(args: Array<out Gtv>) {
+    private fun verifyIntraNetworkIccf(args: Array<out Gtv>, isSyncing: Boolean) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
+        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
+
+        // This is not acceptable since we can't verify that anchoring proof is actually from the correct anchoring chain
+        // If we are syncing we have no option but to accept this limitation
+        if (sourceIsRemoved && !isSyncing) {
+            throw UserMistake("Source blockchain is removed")
+        }
+
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
 
         val rawClusterAnchoringTx = decodeSafely(args, 3) { it.asByteArray() }
@@ -75,7 +96,9 @@ class IccfGTXOperation(
         val clusterAnchoringTxGtv = GtvFactory.decodeGtv(rawClusterAnchoringTx)
         val clusterAnchoringTx = Gtx.fromGtv(clusterAnchoringTxGtv)
 
-        verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid, clusterAnchoringTx)
+        if (!sourceIsRemoved) {
+            verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid, clusterAnchoringTx)
+        }
         verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx, clusterAnchoringTxOpIndex, sourceBlockRid, sourceTxConfirmationProof)
 
         val clusterAnchoringTxHash = clusterAnchoringTxGtv.merkleHash(gtvMerkleHashCalculator)
@@ -119,9 +142,6 @@ class IccfGTXOperation(
     }
 
     private fun verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid: BlockchainRid) {
-        // Skip validation if the chain has been removed
-        if (nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED) return
-
         val sourceCluster = clusterManagement.getClusterOfBlockchain(sourceBlockchainRid)
         if (myCluster != sourceCluster) {
             throw UserMistake("Source blockchain is not in our cluster but no cluster anchoring proof was supplied.")
@@ -140,9 +160,6 @@ class IccfGTXOperation(
     }
 
     private fun verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid: BlockchainRid, clusterAnchoringTx: Gtx) {
-        // Skip validation if the chain has been removed
-        if (nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED) return
-
         val sourceCluster = clusterManagement.getClusterOfBlockchain(sourceBlockchainRid)
         if (clusterAnchoringTx.gtxBody.blockchainRid != clusterManagement.getClusterInfo(sourceCluster).anchoringChain) {
             throw UserMistake("Cluster anchoring tx is not from the cluster anchoring chain of source cluster: $sourceCluster")
