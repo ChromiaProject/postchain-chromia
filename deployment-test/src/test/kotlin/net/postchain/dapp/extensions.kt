@@ -2,6 +2,7 @@ package net.postchain.dapp
 
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.Postable
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.tx.TransactionStatus
 import java.lang.Thread.sleep
 import java.time.Duration
@@ -21,8 +22,24 @@ fun Postable.postTransactionUntilConfirmed(
     retries: Int = 100,
     timeOut: Duration = Duration.ofSeconds(2)
 ): TransactionResult {
+    return postUntilConfirmed(retries, transactionName, timeOut, ::postAwaitConfirmation)
+}
+
+fun Postable.postPartialTransactionUntilConfirmed(
+        signatureBuilder: TransactionBuilder.SignatureBuilder,
+        transactionName: String = "",
+        retries: Int = 100,
+        timeOut: Duration = Duration.ofSeconds(2),
+): TransactionResult {
+    val postTransaction: () -> TransactionResult = {
+        postPartialTransactionAwaitConfirmation(signatureBuilder)
+    }
+    return postUntilConfirmed(retries, transactionName, timeOut, postTransaction)
+}
+
+private fun postUntilConfirmed(retries: Int, transactionName: String, timeOut: Duration, post: () -> TransactionResult) : TransactionResult{
     repeat(retries) { attempt ->
-        val txRes = postAwaitConfirmation()
+        val txRes = post()
         if (txRes.status == TransactionStatus.REJECTED && isRetryableStatus(txRes.httpStatusCode) ||
             txRes.status == TransactionStatus.UNKNOWN
         ) {
