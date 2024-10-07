@@ -37,7 +37,7 @@
                                     <string>my-topic</string>
                                 </entry>
                                 <entry key="skip-to-height">
-                                    <int>1</int>
+                                    <int>2</int>
                                 </entry>
                             </dict>
                         </array>

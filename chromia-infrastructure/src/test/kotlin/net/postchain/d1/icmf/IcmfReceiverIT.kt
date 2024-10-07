@@ -151,12 +151,12 @@ class IcmfReceiverIT : ManagedModeTest() {
         })
     }
 
-    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid, messageHeight: Long = 0) {
+    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1) {
         QueryProviderMocks.clearMocks()
 
         QueryProviderMocks.addMockQueries(senderBrid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic", messageHeight) else null
+                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic", messageHeight, prevMessageHeight) else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"]!!.asInteger() < messageHeight)
@@ -587,6 +587,7 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         startManagedSystem(3, 0)
 
+        // Skips to height 2
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_skip_to_height_1.xml")!!
                         .readText()
@@ -613,7 +614,7 @@ class IcmfReceiverIT : ManagedModeTest() {
             }
         }
 
-        setupNonAnchoredQueriesMock(messageHeight = 1)
+        setupNonAnchoredQueriesMock(messageHeight = 2)
         buildBlock(dappChain)
         for (node in getChainNodes(dappChain)) {
             withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
@@ -630,6 +631,104 @@ class IcmfReceiverIT : ManagedModeTest() {
                     assertThat(message.topic).isEqualTo("my-topic")
                     assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
                     assertThat(message.height).isEqualTo(1)
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun skipToHeightAfterReadingMessages() {
+        setupNonAnchoredQueriesMock()
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_intra_cluster_without_anchoring_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).hasSize(1)
+                    val message = messages[0]
+                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.height).isEqualTo(0)
+                }
+            }
+        }
+
+        val skipToHeightConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_skip_to_height_1.xml")!!
+                        .readText()
+        )
+
+        // Restart with skip to height set to 2
+        addDappBlockchainConfiguration(
+                dappChain, GtvEncoder.encodeGtv(skipToHeightConfig), 2
+        )
+
+        buildBlockNoWait(nodes, dappChain, 2)
+        awaitChainRestarted(dappChain, 1, skipToHeightConfig.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+
+        // skip config should be applied, verify that we don't care about messages at height 1
+        setupNonAnchoredQueriesMock(messageHeight = 1, prevMessageHeight = 0)
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).hasSize(1)
+                    val message = messages[0]
+                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.topic).isEqualTo("my-topic")
+                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.height).isEqualTo(0)
+                }
+            }
+        }
+
+        // See that we read message at height 2
+        setupNonAnchoredQueriesMock(messageHeight = 2, prevMessageHeight = 1)
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                DatabaseAccess.of(ctx).apply {
+                    val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                    val messages = jooq.select()
+                            .from(tableName(ctx, testMessageTable))
+                            .fetch()
+                            .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                    assertThat(messages).hasSize(2)
+                    messages.forEach {
+                        assertThat(it.sender).isEqualTo(senderTwoChainRid)
+                        assertThat(it.topic).isEqualTo("my-topic")
+                        assertThat(it.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    }
+                    assertThat(messages[0].height).isEqualTo(0)
+                    assertThat(messages[1].height).isEqualTo(3)
                 }
             }
         }
