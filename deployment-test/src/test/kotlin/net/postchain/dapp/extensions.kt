@@ -25,17 +25,6 @@ fun Postable.postTransactionUntilConfirmed(
     return postUntilConfirmed(retries, transactionName, timeOut, ::postAwaitConfirmation)
 }
 
-fun Postable.postPartialTransactionUntilConfirmed(
-        signatureBuilder: TransactionBuilder.SignatureBuilder,
-        transactionName: String = "",
-        retries: Int = 100,
-        timeOut: Duration = Duration.ofSeconds(2),
-): TransactionResult {
-    val postTransaction: () -> TransactionResult = {
-        postPartialTransactionAwaitConfirmation(signatureBuilder)
-    }
-    return postUntilConfirmed(retries, transactionName, timeOut, postTransaction)
-}
 
 private fun postUntilConfirmed(retries: Int, transactionName: String, timeOut: Duration, post: () -> TransactionResult) : TransactionResult{
     repeat(retries) { attempt ->

@@ -21,7 +21,6 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.postPartialTransactionUntilConfirmed
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
@@ -170,15 +169,23 @@ class MultiSigIntegrationTest {
         val accountId = getAccountId(signers.map { it.pubKey })
         val accountMainAuthDescriptor = node1.client(ecBrid, alice).getAccountMainAuthDescriptor(accountId)
         // Claim initial supply - partial sign
-        val signatureBuilder = node1.client(ecBrid, alice)
-                .multiSigTransactionBuilder(alice, listOf(aliceKeyPair.pubKey, bobKeyPair.pubKey))
+        val gtx = node1.client(ecBrid, alice)
+                .transactionBuilder(alice, listOf(aliceKeyPair.pubKey,bobKeyPair.pubKey))
                 .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
                 .claimTestChrOperation()
                 .getPartialSignTransaction()
 
-        node1.client(ecBrid, bob).transactionBuilder(bob).partialSign(signatureBuilder)
+        val signTransaction = node1.client(ecBrid, bob)
+                .transactionBuilder(bob).signTransaction(gtx)
+
+        node1.client(ecBrid, bob)
+                .transactionBuilder(bob).post(signTransaction)
+
+
+
+        /*node1.client(ecBrid, bob).transactionBuilder(bob).partialSign(signatureBuilder)
         node1.client(ecBrid, bob).transactionBuilder(bob)
-                .postPartialTransactionUntilConfirmed(signatureBuilder, "Claiming initial supply")
+                .postPartialTransactionUntilConfirmed(signatureBuilder, "Claiming initial supply")*/
 
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(accountId)
         testLogger.info("Alice account balance is: $aliceBalance")
