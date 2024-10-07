@@ -9,10 +9,12 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.PubKey
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -25,6 +27,7 @@ import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.mutableMapOf
 
 class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
@@ -229,6 +232,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         var currentHeaderData: HeaderValidationInfo? = null
         val bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         val bodyHashesBySenderAndTopic: MutableMap<Pair<BlockchainRid, String>, MutableList<ByteArray>> = mutableMapOf()
+        val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
         for (op in ops) {
             when (op.opName) {
                 AnchorHeaderOp.OP_NAME -> {
@@ -246,8 +250,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
                     val decodedHeader = BlockHeaderData.fromBinary(anchorHeaderOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
+                    val peers = getCachedPeers(peerCache, decodedHeader, blockchainConfigProvider) ?: return false
 
-                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorHeaderOp.rawHeader, anchorHeaderOp.rawWitness, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_ANCHOR_HEADERS_EXTRA)
+                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorHeaderOp.rawHeader, anchorHeaderOp.rawWitness, blockRid, cryptoSystem, peers, ICMF_ANCHOR_HEADERS_EXTRA)
                             ?: return false
 
                     currentAnchorHeaderData = AnchorHeaderValidationInfo(
@@ -274,7 +279,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
                     val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
-                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, blockchainConfigProvider, ICMF_BLOCK_HEADER_EXTRA)
+                    val peers = getCachedPeers(peerCache, decodedHeader, blockchainConfigProvider) ?: return false
+
+                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, peers, ICMF_BLOCK_HEADER_EXTRA)
                             ?: return false
 
                     if (headerOp is AnchoredHeaderOp) {

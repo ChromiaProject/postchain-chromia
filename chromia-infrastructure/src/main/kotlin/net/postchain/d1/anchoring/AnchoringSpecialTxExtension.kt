@@ -11,7 +11,6 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -24,6 +23,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -182,17 +182,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
                 return false
             }
 
-            val peers = try {
-                val configHash = headerData.getExtra()["config_hash"]?.asByteArray()
-                if (configHash != null) {
-                    getCachedPeers(headerData, bcRid, configHash)
-                } else {
-                    blockchainConfigProvider.getRelevantPeers(headerData)
-                }
-            } catch (e: UserMistake) {
-                logger.warn(e.message)
-                return false
-            }
+            val peers = getCachedPeers(peerCache, headerData, blockchainConfigProvider) ?: return false
             signatureVerificationJobs.add(peers to anchorOpData)
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
@@ -246,19 +236,6 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             }
         }
         return true
-    }
-
-    private fun getCachedPeers(headerData: BlockHeaderData, bcRid: BlockchainRid, configHash: ByteArray): Collection<PubKey> {
-        peerCache[bcRid]?.let { (cachedConfigHash, peers) ->
-            if (cachedConfigHash.contentEquals(configHash)) {
-                logger.debug { "Retrieved cached peers for blockchain: $bcRid and config hash: ${configHash.toHex()}" }
-                return peers
-            }
-        }
-
-        val peers = blockchainConfigProvider.getRelevantPeers(headerData)
-        peerCache[bcRid] = configHash to peers
-        return peers
     }
 
     private fun pruneCachedPeers(relevantChains: Set<BlockchainRid>) {

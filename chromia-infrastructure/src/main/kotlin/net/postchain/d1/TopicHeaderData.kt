@@ -6,7 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 
@@ -20,16 +20,9 @@ class TopicHeaderData(val hash: ByteArray, val previousBlockHeight: Long) {
                 rawWitness: ByteArray,
                 blockRid: ByteArray,
                 cryptoSystem: CryptoSystem,
-                blockchainConfigProvider: BlockchainConfigProvider,
+                peers: Collection<PubKey>,
                 extraField: String
         ): Map<String, TopicHeaderData>? {
-
-            val peers = try {
-                blockchainConfigProvider.getRelevantPeers(header)
-            } catch (e: UserMistake) {
-                logger.warn(e.message)
-                return null
-            }
 
             try {
                 val witness = BaseBlockWitness.fromBytes(rawWitness)
