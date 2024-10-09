@@ -17,6 +17,7 @@ import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
 import net.postchain.chain0.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -71,6 +72,10 @@ class MultiSigIntegrationTest {
         private val bobPubkey = "02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80".hexStringToByteArray()
         private val bobPrivkey = "B31AB878C62B0E940B345C659A456D3573CF25960823C34C7BEEB5D1F813BEFD".hexStringToByteArray()
         private val bobKeyPair = KeyPair(bobPubkey, bobPrivkey)
+
+        private val charliePubkey = "02620EB55BF0E3116F95D4D21771313AE5A477D5D166787DD8586D4413E3405D7E".hexStringToByteArray()
+        private val charliePrivkey = "944D38EA36E0FA2D9862D77F99874D88FD172559E56913DA55578740573B19ED".hexStringToByteArray()
+        private val charlieKeyPair = KeyPair(charliePubkey, charliePrivkey)
 
         init {
 
@@ -129,7 +134,10 @@ class MultiSigIntegrationTest {
 
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!
                 .readText()
-                .replace("""\s*local:\n\s*-\s*topic:\s*L_evm_block_events\n\s*bc-rid:\s*EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER\n""".toRegex(), "")
+                .replace(
+                        "<string>EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER</string>",
+                        "<bytea>1111111111111111111111111111111111111111111111111111111111111111</bytea>"
+                )
         )
 
         node1.c0.transactionBuilder()
@@ -155,10 +163,10 @@ class MultiSigIntegrationTest {
 
     @Test
     @Order(4)
-    fun `Register FT multisig account`() {
-        testLogger.info("Registering FT multisig account")
+    fun `FT multi-sig transaction`() {
+        testLogger.info("FT multi-sig transaction")
 
-        // Register multisig account
+        // Register multi-sig account
         val signers = listOf(aliceKeyPair, bobKeyPair)
         node1.client(ecBrid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
                 .registerMultisigAccountOperation(signers.map { it.pubKey.data })
@@ -169,37 +177,66 @@ class MultiSigIntegrationTest {
         val accountId = getAccountId(signers.map { it.pubKey })
         val accountMainAuthDescriptor = node1.client(ecBrid, alice).getAccountMainAuthDescriptor(accountId)
         // Claim initial supply - partial sign
-        val gtx = node1.client(ecBrid, alice)
-                .transactionBuilder(alice, listOf(aliceKeyPair.pubKey,bobKeyPair.pubKey))
+        val partiallySignedTx = node1.client(ecBrid, alice)
+                .transactionBuilder(alice, listOf(bobKeyPair.pubKey))
                 .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
                 .claimTestChrOperation()
-                .getPartialSignTransaction()
+                .build()
 
-        val signTransaction = node1.client(ecBrid, bob)
-                .transactionBuilder(bob).signTransaction(gtx)
+        val signedTx = node1.client(ecBrid, bob)
+                .transactionBuilder(bob).signTransaction(partiallySignedTx)
 
         node1.client(ecBrid, bob)
-                .transactionBuilder(bob).post(signTransaction)
+                .transactionBuilder().sendTransaction(signedTx)
 
+        val accountBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(accountId)
+        testLogger.info("Account balance is: $accountBalance")
+        assertThat(accountBalance).isEqualTo(INITIAL_SUPPLY)
+    }
 
+    @Test
+    @Order(5)
+    fun `FT multi-sig transaction signing order`() {
+        testLogger.info("FT multi-sig transaction signing order")
 
-        /*node1.client(ecBrid, bob).transactionBuilder(bob).partialSign(signatureBuilder)
-        node1.client(ecBrid, bob).transactionBuilder(bob)
-                .postPartialTransactionUntilConfirmed(signatureBuilder, "Claiming initial supply")*/
+        // Register multi-sig account
+        val signers = listOf(aliceKeyPair, bobKeyPair, charlieKeyPair)
+        node1.client(ecBrid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
+                .registerMultisigAccountOperation(signers.map { it.pubKey.data })
+                .postTransactionUntilConfirmed("Register account")
 
-        val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(accountId)
-        testLogger.info("Alice account balance is: $aliceBalance")
-        assertThat(aliceBalance).isEqualTo(INITIAL_SUPPLY)
+        val alice = listOf(aliceKeyPair)
+        val bob = listOf(bobKeyPair)
+        val charlie = listOf(charlieKeyPair)
+        val accountId = getAccountId(signers.map { it.pubKey })
+        val accountMainAuthDescriptor = node1.client(ecBrid, alice).getAccountMainAuthDescriptor(accountId)
+        // Claim initial supply - partial sign
+        val signerTransactionCharlie = node1.client(ecBrid, charlie)
+                .transactionBuilder(charlie, listOf(bobKeyPair.pubKey, aliceKeyPair.pubKey))
+                .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
+                .claimTestChrOperation()
+                .build()
+
+        val signedTxAlice = node1.client(ecBrid, alice)
+                .transactionBuilder(alice).signTransaction(signerTransactionCharlie)
+
+        val signedTxBob = node1.client(ecBrid, bob)
+                .transactionBuilder(bob).signTransaction(signedTxAlice)
+
+        node1.client(ecBrid, bob)
+                .transactionBuilder().sendTransaction(signedTxBob)
+
+        val accountBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(accountId)
+        testLogger.info("Account balance is: $accountBalance")
+        assertThat(accountBalance).isEqualTo(INITIAL_SUPPLY)
     }
 
     private val hashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
 
     private fun getAccountId(signers: List<PubKey>) = GtvFactory.gtv(
-            signers.map { it.data }
-                    .sortedWith { a, b ->
-                        a.zip(b).map { it.first.compareTo(it.second) }.firstOrNull { it != 0 }
-                                ?: a.size.compareTo(b.size)
-                    }
+            signers.map { it.data.toHex() }
+                    .sorted()
+                    .map { it.hexStringToByteArray() }
                     .map { GtvFactory.gtv(it) })
             .merkleHash(hashCalculator)
 }
