@@ -22,13 +22,8 @@ fun Postable.postTransactionUntilConfirmed(
     retries: Int = 100,
     timeOut: Duration = Duration.ofSeconds(2)
 ): TransactionResult {
-    return postUntilConfirmed(retries, transactionName, timeOut, ::postAwaitConfirmation)
-}
-
-
-private fun postUntilConfirmed(retries: Int, transactionName: String, timeOut: Duration, post: () -> TransactionResult) : TransactionResult{
     repeat(retries) { attempt ->
-        val txRes = post()
+        val txRes = postAwaitConfirmation()
         if (txRes.status == TransactionStatus.REJECTED && isRetryableStatus(txRes.httpStatusCode) ||
             txRes.status == TransactionStatus.UNKNOWN
         ) {

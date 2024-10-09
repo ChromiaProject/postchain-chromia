@@ -1,9 +1,6 @@
 package net.postchain.dapp
 
 import net.postchain.client.core.PostchainClient
-import net.postchain.client.transaction.TransactionBuilder
-import net.postchain.crypto.KeyPair
-import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 import org.awaitility.Duration
@@ -13,10 +10,6 @@ import org.junit.jupiter.api.Assertions.fail
 class AwaitingClient(val client: PostchainClient): PostchainClient by client {
     override fun query(name: String, args: Gtv): Gtv {
         return awaitQueryResult { client.query(name, args) } ?: GtvNull
-    }
-
-    override fun transactionBuilder(initialSigners: List<KeyPair>, remainingRequiredSigners: List<PubKey>): TransactionBuilder {
-        return client.transactionBuilder(initialSigners, remainingRequiredSigners)
     }
 }
 
