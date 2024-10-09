@@ -15,6 +15,7 @@ import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOpe
 import net.postchain.chain0.economy_chain_test_auth_server.registerMultisigAccountOperation
 import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
 import net.postchain.chain0.lib.ft4.external.auth.ftAuthOperation
+import net.postchain.client.transaction.signTransaction
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -183,8 +184,7 @@ class MultiSigIntegrationTest {
                 .claimTestChrOperation()
                 .build()
 
-        val signedTx = node1.client(ecBrid, bob)
-                .transactionBuilder(bob).signTransaction(partiallySignedTx)
+        val signedTx = signTransaction(partiallySignedTx, bob)
 
         node1.client(ecBrid, bob)
                 .transactionBuilder().sendTransaction(signedTx)
@@ -217,11 +217,9 @@ class MultiSigIntegrationTest {
                 .claimTestChrOperation()
                 .build()
 
-        val signedTxAlice = node1.client(ecBrid, alice)
-                .transactionBuilder(alice).signTransaction(signerTransactionCharlie)
+        val signedTxAlice = signTransaction(signerTransactionCharlie, alice)
 
-        val signedTxBob = node1.client(ecBrid, bob)
-                .transactionBuilder(bob).signTransaction(signedTxAlice)
+        val signedTxBob = signTransaction(signedTxAlice, bob)
 
         node1.client(ecBrid, bob)
                 .transactionBuilder().sendTransaction(signedTxBob)
