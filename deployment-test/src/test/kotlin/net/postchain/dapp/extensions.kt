@@ -2,7 +2,6 @@ package net.postchain.dapp
 
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.Postable
-import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.tx.TransactionStatus
 import java.lang.Thread.sleep
 import java.time.Duration
