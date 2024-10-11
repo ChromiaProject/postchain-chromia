@@ -45,10 +45,11 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
     return parseConfig(resource, configOverrides)
 }
 
-internal fun getMasterContainerUser(): String? = if (System.getProperty("SET_DOCKER_MASTER_USER", "true").toBoolean())
+internal fun getMasterContainerUserAndGroups(): Pair<String, List<String>>? = if (System.getProperty("SET_DOCKER_MASTER_USER", "true").toBoolean())
     try {
         val unixSystem = UnixSystem()
-        if (unixSystem.uid == 0L) null else "${unixSystem.uid}:${unixSystem.gid}"
+        if (unixSystem.uid == 0L) null
+        else "${unixSystem.uid}:${unixSystem.gid}" to unixSystem.groups.map { it.toString() }
     } catch (e: Exception) {
         testLogger.warn("Unable to fetch current user id: $e")
         null
