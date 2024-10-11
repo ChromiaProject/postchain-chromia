@@ -1,6 +1,7 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsAll
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
@@ -13,10 +14,13 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
+import net.postchain.chain0.common.addProviderKeyOperation
+import net.postchain.chain0.common.getProviderKeys
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
+import net.postchain.chain0.common.operations.updateProviderOperation
 import net.postchain.chain0.common.queries.getBlockchainInfo
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainerData
@@ -24,6 +28,8 @@ import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
+import net.postchain.chain0.common.removeProviderKeyOperation
+import net.postchain.chain0.common.setProviderKeyThresholdOperation
 import net.postchain.chain0.economy_chain.ClusterCreationStatus
 import net.postchain.chain0.economy_chain.TagData
 import net.postchain.chain0.economy_chain.TicketState
@@ -43,9 +49,9 @@ import net.postchain.chain0.economy_chain.registerDappProviderOperation
 import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
+import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
 import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
-import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
@@ -64,10 +70,12 @@ import net.postchain.chain0.proposal.voting.createVoterSetOperation
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
+import net.postchain.chain0.provider_auth.model.ProviderKeyRole
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
@@ -629,6 +637,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
                 .registerDappProviderOperation(containerName, newDappProvider.pubKey.data)
                 .postTransactionUntilConfirmed("Registering new dApp provider ${newDappProvider.pubKey}")
 
+        voteOnAllProposals(listOf(node1.provider, newDappProvider))
         val containerVoterSet = node1.c0.getContainerData(containerName).deployer
         // Assert new provider is added
         awaitUntilAsserted {
@@ -739,6 +748,157 @@ class Directory1EconomyChainMixSlowIntegrationTest {
 
         val newAccountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
         assertThat(newAccountMainAuthDescriptor.args[1].asByteArray().toHex()).isEqualTo(addressString.uppercase())
+    }
+
+    @Test
+    @Order(20)
+    fun `Add multi-key for node1 provider`() {
+        val providerSecondKey = cryptoSystem.generateKeyPair()
+        val providerThirdKey = cryptoSystem.generateKeyPair()
+        val providerFourthKey = cryptoSystem.generateKeyPair()
+        val keyNotUsed = cryptoSystem.generateKeyPair()
+
+        // Only first key is valid
+        verifyProviderAuth(listOf(listOf(node1.provider)), TransactionStatus.CONFIRMED)
+        // The second key is not yet valid
+        verifyProviderAuth(listOf(listOf(providerSecondKey)), TransactionStatus.REJECTED)
+
+        // Add a second key to provider 1
+        node1.client(chain0Brid, listOf(node1.provider, providerSecondKey)).transactionBuilder()
+                .addProviderKeyOperation(ProviderKeyRole.main, providerSecondKey.pubKey)
+                .postTransactionUntilConfirmed("Add key to provider 1")
+
+        // Both keys are valid since the default threshold is 1
+        verifyProviderAuth(listOf(
+                listOf(node1.provider),
+                listOf(providerSecondKey),
+                listOf(node1.provider, providerSecondKey)
+        ), TransactionStatus.CONFIRMED)
+        // But not other keys
+        verifyProviderAuth(listOf(
+                listOf(aliceKeyPair),
+                listOf(keyNotUsed)
+        ), TransactionStatus.REJECTED)
+
+        // Verify keys returned by query
+        var providerKeys = node1.c0.getProviderKeys(node1.provider.pubKey)
+        assertThat(providerKeys.providerPubkey.data).isEqualTo(node1.provider.pubKey.data)
+        assertThat(providerKeys.keys.size).isEqualTo(1)
+        assertThat(providerKeys.keys[0].role).isEqualTo(ProviderKeyRole.main)
+        assertThat(providerKeys.keys[0].threshold).isEqualTo(1)
+        assertThat(providerKeys.keys[0].keys.map { it.toHex() })
+                .isEqualTo(listOf(node1.provider.pubKey.hex(), providerSecondKey.pubKey.hex()))
+
+        // Change the threshold to super-majority
+        node1.client(chain0Brid, listOf(node1.provider, providerSecondKey)).transactionBuilder()
+                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 0)
+                .postTransactionUntilConfirmed("Threshold set to super-majority")
+
+        // Verify keys returned by query
+        providerKeys = node1.c0.getProviderKeys(node1.provider.pubKey)
+        assertThat(providerKeys.providerPubkey.data).isEqualTo(node1.provider.pubKey.data)
+        assertThat(providerKeys.keys.size).isEqualTo(1)
+        assertThat(providerKeys.keys[0].role).isEqualTo(ProviderKeyRole.main)
+        assertThat(providerKeys.keys[0].threshold).isEqualTo(0)
+        assertThat(providerKeys.keys[0].keys.map { it.toHex() })
+                .isEqualTo(listOf(node1.provider.pubKey.hex(), providerSecondKey.pubKey.hex()))
+
+        // Super-majority requires both keys
+        verifyProviderAuth(listOf(
+                listOf(node1.provider, providerSecondKey),
+        ), TransactionStatus.CONFIRMED)
+        verifyProviderAuth(listOf(
+                listOf(node1.provider),
+                listOf(providerSecondKey),
+                listOf(keyNotUsed)
+        ), TransactionStatus.REJECTED)
+
+        // Add third and fourth key
+        node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey, providerFourthKey)).transactionBuilder()
+                .addProviderKeyOperation(ProviderKeyRole.main, providerThirdKey.pubKey)
+                .addProviderKeyOperation(ProviderKeyRole.main, providerFourthKey.pubKey)
+                .postTransactionUntilConfirmed("Add third and fourth key")
+
+        // Super-majority requires 3 out of 4 keys
+        verifyProviderAuth(listOf(
+                listOf(node1.provider, providerSecondKey, providerThirdKey),
+                listOf(node1.provider, providerSecondKey, providerFourthKey),
+                listOf(providerSecondKey, providerThirdKey, providerFourthKey),
+        ), TransactionStatus.CONFIRMED)
+        verifyProviderAuth(listOf(
+                listOf(node1.provider),
+                listOf(providerSecondKey),
+                listOf(providerThirdKey),
+                listOf(providerFourthKey),
+                listOf(keyNotUsed)
+        ), TransactionStatus.REJECTED)
+
+        // Add third key to a different role
+        node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey)).transactionBuilder()
+                .addProviderKeyOperation(ProviderKeyRole.configuration_proposal_vote, providerThirdKey.pubKey)
+                .postTransactionUntilConfirmed("Add third key to ${ProviderKeyRole.configuration_proposal_vote}")
+
+        // No change here - still super-majority requires 3 out of 4 keys
+        verifyProviderAuth(listOf(
+                listOf(node1.provider, providerSecondKey, providerThirdKey),
+                listOf(node1.provider, providerSecondKey, providerFourthKey),
+                listOf(providerSecondKey, providerThirdKey, providerFourthKey),
+        ), TransactionStatus.CONFIRMED)
+        verifyProviderAuth(listOf(
+                listOf(node1.provider),
+                listOf(providerSecondKey),
+                listOf(providerThirdKey),
+                listOf(providerFourthKey),
+                listOf(keyNotUsed)
+        ), TransactionStatus.REJECTED)
+
+        // Verify keys returned by query
+        providerKeys = node1.c0.getProviderKeys(node1.provider.pubKey)
+        assertThat(providerKeys.providerPubkey.data).isEqualTo(node1.provider.pubKey.data)
+        assertThat(providerKeys.keys.size).isEqualTo(2)
+        assertThat(providerKeys.keys[0].role).isEqualTo(ProviderKeyRole.main)
+        assertThat(providerKeys.keys[0].threshold).isEqualTo(0)
+        assertThat(providerKeys.keys[0].keys.map { it.toHex() })
+                .isEqualTo(listOf(node1.provider.pubKey.hex(), providerSecondKey.pubKey.hex(), providerThirdKey.pubKey.hex(), providerFourthKey.pubKey.hex()))
+        assertThat(providerKeys.keys[1].role).isEqualTo(ProviderKeyRole.configuration_proposal_vote)
+        assertThat(providerKeys.keys[1].threshold).isEqualTo(1)
+        assertThat(providerKeys.keys[1].keys.map { it.toHex() })
+                .isEqualTo(listOf(providerThirdKey.pubKey.hex()))
+
+        // Remove the first key and set threshold to 2 - key removed key is signing the transaction before it is being removed
+        node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey, providerFourthKey)).transactionBuilder()
+                .removeProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
+                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 2)
+                .postTransactionUntilConfirmed("Remove first provider key")
+
+        // 2 keys will be enough
+        verifyProviderAuth(listOf(
+                listOf(providerSecondKey, providerThirdKey),
+                listOf(providerThirdKey, providerFourthKey),
+        ), TransactionStatus.CONFIRMED)
+        verifyProviderAuth(listOf(
+                listOf(node1.provider, providerSecondKey),
+                listOf(keyNotUsed)
+        ), TransactionStatus.REJECTED)
+
+        // Reset keys for following tests - add node key back and set threshold to 1
+        node1.client(chain0Brid, listOf(node1.provider)).transactionBuilder()
+                .addProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
+                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 1)
+                .postTransactionUntilConfirmed("Reset keys")
+    }
+
+    fun verifyProviderAuth(signerListToVerify: List<List<KeyPair>>, expectedTxStatus: TransactionStatus) {
+        signerListToVerify.forEach {
+            val response = node1.client(chain0Brid, it).transactionBuilder()
+                    .addNop()
+                    .updateProviderOperation(node1.provider.pubKey.data, "new-name", "new-url")
+                    .postTransactionUntilConfirmed("Testing updating provider info signed by $it and expecting tx status $expectedTxStatus")
+            assertThat(response.status).isEqualTo(expectedTxStatus)
+            if (expectedTxStatus == TransactionStatus.REJECTED) {
+                assertThat(response.rejectReason).isNotNull().contains("Operation must be signed by provider key(s)")
+            }
+        }
     }
 
     private fun registerAccount(blockchainRid: BlockchainRid, userKeyPair: KeyPair, username: String): FTAuthenticator {
