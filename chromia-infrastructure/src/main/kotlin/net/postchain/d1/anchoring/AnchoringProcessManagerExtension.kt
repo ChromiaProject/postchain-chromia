@@ -68,15 +68,17 @@ open class AnchoringProcessManagerExtension(
                         gtxConfig.toObject<GtxConfigurationData>().maxTxSize
                 )
 
+                val anchorBlockQueries = engine.getBlockQueries()
+
                 it.createReceiver(cfg.blockchainRid)
-                localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver)
+                localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver, anchorBlockQueries)
 
                 (engine.getBlockBuildingStrategy() as? AnchoringBlockBuildingStrategy)?.apply {
                     txExtension = it
                     anchoringConfig = it.anchoringConfig
                 }
 
-                anchoringCheck.maybeCreateAnchoringCheckCronJob(it, engine.getConfiguration().blockchainRid, engine.getBlockQueries(), cfg.module.getQueries())
+                anchoringCheck.maybeCreateAnchoringCheckCronJob(it, cfg.blockchainRid, anchorBlockQueries, cfg.module.getQueries())
             }
 
             // connect process to local dispatcher

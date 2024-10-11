@@ -43,7 +43,6 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
         const val OP_BATCH_BLOCK_HEADER = "__batch_anchor_block_header"
-        const val MAX_PACKETS_PER_REQUEST = 20L
 
         val REMOVED_BLOCKCHAIN_GRACE_PERIOD: Duration = Duration.ofHours(1L)
     }
@@ -109,7 +108,7 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
             var opsCount = 0
             var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
             pipePacketsIt@ while (pipe.mightHaveNewPackets()) {
-                val anchorPackets = pipe.fetchNextRange(currentHeight + 1, MAX_PACKETS_PER_REQUEST)
+                val anchorPackets = pipe.fetchNextRange(currentHeight + 1)
                 if (anchorPackets.isEmpty()) {
                     break // Nothing more to find
                 } else {

@@ -7,6 +7,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.core.Storage
+import net.postchain.d1.anchoring.AnchoringPipe.Companion.MAX_PACKETS_PER_REQUEST
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
@@ -18,19 +19,19 @@ class AnchoringLocalPipe(
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
-    override fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
+    override fun newBlockAvailable(height: Long) = highestSeen.set(height)
 
     override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
     override fun numberOfNewPackets() = highestSeen.get() - lastCommitted.get()
 
-    override fun fetchNextRange(fromHeight: Long, limit: Long): List<AnchoringPacket> {
+    override fun fetchNextRange(fromHeight: Long): List<AnchoringPacket> {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
             val packets = mutableListOf<AnchoringPacket>()
 
-            while (packets.size < limit) {
+            while (packets.size < MAX_PACKETS_PER_REQUEST) {
                 val height = fromHeight + packets.size
                 val blockRID = dba.getBlockRID(eContext, height)
                 if (blockRID != null) {
@@ -46,7 +47,7 @@ class AnchoringLocalPipe(
             }
 
             // Are there more blocks available?
-            if (packets.size.toLong() == limit) {
+            if (packets.size.toLong() == MAX_PACKETS_PER_REQUEST) {
                 val height = fromHeight + packets.size + 1
                 val blockRID = dba.getBlockRID(eContext, height)
                 if (blockRID != null) {
@@ -58,9 +59,11 @@ class AnchoringLocalPipe(
         }
     }
 
-    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
+    override fun markTaken(lastCommittedHeight: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
-            lastCommitted.getAndUpdate { max(it, currentPointer) }
+            lastCommitted.getAndUpdate { max(it, lastCommittedHeight) }
         }
     }
+
+    override fun shutdown() {}
 }
