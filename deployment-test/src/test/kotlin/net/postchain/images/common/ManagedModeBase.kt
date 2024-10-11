@@ -54,7 +54,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
-import net.postchain.images.directory1.getMasterContainerUser
+import net.postchain.images.directory1.getMasterContainerUserAndGroups
 import net.postchain.images.directory1.getResolvedDockerHost
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
@@ -179,8 +179,9 @@ open class ManagedModeBase {
                             .withCapAdd(Capability.CHOWN, Capability.FOWNER, Capability.DAC_OVERRIDE)
                             .withSecurityOpts(listOf("no-new-privileges:true"))
                             .apply {
-                                getMasterContainerUser()?.let { userSpec ->
+                                getMasterContainerUserAndGroups()?.let { (userSpec, groups) ->
                                     cmd.withUser(userSpec)
+                                    withGroupAdd(groups)
                                 }
                             }
                 }
