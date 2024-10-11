@@ -13,8 +13,12 @@ if [ "$(id -u)" = '0' ]; then
   exit 1
 fi
 
+trap 'echo "Shutting down..." ; kill ${POSTCHAIN_PID} ; pg_ctl stop -m smart' TERM INT
+
 echo "Configuring and starting Postgres"
 bash postgres-entrypoint.sh postgres
 
-echo "Starting Postchain node"
-exec java -Duser.language=en -Duser.country=US -XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/libs/*:$POSTCHAIN_DIR/classpath/*" net.postchain.server.AppKt run-subnode
+java -Duser.language=en -Duser.country=US -XX:+UnlockDiagnosticVMOptions -XX:AbortVMOnException=java.lang.OutOfMemoryError -XX:MaxRAMPercentage=$JAVA_MEMORY_SHARE -classpath "$POSTCHAIN_DIR/libs/*:$POSTCHAIN_DIR/classpath/*" net.postchain.server.AppKt run-subnode &
+POSTCHAIN_PID="$!"
+echo "Started Postchain node with PID ${POSTCHAIN_PID}"
+wait ${POSTCHAIN_PID}
