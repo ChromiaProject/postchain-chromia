@@ -76,7 +76,7 @@ Example:
 docker run -d --name postchain \
     --restart unless-stopped \
     --security-opt=no-new-privileges \
-    --cap-drop ALL --cap-add FOWNER --cap-add CHOWN --cap-add DAC_OVERRIDE \
+    --cap-drop ALL \
     --user $(id -u):$(id -g) \
     --group-add $(cut -d: -f3 < <(getent group docker)) \
     --volume /var/run/docker.sock:/var/run/docker.sock \
