@@ -46,10 +46,14 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
+import kotlin.collections.eachCount
+import kotlin.math.ceil
 
 class IcmfReceiverIT : ManagedModeTest() {
 
@@ -537,6 +541,68 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
 
         verifyPipesAreEmpty(dappChain)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            "1, 1",
+            "10, 1",
+            "10, 2",
+            "10, 3",
+            "10, 9",
+            "10, 10",
+    )
+    fun messageLimit(messageCount: Int, messageLimit: Int) {
+
+        val messages = (1..messageCount).map {
+            val messageBody = gtv("msg_$it")
+            messageBody
+        }
+        val expectedNumberOfBlocks = ceil(messageCount / messageLimit.toDouble()).toInt()
+
+        val queryResponse = createQueryResponseForMessage(senderOneChainRid, messages)
+        setupClientMocks(listOf(queryResponse), messages)
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_message_limit_1.xml")!!
+                        .readText()
+                        .replace("__MESSAGE_LIMIT__", "$messageLimit")
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                    DatabaseAccess.of(ctx).apply {
+                        val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                        val messages = jooq.select()
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+                        val messagesPerHeight = messages.groupingBy { it.height }
+                                .eachCount()
+
+                        // Expect all messages to be received
+                        assertThat(messages).hasSize(messageCount)
+
+                        // Expect message distribution over blocks
+                        assertThat(messagesPerHeight).hasSize(expectedNumberOfBlocks)
+
+                        // Expect no block to contain more than messageLimit messages
+                        assertThat(messagesPerHeight.all { (_, messagesInHeight) -> messagesInHeight <= messageLimit }).isTrue()
+                    }
+                }
+            }
+        }
     }
 
     @Test
