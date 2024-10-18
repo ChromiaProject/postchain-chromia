@@ -250,7 +250,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         val bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         val bodyHashesBySenderAndTopic: MutableMap<Pair<BlockchainRid, String>, MutableList<ByteArray>> = mutableMapOf()
         val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
-        val messageLimit = AtomicLong(icmfReceiverBlockchainConfigData.messageLimit)
+        var messageLimit = icmfReceiverBlockchainConfigData.messageLimit
         for (op in ops) {
             when (op.opName) {
                 AnchorHeaderOp.OP_NAME -> {
@@ -343,7 +343,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 }
 
                 MessageOp.OP_NAME -> {
-                    if (messageLimit.getAndDecrement() <= 0 && isSigner()) {
+                    if (messageLimit-- <= 0 && isSigner()) {
                         logger.warn("Number of messages exceed limit of ${icmfReceiverBlockchainConfigData.messageLimit}")
                         return false
                     }
