@@ -44,6 +44,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     val anchoringReceivers: MutableList<AnchoringIcmfReceiver> = mutableListOf()
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
     lateinit var clusterManagement: ClusterManagement
+    lateinit var isSigner: () -> Boolean
     lateinit var icmfReceiverBlockchainConfigData: IcmfReceiverBlockchainConfigData
     var maxTxSize: Long = -1
     var specialTxSizeMargin = -1L
@@ -249,6 +250,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         val bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         val bodyHashesBySenderAndTopic: MutableMap<Pair<BlockchainRid, String>, MutableList<ByteArray>> = mutableMapOf()
         val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
+        val messageLimit = AtomicLong(icmfReceiverBlockchainConfigData.messageLimit)
         for (op in ops) {
             when (op.opName) {
                 AnchorHeaderOp.OP_NAME -> {
@@ -341,6 +343,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 }
 
                 MessageOp.OP_NAME -> {
+                    if (messageLimit.getAndDecrement() <= 0 && isSigner()) {
+                        logger.warn("Number of messages exceed limit of ${icmfReceiverBlockchainConfigData.messageLimit}")
+                        return false
+                    }
                     val messageOp = MessageOp.fromOpData(op) ?: return false
                     val latestReceivedHashForTopic = bodyHashesBySenderAndTopic[messageOp.sender to messageOp.topic]?.removeLastOrNull()
                     val messageBodyHash = messageOp.body.merkleHash(hashCalculator)

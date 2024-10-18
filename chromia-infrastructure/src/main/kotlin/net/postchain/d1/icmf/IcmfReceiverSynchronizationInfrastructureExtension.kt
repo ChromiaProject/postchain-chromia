@@ -54,6 +54,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val blockchainConfigProvider = createBlockchainConfigProvider(configuration, clusterManagement)
                 txExt.blockchainConfigProvider = blockchainConfigProvider
                 txExt.clusterManagement = clusterManagement
+                txExt.isSigner = process::isSigner
 
                 val blockStrategyConfig = configuration.rawConfig[KEY_BLOCKSTRATEGY] ?: gtv(mapOf())
                 val maxBlockSize = blockStrategyConfig.toObject<BaseBlockBuildingStrategyConfigurationData>().maxBlockSize

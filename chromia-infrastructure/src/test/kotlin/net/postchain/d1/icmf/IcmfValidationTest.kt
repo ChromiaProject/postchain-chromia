@@ -544,10 +544,49 @@ class IcmfValidationTest {
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
     }
 
-    private fun createTxExt(databaseOperations: IcmfDatabaseOperations = dbMock, icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
+    @Test
+    fun `Messages can't exceed set message limit if signer`() {
+
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, 1))
+
+        val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
+        val block = createBlockDetail(
+                messageBodies,
+                -1,
+                IcmfTestClusterManagement.keyPair
+        )
+        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageOps = createMessageOps(messageBodies)
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
+    }
+
+    @Test
+    fun `Messages can exceed set message limit if not signer`() {
+
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, 1), nodeIsSigner = false)
+
+        val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
+        val block = createBlockDetail(
+                messageBodies,
+                -1,
+                IcmfTestClusterManagement.keyPair
+        )
+        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageOps = createMessageOps(messageBodies)
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
+    }
+
+    private fun createTxExt(
+            databaseOperations: IcmfDatabaseOperations = dbMock,
+            icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig,
+            nodeIsSigner: Boolean = true,
+    ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         blockchainConfigProvider = BlockchainConfigProvider { _ -> listOf(IcmfTestClusterManagement.keyPair.pubKey) }
         icmfReceiverBlockchainConfigData = icmfConfig
+        isSigner = { nodeIsSigner }
     }
 
     private fun createOpData(
