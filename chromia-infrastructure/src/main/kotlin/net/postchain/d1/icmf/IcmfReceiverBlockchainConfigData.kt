@@ -25,7 +25,11 @@ data class IcmfReceiverBlockchainConfigData(
 
         @Name("special-tx-margin-bytes")
         @DefaultValue(100 * 1024) // 100 KiB
-        val specialTxMarginBytes: Long
+        val specialTxMarginBytes: Long,
+
+        @Name("message-limit")
+        @DefaultValue(1000)
+        val messageLimit: Long
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): IcmfReceiverBlockchainConfigData = gtv.toObject()
