@@ -199,7 +199,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             for (message in packet.messages.subList(packet.messages.size - spilledCount, packet.messages.size)) {
                 val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
                 val messageOpSize = messageOp.getEncodedSize()
-                if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.andDecrement > 0) {
+                if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
                     allOps.add(messageOp)
                     currentSize += messageOpSize
                 } else {
@@ -218,7 +218,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                     allOps.add(MessageHashOp(packet.sender, packet.topic, message.body.merkleHash(hashCalculator)).toOpData())
                     val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
                     val messageOpSize = messageOp.getEncodedSize()
-                    if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.andDecrement > 0) {
+                    if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
                         allOps.add(messageOp)
                         currentSize += messageOpSize
                     } else {
