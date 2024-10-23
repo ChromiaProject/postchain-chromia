@@ -1,4 +1,4 @@
 // Dummy operation that checks that tx has been proven and nothing else
 operation iccf_test(gtx_transaction, require_anchored_proof: boolean) {
-    require(_has_proof(gtx_transaction, require_anchored_proof), "No proof operation present for TX");
+    require(_get_proof(gtx_transaction, require_anchored_proof), "No proof operation present for TX");
 }

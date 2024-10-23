@@ -188,9 +188,9 @@ open class ManagedModeBase {
     }
 
     fun getDb(node: PostchainContainer): ChainDatabaseCommunicator =
-        nodeDbs.getOrPut(node) {
-            postgres.createChainDatabaseCommunicator(0, node.appConfig.databaseSchema)
-        }
+            nodeDbs.getOrPut(node) {
+                postgres.createChainDatabaseCommunicator(0, node.appConfig.databaseSchema)
+            }
 
     fun stopNodes() {
         stopContainers(*nodes())
@@ -284,19 +284,21 @@ open class ManagedModeBase {
     }
 
     protected fun voteOnAllProposals(providers: List<KeyPair>) {
-        val txBuilder = node1.client(chain0Brid, providers).transactionBuilder()
 
         providers.forEach { provider ->
-            val proposals = awaitQueryResult {
-                node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
-            } ?: return
 
-            proposals.forEach { proposal ->
-                txBuilder.makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
+            val pendingProposals = awaitQueryResult {
+                node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
+            }
+
+            if (pendingProposals != null && pendingProposals.isNotEmpty()) {
+                val client = node1.client(chain0Brid, listOf(provider)).transactionBuilder()
+                pendingProposals.forEach { proposal ->
+                    client.makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
+                }
+                client.postTransactionUntilConfirmed("provider ${provider.pubKey} voted yes to all other providers proposals (${pendingProposals.map { it.rowid.id }})")
             }
         }
-
-        txBuilder.postTransactionUntilConfirmed("providers vote on all proposals")
     }
 
     protected fun assertNumberOfChainSigners(blockchainRid: BlockchainRid, expected: Int) {
