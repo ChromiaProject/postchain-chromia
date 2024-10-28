@@ -637,10 +637,10 @@ class Directory1EconomyChainMixSlowIntegrationTest {
                 .registerDappProviderOperation(containerName, newDappProvider.pubKey.data)
                 .postTransactionUntilConfirmed("Registering new dApp provider ${newDappProvider.pubKey}")
 
-        voteOnAllProposals(listOf(node1.provider, newDappProvider))
         val containerVoterSet = node1.c0.getContainerData(containerName).deployer
         // Assert new provider is added
         awaitUntilAsserted {
+            voteOnAllProposals(listOf(node1.provider))
             assertThat(node1.c0.getVoterSetMembers(containerVoterSet).map { PubKey(it) })
                     .containsOnly(node1.provider.pubKey, newDappProvider.pubKey)
         }
