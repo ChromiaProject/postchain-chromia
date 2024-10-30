@@ -21,6 +21,7 @@ import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.InternetProtocol
+import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import org.testcontainers.lifecycle.Startable
 import org.testcontainers.utility.DockerImageName
@@ -75,10 +76,10 @@ class PostchainContainer(
     fun withMasterDockerConfig(): PostchainContainer {
         if (System.getenv("DOCKER_HOST") == null) {
             // Mount host machines docker socket into master container
-            super.addFileSystemBind(DOCKER_SOCKET, DOCKER_SOCKET, BindMode.READ_ONLY)
+            super.addFileSystemBind(DOCKER_SOCKET, DOCKER_SOCKET, BindMode.READ_ONLY, SelinuxContext.SHARED)
         }
         // Mounting a volume that can be used as a "bridge" between the containers
-        super.addFileSystemBind(MOUNT_DIR, MOUNT_DIR, BindMode.READ_WRITE)
+        super.addFileSystemBind(MOUNT_DIR, MOUNT_DIR, BindMode.READ_WRITE, SelinuxContext.SHARED)
         return self()
     }
 

@@ -36,7 +36,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -217,10 +216,10 @@ class Directory1ArchivingMixSlowIntegrationTest {
         verifyBlockchainState(node1, dappBrid, BlockchainState.ARCHIVED)
 
         awaitUntilAsserted {
-            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                it.names().any { name -> name.contains("-c3-") }
+            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                it.names.any { name -> name.contains("-c3-") }
             }
-            assertThat(fooDockerContainer?.state()).isEqualTo("exited")
+            assertThat(fooDockerContainer?.state).isEqualTo("exited")
         }
     }
 

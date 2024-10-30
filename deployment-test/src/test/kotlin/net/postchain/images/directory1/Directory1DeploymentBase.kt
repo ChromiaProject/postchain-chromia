@@ -30,6 +30,7 @@ import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.POSTCHAIN_MASTER_PUBKEY
 import net.postchain.containers.bpm.resources.Cpu
 import net.postchain.containers.bpm.resources.IoRead
 import net.postchain.containers.bpm.resources.IoWrite
@@ -52,7 +53,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.mandas.docker.client.DockerClient
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
@@ -250,9 +250,11 @@ abstract class Directory1DeploymentBase {
     fun `Subnode containers have been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
-            val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-            val runningSubnodes = all.filter { it.image().contains("chromia-subnode") && it.state() == "running" }
+            val runningSubnodes = dockerClient.listSubContainersCmd()
+                    .withStatusFilter(listOf("running"))
+                    .exec()
             assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
+            POSTCHAIN_MASTER_PUBKEY
         }
     }
 
@@ -261,14 +263,14 @@ abstract class Directory1DeploymentBase {
     fun `fooContainer has resource limits`() {
         testLogger.info("Asserting $fooContainer resource limits")
 
-        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        val all = dockerClient.listContainersCmd().withShowAll(true).exec()
         all.forEach {
-            if (it.names()?.get(0)?.contains(fooContainer) == true) {
-                val res = dockerClient.inspectContainer(it.id())
-                assertThat(res.hostConfig()?.memory()).isEqualTo(fooResourceLimits.ramBytes())
-                assertThat(res.hostConfig()?.cpuQuota()).isEqualTo(fooResourceLimits.cpuQuota())
-                assertThat(res.hostConfig().blkioDeviceReadBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioReadBytes())
-                assertThat(res.hostConfig().blkioDeviceWriteBps()[0].rate().toLong()).isEqualTo(fooResourceLimits.ioWriteBytes())
+            if (it.names?.get(0)?.contains(fooContainer) == true) {
+                val res = dockerClient.inspectContainerCmd(it.id).exec()
+                assertThat(res.hostConfig?.memory).isEqualTo(fooResourceLimits.ramBytes())
+                assertThat(res.hostConfig?.cpuQuota).isEqualTo(fooResourceLimits.cpuQuota())
+                assertThat(res.hostConfig?.blkioDeviceReadBps?.get(0)?.rate?.toLong()).isEqualTo(fooResourceLimits.ioReadBytes())
+                assertThat(res.hostConfig?.blkioDeviceWriteBps?.get(0)?.rate?.toLong()).isEqualTo(fooResourceLimits.ioWriteBytes())
             }
         }
     }
@@ -452,8 +454,8 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                it.names().any { name -> name.contains(fooContainer) }
+            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
 
@@ -483,8 +485,8 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                it.names().any { name -> name.contains(fooContainer) }
+            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
 
@@ -508,10 +510,10 @@ abstract class Directory1DeploymentBase {
                     .postTransactionUntilConfirmed("Removing test_dapp5")
 
             awaitUntilAsserted {
-                val fooDockerContainer = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).firstOrNull {
-                    it.names().any { name -> name.contains(fooContainer) }
+                val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                    it.names.any { name -> name.contains(fooContainer) }
                 }
-                assertThat(fooDockerContainer?.state()).isEqualTo("exited")
+                assertThat(fooDockerContainer?.state).isEqualTo("exited")
             }
         }
     }
