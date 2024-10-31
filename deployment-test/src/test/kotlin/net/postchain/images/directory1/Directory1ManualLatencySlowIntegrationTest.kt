@@ -58,6 +58,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
  *
  * It should be possible to have multiple proxies towards the same node for more complex scenarios.
  */
+@Suppress("DEPRECATION")
 @Testcontainers
 @Disabled
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)

@@ -5,6 +5,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
+import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Capability
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
@@ -56,6 +57,7 @@ import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getMasterContainerUserAndGroups
 import net.postchain.images.directory1.getResolvedDockerHost
+import net.postchain.images.directory1.listSubContainersCmd
 import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
@@ -66,7 +68,6 @@ import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.mandas.docker.client.DockerClient
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.output.Slf4jLogConsumer
@@ -144,11 +145,11 @@ open class ManagedModeBase {
     }
 
     fun removeSubnodeContainers() {
-        dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).forEach {
-            if (it.image().contains("chromia-subnode")) {
-                dockerClient.stopContainer(it.id(), 0)
-                dockerClient.removeContainer(it.id())
-            }
+        dockerClient.listSubContainersCmd().withStatusFilter(listOf("running")).exec().forEach {
+            dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
+        }
+        dockerClient.listSubContainersCmd().exec().forEach {
+            dockerClient.removeContainerCmd(it.id).exec()
         }
     }
 
