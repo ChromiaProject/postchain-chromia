@@ -92,7 +92,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                 dbOperations
                         )
                         receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(globalTopicIcmfReceiver)
-                        txExt.globalTopicReceivers.add(globalTopicIcmfReceiver)
+                        txExt.anchoredReceivers.add(globalTopicIcmfReceiver)
                     }
 
                     if (!config.global.blockchains.isNullOrEmpty()) {
@@ -110,7 +110,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                 dbOperations
                         )
                         receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(specificChainReceiver)
-                        txExt.globalTopicReceivers.add(specificChainReceiver)
+                        txExt.anchoredReceivers.add(specificChainReceiver)
                     }
                 }
 
@@ -125,12 +125,18 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                     val localOrigins = config.local?.map {
                         LocalIcmfOrigin(it.topic, BlockchainRid(it.blockchainRid), it.skipToHeight)
                     } ?: listOf()
-                    val intraClusterTopicIcmfReceiver = IntraClusterTopicIcmfReceiver(
+                    val localTopicIcmfReceiver = LocalTopicIcmfReceiver(
                             directoryChainOrigins + localOrigins,
-                            queryProvider
+                            queryProvider,
+                            clusterManagement,
+                            clientProvider,
+                            configuration.chainID,
+                            configuration.blockchainRid,
+                            engine.blockBuilderStorage,
+                            dbOperations
                     )
-                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(intraClusterTopicIcmfReceiver)
-                    txExt.intraClusterReceivers.add(intraClusterTopicIcmfReceiver)
+                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(localTopicIcmfReceiver)
+                    txExt.nonAnchoredReceivers.add(localTopicIcmfReceiver)
                 }
 
                 if (config.anchoring != null) {
@@ -140,7 +146,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                             queryProvider
                     )
                     receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(anchoringReceiver)
-                    txExt.anchoringReceivers.add(anchoringReceiver)
+                    txExt.nonAnchoredReceivers.add(anchoringReceiver)
                 }
             }
         }

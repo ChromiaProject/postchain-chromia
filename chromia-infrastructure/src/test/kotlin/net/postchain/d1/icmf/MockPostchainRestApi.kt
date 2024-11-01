@@ -38,6 +38,9 @@ object MockPostchainRestApi : HttpHandler, Closeable {
             object : ChromiaClientProvider(clusterManagement) {
                 override fun cluster(clusterName: String): ClusterPostchainClient =
                         ClusterPostchainClient(EndpointPool.singleUrl("http://localhost:$port"))
+
+                override fun blockchain(blockchainRid: BlockchainRid): PostchainClient =
+                        super.client(blockchainRid, EndpointPool.singleUrl("http://localhost:$port"))
             }
 
     fun addMockClient(blockchainRid: BlockchainRid, client: PostchainClient) {

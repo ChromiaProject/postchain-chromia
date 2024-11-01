@@ -55,7 +55,7 @@ open class ChromiaClientProvider(
         open fun blockchain(blockchainRid: BlockchainRid): PostchainClient = client(blockchainRid, endpointPool)
     }
 
-    private fun client(blockchainRid: BlockchainRid, endpointPool: EndpointPool) = PostchainClientImpl(
+    protected fun client(blockchainRid: BlockchainRid, endpointPool: EndpointPool) = PostchainClientImpl(
             configTemplate.copy(blockchainRid, endpointPool)
     )
 

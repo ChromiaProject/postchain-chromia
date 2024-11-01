@@ -38,13 +38,19 @@ Configuration:
       - ref: FileAppender
 
     Logger:
-
       - name: net.postchain
         level: debug
         additivity: false
         AppenderRef:
         - ref: ConsoleAppender
           level: warn
+        - ref: FileAppender
+
+      - name: net.postchain.d1
+        level: debug
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
         - ref: FileAppender
 
       - name: net.postchain.ebft.syncmanager.common

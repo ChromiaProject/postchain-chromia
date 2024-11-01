@@ -24,6 +24,11 @@ import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.clusterAnchoringChainRid
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.otherLocalSenderChainRid
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.remoteSenderChainRid
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.systemAnchoringChainRid
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.getModules
 import net.postchain.gtv.Gtv
@@ -48,28 +53,26 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
-import kotlin.collections.eachCount
 import kotlin.math.ceil
 
 class IcmfReceiverIT : ManagedModeTest() {
 
-    private val systemAnchoringChain = BlockchainRid.buildRepeat(0)
-    private val clusterAnchoringChain = BlockchainRid.buildRepeat(1)
+    private val remoteSenderMessageBody = gtv("remote")
+    private val remoteSenderEncodedMessageBody = GtvEncoder.encodeGtv(remoteSenderMessageBody)
+    private val remoteSenderQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody))
+    private val remoteSenderSecondQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), 1, 0)
 
-    private val senderOneChainRid = BlockchainRid.buildRepeat(2)
-    private val senderOneMessageBody = gtv("hej1")
-    private val senderOneEncodedMessageBody = GtvEncoder.encodeGtv(senderOneMessageBody)
-    private val senderOneQueryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(senderOneMessageBody))
-    private val senderOneSecondQueryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(senderOneMessageBody), 1, 0)
+    private val localSenderMessageBody = gtv("local")
+    private val localSenderEncodedMessageBody = GtvEncoder.encodeGtv(localSenderMessageBody)
+    private val localSenderQueryResponse = createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody))
 
-    private val senderTwoChainRid = BlockchainRid.buildRepeat(3)
-    private val senderTwoMessageBody = gtv("hej2")
-    private val senderTwoEncodedMessageBody = GtvEncoder.encodeGtv(senderTwoMessageBody)
-    private val senderTwoQueryResponse = createQueryResponseForMessage(senderTwoChainRid, listOf(senderTwoMessageBody))
+    private val otherLocalSenderMessageBody = gtv("other")
 
     companion object {
         @BeforeAll
@@ -95,7 +98,7 @@ class IcmfReceiverIT : ManagedModeTest() {
      * @param anchorQueryResponse Pass multiple responses to mock sending at multiple heights
      * @param messageQueryResponse Pass the messages to send at each height
      */
-    private fun setupClientMocks(anchorQueryResponse: List<Gtv> = listOf(senderOneQueryResponse), messageQueryResponse: List<Gtv> = listOf(senderOneMessageBody)) {
+    private fun setupClientMocks(anchorQueryResponse: List<Gtv> = listOf(remoteSenderQueryResponse), messageQueryResponse: List<Gtv> = listOf(remoteSenderMessageBody)) {
         val clusterAnchoringChainClientMock: PostchainClient = mock {}
         val senderOneChainClientMock: PostchainClient = mock {}
 
@@ -121,8 +124,30 @@ class IcmfReceiverIT : ManagedModeTest() {
             )
         }
 
-        MockPostchainRestApi.addMockClient(clusterAnchoringChain, clusterAnchoringChainClientMock)
-        MockPostchainRestApi.addMockClient(senderOneChainRid, senderOneChainClientMock)
+        MockPostchainRestApi.addMockClient(clusterAnchoringChainRid, clusterAnchoringChainClientMock)
+        MockPostchainRestApi.addMockClient(remoteSenderChainRid, senderOneChainClientMock)
+    }
+
+    private fun setupNonAnchoredClientMocks(senderChainRid: BlockchainRid = remoteSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1) {
+        val senderChainClientMock: PostchainClient = mock {}
+
+        doReturn(createBlockDetail(senderChainRid, listOf(remoteSenderMessageBody), "my-topic", messageHeight, prevMessageHeight))
+                .whenever(senderChainClientMock).blockAtHeight(messageHeight)
+
+        doReturn(gtv(listOf())).whenever(senderChainClientMock).query(
+                eq(QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT),
+                any()
+        )
+
+        doReturn(gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(messageHeight)))))).whenever(senderChainClientMock).query(
+                QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
+                gtv(mapOf(
+                        "topic" to gtv("my-topic"),
+                        "height" to gtv(messageHeight - 1)
+                ))
+        )
+
+        MockPostchainRestApi.addMockClient(senderChainRid, senderChainClientMock)
     }
 
     private fun setupQueriesMocks() {
@@ -130,41 +155,41 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         QueryProviderMocks.clusterAnchoringQueries = object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    buildAnchorHeader(listOf(senderTwoQueryResponse["block_header"]!!.asByteArray()))
+                    buildAnchorHeader(listOf(localSenderQueryResponse["block_header"]!!.asByteArray()))
 
             override fun query(name: String, args: Gtv): Gtv =
                     if (name == "icmf_get_headers_with_messages_after_height" && args["topic"] == gtv("my-topic") && args["from_anchor_height"] == gtv(
                                     -1
                             )
                     )
-                        gtv(listOf(senderTwoQueryResponse))
+                        gtv(listOf(localSenderQueryResponse))
                     else if (name == "icmf_get_headers_with_messages_after_height")
                         gtv(listOf())
                     else
                         GtvNull
         }
 
-        QueryProviderMocks.addMockQueries(senderTwoChainRid, object : PostchainBlockClient {
+        QueryProviderMocks.addMockQueries(localSenderChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) = throw NotImplementedError()
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AT_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(0))
-                        gtv(listOf(senderTwoMessageBody))
+                        gtv(listOf(localSenderMessageBody))
                     else
                         GtvNull
         })
     }
 
-    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = senderTwoChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1) {
+    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = localSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1) {
         QueryProviderMocks.clearMocks()
 
         QueryProviderMocks.addMockQueries(senderBrid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(senderTwoMessageBody), "my-topic", messageHeight, prevMessageHeight) else null
+                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(localSenderMessageBody), "my-topic", messageHeight, prevMessageHeight) else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"]!!.asInteger() < messageHeight)
-                        gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(messageHeight)))))
+                        gtv(listOf(gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(messageHeight)))))
                     else
                         gtv(listOf())
         })
@@ -173,26 +198,26 @@ class IcmfReceiverIT : ManagedModeTest() {
     private fun setupFailingNonAnchoredQueriesMock() {
         QueryProviderMocks.clearMocks()
 
-        QueryProviderMocks.addMockQueries(senderOneChainRid, object : PostchainBlockClient {
+        QueryProviderMocks.addMockQueries(otherLocalSenderChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(senderOneChainRid, listOf(senderOneMessageBody), "failing-topic") else null
+                    if (height == 0L) createBlockDetail(otherLocalSenderChainRid, listOf(otherLocalSenderMessageBody), "failing-topic") else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("failing-topic") && args["height"] == gtv(-1))
                         gtv(listOf(
-                                gtv(mapOf("body" to senderOneMessageBody, "height" to gtv(0)))))
+                                gtv(mapOf("body" to otherLocalSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
         })
 
-        QueryProviderMocks.addMockQueries(senderTwoChainRid, object : PostchainBlockClient {
+        QueryProviderMocks.addMockQueries(localSenderChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(senderTwoChainRid, listOf(senderTwoMessageBody), "my-topic") else null
+                    if (height == 0L) createBlockDetail(localSenderChainRid, listOf(localSenderMessageBody), "my-topic") else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
                         gtv(listOf(
-                                gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(0)))))
+                                gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
         })
@@ -201,7 +226,7 @@ class IcmfReceiverIT : ManagedModeTest() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun globalTopicReceiver() {
-        setupClientMocks(listOf(senderOneQueryResponse, senderOneSecondQueryResponse))
+        setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse))
         setupQueriesMocks()
 
         startManagedSystem(3, 0)
@@ -228,8 +253,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
                         assertThat(messages).hasSize(3)
-                        assertThat(messages.filter { it.sender == senderOneChainRid && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).hasSize(2)
-                        assertThat(messages.any { it.sender == senderTwoChainRid && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
+                        assertThat(messages.filter { it.sender == remoteSenderChainRid && it.topic == "my-topic" && it.body.contentEquals(remoteSenderEncodedMessageBody) }).hasSize(2)
+                        assertThat(messages.any { it.sender == localSenderChainRid && it.topic == "my-topic" && it.body.contentEquals(localSenderEncodedMessageBody) }).isTrue()
                     }
                 }
             }
@@ -267,9 +292,51 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                         assertThat(messages).hasSize(1)
                         val message = messages[0]
-                        assertThat(message.sender).isEqualTo(senderOneChainRid)
+                        assertThat(message.sender).isEqualTo(remoteSenderChainRid)
                         assertThat(message.topic).isEqualTo("my-topic")
-                        assertThat(message.body.contentEquals(senderOneEncodedMessageBody)).isTrue()
+                        assertThat(message.body.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+                    }
+                }
+            }
+        }
+
+        verifyPipesAreEmpty(dappChain)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun interClusterSpecificChainReceiverWithoutAnchoring() {
+        setupNonAnchoredClientMocks()
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_without_anchoring.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                    DatabaseAccess.of(ctx).apply {
+                        val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
+                        val messages = jooq.select()
+                                .from(tableName(ctx, testMessageTable))
+                                .fetch()
+                                .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+
+                        assertThat(messages).hasSize(1)
+                        val message = messages[0]
+                        assertThat(message.sender).isEqualTo(remoteSenderChainRid)
+                        assertThat(message.topic).isEqualTo("my-topic")
+                        assertThat(message.body.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
                     }
                 }
             }
@@ -308,9 +375,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.sender).isEqualTo(localSenderChainRid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                 }
             }
         }
@@ -346,9 +413,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.sender).isEqualTo(localSenderChainRid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                 }
             }
         }
@@ -387,9 +454,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                         assertThat(messages).hasSize(1)
                         val message = messages[0]
-                        assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                        assertThat(message.sender).isEqualTo(localSenderChainRid)
                         assertThat(message.topic).isEqualTo("my-topic")
-                        assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                        assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                     }
                 }
             }
@@ -400,22 +467,22 @@ class IcmfReceiverIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun anchoringReceiver() {
         QueryProviderMocks.clearMocks()
-        QueryProviderMocks.addMockQueries(clusterAnchoringChain, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) = createBlockDetail(clusterAnchoringChain, listOf(senderOneMessageBody), "my-topic")
+        QueryProviderMocks.addMockQueries(clusterAnchoringChainRid, object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long) = createBlockDetail(clusterAnchoringChainRid, listOf(remoteSenderMessageBody), "my-topic")
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
-                        gtv(listOf(gtv(mapOf("body" to senderOneMessageBody, "height" to gtv(0)))))
+                        gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
         })
 
-        QueryProviderMocks.addMockQueries(systemAnchoringChain, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) = createBlockDetail(systemAnchoringChain, listOf(senderTwoMessageBody), "my-topic")
+        QueryProviderMocks.addMockQueries(systemAnchoringChainRid, object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long) = createBlockDetail(systemAnchoringChainRid, listOf(localSenderMessageBody), "my-topic")
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
-                        gtv(listOf(gtv(mapOf("body" to senderTwoMessageBody, "height" to gtv(0)))))
+                        gtv(listOf(gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
         })
@@ -444,8 +511,8 @@ class IcmfReceiverIT : ManagedModeTest() {
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
 
                         assertThat(messages).hasSize(2)
-                        assertThat(messages.any { it.sender == clusterAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderOneEncodedMessageBody) }).isTrue()
-                        assertThat(messages.any { it.sender == systemAnchoringChain && it.topic == "my-topic" && it.body.contentEquals(senderTwoEncodedMessageBody) }).isTrue()
+                        assertThat(messages.any { it.sender == clusterAnchoringChainRid && it.topic == "my-topic" && it.body.contentEquals(remoteSenderEncodedMessageBody) }).isTrue()
+                        assertThat(messages.any { it.sender == systemAnchoringChainRid && it.topic == "my-topic" && it.body.contentEquals(localSenderEncodedMessageBody) }).isTrue()
                     }
                 }
             }
@@ -464,7 +531,7 @@ class IcmfReceiverIT : ManagedModeTest() {
 
         val messageBody = gtv("imtoobig".repeat(2 * 1024 * 1024))
         val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
-        val queryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(messageBody))
+        val queryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(messageBody))
 
         setupClientMocks(listOf(queryResponse), listOf(messageBody))
 
@@ -495,7 +562,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
         val secondMessageBody = gtv("n".repeat(90 * 1024))
         val secondEncodedMessageBody = GtvEncoder.encodeGtv(secondMessageBody)
-        val queryResponse = createQueryResponseForMessage(senderOneChainRid, listOf(messageBody, secondMessageBody))
+        val queryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(messageBody, secondMessageBody))
 
         setupClientMocks(listOf(queryResponse), listOf(messageBody, secondMessageBody))
 
@@ -525,12 +592,12 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                         assertThat(messages).hasSize(2)
                         val firstMessage = messages[0]
-                        assertThat(firstMessage.sender).isEqualTo(senderOneChainRid)
+                        assertThat(firstMessage.sender).isEqualTo(remoteSenderChainRid)
                         assertThat(firstMessage.topic).isEqualTo("my-topic")
                         assertThat(firstMessage.body.contentEquals(encodedMessageBody)).isTrue()
 
                         val secondMessage = messages[1]
-                        assertThat(secondMessage.sender).isEqualTo(senderOneChainRid)
+                        assertThat(secondMessage.sender).isEqualTo(remoteSenderChainRid)
                         assertThat(secondMessage.topic).isEqualTo("my-topic")
                         assertThat(secondMessage.body.contentEquals(secondEncodedMessageBody)).isTrue()
 
@@ -560,7 +627,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
         val expectedNumberOfBlocks = ceil(messageCount / messageLimit.toDouble()).toInt()
 
-        val queryResponse = createQueryResponseForMessage(senderOneChainRid, messages)
+        val queryResponse = createQueryResponseForMessage(remoteSenderChainRid, messages)
         setupClientMocks(listOf(queryResponse), messages)
 
         startManagedSystem(3, 0)
@@ -584,15 +651,15 @@ class IcmfReceiverIT : ManagedModeTest() {
                 withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) { ctx ->
                     DatabaseAccess.of(ctx).apply {
                         val jooq = DSL.using(ctx.conn, SQLDialect.POSTGRES)
-                        val messages = jooq.select()
+                        val nodeMessages = jooq.select()
                                 .from(tableName(ctx, testMessageTable))
                                 .fetch()
                                 .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
-                        val messagesPerHeight = messages.groupingBy { it.height }
+                        val messagesPerHeight = nodeMessages.groupingBy { it.height }
                                 .eachCount()
 
                         // Expect all messages to be received
-                        assertThat(messages).hasSize(messageCount)
+                        assertThat(nodeMessages).hasSize(messageCount)
 
                         // Expect message distribution over blocks
                         assertThat(messagesPerHeight).hasSize(expectedNumberOfBlocks)
@@ -640,7 +707,7 @@ class IcmfReceiverIT : ManagedModeTest() {
                     val message = messages[0]
                     assertThat(message.sender).isEqualTo(directoryChainBrid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                 }
             }
         }
@@ -693,9 +760,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.sender).isEqualTo(localSenderChainRid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                     assertThat(message.height).isEqualTo(1)
                 }
             }
@@ -732,9 +799,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.sender).isEqualTo(localSenderChainRid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                     assertThat(message.height).isEqualTo(0)
                 }
             }
@@ -767,9 +834,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(1)
                     val message = messages[0]
-                    assertThat(message.sender).isEqualTo(senderTwoChainRid)
+                    assertThat(message.sender).isEqualTo(localSenderChainRid)
                     assertThat(message.topic).isEqualTo("my-topic")
-                    assertThat(message.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                    assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                     assertThat(message.height).isEqualTo(0)
                 }
             }
@@ -789,9 +856,9 @@ class IcmfReceiverIT : ManagedModeTest() {
 
                     assertThat(messages).hasSize(2)
                     messages.forEach {
-                        assertThat(it.sender).isEqualTo(senderTwoChainRid)
+                        assertThat(it.sender).isEqualTo(localSenderChainRid)
                         assertThat(it.topic).isEqualTo("my-topic")
-                        assertThat(it.body.contentEquals(senderTwoEncodedMessageBody)).isTrue()
+                        assertThat(it.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
                     }
                     assertThat(messages[0].height).isEqualTo(0)
                     assertThat(messages[1].height).isEqualTo(3)
@@ -809,9 +876,18 @@ class IcmfReceiverIT : ManagedModeTest() {
         nodes.forEach { node ->
             val receiverGTXModule = node.getModules(1L).find { it is IcmfReceiverGTXModule }!!
             val receiverSpecialTxExtension = receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
-            val globalTopicPipe = receiverSpecialTxExtension.globalTopicReceivers[0].getRelevantPipes()[0] as InterClusterAnchoredTopicPipe
-
-            assertThat(globalTopicPipe.queueIsEmpty).isTrue()
+            receiverSpecialTxExtension.anchoredReceivers.forEach {
+                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
+                    assertThat(pipe.queueLength).isEqualTo(0)
+                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
+                }
+            }
+            receiverSpecialTxExtension.nonAnchoredReceivers.forEach {
+                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
+                    assertThat(pipe.queueLength).isEqualTo(0)
+                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
+                }
+            }
         }
     }
 
@@ -874,8 +950,8 @@ class IcmfReceiverIT : ManagedModeTest() {
         }
 
         val blockHeader = BlockHeaderData(
-                gtv(clusterAnchoringChain.data),
-                gtv(clusterAnchoringChain.data),
+                gtv(clusterAnchoringChainRid.data),
+                gtv(clusterAnchoringChainRid.data),
                 gtv(ByteArray(32)),
                 gtv(0),
                 gtv(prevHeight + 1),
@@ -896,7 +972,7 @@ class IcmfReceiverIT : ManagedModeTest() {
         ).getRawData()
         return BlockDetail(
                 blockRid.wrap(),
-                clusterAnchoringChain.data.wrap(),
+                clusterAnchoringChainRid.data.wrap(),
                 GtvEncoder.encodeGtv(blockHeader).wrap(),
                 0L,
                 listOf(),

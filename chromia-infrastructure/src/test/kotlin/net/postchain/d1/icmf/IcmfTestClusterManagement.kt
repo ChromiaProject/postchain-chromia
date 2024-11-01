@@ -11,18 +11,21 @@ class IcmfTestClusterManagement : ClusterManagement {
         private val cryptoSystem = Secp256K1CryptoSystem()
         val keyPair = cryptoSystem.generateKeyPair()
 
+        const val restApiUrl = "http://127.0.0.1:7740/"
+
         const val senderCluster = "senderCluster"
         const val receiverCluster = "receiverCluster"
 
         val systemAnchoringChainRid = BlockchainRid.buildRepeat(0)
         val clusterAnchoringChainRid = BlockchainRid.buildRepeat(1)
-        val senderOneChainRid = BlockchainRid.buildRepeat(2)
-        val senderTwoChainRid = BlockchainRid.buildRepeat(3)
+        val remoteSenderChainRid = BlockchainRid.buildRepeat(2)
+        val localSenderChainRid = BlockchainRid.buildRepeat(3)
         val receiverClusterAnchoringChainRid = BlockchainRid.buildRepeat(4)
+        val otherLocalSenderChainRid = BlockchainRid.buildRepeat(5)
     }
 
     private val peers = listOf(
-            D1PeerInfo("http://127.0.0.1:7740/", keyPair.pubKey),
+            D1PeerInfo(restApiUrl, keyPair.pubKey),
     )
 
     override fun getClusterNames() = listOf(senderCluster, receiverCluster)
@@ -36,15 +39,13 @@ class IcmfTestClusterManagement : ClusterManagement {
         else -> throw IllegalArgumentException(clusterName)
     }
 
-    override fun getBlockchainApiUrls(blockchainRid: BlockchainRid): Collection<String> {
-        throw NotImplementedError("Not yet implemented")
-    }
+    override fun getBlockchainApiUrls(blockchainRid: BlockchainRid): Collection<String> = listOf(restApiUrl)
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
-            listOf(systemAnchoringChainRid, clusterAnchoringChainRid, senderOneChainRid, senderTwoChainRid)
+            listOf(systemAnchoringChainRid, clusterAnchoringChainRid, remoteSenderChainRid, localSenderChainRid)
 
     override fun getClusterOfBlockchain(blockchainRid: BlockchainRid): String = when (blockchainRid) {
-        systemAnchoringChainRid, clusterAnchoringChainRid, senderOneChainRid -> senderCluster
+        systemAnchoringChainRid, clusterAnchoringChainRid, remoteSenderChainRid -> senderCluster
         else -> receiverCluster
     }
 
