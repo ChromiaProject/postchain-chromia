@@ -44,8 +44,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                                     private val clientProvider: ChromiaClientProvider,
                                     private val clusterManagement: ClusterManagement,
                                     private val blockchainConfigProvider: BlockchainConfigProvider,
-                                    _lastMessageHeights: List<Pair<BlockchainRid, Long>>
-) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
+                                    initialLastMessageHeights: List<Pair<BlockchainRid, Long>>
+) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable, QueuedPipe {
     companion object : KLogging() {
         val pollInterval = 10.seconds
         const val maxQueueSizeBytes = 32 * 1024 * 1024 // 32 MiB
@@ -58,11 +58,14 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
     private val job: Job
 
-    internal val queueIsEmpty: Boolean
-        get() = currentQueueSizeBytes.get() == 0
+    override val queueLength: Int
+        get() = packets.size
+
+    override val queueSizeBytes: Int
+        get() = currentQueueSizeBytes.get()
 
     init {
-        _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
+        initialLastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
 
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("anchored-pipe-worker-cluster-$clusterName-topic-${route.topic}") + MDCContext()) {
             while (isActive) {
