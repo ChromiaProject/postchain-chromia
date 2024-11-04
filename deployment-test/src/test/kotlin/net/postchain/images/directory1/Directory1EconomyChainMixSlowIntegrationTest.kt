@@ -51,7 +51,7 @@ import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
-import net.postchain.chain0.economy_chain_test_claim_tchr.claimTestChrOperation
+import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
@@ -389,7 +389,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val senderVirtualBrid = gtv(
                 gtv("EVM"),
                 gtv(evmContainerNetworkId),
-                gtv(bridgeAddress.replace("^0x".toRegex(), ""))
+                gtv(testTokenAddress.substring(2).hexStringToByteArray())
         ).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
 
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!
@@ -401,7 +401,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
                 )
                 .replace(
                         "<string>$EIF_EC_STRATEGY_SENDER_BLOCKCHAIN</string>",
-                        "<string>\"${senderVirtualBrid.toHex()}\"</string>"
+                        "<bytea>${senderVirtualBrid.toHex()}</bytea>"
                 )
                 // use `TST TestToken ERC-20` instead of `CHR Chromia ERC-20`
                 .replace(ETH_ASSET_ADDRESS, testTokenAddress.substring(2))
@@ -439,9 +439,9 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         linkAccount(aliceAuthenticator, aliceEvmAddress)
 
         // Claim initial supply
-        aliceAuthenticator.verifyOperationAuthFlags("claim_test_chr")
+        aliceAuthenticator.verifyOperationAuthFlags("faucet")
         aliceAuthenticator.transactionBuilder()
-                .claimTestChrOperation()
+                .faucetOperation()
                 .postTransactionUntilConfirmed("Claiming initial supply")
 
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
@@ -732,7 +732,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val accountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
 
         val updateMainAuthDescriptorSignature = getUpdateMainAuthDescriptorSignature(addressByteArray, accountMainAuthDescriptor, evmKeyPair)
-        val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair)
+        val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair, accountId)
 
         node1.client(ecBrid, listOf(node1KeyPair)).transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(addressByteArray), listOf(linkEvmEoaAccountSignature))
@@ -909,7 +909,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         return FTAuthenticator(userKeyPair, node1.client(blockchainRid, listOf(userKeyPair)))
     }
 
-    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair): Signature {
+    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair, accountId: ByteArray): Signature {
         val opName = LINK_EVM_EOA_ACCOUNT
         val opArgs = gtv(listOf(gtv(addressByteArray)))
 
@@ -923,6 +923,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val template = node1.client(ecBrid).getAuthMessageTemplate(opName, opArgs)
         val message = template.replace("{blockchain_rid}", ecBrid.toHex().uppercase())
                 .replace("{nonce}", nonce.toHex().uppercase())
+                .replace("{account_id}", accountId.toHex())
 
         val evmSig = Sign.signPrefixedMessage(
                 message.toByteArray(StandardCharsets.UTF_8),
@@ -937,7 +938,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
     }
 
     private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray) {
-        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair)
+        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair, userAuthenticator.accountId)
 
         userAuthenticator.client.transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(userEvmAddress), listOf(signature))

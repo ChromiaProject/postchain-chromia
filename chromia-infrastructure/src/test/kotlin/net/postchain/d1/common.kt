@@ -9,6 +9,7 @@ import java.io.File
 val RELL_SOURCE_PATH = File(System.getenv("D1_SOURCE"))
 
 fun getSystemAnchoringChainConfig(): Gtv {
+    val chainVersionCode = File(RELL_SOURCE_PATH, "chain_version.rell").readText()
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
     val systemAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_system/module.rell").readText()
     val systemAnchoringSelfReportRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_system/self_report_configuration_updated.rell").readText()
@@ -19,6 +20,7 @@ fun getSystemAnchoringChainConfig(): Gtv {
     return GtvMLParser.parseGtvML(
             Any::class::class.java.getResource("/net/postchain/d1/anchoring/blockchain_config_2_system_anchoring.xml")!!.readText(),
             mapOf(
+                    "chain_version" to GtvFactory.gtv(chainVersionCode),
                     "anchoring_chain_common" to GtvFactory.gtv(anchoringRellCode),
                     "anchoring_chain_system" to GtvFactory.gtv(systemAnchoringRellCode + systemAnchoringSelfReportRellCode),
                     "self_report_configuration_failed" to GtvFactory.gtv(selfReportConfigurationFailed),
@@ -30,6 +32,7 @@ fun getSystemAnchoringChainConfig(): Gtv {
 }
 
 fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
+    val chainVersionCode = File(RELL_SOURCE_PATH, "chain_version.rell").readText()
     val anchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_common/module.rell").readText()
     val clusterAnchoringRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/module.rell").readText()
     val icmfRellCode = File(RELL_SOURCE_PATH, "anchoring_chain_cluster/icmf.rell").readText()
@@ -41,6 +44,7 @@ fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
     return GtvMLParser.parseGtvML(
             Any::class::class.java.getResource(blockchainConfigFile)!!.readText(),
             mapOf(
+                    "chain_version" to GtvFactory.gtv(chainVersionCode),
                     "anchoring_chain_common" to GtvFactory.gtv(anchoringRellCode),
                     "anchoring_chain_cluster" to GtvFactory.gtv(clusterAnchoringRellCode + icmfRellCode + nodeAvailabilityReporting),
                     "lib.icmf" to GtvFactory.gtv(messagingIcmfRellCode),

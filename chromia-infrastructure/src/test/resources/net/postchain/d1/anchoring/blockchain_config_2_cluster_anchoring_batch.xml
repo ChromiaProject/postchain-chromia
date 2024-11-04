@@ -57,6 +57,9 @@ This is a Anchor Chain configuration specifically for testing.
                     </entry>
                     <entry key="sources">
                         <dict>
+                            <entry key="chain_version.rell">
+                                <param key="chain_version" type="string"/>
+                            </entry>
                             <entry key="anchoring_chain_common/module.rell">
                                 <param key="anchoring_chain_common" type="string"/>
                             </entry>
