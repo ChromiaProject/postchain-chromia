@@ -220,11 +220,11 @@ blockchains:
       lib.ft4.core.accounts.strategies.transfer:
         rules:
           - sender_blockchain:
-              - "EIF_EC_STRATEGY_SENDER_BLOCKCHAIN" # chr repl -c '("EVM",1,x"bridge_contract_address_without_0x").hash()' - token address from https://gitlab.com/chromaway/core/postchain-eif/-/blob/dev/postchain-eif-contracts/tasks/deployers/chromiabridge.ts?ref_type=heads#L21-L34
+              - "EIF_EC_STRATEGY_SENDER_BLOCKCHAIN" # chr repl -c '("EVM",1,x"token_address_without_0x").hash()'
             sender: "*"
             recipient: "*"
             asset:
-              - name: "Chromia" # Should match `economy_chain_module_args.asset_name`
+              - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
                 min_amount: 10000000L # 10.0 CHR
             timeout_days: 10
             strategy: "open"
@@ -232,13 +232,13 @@ blockchains:
             sender: "*"
             recipient: "*"
             asset:
-              - name: "Chromia" # Should match `economy_chain_module_args.asset_name`
+              - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
                 min_amount: 10000000L # 10.0 CHR
             timeout_days: 10
             strategy: "fee"
       lib.ft4.core.accounts.strategies.transfer.fee:
         asset:
-          - name: "Chromia"  # Should match `economy_chain_module_args.asset_name`
+          - name: "tCHR"  # Should match `economy_chain_module_args.asset_name`
             amount: 10000000L # 10.0 CHR
         fee_account: x"A97CEAF65C5D7BE1B1307B0CD11AC9B3DB7065D24B8C1D36B135C68A846A4426" # pool account
       lib.auth:
@@ -268,6 +268,7 @@ blockchains:
         asset_decimals: 6
         amount_to_mint: 1000000000
         test_chr_refill_limit_millis: 604800000 # 1 week
+        account_creator_pubkey: x"036AF40CBAFA718B1AFBB8335E3315B8BD3821AB2AA891E5287521EEB6462AE2C5"
       economy_chain_test_admin:
         # corresponding private key for this test key is E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0
         admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
