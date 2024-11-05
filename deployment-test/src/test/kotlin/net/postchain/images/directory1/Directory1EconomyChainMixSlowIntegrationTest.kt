@@ -28,7 +28,7 @@ import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.common.removeProviderKeyOperation
+import net.postchain.chain0.common.revokeProviderKeyOperation
 import net.postchain.chain0.common.setProviderKeyThresholdOperation
 import net.postchain.chain0.economy_chain.ClusterCreationStatus
 import net.postchain.chain0.economy_chain.TagData
@@ -865,11 +865,11 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         assertThat(providerKeys.keys[1].keys.map { it.toHex() })
                 .isEqualTo(listOf(providerThirdKey.pubKey.hex()))
 
-        // Remove the first key and set threshold to 2 - key removed key is signing the transaction before it is being removed
+        // Revoke the first key and set threshold to 2 - key removed key is signing the transaction before it is being removed
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey, providerFourthKey)).transactionBuilder()
-                .removeProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
+                .revokeProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
                 .setProviderKeyThresholdOperation(ProviderKeyRole.main, 2)
-                .postTransactionUntilConfirmed("Remove first provider key")
+                .postTransactionUntilConfirmed("Revoke first provider key")
 
         // 2 keys will be enough
         verifyProviderAuth(listOf(
