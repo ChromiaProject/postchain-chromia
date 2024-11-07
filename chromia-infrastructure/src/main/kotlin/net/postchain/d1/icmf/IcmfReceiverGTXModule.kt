@@ -1,7 +1,6 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
@@ -51,7 +50,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
         dbOperations.initialize(ctx)
     }
 
-    override fun makeBlockBuilderExtensions() = listOf<BaseBlockBuilderExtension>()
+    override fun makeBlockBuilderExtensions() = listOf(blockBuilderExtension)
 
     fun getBlockBuilderExtension() = blockBuilderExtension
 

@@ -75,7 +75,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
-                    blockBuilder.addEventListener(configuration.chainID) { topics ->
+                    blockBuilder.addEventListener { topics ->
 
                         withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
                             val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
@@ -188,23 +188,21 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             bcConfig: IcmfReceiverBlockchainConfigData,
             dappProvidedTopics: List<IcmfReceiverTopicEventMessage>
     ): IcmfReceiverBlockchainConfigData {
-        val globalTopics = mutableListOf<String>()
         val globalBlockchainTopics = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()
         val globalDappProviderTopics = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && it.bcRid == null }
         val globalDappProviderTopicsWithBrid = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && it.bcRid != null }
         val localDappProviderTopics = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX) && it.bcRid != null }
 
+        val globalTopics = mutableListOf(*globalDappProviderTopics.map { it.topic }.toTypedArray())
         bcConfig.global?.topics?.let { globalTopics += it }
-        globalDappProviderTopics.filter { it.bcRid == null }.map { it.topic }.forEach(globalTopics::add)
 
         bcConfig.global?.blockchains?.let { globalBlockchainTopics += it }
         globalDappProviderTopicsWithBrid
                 .map { IcmfReceiverSpecificBlockChainConfig(it.bcRid!!, it.topic, it.skipToHeight) }
                 .forEach(globalBlockchainTopics::add)
 
-        val local = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()
+        val local = mutableListOf(*localDappProviderTopics.map { IcmfReceiverSpecificBlockChainConfig(it.bcRid!!, it.topic, it.skipToHeight) }.toTypedArray())
         bcConfig.local?.let { local += it }
-        local += localDappProviderTopics.map { IcmfReceiverSpecificBlockChainConfig(it.bcRid!!, it.topic, it.skipToHeight) }
 
         return IcmfReceiverBlockchainConfigData(
                 IcmfReceiverTopicsAndSpecificBlockchainConfig(globalTopics, globalBlockchainTopics),
@@ -253,12 +251,6 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             ChromiaQueryProviderFactory.create(configuration, postchainContext.blockQueriesProvider, postchainContext.connectionManager, clusterManagement)
 
     override fun disconnectProcess(process: BlockchainProcess) {
-        val configuration = process.blockchainEngine.getConfiguration()
-        if (configuration is GTXModuleAware && configuration is ManagedDataSourceAware) {
-            withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
-                blockBuilder.removeEventListener(configuration.chainID)
-            }
-        }
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.forEach { it.shutdown() }
     }
 

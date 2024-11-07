@@ -19,10 +19,13 @@ const val ICMF_RECEIVER_TOPICS_EVENT_TYPE = "icmf_receiver_topics"
 class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
+    private lateinit var blockEContext: BlockEContext
     private lateinit var cryptoSystem: CryptoSystem
-    private val chainEventListeners = mutableMapOf<Long, (List<IcmfReceiverTopicEventMessage>) -> Unit>()
+    private var eventListener: ((List<IcmfReceiverTopicEventMessage>) -> Unit)? = null
+    private var queuedUpdate: List<IcmfReceiverTopicEventMessage>? = null
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
+        this.blockEContext = blockEContext
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_RECEIVER_TOPICS_EVENT_TYPE, this)
     }
@@ -46,20 +49,21 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
         }
 
         ctxt.addAfterAppendHook {
-
             logger.debug { "Dapp requests ICMF receiver topics update: ${ctxt.height}: $topics" }
+            queuedUpdate = topics
+        }
 
-            chainEventListeners[ctxt.chainID]?.invoke(topics)
+        blockEContext.addAfterCommitHook {
+            if (queuedUpdate != null) {
+                eventListener?.invoke(queuedUpdate!!)
+                queuedUpdate = null
+            }
         }
     }
 
-    fun addEventListener(chainId: Long, function: (List<IcmfReceiverTopicEventMessage>) -> Unit) {
-        chainEventListeners[chainId] = function
+    fun addEventListener(function: (List<IcmfReceiverTopicEventMessage>) -> Unit) {
+        eventListener = function
     }
 
     override fun finalize(): Map<String, Gtv> = mapOf()
-
-    fun removeEventListener(chainID: Long) {
-        chainEventListeners.remove(chainID)
-    }
 }
