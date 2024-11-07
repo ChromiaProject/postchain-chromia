@@ -7,6 +7,7 @@ import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.impl.TryNextOnErrorRequestStrategyFactory
@@ -16,6 +17,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
@@ -27,8 +29,10 @@ import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.config.ManagedBlockchainConfigProvider
 import net.postchain.d1.nm_api.NodeManagementImpl
 import net.postchain.d1.query.ChromiaQueryProvider
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.GtxConfigurationData
@@ -66,90 +70,162 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 val rawIcmfReceiverConfig = configuration.rawConfig["icmf"]?.get("receiver")
                         ?: throw UserMistake("Missing configuration key icmf/receiver")
-                val config = IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig)
-                txExt.icmfReceiverBlockchainConfigData = config
-                txExt.specialTxSizeMargin = config.specialTxMarginBytes
 
-                if (maxBlockSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
-                    logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
-                }
-                if (maxTxSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
-                    logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
-                }
+                addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider)
 
-                if (config.global != null) {
-                    if (!config.global.topics.isNullOrEmpty()) {
-                        val globalTopicIcmfReceiver = GlobalTopicIcmfReceiver(
-                                config.global.topics.distinct().associateWith { listOf() },
-                                cryptoSystem,
-                                engine.blockBuilderStorage,
-                                queryProvider,
-                                configuration.chainID,
-                                configuration.blockchainRid,
-                                clusterManagement,
-                                blockchainConfigProvider,
-                                clientProvider,
-                                dbOperations
-                        )
-                        receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(globalTopicIcmfReceiver)
-                        txExt.anchoredReceivers.add(globalTopicIcmfReceiver)
+                // Dapp event listener callback
+                withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
+                    blockBuilder.addEventListener(configuration.chainID) { topics ->
+
+                        withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
+                            val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
+                            dbOperations.saveDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data, topics)
+                            true
+                        }
+
+                        removeReceivers(configuration.chainID, txExt)
+                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider)
                     }
-
-                    if (!config.global.blockchains.isNullOrEmpty()) {
-                        val specificChainReceiver = GlobalTopicIcmfReceiver(
-                                config.global.blockchains.groupBy { it.topic }
-                                        .mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
-                                cryptoSystem,
-                                engine.blockBuilderStorage,
-                                queryProvider,
-                                configuration.chainID,
-                                configuration.blockchainRid,
-                                clusterManagement,
-                                blockchainConfigProvider,
-                                clientProvider,
-                                dbOperations
-                        )
-                        receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(specificChainReceiver)
-                        txExt.anchoredReceivers.add(specificChainReceiver)
-                    }
-                }
-
-                if (config.local != null || config.directoryChain != null) {
-                    val directoryChainOrigins = config.directoryChain?.let { directoryChainConfig ->
-                        val directoryChainBrid = withReadConnection(engine.blockBuilderStorage, 0L) { ctx ->
-                            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
-                        } ?: throw ProgrammerMistake("Unable to resolve directory chain blockchain RID")
-                        txExt.directoryChainBrid = directoryChainBrid
-                        directoryChainConfig.topics.map { LocalIcmfOrigin(it, directoryChainBrid) }
-                    } ?: listOf()
-                    val localOrigins = config.local?.map {
-                        LocalIcmfOrigin(it.topic, BlockchainRid(it.blockchainRid), it.skipToHeight)
-                    } ?: listOf()
-                    val localTopicIcmfReceiver = LocalTopicIcmfReceiver(
-                            directoryChainOrigins + localOrigins,
-                            queryProvider,
-                            clusterManagement,
-                            clientProvider,
-                            configuration.chainID,
-                            configuration.blockchainRid,
-                            engine.blockBuilderStorage,
-                            dbOperations
-                    )
-                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(localTopicIcmfReceiver)
-                    txExt.nonAnchoredReceivers.add(localTopicIcmfReceiver)
-                }
-
-                if (config.anchoring != null) {
-                    val anchoringReceiver = AnchoringIcmfReceiver(
-                            config.anchoring.topics,
-                            clusterManagement,
-                            queryProvider
-                    )
-                    receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(anchoringReceiver)
-                    txExt.nonAnchoredReceivers.add(anchoringReceiver)
                 }
             }
         }
+    }
+
+    private fun addReceivers(engine: BlockchainEngine, configuration: BlockchainConfiguration, clusterManagement: ClusterManagement, rawIcmfReceiverConfig: Gtv, txExt: IcmfReceiverSpecialTxExtension, maxBlockSize: Long, maxTxSize: Long, queryProvider: ChromiaQueryProvider, blockchainConfigProvider: BlockchainConfigProvider, clientProvider: ChromiaClientProvider) {
+
+        val config = withReadConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
+            val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
+            val dappProvidedTopics = dbOperations.loadDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data)
+            mergeConfigs(IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig), dappProvidedTopics)
+        }
+        txExt.icmfReceiverBlockchainConfigData = config
+        txExt.specialTxSizeMargin = config.specialTxMarginBytes
+
+        if (maxBlockSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
+            logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+        }
+        if (maxTxSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
+            logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+        }
+
+        if (config.global != null) {
+            if (!config.global.topics.isNullOrEmpty()) {
+                val globalTopicIcmfReceiver = GlobalTopicIcmfReceiver(
+                        config.global.topics.distinct().associateWith { listOf() },
+                        cryptoSystem,
+                        engine.blockBuilderStorage,
+                        queryProvider,
+                        configuration.chainID,
+                        configuration.blockchainRid,
+                        clusterManagement,
+                        blockchainConfigProvider,
+                        clientProvider,
+                        dbOperations
+                )
+                receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(globalTopicIcmfReceiver)
+                txExt.anchoredReceivers.add(globalTopicIcmfReceiver)
+            }
+
+            if (!config.global.blockchains.isNullOrEmpty()) {
+                val specificChainReceiver = GlobalTopicIcmfReceiver(
+                        config.global.blockchains.groupBy { it.topic }
+                                .mapValues { it.value.map { x -> BlockchainRid(x.blockchainRid) }.distinct() },
+                        cryptoSystem,
+                        engine.blockBuilderStorage,
+                        queryProvider,
+                        configuration.chainID,
+                        configuration.blockchainRid,
+                        clusterManagement,
+                        blockchainConfigProvider,
+                        clientProvider,
+                        dbOperations
+                )
+                receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(specificChainReceiver)
+                txExt.anchoredReceivers.add(specificChainReceiver)
+            }
+        }
+
+        if (config.local != null || config.directoryChain != null) {
+            val directoryChainOrigins = config.directoryChain?.let { directoryChainConfig ->
+                val directoryChainBrid = withReadConnection(engine.blockBuilderStorage, 0L) { ctx ->
+                    DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+                } ?: throw ProgrammerMistake("Unable to resolve directory chain blockchain RID")
+                txExt.directoryChainBrid = directoryChainBrid
+                directoryChainConfig.topics.map { LocalIcmfOrigin(it, directoryChainBrid) }
+            } ?: listOf()
+            val localOrigins = config.local?.map {
+                LocalIcmfOrigin(it.topic, BlockchainRid(it.blockchainRid), it.skipToHeight)
+            } ?: listOf()
+            val localTopicIcmfReceiver = LocalTopicIcmfReceiver(
+                    directoryChainOrigins + localOrigins,
+                    queryProvider,
+                    clusterManagement,
+                    clientProvider,
+                    configuration.chainID,
+                    configuration.blockchainRid,
+                    engine.blockBuilderStorage,
+                    dbOperations
+            )
+            receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(localTopicIcmfReceiver)
+            txExt.nonAnchoredReceivers.add(localTopicIcmfReceiver)
+        }
+
+        if (config.anchoring != null) {
+            val anchoringReceiver = AnchoringIcmfReceiver(
+                    config.anchoring.topics,
+                    clusterManagement,
+                    queryProvider
+            )
+            receivers.computeIfAbsent(configuration.chainID) { mutableListOf() }.add(anchoringReceiver)
+            txExt.nonAnchoredReceivers.add(anchoringReceiver)
+        }
+    }
+
+    /**
+     * Merged ICMF receiver config from BC and the one provided by dapp.
+     */
+    private fun mergeConfigs(
+            bcConfig: IcmfReceiverBlockchainConfigData,
+            dappProvidedTopics: List<IcmfReceiverTopicsEventMessage>
+    ): IcmfReceiverBlockchainConfigData {
+        val globalTopics = mutableListOf<String>()
+        val globalBlockchainTopics = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()
+        val globalDappProviderTopics = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && it.bcRid == null }
+        val globalDappProviderTopicsWithBrid = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && it.bcRid != null }
+        val localDappProviderTopics = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX) && it.bcRid != null }
+
+        bcConfig.global?.topics?.let { globalTopics += it }
+        globalDappProviderTopics.filter { it.bcRid == null }.map { it.topic }.forEach(globalTopics::add)
+
+        bcConfig.global?.blockchains?.let { globalBlockchainTopics += it }
+        globalDappProviderTopicsWithBrid
+                .map { IcmfReceiverSpecificBlockChainConfig(it.bcRid!!, it.topic, it.skipToHeight) }
+                .forEach(globalBlockchainTopics::add)
+
+        val local = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()
+        bcConfig.local?.let { local += it }
+        local += localDappProviderTopics.map { IcmfReceiverSpecificBlockChainConfig(it.bcRid!!, it.topic, it.skipToHeight) }
+
+        return IcmfReceiverBlockchainConfigData(
+                IcmfReceiverTopicsAndSpecificBlockchainConfig(globalTopics, globalBlockchainTopics),
+                local,
+                bcConfig.anchoring,
+                bcConfig.directoryChain,
+                bcConfig.specialTxMarginBytes,
+                bcConfig.messageLimit,
+        )
+    }
+
+    private fun removeReceivers(chainID: Long, txExt: IcmfReceiverSpecialTxExtension) {
+        (txExt.nonAnchoredReceivers + txExt.anchoredReceivers)
+                .forEach {
+                    txExt.anchoredReceivers.remove(it)
+                    txExt.nonAnchoredReceivers.remove(it)
+                    if (it is Shutdownable) {
+                        receivers[chainID]?.remove(it)
+                        it.shutdown()
+                    }
+                }
     }
 
     open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement =
@@ -177,6 +253,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             ChromiaQueryProviderFactory.create(configuration, postchainContext.blockQueriesProvider, postchainContext.connectionManager, clusterManagement)
 
     override fun disconnectProcess(process: BlockchainProcess) {
+        val configuration = process.blockchainEngine.getConfiguration()
+        if (configuration is GTXModuleAware && configuration is ManagedDataSourceAware) {
+            withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
+                blockBuilder.removeEventListener(configuration.chainID)
+            }
+        }
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.forEach { it.shutdown() }
     }
 
@@ -188,5 +270,16 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         return module.getSpecialTxExtensions().firstOrNull { ext ->
             (ext is IcmfReceiverSpecialTxExtension)
         } as IcmfReceiverSpecialTxExtension?
+    }
+
+    private fun withIcmfReceiverBlockBuilderExtension(module: GTXModule, function: (IcmfReceiverBlockBuilderExtension) -> Unit) {
+        if (module is CompositeGTXModule) {
+            for (gtxModule in module.modules) {
+                if (gtxModule is IcmfReceiverGTXModule) {
+                    function(gtxModule.getBlockBuilderExtension())
+                    break
+                }
+            }
+        }
     }
 }

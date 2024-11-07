@@ -25,6 +25,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
     private val specialTxExtension = IcmfReceiverSpecialTxExtension(dbOperations)
     private val _specialTxExtensions = listOf(specialTxExtension)
     private lateinit var delegateTransactorMaker: TransactorMaker
+    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension()
 
     private val operations: Map<String, (ExtOpData) -> Transactor> = mapOf(
             AnchorHeaderOp.OP_NAME to ::DummyGTXOperation,
@@ -50,7 +51,13 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
         dbOperations.initialize(ctx)
     }
 
-    override fun makeBlockBuilderExtensions() = listOf<BaseBlockBuilderExtension>()
+    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
+        return listOf(blockBuilderExtension)
+    }
+
+    fun getBlockBuilderExtension(): IcmfReceiverBlockBuilderExtension {
+        return blockBuilderExtension
+    }
 
     override fun getSpecialTxExtensions() = _specialTxExtensions
 

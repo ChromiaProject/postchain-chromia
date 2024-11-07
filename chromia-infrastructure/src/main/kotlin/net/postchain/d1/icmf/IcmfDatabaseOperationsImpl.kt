@@ -36,12 +36,16 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         val COLUMN_ID: Field<Long> = field("id", PostgresDataType.BIGSERIAL.nullable(false))
         val COLUMN_TRANSACTION: Field<Long> = field("transaction", PostgresDataType.BIGINT.nullable(false))
         val COLUMN_BODY: Field<ByteArray> = field("body", PostgresDataType.BYTEA.nullable(false))
+        val COLUMN_RECEIVER: Field<ByteArray> = field("receiver", PostgresDataType.BYTEA.nullable(false))
+        val COLUMN_SKIP_TO_HEIGHT: Field<Long> = field("skip_to_height", PostgresDataType.BIGINT.nullable(false))
+        val COLUMN_SENDER_NULLABLE: Field<ByteArray> = field("sender", PostgresDataType.BYTEA.nullable(true))
     }
 
     private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
     private fun DatabaseAccess.tableMessageHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.message_height")
     private fun DatabaseAccess.tableSpilledMessage(ctx: EContext) = tableName(ctx, "${PREFIX}.spilled_message")
     private fun DatabaseAccess.tableSentIcmfMessage(ctx: EContext) = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE)
+    private fun DatabaseAccess.tableDappProvidedReceiverTopics(ctx: EContext) = tableName(ctx, "${PREFIX}.dapp_provided_receiver_topics")
 
     override fun initialize(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
@@ -90,6 +94,17 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .execute()
             jooq.createIndexIfNotExists("${INDEX_PREFIX}${simTableName}_0")
                     .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
+                    .execute()
+
+            val dappProvidedReceiverTopicsTable = table(tableDappProvidedReceiverTopics(ctx))
+            jooq.createTableIfNotExists(dappProvidedReceiverTopicsTable)
+                    .column(COLUMN_CLUSTER)
+                    .column(COLUMN_RECEIVER)
+                    .column(COLUMN_TOPIC)
+                    .column(COLUMN_SENDER_NULLABLE)
+                    .column(COLUMN_SKIP_TO_HEIGHT)
+                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${dappProvidedReceiverTopicsTable}")
+                            .primaryKey(COLUMN_CLUSTER.name, COLUMN_RECEIVER.name, COLUMN_TOPIC.name))
                     .execute()
         }
     }
@@ -248,6 +263,35 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                 .fetch()
     }.map {
         GtvDecoder.decodeGtv(it[COLUMN_BODY])
+    }
+
+    override fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicsEventMessage>) {
+        DatabaseAccess.of(ctx).run {
+            createJooq(ctx).deleteFrom(table(tableDappProvidedReceiverTopics(ctx)))
+                    .where(COLUMN_CLUSTER.eq(cluster))
+                    .and(COLUMN_RECEIVER.eq(receiver))
+                    .execute()
+
+            topics.forEach {
+                createJooq(ctx).insertInto(table(tableDappProvidedReceiverTopics(ctx)))
+                        .set(COLUMN_CLUSTER, cluster)
+                        .set(COLUMN_RECEIVER, receiver)
+                        .set(COLUMN_TOPIC, it.topic)
+                        .set(COLUMN_SENDER_NULLABLE, it.bcRid)
+                        .set(COLUMN_SKIP_TO_HEIGHT, it.skipToHeight)
+                        .execute()
+            }
+        }
+    }
+
+    override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicsEventMessage> {
+        return DatabaseAccess.of(ctx).run {
+            createJooq(ctx).select(COLUMN_TOPIC, COLUMN_SENDER, COLUMN_SKIP_TO_HEIGHT)
+                    .from(tableDappProvidedReceiverTopics(ctx))
+                    .where(COLUMN_CLUSTER.eq(cluster))
+                    .and(COLUMN_RECEIVER.eq(receiver))
+                    .fetch()
+        }.map { IcmfReceiverTopicsEventMessage(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)

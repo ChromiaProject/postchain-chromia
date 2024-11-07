@@ -45,7 +45,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_BODY)
                     .column(COLUMN_HEIGHT)
-                    .constraint(constraint("PK").primaryKey(COLUMN_ID))
+                    .constraint(constraint("PK_${ctx.chainID}").primaryKey(COLUMN_ID))
                     .execute()
         }
     }
