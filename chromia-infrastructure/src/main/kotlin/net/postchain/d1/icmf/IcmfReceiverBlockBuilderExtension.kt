@@ -20,7 +20,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
-    private val chainEventListeners = mutableMapOf<Long, (List<IcmfReceiverTopicsEventMessage>) -> Unit>()
+    private val chainEventListeners = mutableMapOf<Long, (List<IcmfReceiverTopicEventMessage>) -> Unit>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         cryptoSystem = baseBB.cryptoSystem
@@ -30,7 +30,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
 
         val topics = try {
-            GtvObjectMapper.fromArray(data, IcmfReceiverTopicsEventMessage::class.java)
+            GtvObjectMapper.fromArray(data, IcmfReceiverTopicEventMessage::class.java)
         } catch (e: Exception) {
             throw UserMistake("Received invalid icmf topics: ${e.message}", e)
         }
@@ -53,7 +53,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
         }
     }
 
-    fun addEventListener(chainId: Long, function: (List<IcmfReceiverTopicsEventMessage>) -> Unit) {
+    fun addEventListener(chainId: Long, function: (List<IcmfReceiverTopicEventMessage>) -> Unit) {
         chainEventListeners[chainId] = function
     }
 

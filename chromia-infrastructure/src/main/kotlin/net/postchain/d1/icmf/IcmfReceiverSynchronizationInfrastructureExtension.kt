@@ -186,7 +186,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
      */
     private fun mergeConfigs(
             bcConfig: IcmfReceiverBlockchainConfigData,
-            dappProvidedTopics: List<IcmfReceiverTopicsEventMessage>
+            dappProvidedTopics: List<IcmfReceiverTopicEventMessage>
     ): IcmfReceiverBlockchainConfigData {
         val globalTopics = mutableListOf<String>()
         val globalBlockchainTopics = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()

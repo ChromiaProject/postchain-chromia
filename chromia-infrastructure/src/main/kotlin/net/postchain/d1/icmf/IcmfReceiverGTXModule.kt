@@ -51,13 +51,9 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
         dbOperations.initialize(ctx)
     }
 
-    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(blockBuilderExtension)
-    }
+    override fun makeBlockBuilderExtensions() = listOf<BaseBlockBuilderExtension>()
 
-    fun getBlockBuilderExtension(): IcmfReceiverBlockBuilderExtension {
-        return blockBuilderExtension
-    }
+    fun getBlockBuilderExtension() = blockBuilderExtension
 
     override fun getSpecialTxExtensions() = _specialTxExtensions
 

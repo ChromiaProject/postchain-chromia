@@ -721,11 +721,11 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
         TODO("Not yet implemented")
     }
 
-    override fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicsEventMessage>) {
+    override fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicEventMessage>) {
         TODO("Not yet implemented")
     }
 
-    override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicsEventMessage> {
+    override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicEventMessage> {
         TODO("Not yet implemented")
     }
 }

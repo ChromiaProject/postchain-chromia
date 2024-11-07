@@ -20,8 +20,8 @@ interface IcmfDatabaseOperations {
     fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long
     fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight>
     fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv>
-    fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicsEventMessage>)
-    fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicsEventMessage>
+    fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicEventMessage>)
+    fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicEventMessage>
 }
 
 data class AnchorHeight(

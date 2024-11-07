@@ -6,7 +6,7 @@ import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
 
-data class IcmfReceiverTopicsEventMessage(
+data class IcmfReceiverTopicEventMessage(
         val topic: String,
 
         @Nullable
@@ -18,7 +18,7 @@ data class IcmfReceiverTopicsEventMessage(
         val skipToHeight: Long
 ) {
     companion object {
-        fun fromGtv(gtv: Gtv): IcmfReceiverTopicsEventMessage =
-                GtvObjectMapper.fromGtv(gtv, IcmfReceiverTopicsEventMessage::class.java)
+        fun fromGtv(gtv: Gtv): IcmfReceiverTopicEventMessage =
+                GtvObjectMapper.fromGtv(gtv, IcmfReceiverTopicEventMessage::class.java)
     }
 }
