@@ -262,6 +262,7 @@ blockchains:
         pool_refill_limit_ms: 86400000
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
+        container_removal_timeout: -1
       economy_chain_test_claim_tchr:
         asset_name: "tCHR"
         asset_symbol: "tCHR"

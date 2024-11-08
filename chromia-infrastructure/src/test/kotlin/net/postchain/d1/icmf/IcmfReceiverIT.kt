@@ -784,7 +784,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add two more topics
         val tx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "receiver_icmf_update_topics",
+                "receiver_icmf_update_topics_op",
                 gtv(gtv(
                         gtv("L_topic-1"),
                         gtv(localSenderChainRid2.data),
@@ -840,7 +840,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
-                "receiver_icmf_update_topics",
+                "receiver_icmf_update_topics_op",
                 gtv(gtv(
                         gtv(topic),
                         GtvNull,
@@ -877,7 +877,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
-                "receiver_icmf_update_topics",
+                "receiver_icmf_update_topics_op",
                 gtv(gtv(
                         gtv(topic),
                         gtv(remoteSenderChainRid.data),
@@ -929,7 +929,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add two more topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "receiver_icmf_update_topics",
+                "receiver_icmf_update_topics_op",
                 gtv(gtv(
                         gtv("L_topic-1"),
                         gtv(localSenderChainRid2.data),
@@ -967,7 +967,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         addNonAnchoredQueriesMock(localSenderChainRid3, 6, 2, "L_topic-2", messageBody = gtv("topic-2-second-message"))
 
         val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "receiver_icmf_update_topics",
+                "receiver_icmf_update_topics_op",
                 gtv(gtv(
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
@@ -1026,15 +1026,15 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
                 // Operation #1 - add a topic - this one will be ignored due to the following reset op
-                GtxOp("receiver_icmf_update_topics",
+                GtxOp("receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-1"), gtv(localSenderChainRid.data), gtv(0))),
                         gtv(false)),
                 // Operation #2 - replace topics (this will add one topic)
-                GtxOp("receiver_icmf_update_topics",
+                GtxOp("receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-2"), gtv(localSenderChainRid2.data), gtv(0))),
                         gtv(true)),
                 // Operation #3 - add another topic
-                GtxOp("receiver_icmf_update_topics",
+                GtxOp("receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-3"), gtv(localSenderChainRid3.data), gtv(0))),
                         gtv(false)),
         )
@@ -1076,7 +1076,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
                 // Operation #1 - add a topic - this one will be ignored due to the following reset op
-                GtxOp("receiver_icmf_update_topics", GtvArray(listOf<Gtv>().toTypedArray()), gtv(true)),
+                GtxOp("receiver_icmf_update_topics_op", GtvArray(listOf<Gtv>().toTypedArray()), gtv(true)),
         )
 
         buildBlock(dappChain1, removeTopicsTx)
@@ -1217,21 +1217,14 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 configFile = configFile,
                 additionRellCode =
                 """
-                    struct icmf_receiver_topic_message {
-                        replace: boolean = true;
-                        topics: list<icmf_receiver_topic>;
-                    }
-                    struct icmf_receiver_topic {
-                        topic: text;
-                        bc_rid: byte_array?;
-                        skip_to_height: integer = 0;
-                    }
-                    operation receiver_icmf_update_topics(topics: list<icmf_receiver_topic>, replace: boolean) {
-                        op_context.emit_event("icmf_receiver_topics", icmf_receiver_topic_message(topics, replace).to_gtv_pretty());
+                    import .receiver.*;
+                    operation receiver_icmf_update_topics_op(topics: list<icmf_receiver_topic>, replace: boolean) {
+                        receiver_icmf_update_topics(topics, replace);
                     }
                 """.trimIndent() + additionRellCode,
-                modifyConfig = modifyConfig
-        )
+        ) {
+            modifyConfig(it).replace("operation __icmf_message", "operation disabled__icmf_message")
+        }
 
 
     private fun getTestMessages(node: PostchainTestNode, chainId: Long): List<TestMessage> {
