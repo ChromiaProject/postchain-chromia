@@ -36,6 +36,7 @@ import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -767,8 +768,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
     fun `dapp receiver config - add local topic and read messages`() {
 
         setupNonAnchoredQueriesMock(messageHeight = 2, topic = "topic-defined-in-config")
-        addNonAnchoredQueriesMock(localSenderChainRid2, 4, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 4, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
 
         startManagedSystem(3, 0)
 
@@ -783,7 +784,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add two more topics
         val tx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "update_topics",
+                "receiver_icmf_update_topics",
                 gtv(gtv(
                         gtv("L_topic-1"),
                         gtv(localSenderChainRid2.data),
@@ -792,7 +793,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
                         gtv(0)
-                ))
+                )),
+                gtv(true)
         ))
 
         buildBlock(dappChain1, tx)
@@ -838,12 +840,13 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
-                "update_topics",
+                "receiver_icmf_update_topics",
                 gtv(gtv(
                         gtv(topic),
                         GtvNull,
                         gtv(0)
-                ))
+                )),
+                gtv(true)
         ))
 
         buildBlock(dappChain, addTopicsTx)
@@ -874,12 +877,13 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
-                "update_topics",
+                "receiver_icmf_update_topics",
                 gtv(gtv(
                         gtv(topic),
                         gtv(remoteSenderChainRid.data),
                         gtv(0)
-                ))
+                )),
+                gtv(true)
         ))
 
         buildBlock(dappChain, addTopicsTx)
@@ -910,8 +914,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `dapp receiver config - remove 1 topic and stop receive messages on that topic`() {
-        addNonAnchoredQueriesMock(localSenderChainRid2, 4, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 4, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
 
         startManagedSystem(3, 0)
 
@@ -919,14 +923,13 @@ class IcmfReceiverIT : IcmfBaseIT() {
         buildBlock(dappChain1)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
-
             val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
             assertThat(result.size).isZero()
         }
 
         // Add two more topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "update_topics",
+                "receiver_icmf_update_topics",
                 gtv(gtv(
                         gtv("L_topic-1"),
                         gtv(localSenderChainRid2.data),
@@ -935,7 +938,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
                         gtv(0)
-                ))
+                )),
+                gtv(true)
         ))
 
         buildBlock(dappChain1, addTopicsTx)
@@ -959,16 +963,17 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         // New messages
-        addNonAnchoredQueriesMock(localSenderChainRid2, 10, 4, "L_topic-1", messageBody = gtv("topic-1-second-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 10, 4, "L_topic-2", messageBody = gtv("topic-2-second-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid2, 6, 2, "L_topic-1", messageBody = gtv("topic-1-second-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid3, 6, 2, "L_topic-2", messageBody = gtv("topic-2-second-message"))
 
         val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
-                "update_topics",
+                "receiver_icmf_update_topics",
                 gtv(gtv(
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
                         gtv(0)
-                ))
+                )),
+                gtv(true)
         ))
 
         buildBlock(dappChain1, removeTopicsTx)
@@ -989,6 +994,97 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         verifyPipesAreEmpty(dappChain1)
+    }
+
+    /**
+     * Test add and replace in the same block.
+     *
+     * In the same block:
+     * 1. Add a transaction
+     * 2. Replace all transactions
+     * 3. Add a transaction
+     *
+     * This should ignore #1 and create topics for #2 & #3.
+     * And then a final step to clear all dapp provided receivers.
+     */
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun `dapp receiver config - add, replace and add topics`() {
+        addNonAnchoredQueriesMock(localSenderChainRid, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
+        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-3", messageBody = gtv("topic-3-message"))
+
+        startManagedSystem(3, 0)
+
+        val dappChain1 = deployDynamicTopicDappChain(configFile = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics_no_topic.xml")
+        buildBlock(dappChain1)
+
+        withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            assertThat(result.size).isZero()
+        }
+
+        val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
+                // Operation #1 - add a topic - this one will be ignored due to the following reset op
+                GtxOp("receiver_icmf_update_topics",
+                        gtv(gtv(gtv("L_topic-1"), gtv(localSenderChainRid.data), gtv(0))),
+                        gtv(false)),
+                // Operation #2 - replace topics (this will add one topic)
+                GtxOp("receiver_icmf_update_topics",
+                        gtv(gtv(gtv("L_topic-2"), gtv(localSenderChainRid2.data), gtv(0))),
+                        gtv(true)),
+                // Operation #3 - add another topic
+                GtxOp("receiver_icmf_update_topics",
+                        gtv(gtv(gtv("L_topic-3"), gtv(localSenderChainRid3.data), gtv(0))),
+                        gtv(false)),
+        )
+
+        buildBlock(dappChain1, addTopicsTx)
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain1)
+
+            for (node in getChainNodes(dappChain1)) {
+                val messages = getTestMessages(node, dappChain1)
+
+                assertThat(messages).hasSize(2)
+
+                assertThat(messages[0].sender).isEqualTo(localSenderChainRid2)
+                assertThat(messages[0].topic).isEqualTo("L_topic-2")
+                assertThat(GtvDecoder.decodeGtv(messages[0].body)).isEqualTo(gtv("topic-2-message"))
+
+                assertThat(messages[1].sender).isEqualTo(localSenderChainRid3)
+                assertThat(messages[1].topic).isEqualTo("L_topic-3")
+                assertThat(GtvDecoder.decodeGtv(messages[1].body)).isEqualTo(gtv("topic-3-message"))
+            }
+        }
+
+        withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            assertThat(result.size).isEqualTo(2)
+            with (result[0]) {
+                assertThat(topic).isEqualTo("L_topic-2")
+                assertThat(bcRid.contentEquals(localSenderChainRid2.data)).isTrue()
+                assertThat(skipToHeight).isEqualTo(0)
+            }
+            with (result[1]) {
+                assertThat(topic).isEqualTo("L_topic-3")
+                assertThat(bcRid.contentEquals(localSenderChainRid3.data)).isTrue()
+                assertThat(skipToHeight).isEqualTo(0)
+            }
+        }
+
+        val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
+                // Operation #1 - add a topic - this one will be ignored due to the following reset op
+                GtxOp("receiver_icmf_update_topics", GtvArray(listOf<Gtv>().toTypedArray()), gtv(true)),
+        )
+
+        buildBlock(dappChain1, removeTopicsTx)
+
+        withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            assertThat(result.size).isZero()
+        }
     }
 
     private fun verifyPipesAreEmpty(dappChain: Long) {
@@ -1121,15 +1217,17 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 configFile = configFile,
                 additionRellCode =
                 """
+                    struct icmf_receiver_topic_message {
+                        replace: boolean = true;
+                        topics: list<icmf_receiver_topic>;
+                    }
                     struct icmf_receiver_topic {
                         topic: text;
                         bc_rid: byte_array?;
                         skip_to_height: integer = 0;
                     }
-                    
-                    operation update_topics(topics: list<icmf_receiver_topic>) {
-                        log("Update topics");
-                        op_context.emit_event("icmf_receiver_topics", topics.to_gtv_pretty());
+                    operation receiver_icmf_update_topics(topics: list<icmf_receiver_topic>, replace: boolean) {
+                        op_context.emit_event("icmf_receiver_topics", icmf_receiver_topic_message(topics, replace).to_gtv_pretty());
                     }
                 """.trimIndent() + additionRellCode,
                 modifyConfig = modifyConfig

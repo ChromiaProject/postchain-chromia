@@ -21,8 +21,8 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
 
     private lateinit var blockEContext: BlockEContext
     private lateinit var cryptoSystem: CryptoSystem
-    private var eventListener: ((List<IcmfReceiverTopicEventMessage>) -> Unit)? = null
-    private var queuedUpdate: List<IcmfReceiverTopicEventMessage>? = null
+    private var eventListener: ((List<IcmfReceiverEventMessage>) -> Unit)? = null
+    private var queuedUpdates: MutableList<IcmfReceiverEventMessage> = mutableListOf()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         this.blockEContext = blockEContext
@@ -32,13 +32,13 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
 
-        val topics = try {
-            GtvObjectMapper.fromArray(data, IcmfReceiverTopicEventMessage::class.java)
+        val topicUpdate = try {
+            GtvObjectMapper.fromGtv(data, IcmfReceiverEventMessage::class.java)
         } catch (e: Exception) {
             throw UserMistake("Received invalid icmf topics: ${e.message}", e)
         }
 
-        topics.map {
+        topicUpdate.topics?.forEach {
             if (!isValidTopicName(it.topic)) {
                 throw UserMistake("Invalid topic name: ${it.topic}")
             }
@@ -49,19 +49,23 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
         }
 
         ctxt.addAfterAppendHook {
-            logger.debug { "Dapp requests ICMF receiver topics update: ${ctxt.height}: $topics" }
-            queuedUpdate = topics
+            logger.debug { "Dapp requests ICMF receiver topics update: ${ctxt.height}: $topicUpdate" }
+
+            if (topicUpdate.replace) {
+                queuedUpdates.clear()
+            }
+            queuedUpdates.add(topicUpdate)
         }
 
         blockEContext.addAfterCommitHook {
-            if (queuedUpdate != null) {
-                eventListener?.invoke(queuedUpdate!!)
-                queuedUpdate = null
+            if (queuedUpdates.isNotEmpty()) {
+                eventListener?.invoke(queuedUpdates.toMutableList())
+                queuedUpdates.clear()
             }
         }
     }
 
-    fun addEventListener(function: (List<IcmfReceiverTopicEventMessage>) -> Unit) {
+    fun addEventListener(function: (List<IcmfReceiverEventMessage>) -> Unit) {
         eventListener = function
     }
 

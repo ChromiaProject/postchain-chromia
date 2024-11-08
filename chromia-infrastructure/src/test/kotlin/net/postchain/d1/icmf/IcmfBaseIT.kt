@@ -17,9 +17,10 @@ import java.io.File
 
 abstract class IcmfBaseIT : ManagedModeTest() {
 
-    fun makeTransaction(node: PostchainTestNode, chainId: Long, op: GtxOp): Transaction {
-        val txData = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem)
-                .addOperation(op.opName, *op.args)
+    fun makeTransaction(node: PostchainTestNode, chainId: Long, vararg ops: GtxOp): Transaction {
+        val builder = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem)
+        ops.forEach { builder.addOperation(it.opName, *it.args) }
+        val txData = builder
                 .addNop()
                 .finish().buildGtx().encode()
         return node.getBlockchainInstance(chainId).blockchainEngine.getConfiguration().getTransactionFactory()

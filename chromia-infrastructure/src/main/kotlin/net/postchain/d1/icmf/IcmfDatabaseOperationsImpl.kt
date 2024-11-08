@@ -265,13 +265,17 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         GtvDecoder.decodeGtv(it[COLUMN_BODY])
     }
 
-    override fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverTopicEventMessage>) {
+    override fun deleteDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray) {
         DatabaseAccess.of(ctx).run {
             createJooq(ctx).deleteFrom(table(tableDappProvidedReceiverTopic(ctx)))
                     .where(COLUMN_CLUSTER.eq(cluster))
                     .and(COLUMN_RECEIVER.eq(receiver))
                     .execute()
+        }
+    }
 
+    override fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverEventTopic>) {
+        DatabaseAccess.of(ctx).run {
             topics.forEach {
                 createJooq(ctx).insertInto(table(tableDappProvidedReceiverTopic(ctx)))
                         .set(COLUMN_CLUSTER, cluster)
@@ -284,14 +288,14 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         }
     }
 
-    override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverTopicEventMessage> {
+    override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverEventTopic> {
         return DatabaseAccess.of(ctx).run {
             createJooq(ctx).select(COLUMN_TOPIC, COLUMN_SENDER, COLUMN_SKIP_TO_HEIGHT)
                     .from(tableDappProvidedReceiverTopic(ctx))
                     .where(COLUMN_CLUSTER.eq(cluster))
                     .and(COLUMN_RECEIVER.eq(receiver))
                     .fetch()
-        }.map { IcmfReceiverTopicEventMessage(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
+        }.map { IcmfReceiverEventTopic(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)

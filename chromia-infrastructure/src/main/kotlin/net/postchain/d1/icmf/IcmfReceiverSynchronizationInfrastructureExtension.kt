@@ -75,11 +75,18 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
-                    blockBuilder.addEventListener { topics ->
+                    blockBuilder.addEventListener { update ->
 
                         withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
                             val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
-                            dbOperations.saveDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data, topics)
+                            update.forEach {
+                                if (it.replace) {
+                                    dbOperations.deleteDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data)
+                                }
+                                if (!it.topics.isNullOrEmpty()) {
+                                    dbOperations.saveDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data, it.topics)
+                                }
+                            }
                             true
                         }
 
@@ -186,7 +193,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
      */
     private fun mergeConfigs(
             bcConfig: IcmfReceiverBlockchainConfigData,
-            dappProvidedTopics: List<IcmfReceiverTopicEventMessage>
+            dappProvidedTopics: List<IcmfReceiverEventTopic>
     ): IcmfReceiverBlockchainConfigData {
         val globalBlockchainTopics = mutableListOf<IcmfReceiverSpecificBlockChainConfig>()
         val globalDappProviderTopics = dappProvidedTopics.filter { it.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && it.bcRid == null }
