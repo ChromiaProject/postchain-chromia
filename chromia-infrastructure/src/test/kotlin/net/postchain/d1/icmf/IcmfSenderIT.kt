@@ -11,35 +11,24 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
-import net.postchain.core.Transaction
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
-import net.postchain.devtools.ManagedModeTest
-import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.utils.ChainUtil
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.GTXBlockchainConfigurationFactory
-import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import java.io.File
 import java.util.concurrent.TimeUnit
 
-class IcmfSenderIT : ManagedModeTest() {
+class IcmfSenderIT : IcmfBaseIT() {
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain("L_my-topic")
+        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("L_my-topic"))
 
         // Messages in block 0
         val block0Messages = listOf("test0", "test1")
@@ -66,7 +55,7 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain("L_my-topic")
+        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("L_my-topic"))
 
         val message = "imtoobig".repeat(2 * 1024 * 1024)
         val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(message)))
@@ -83,7 +72,7 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header with not allowed topic`() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain("my-topic")
+        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("my-topic"))
 
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.map {
@@ -97,7 +86,7 @@ class IcmfSenderIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header for normal chain with global topic`() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain("G_my-topic")
+        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("G_my-topic"))
 
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.map {
@@ -114,8 +103,8 @@ class IcmfSenderIT : ManagedModeTest() {
 
         // Query limit is 3
         val dappChain = deployDappChain(
-                "L_my-topic",
-                configFile = "/net/postchain/d1/icmf/sender/blockchain_config_1_with_query_limit.xml"
+                configFile = "/net/postchain/d1/icmf/sender/blockchain_config_1_with_query_limit.xml",
+                additionRellCode = icmfSendRellCode("L_my-topic")
         )
 
         // Send 2 msgs per block
@@ -190,33 +179,11 @@ class IcmfSenderIT : ManagedModeTest() {
         }
     }
 
-    private fun makeTransaction(node: PostchainTestNode, chainId: Long, op: GtxOp): Transaction {
-        val txData = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem)
-                .addOperation(op.opName, *op.args)
-                .finish().buildGtx().encode()
-        return node.getBlockchainInstance(chainId).blockchainEngine.getConfiguration().getTransactionFactory()
-                .decodeTransaction(txData)
-    }
-
-    private fun getIcmfConstantsCode(): Pair<String, Gtv> {
-        return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
-    }
-
-    private fun deployDappChain(icmfTopic: String, signers: Set<Int> = setOf(0, 1, 2), configFile: String = "/net/postchain/d1/icmf/sender/blockchain_config_1.xml"): Long {
-        val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() +
-                """
+    private fun icmfSendRellCode(icmfTopic: String): String {
+        return """
                     operation test_message(text) {
                         send_message("$icmfTopic", text.to_gtv());
                     }
                 """
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource(configFile)!!.readText(),
-                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
-
-        return startNewBlockchain(
-                signers,
-                setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
-                blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
     }
 }
