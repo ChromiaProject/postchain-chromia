@@ -31,6 +31,10 @@ abstract class IcmfBaseIT : ManagedModeTest() {
         return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
     }
 
+    private fun getIcmfReceiverCode(): Pair<String, Gtv> {
+        return "lib.icmf.receiver" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/receiver.rell").readText())
+    }
+
     fun deployDappChain(
             signers: Set<Int> = setOf(0, 1, 2),
             configFile: String = "/net/postchain/d1/icmf/sender/blockchain_config_1.xml",
@@ -40,7 +44,7 @@ abstract class IcmfBaseIT : ManagedModeTest() {
         val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() + additionRellCode
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource(configFile)!!.readText(),
-                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfConstantsCode()))
+                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfReceiverCode(), getIcmfConstantsCode()))
 
         val dappConfigString = modifyConfig(GtvMLEncoder.encodeXMLGtv(dappGtvConfig))
 

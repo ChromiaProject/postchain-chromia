@@ -72,6 +72,9 @@
                             <entry key="lib/icmf/constants.rell">
                                 <param key="lib.icmf.constants" type="string"/>
                             </entry>
+                            <entry key="lib/icmf/receiver.rell">
+                                <param key="lib.icmf.receiver" type="string"/>
+                            </entry>
                         </dict>
                     </entry>
                     <entry key="version">
