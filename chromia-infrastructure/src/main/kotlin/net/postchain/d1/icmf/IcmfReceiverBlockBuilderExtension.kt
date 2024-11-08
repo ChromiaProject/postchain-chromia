@@ -59,7 +59,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
 
         blockEContext.addAfterCommitHook {
             if (queuedUpdates.isNotEmpty()) {
-                eventListener?.invoke(queuedUpdates.toMutableList())
+                eventListener?.invoke(queuedUpdates)
                 queuedUpdates.clear()
             }
         }
