@@ -54,7 +54,14 @@ class GlobalTopicIcmfReceiver(
         val allClusters = clusterManagement.getClusterNames()
         for (route in routes) {
             if (route.chains.isNotEmpty()) {
-                route.chains.map { clusterManagement.getClusterOfBlockchain(it) }.distinct().forEach { clusterName ->
+                route.chains.mapNotNull {
+                    try {
+                        clusterManagement.getClusterOfBlockchain(it)
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Global topic for blockchain rid $it ignored since cluster name lookup failed: ${e.message}" }
+                        null
+                    }
+                }.distinct().forEach { clusterName ->
                     pipes[clusterName to route] = createPipe(
                             myCluster,
                             clusterName,

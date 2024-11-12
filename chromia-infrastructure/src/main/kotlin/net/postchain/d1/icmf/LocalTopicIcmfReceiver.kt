@@ -6,6 +6,7 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.icmf.GlobalTopicIcmfReceiver.Companion.logger
 import net.postchain.d1.query.ChromiaQueryProvider
 
 class LocalTopicIcmfReceiver(
@@ -21,27 +22,37 @@ class LocalTopicIcmfReceiver(
 
     private val pipes: List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = run {
         val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
-        origins.map {
-            val senderCluster = clusterManagement.getClusterOfBlockchain(it.blockchainRid)
-            if (senderCluster == myCluster) {
-                IntraClusterTopicPipe(
-                        queryProvider,
-                        TopicRoute(it.topic, listOf(it.blockchainRid)),
-                        it.blockchainRid,
-                        it.skipToHeight
-                )
-            } else {
-                val lastMessageHeight = withReadConnection(storage, myChainId) { ctx ->
-                    dbOperations.loadLastMessageHeight(ctx, it.blockchainRid, it.topic)
+        origins.mapNotNull {
+            val senderCluster =
+                    try {
+                        clusterManagement.getClusterOfBlockchain(it.blockchainRid)
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Local topic ${it.topic} with blockchain rid ${it.blockchainRid} ignored since cluster name lookup failed: ${e.message}" }
+                        null
+                    }
+            when {
+                senderCluster == myCluster -> {
+                    IntraClusterTopicPipe(
+                            queryProvider,
+                            TopicRoute(it.topic, listOf(it.blockchainRid)),
+                            it.blockchainRid,
+                            it.skipToHeight
+                    )
                 }
+                senderCluster != null -> {
+                    val lastMessageHeight = withReadConnection(storage, myChainId) { ctx ->
+                        dbOperations.loadLastMessageHeight(ctx, it.blockchainRid, it.topic)
+                    }
 
-                InterClusterTopicPipe(
-                        TopicRoute(it.topic, listOf(it.blockchainRid)),
-                        it.blockchainRid,
-                        clientProvider,
-                        it.skipToHeight,
-                        lastMessageHeight
-                )
+                    InterClusterTopicPipe(
+                            TopicRoute(it.topic, listOf(it.blockchainRid)),
+                            it.blockchainRid,
+                            clientProvider,
+                            it.skipToHeight,
+                            lastMessageHeight
+                    )
+                }
+                else -> null
             }
         }
     }
