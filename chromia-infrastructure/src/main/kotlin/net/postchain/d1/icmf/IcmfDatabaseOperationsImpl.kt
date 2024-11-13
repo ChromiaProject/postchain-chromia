@@ -5,6 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
+import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL.constraint
@@ -290,13 +291,24 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
     override fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverEventTopic> {
         return DatabaseAccess.of(ctx).run {
-            createJooq(ctx).select(COLUMN_TOPIC, COLUMN_SENDER, COLUMN_SKIP_TO_HEIGHT)
-                    .from(tableDappProvidedReceiverTopic(ctx))
-                    .where(COLUMN_CLUSTER.eq(cluster))
-                    .and(COLUMN_RECEIVER.eq(receiver))
-                    .fetch()
-        }.map { IcmfReceiverEventTopic(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
+            val jooq = createJooq(ctx)
+            val table = tableDappProvidedReceiverTopic(ctx)
+            if (jooq.tableExists(ctx.conn.schema, table.replace("\"", ""))) {
+                jooq.select(COLUMN_TOPIC, COLUMN_SENDER, COLUMN_SKIP_TO_HEIGHT)
+                        .from(table)
+                        .where(COLUMN_CLUSTER.eq(cluster))
+                        .and(COLUMN_RECEIVER.eq(receiver))
+                        .fetch()
+                        .map { IcmfReceiverEventTopic(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
+            } else {
+                emptyList()
+            }
+        }
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
+
+    private fun DSLContext.tableExists(schema: String, tableName: String): Boolean {
+        return meta().tables.any { it.name == tableName && it.schema.name == schema }
+    }
 }
