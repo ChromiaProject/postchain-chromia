@@ -1,7 +1,6 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
@@ -25,6 +24,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
     private val specialTxExtension = IcmfReceiverSpecialTxExtension(dbOperations)
     private val _specialTxExtensions = listOf(specialTxExtension)
     private lateinit var delegateTransactorMaker: TransactorMaker
+    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension()
 
     private val operations: Map<String, (ExtOpData) -> Transactor> = mapOf(
             AnchorHeaderOp.OP_NAME to ::DummyGTXOperation,
@@ -50,7 +50,9 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
         dbOperations.initialize(ctx)
     }
 
-    override fun makeBlockBuilderExtensions() = listOf<BaseBlockBuilderExtension>()
+    override fun makeBlockBuilderExtensions() = listOf(blockBuilderExtension)
+
+    fun getBlockBuilderExtension() = blockBuilderExtension
 
     override fun getSpecialTxExtensions() = _specialTxExtensions
 

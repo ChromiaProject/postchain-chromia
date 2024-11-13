@@ -25,7 +25,7 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
+            <artifactId>postchain-spi</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -102,6 +102,45 @@
             <artifactId>jooq</artifactId>
         </dependency>
 
+        <!-- EIF EVM contracts -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-contracts</artifactId>
+            <version>${eif.version}</version>
+            <type>tar.gz</type>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-eif-core</artifactId>
+            <version>${eif.version}</version>
+        </dependency>
+
+        <!-- web3j -->
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>core</artifactId>
+            <version>${web3j.version}</version>
+        </dependency>
+        <!-- web3j security fixes -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.9.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio</artifactId>
+            <version>3.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>logging-interceptor</artifactId>
+            <version>4.9.3</version>
+        </dependency>
+
         <!-- We want access to integration test setup classes -->
         <dependency>
             <groupId>net.postchain</groupId>
@@ -119,6 +158,16 @@
         <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -157,6 +206,77 @@
                             <mainModules>
                                 <mainModule>anchoring_chain_cluster</mainModule>
                             </mainModules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- EIF contracts -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <includeArtifactIds>postchain-eif-contracts</includeArtifactIds>
+                            <includeTypes>tar.gz</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.web3j</groupId>
+                <artifactId>web3j-maven-plugin</artifactId>
+                <version>${web3j-plugin.version}</version>
+                <configuration>
+                    <packageName>net.postchain.eif.contracts</packageName>
+                    <nativeJavaType>false</nativeJavaType>
+                    <contract>
+                        <includes>
+                            <include>Anchoring</include>
+                        </includes>
+                    </contract>
+                    <abiSourceFiles>
+                        <directory>${project.build.directory}/postchain-eif-contracts/abi</directory>
+                        <includes>
+                            <include>**/Anchoring.json</include>
+                        </includes>
+                    </abiSourceFiles>
+                    <outputDirectory>
+                        <abi>${project.basedir}/target/generated-resources</abi>
+                        <java>${project.basedir}/target/generated-sources</java>
+                    </outputDirectory>
+                    <outputFormat>java,abi</outputFormat>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate-sources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>target/generated-sources</source>
+                            </sources>
                         </configuration>
                     </execution>
                 </executions>

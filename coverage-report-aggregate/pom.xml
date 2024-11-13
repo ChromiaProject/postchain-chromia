@@ -31,11 +31,6 @@
             <artifactId>chromia-infrastructure</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-container</artifactId>
-            <version>${project.version}</version>
-        </dependency>
     </dependencies>
 
     <build>

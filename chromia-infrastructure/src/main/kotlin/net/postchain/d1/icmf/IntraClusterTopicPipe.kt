@@ -9,11 +9,13 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import kotlin.math.max
 
 class IntraClusterTopicPipe(
         private val queryProvider: ChromiaQueryProvider,
         override val route: TopicRoute,
-        override val id: BlockchainRid
+        override val id: BlockchainRid,
+        private val skipToHeight: Long = 0
 ) : IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid> {
     companion object : KLogging()
 
@@ -35,9 +37,10 @@ class IntraClusterTopicPipe(
             return null
         }
 
+        val heightToQueryFrom = max(currentPointer, skipToHeight - 1)
         val allMessages = query.query(
                 QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
-                GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(currentPointer)))
+                GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(heightToQueryFrom)))
         ).asArray().map {
             val size = GtvEncoder.encodeGtv(it["body"]!!).size
             if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")

@@ -30,7 +30,6 @@ class ChainDatabaseCommunicator(chainIId: Long, schema: String, dbConfig: Databa
     }
 
     fun awaitBlockHeight(height: Long, timeOut: Duration = Duration.TWO_MINUTES) {
-        println("Awaiting height $height on chain ${eContext.chainID}")
         await.pollInterval(Duration.TEN_SECONDS).atMost(timeOut).until {
             getHeight() >= height
         }

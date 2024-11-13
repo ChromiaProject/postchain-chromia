@@ -13,7 +13,7 @@ class SystemAnchoringReceiver(private val clusterManagement: ClusterManagement) 
         return localPipes.values.filter { it.blockchainRid in getRelevantChains() }
     }
 
-    override fun getRelevantChains(): Set<BlockchainRid> {
+    override fun getRelevantChains(includeRemovedChainsSince: Long?): Set<BlockchainRid> {
         return clusterManagement.getClusterAnchoringChains().toSet()
     }
 }

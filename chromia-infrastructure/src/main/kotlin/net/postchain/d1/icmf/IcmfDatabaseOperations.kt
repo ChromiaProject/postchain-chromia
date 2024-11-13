@@ -18,8 +18,11 @@ interface IcmfDatabaseOperations {
     fun imprecateSpilledMessage(ctx: EContext, serial: Long)
     fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray)
     fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long
-    fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long): List<IcmfMessageAtHeight>
+    fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight>
     fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv>
+    fun deleteDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray)
+    fun saveDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray, topics: List<IcmfReceiverEventTopic>)
+    fun loadDappProvidedReceiverTopics(ctx: EContext, cluster: String, receiver: ByteArray): List<IcmfReceiverEventTopic>
 }
 
 data class AnchorHeight(

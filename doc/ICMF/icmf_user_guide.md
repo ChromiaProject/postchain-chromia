@@ -17,6 +17,16 @@ config:
       - "net.postchain.d1.icmf.IcmfSenderGTXModule"
 ```
 
+You can also modify the default message query limit of your blockchain. If your chain is sending very large messages it
+may be a good idea to lower it in order to not get spammed with huge queries:
+
+```
+config:
+  icmf:
+    sender:
+      message_query_limit: 100 # Default is 100
+```
+
 ### Rell code
 See instructions on how to install the ICMF rell code library here: https://gitlab.com/chromaway/core/directory-chain
 
@@ -61,5 +71,18 @@ config:
           topic: "L_topic1"
         - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000002"
           topic: "L_topic2"
+          skip-to-height: 10 # Skip any messages sent by chain on this topic until this height
         - etc.
+```
+
+### Combining ICMF with other extensions
+
+ICMF will normally try to fit as many messages as possible into the block. When running in combination with other
+extensions it might be necessary to tweak the amount of space that it leaves for them to inject operations.
+
+```
+config:
+  icmf:
+    receiver:
+      special-tx-margin-bytes: 102400 # Default 100 KiB
 ```

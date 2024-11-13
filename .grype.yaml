@@ -1,3 +1,1 @@
 ignore:
-  # snakeyaml
-  - vulnerability: GHSA-mjmj-j48q-9wg2

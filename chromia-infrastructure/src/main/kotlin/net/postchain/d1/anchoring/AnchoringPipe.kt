@@ -4,13 +4,18 @@ package net.postchain.d1.anchoring
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import net.postchain.core.Shutdownable
 
-interface AnchoringPipe {
+interface AnchoringPipe : Shutdownable {
+    companion object {
+        const val MAX_PACKETS_PER_REQUEST = 20L
+    }
+
     val chainID: Long
     val blockchainRid: BlockchainRid
-    fun setHighestSeenHeight(height: Long)
+    fun newBlockAvailable(height: Long)
     fun mightHaveNewPackets(): Boolean
     fun numberOfNewPackets(): Long
-    fun fetchNext(currentPointer: Long): AnchoringPacket?
-    fun markTaken(currentPointer: Long, bctx: BlockEContext)
+    fun fetchNextRange(fromHeight: Long): List<AnchoringPacket>
+    fun markTaken(lastCommittedHeight: Long, bctx: BlockEContext)
 }

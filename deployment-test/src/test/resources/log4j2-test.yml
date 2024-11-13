@@ -61,19 +61,47 @@ Configuration:
         fileName: "logs/archiving/node3.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node1Appender
-        fileName: "logs/tc/node1.log"
+      - name: EC_EvmContainerAppender
+        fileName: "logs/ec/evm_container.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node2Appender
-        fileName: "logs/tc/node2.log"
+      - name: EC_Node1Appender
+        fileName: "logs/ec/node1.log"
         PatternLayout:
           pattern: "%msg%n"
-      - name: TC_Node3Appender
-        fileName: "logs/tc/node3.log"
+      - name: EC_Node2Appender
+        fileName: "logs/ec/node2.log"
         PatternLayout:
           pattern: "%msg%n"
-
+      - name: EC_Node3Appender
+        fileName: "logs/ec/node3.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_EvmContainerAppender
+        fileName: "logs/evm_tx_submitter/evm_container.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node1Appender
+        fileName: "logs/evm_tx_submitter/node1.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node2Appender
+        fileName: "logs/evm_tx_submitter/node2.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node3Appender
+        fileName: "logs/evm_tx_submitter/node3.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: EvmTxs_Node4Appender
+        fileName: "logs/evm_tx_submitter/node4.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
   Loggers:
 
     Root:
@@ -158,19 +186,51 @@ Configuration:
         AppenderRef:
           - ref: Archiving_Node3Appender
 
-      # TC tests
-      - name: TC_Node1Logger
+      # EC tests
+      - name: EC_EvmContainerLogger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node1Appender
-      - name: TC_Node2Logger
+          - ref: EC_EvmContainerAppender
+      - name: EC_Node1Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node2Appender
-      - name: TC_Node3Logger
+          - ref: EC_Node1Appender
+      - name: EC_Node2Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: TC_Node3Appender
+          - ref: EC_Node2Appender
+      - name: EC_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EC_Node3Appender
+
+      # EVM transaction submitter tests
+      - name: EvmTxs_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_EvmContainerAppender
+      - name: EvmTxs_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node1Appender
+      - name: EvmTxs_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node2Appender
+      - name: EvmTxs_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node3Appender
+      - name: EvmTxs_Node4Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: EvmTxs_Node4Appender

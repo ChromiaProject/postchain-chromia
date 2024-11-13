@@ -85,6 +85,6 @@ docker run -it --rm \
     -p 9870:9870   \
     -p 7740:7740   \
     -v $(pwd)/config:/config/ \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.8.0-SNAPSHOT \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.19.0 \
     run-server --node-config /config/node-config.properties
 ```

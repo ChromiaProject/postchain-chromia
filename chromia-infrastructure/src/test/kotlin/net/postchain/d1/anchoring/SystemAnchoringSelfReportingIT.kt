@@ -8,6 +8,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.d1.getSystemAnchoringChainConfig
+import net.postchain.d1.icmf.DEFAULT_MESSAGE_QUERY_LIMIT
 import net.postchain.d1.icmf.IcmfDatabaseOperationsImpl
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.utils.ChainUtil
@@ -40,7 +41,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
 
         // Add invalid config
         val reconfigHeight = 3L
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 systemAnchoringChain,
                 signers.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -62,7 +63,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
             withReadConnection(node.postchainContext.blockBuilderStorage, systemAnchoringChain) {
                 val dbOps = IcmfDatabaseOperationsImpl()
 
-                val configFailedMessages = dbOps.getSentMessagesAfterHeight(it, "G_configuration_failed", -1)
+                val configFailedMessages = dbOps.getSentMessagesAfterHeight(it, "G_configuration_failed", -1, DEFAULT_MESSAGE_QUERY_LIMIT)
                 assertThat(configFailedMessages).hasSize(1)
 
                 val failedConfigMessageBody = configFailedMessages.first().body.asArray()

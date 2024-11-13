@@ -40,7 +40,9 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
             logger.info("ICMF message sent in topic ${message.topic}")
             dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, GtvEncoder.encodeGtv(message.body))
             val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
-            queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
+            ctxt.addAfterAppendHook {
+                queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
+            }
         }
     }
 

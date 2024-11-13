@@ -1,0 +1,91 @@
+blockchains:
+  eif_event_receiver:
+    module: eif_event_receiver
+    config:
+      gtx:
+        modules:
+          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+      sync_ext:
+        - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
+      eif:
+        chains:
+          ethereum:
+            network_id: 1337
+            contracts:
+              - EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER
+            skip_to_height: 0
+            evm_read_offset: 0
+            read_offset: 0
+            events: !include events.yml
+  transaction_submitter:
+    module: transaction_submitter
+    moduleArgs:
+      transaction_submitter:
+        manual_admins: [ ] # List of public keys that are allowed to reset failed signer list updates
+        directory_chain_config:
+          blockchain_rid: x"DIRECTORY_CHAIN_BRID_VALUE" # Replace with directory chain brid
+          validator_contracts:
+            - address: "DIRECTORY_CHAIN_VALIDATOR_VALUE"
+              network_id: 1337
+        # Omit this to disable anchoring
+        system_anchoring_chain_config:
+          blockchain_rid: x"SYSTEM_ANCHORING_CHAIN_BRID_VALUE" # Replace with system anchoring chain brid
+          anchoring_contracts:
+            - address: "ANCHORING_CONTRACT_VALUE"
+              validator_contract: "VALIDATOR_CONTRACT_VALUE"
+              network_id: 1337
+        # Here we can add all system chain bridges
+        system_chain_bridges: [ ]
+        #          - blockchain_rid: x"" # Replace with economy chain brid & contracts
+        #            bridge_contracts:
+        #              - address: "ec_bridge_contract"
+        #                validator_contract: "ec_validator_contract"
+        #                network_id: 1337
+        contract_tx_rate_limit: 60000
+        tx_node_submit_timeout: 1800000 # 30m
+        tx_verification_timeout: 5400000
+        tx_timeout: 86400000 #24h
+        node_retry_strategy: SUPERMAJORITY
+        network_configs:
+          - id: 1337
+            currency_symbol: "ETH"
+        system_max_priority_fee_per_gas: 1000000000
+        system_max_fee_per_gas: 4000000000
+      transaction_submitter.anchoring:
+        anchoring_interval: 5_000 # 1 per hour
+    config:
+      blockstrategy:
+        maxblocktime: 2000
+      gtx:
+        modules:
+          - "net.postchain.eif.transaction.TransactionSubmitterGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+      transaction_submitter:
+        chains:
+          ethereum:
+            network_id: 1337
+            max_gas_price: 300000000000000
+            min_wallet_balance: 100000000000
+            gas_limit: 9000000
+            gas_limit_margin: 0.1
+            node_tx_verification_evm_blocks: 10
+            tx_verification_time: 20000
+      sync_ext:
+        - "net.postchain.eif.transaction.TransactionSubmitterSynchronizationInfrastructureExtension"
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          directory-chain:
+            topics:
+              - L_signer_list_update
+#          local:
+#            - bc-rid: "DIRECTORY_CHAIN_BRID_VALUE" # Replace with economy chain brid
+#              topic: "L_bridge_mapping"
+          global:
+            topics:
+              - G_evm_submit_transaction
+
+compile:
+  rellVersion: 0.13.12

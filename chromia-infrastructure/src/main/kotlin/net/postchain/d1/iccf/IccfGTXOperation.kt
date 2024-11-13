@@ -2,6 +2,7 @@ package net.postchain.d1.iccf
 
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.chromia.model.BlockchainState
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -10,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.core.TxEContext
 import net.postchain.d1.Validation
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -23,6 +25,8 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxNop
+import net.postchain.gtx.GtxTimeB
 import net.postchain.gtx.data.ExtOpData
 
 class IccfGTXOperation(
@@ -31,18 +35,30 @@ class IccfGTXOperation(
 ) : GTXOperation(opData) {
     private val cryptoSystem = iccfContext.cryptoSystem
     private val clusterManagement = iccfContext.clusterManagement
+    private val nodeManagement = iccfContext.nodeManagement
     private val queryProvider = iccfContext.queryProvider
     private val nodeIsReplica = iccfContext.nodeIsReplica
     private val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val myCluster = clusterManagement.getClusterOfBlockchain(opData.blockchainRID)
+    private val nonCustomOps = setOf(ICCF_OP_NAME, GtxNop.OP_NAME, GtxTimeB.OP_NAME)
 
     override fun apply(ctx: TxEContext) = true
 
+    override fun checkCorrectnessWhileSyncing() {
+        verifyIccf(data.args, true)
+    }
+
     override fun checkCorrectness() {
-        val args = data.args
+        verifyIccf(data.args, false)
+    }
+
+    private fun verifyIccf(args: Array<out Gtv>, isSyncing: Boolean) {
+        if (data.operations.all { nonCustomOps.contains(it.opName) }) {
+            throw GTXOpMistake("Tx must contain other operations than $nonCustomOps", data)
+        }
         when (args.size) {
             3 -> verifyIntraClusterIccf(args)
-            6 -> verifyIntraNetworkIccf(args)
+            6 -> verifyIntraNetworkIccf(args, isSyncing)
             else -> {
                 throw GTXOpMistake("Wrong number of arguments", data)
             }
@@ -51,13 +67,27 @@ class IccfGTXOperation(
 
     private fun verifyIntraClusterIccf(args: Array<out Gtv>) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
-        verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid)
+        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
+
+        // This can't be verified if chain is removed but anchoring check will fail anyway so that's fine
+        // It's still worth doing this check if not removed (to save time and get a better error message)
+        if (!sourceIsRemoved) {
+            verifySourceChainInSameClusterAsTargetChain(sourceBlockchainRid)
+        }
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
         verifySourceBlockAnchoredInClusterAnchoringChain(sourceBlockchainRid, sourceBlockRid)
     }
 
-    private fun verifyIntraNetworkIccf(args: Array<out Gtv>) {
+    private fun verifyIntraNetworkIccf(args: Array<out Gtv>, isSyncing: Boolean) {
         val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid) = getSourceInfo(args)
+        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
+
+        // This is not acceptable since we can't verify that anchoring proof is actually from the correct anchoring chain
+        // If we are syncing we have no option but to accept this limitation
+        if (sourceIsRemoved && !isSyncing) {
+            throw UserMistake("Source blockchain is removed")
+        }
+
         verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash)
 
         val rawClusterAnchoringTx = decodeSafely(args, 3) { it.asByteArray() }
@@ -66,7 +96,9 @@ class IccfGTXOperation(
         val clusterAnchoringTxGtv = GtvFactory.decodeGtv(rawClusterAnchoringTx)
         val clusterAnchoringTx = Gtx.fromGtv(clusterAnchoringTxGtv)
 
-        verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid, clusterAnchoringTx)
+        if (!sourceIsRemoved) {
+            verifyAnchoringProofIsFromCorrectClusterAnchoringChain(sourceBlockchainRid, clusterAnchoringTx)
+        }
         verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx, clusterAnchoringTxOpIndex, sourceBlockRid, sourceTxConfirmationProof)
 
         val clusterAnchoringTxHash = clusterAnchoringTxGtv.merkleHash(gtvMerkleHashCalculator)
@@ -136,16 +168,33 @@ class IccfGTXOperation(
 
     private fun verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx: Gtx, clusterAnchoringTxOpIndex: Int, sourceBlockRid: Hash, sourceTxConfirmationProof: ConfirmationProof) {
         val clusterAnchoringTxOperations = clusterAnchoringTx.gtxBody.operations
-        val anchoringTxOp = if (clusterAnchoringTxOperations.size >= clusterAnchoringTxOpIndex + 1) {
-            clusterAnchoringTxOperations[clusterAnchoringTxOpIndex]
+
+        val batchOp = clusterAnchoringTxOperations.find { it.opName == AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER }
+        if (batchOp != null) {
+            val batchAnchoringBlocks = batchOp.args[0].asArray()
+            val anchorBlockElement = if (batchAnchoringBlocks.size >= clusterAnchoringTxOpIndex + 1) {
+                batchAnchoringBlocks[clusterAnchoringTxOpIndex]
+            } else {
+                throw UserMistake("Invalid index in cluster anchoring batch operation")
+            }
+
+            if (!sourceBlockRid.contentEquals(anchorBlockElement[0].asByteArray())
+                    || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchorBlockElement[1]))
+            ) {
+                throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            }
         } else {
-            throw UserMistake("Invalid operation index in cluster anchoring TX")
-        }
-        if (anchoringTxOp.opName != AnchoringSpecialTxExtension.OP_BLOCK_HEADER
-                || !sourceBlockRid.contentEquals(anchoringTxOp.args[0].asByteArray())
-                || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchoringTxOp.args[1]))
-        ) {
-            throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            val anchoringTxOp = if (clusterAnchoringTxOperations.size >= clusterAnchoringTxOpIndex + 1) {
+                clusterAnchoringTxOperations[clusterAnchoringTxOpIndex]
+            } else {
+                throw UserMistake("Invalid operation index in cluster anchoring TX")
+            }
+            if (anchoringTxOp.opName != AnchoringSpecialTxExtension.OP_BLOCK_HEADER
+                    || !sourceBlockRid.contentEquals(anchoringTxOp.args[0].asByteArray())
+                    || !sourceTxConfirmationProof.blockHeader.contentEquals(GtvEncoder.encodeGtv(anchoringTxOp.args[1]))
+            ) {
+                throw UserMistake("No source block anchoring operation is present in anchoring TX")
+            }
         }
     }
 

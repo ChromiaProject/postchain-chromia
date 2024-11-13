@@ -17,6 +17,9 @@ data class AnchoringBlockchainConfigData(
         @Name("max_anchoring_blocks_per_anchor_block")
         @DefaultValue(defaultLong = 100)
         val maxAnchoringBlocksPerAnchorBlock: Long,
+        @Name("batch_mode")
+        @DefaultValue(defaultBoolean = false)
+        val batchMode: Boolean
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): AnchoringBlockchainConfigData = gtv.toObject()

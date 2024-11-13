@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.BaseBlockQueries
 import net.postchain.client.core.PostchainQuery
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.d1.RELL_SOURCE_PATH
@@ -13,8 +14,10 @@ import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoringTransactionForBlockRid
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.mminfra.MockManagedNodeDataSource
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -28,28 +31,44 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 
 class IccfIT : ManagedModeTest() {
+
     private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-    private val iccfRellCode = File(RELL_SOURCE_PATH, "iccf/module.rell").readText()
+    private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
     private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
     private val sourceDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_source_1.xml")!!.readText())
     private val targetDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_target_1.xml")!!.readText(), mapOf(
-                    "iccf" to gtv(iccfRellCode + iccfRellTestCode)
-            ))
+            "lib.iccf" to gtv(iccfRellCode + iccfRellTestCode)
+    ))
+    private val signers = setOf(0, 1, 2, 3)
+
+    override fun createManagedNodeDataSource(): MockManagedNodeDataSource {
+        return object : MockManagedNodeDataSource() {
+            override fun query(name: String, args: Gtv): Gtv {
+                val brid = BlockchainRid(args.asDict()["blockchain_rid"]!!.asByteArray())
+                return when (name) {
+                    "nm_get_blockchain_state" -> gtv(getBlockchainState(brid).name)
+                    else -> super.query(name, args)
+                }
+            }
+        }
+    }
 
     @Test
     fun intraCluster() {
-        startManagedSystem(3, 0)
+        startManagedSystem(4, 0)
 
-        startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
+        startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
 
-        val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
-        val targetChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
+        val sourceChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
+        val targetChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
 
         val txToProve = enqueueTxWithOps(sourceChain, listOf(
                 OpData("gtx_test", arrayOf(gtv(1), gtv("iccf_test")))
@@ -62,7 +81,7 @@ class IccfIT : ManagedModeTest() {
 
         val iccfTx = enqueueTxWithOps(targetChain, listOf(
                 OpData(ICCF_OP_NAME, arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash()), gtv(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(txProof!!))))),
-                OpData("iccf_test", arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash())))
+                OpData("iccf_test", arrayOf(txToProve.gtvData, gtv(false)))
         ))
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
@@ -70,17 +89,21 @@ class IccfIT : ManagedModeTest() {
         assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
-    @Test
-    fun intraNetwork() {
-        startManagedSystem(3, 0)
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml",
+        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_batch.xml"
+    ])
+    fun intraNetwork(clusterAnchoringConfig: String) {
+        startManagedSystem(4, 0)
 
-        val systemAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
+        val systemAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig(clusterAnchoringConfig)))
 
-        val sourceChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
-        startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
+        val sourceChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
+        startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
         // Target chain will get chain id == 5 and will be considered to be in another cluster
-        val targetChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
+        val targetChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
 
         val txToProve = enqueueTxWithOps(sourceChain, listOf(
                 OpData("gtx_test", arrayOf(gtv(1), gtv("iccf_test")))
@@ -107,7 +130,7 @@ class IccfIT : ManagedModeTest() {
                         gtv(clusterAnchoringTx.txOpIndex),
                         gtv(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(clusterAnchoringProof!!)))
                 )),
-                OpData("iccf_test", arrayOf(gtv(ChainUtil.ridOf(sourceChain)), gtv(txToProve.getHash())))
+                OpData("iccf_test", arrayOf(txToProve.gtvData, gtv(true)))
         ))
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)

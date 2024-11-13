@@ -23,6 +23,10 @@
             <artifactId>postchain-server-cli</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-web-static</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.postchain.rell</groupId>
             <artifactId>rell-gtx</artifactId>
         </dependency>
@@ -44,7 +48,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java21-postgres14:1.0.0@sha256:d56b939d2b604fd678230f4aab08ed0124f3f1230f5a5bca3ade94324b28a164</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java21-postgres14:1.0.9@sha256:cf6fd44a11bb60e5c1d6b2705e9cffc776fd2c20ca415eb516aaac3de86f62b5</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
