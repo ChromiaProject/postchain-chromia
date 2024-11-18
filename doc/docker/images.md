@@ -138,6 +138,17 @@ Before using the script, make sure `cosign` is installed. You can install it via
 - **Manual Installation**:
   Follow instructions on the [cosign GitHub page](https://github.com/sigstore/cosign#installation).
 
+#### Authenticate with the GitLab Container Registry
+
+You will need to create a "Personal access tokens" in your Gitlab account with the `read_registry`, `write_registry`
+scopes.
+
+Now login with your docker client using your GitLab user name and the token as password:
+
+```bash
+docker login registry.gitlab.com
+```
+
 ### Usage
 
 To verify a Docker image, run the following command:
