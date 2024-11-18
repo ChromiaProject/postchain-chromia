@@ -33,9 +33,36 @@ docker images --digests registry.gitlab.com/chromaway/postchain-chromia/chromawa
 
 1. Inspect the GitLab registry image manifest:
 
-   ```bash
-   docker manifest inspect registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server@<digest>
-   ```
+Unfortunately, in order to get a manifest file that you can actually verify you have to use another tool than the docker
+client.
+It is possible to use tools like `skopeo` and `skopeo inspect` command but below are instructions on how to do it by
+interacting directly with the GitLab API:
+
+Get GitLab temporary access token (yes, you have to do this even though images are public):
+
+```bash
+GITLAB_JWT=$(curl https://gitlab.com/jwt/auth\?scope\=repository%3Achromaway%2Fpostchain-chromia%2Fchromaway%2Fchromia-server%3Apull\&service\=container_registry | jq -r .token)
+```
+
+Fetch the manifest for the digest you would like to verify:
+
+```bash
+curl -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -H "Authorization: Bearer $GITLAB_JWT" https://registry.gitlab.com/v2/chromaway/postchain-chromia/chromaway/chromia-server/manifests/sha256:digest > manifest.json
+```
+
+Verify that hashing the manifest matches the expected digest:
+
+```bash
+sha256sum manifest.json
+```
+
+Carefully inspect the manifest to verify that it only contains two builds, one for `amd64` and one for `arm64`.
+These are the ones we will verify by running the build locally.
+To make this a bit easier you can pretty-print the manifest file:
+
+```bash
+jq . manifest.json
+```
 
    Example output:
    ```json
