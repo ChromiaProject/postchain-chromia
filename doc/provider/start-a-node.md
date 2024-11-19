@@ -31,9 +31,9 @@ database.schema=<postgres-schema>
 database.url=jdbc:postgresql://localhost:5432/<db-name>
 
 # Node information to connect to an existing network
-genesis.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f56
-genesis.host=231.123.12.2
-genesis.port=9870
+initial-peer.pubkey=0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f56
+initial-peer.host=231.123.12.2
+initial-peer.port=9870
 
 # Container
 # Path to image used by subnode containers
@@ -93,7 +93,7 @@ docker run -d --name postchain \
     -p 9870:9870/tcp \
     -p 7740:7740/tcp \
     -p 9880:9880/tcp \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.19.0 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.23.0 \
     run-node
 ```
 
@@ -157,7 +157,7 @@ docker run -d --name postchain \
     -p 9870:9870/tcp \
     -p 7740:7740/tcp \
     -p 9880:9880/tcp \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.19.0 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.23.0 \
     run-node
 ```
 

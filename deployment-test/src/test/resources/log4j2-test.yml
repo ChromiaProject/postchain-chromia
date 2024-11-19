@@ -25,6 +25,14 @@ Configuration:
         fileName: "logs/deployment/node3.log"
         PatternLayout:
           pattern: "%msg%n"
+      - name: Deployment_Node4Appender
+        fileName: "logs/deployment/node4.log"
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Deployment_Node5Appender
+        fileName: "logs/deployment/node5.log"
+        PatternLayout:
+          pattern: "%msg%n"
       - name: Reconfig_Node1Appender
         fileName: "logs/reconfig/node1.log"
         PatternLayout:
@@ -134,6 +142,16 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: Deployment_Node3Appender
+      - name: Deployment_Node4Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deployment_Node4Appender
+      - name: Deployment_Node5Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deployment_Node5Appender
 
       # Reconfiguration tests
       - name: Reconfig_Node1Logger
