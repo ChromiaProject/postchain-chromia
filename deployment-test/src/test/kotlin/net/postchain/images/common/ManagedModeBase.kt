@@ -62,9 +62,7 @@ import net.postchain.images.directory1.saveSubnodeLogs
 import net.postchain.images.directory1.setupMasterNodeConfig
 import net.postchain.postgres.ChainDatabaseCommunicator
 import net.postchain.postgres.ChromaWayPostgresContainer
-import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
-import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -90,6 +88,7 @@ open class ManagedModeBase {
     lateinit var node2: PostchainContainer
     lateinit var node3: PostchainContainer
     lateinit var node4: PostchainContainer
+    lateinit var node5: PostchainContainer
 
     val resolvedDockerHost = getResolvedDockerHost()
     protected val dockerClient: DockerClient = DockerClientFactory.create()
@@ -110,13 +109,12 @@ open class ManagedModeBase {
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
 
     fun nodes() = buildList {
-        if (::node1.isInitialized) add(node1)
-        if (::node2.isInitialized) add(node2)
-        if (::node3.isInitialized) add(node3)
-        if (::node4.isInitialized) add(node4)
+        if (::node1.isInitialized && node1.isRunning) add(node1)
+        if (::node2.isInitialized && node2.isRunning) add(node2)
+        if (::node3.isInitialized && node3.isRunning) add(node3)
+        if (::node4.isInitialized && node4.isRunning) add(node4)
+        if (::node5.isInitialized && node5.isRunning) add(node5)
     }.toTypedArray()
-
-    fun nodesExceptGenesis() = nodes().filter { it != node1 }
 
     fun breakdown() {
         saveSubnodeLogs(dockerClient, logsSubdir)
@@ -217,7 +215,13 @@ open class ManagedModeBase {
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
         postgres.start()
-        startContainers(*nodes())
+        startContainers(*buildList {
+            if (::node1.isInitialized) add(node1)
+            if (::node2.isInitialized) add(node2)
+            if (::node3.isInitialized) add(node3)
+            if (::node4.isInitialized) add(node4)
+            if (::node5.isInitialized) add(node5)
+        }.toTypedArray())
 
         // node1
         chain0Brid = startBlockchain(node1.channel, chain0Config)
@@ -225,37 +229,9 @@ open class ManagedModeBase {
         testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")
 
         // Other nodes if started
-        nodesExceptGenesis().forEach {
-            addPeerAndStartBlockchain(it, node1, chain0Config)
+        nodes().filter { it != node1 }.forEach {
+            startBlockchain(it.channel, chain0Config)
         }
-    }
-
-    fun addPeerAndStartBlockchain(node: PostchainContainer, peer: PostchainContainer, config: String) {
-        addPeer(node.channel, peer)
-        startBlockchain(node.channel, config)
-    }
-
-    fun overrideNode4PeerInfo(peerPubkey: PubKey, peerHost: String, peerPort: Int) {
-        val service = PeerServiceGrpc.newBlockingStub(node4.channel)
-        service.addPeer(
-                AddPeerRequest.newBuilder()
-                        .setHost(peerHost)
-                        .setPort(peerPort)
-                        .setPubkey(peerPubkey.hex())
-                        .setOverride(true)
-                        .build()
-        )
-    }
-
-    fun addPeer(channel: ManagedChannel, peer: PostchainContainer) {
-        val service = PeerServiceGrpc.newBlockingStub(channel)
-        service.addPeer(
-                AddPeerRequest.newBuilder()
-                        .setHost(peer.nodeHost)
-                        .setPort(peer.nodePort)
-                        .setPubkey(peer.pubkey.hex())
-                        .build()
-        )
     }
 
     fun startBlockchain(channel: ManagedChannel, config: String): String {

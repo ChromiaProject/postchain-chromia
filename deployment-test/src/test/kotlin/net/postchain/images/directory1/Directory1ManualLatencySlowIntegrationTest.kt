@@ -19,10 +19,13 @@ import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
+import net.postchain.server.grpc.AddPeerRequest
+import net.postchain.server.grpc.PeerServiceGrpc
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer
@@ -94,12 +97,21 @@ class Directory1ManualLatencySlowIntegrationTest {
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
                     "config-no-subnodes")
+                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
                     "config-no-subnodes")
+                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
             node4 = postchainServer("node4", Slf4jLogConsumer(node4Logger.underlyingLogger, true),
                     KeyPair.of("02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635", "2C3ED78A578575FD9E67996164A6B281C8AEE29D9AAEE9900088749E33C99150"),
                     "config-no-subnodes")
+                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
 
             removeSubnodeContainers()
             startNodesAndChain0()
@@ -201,4 +213,16 @@ class Directory1ManualLatencySlowIntegrationTest {
     }
 
     /* INSERT TESTS HERE */
+
+    private fun overrideNode4PeerInfo(peerPubkey: PubKey, peerHost: String, peerPort: Int) {
+        val service = PeerServiceGrpc.newBlockingStub(node4.channel)
+        service.addPeer(
+                AddPeerRequest.newBuilder()
+                        .setHost(peerHost)
+                        .setPort(peerPort)
+                        .setPubkey(peerPubkey.hex())
+                        .setOverride(true)
+                        .build()
+        )
+    }
 }
