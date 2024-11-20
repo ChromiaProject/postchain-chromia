@@ -32,7 +32,7 @@ definitions:
 
 blockchains:
   manager:
-    module: management_chain_directory1
+    module: management_chain_devnet1
     moduleArgs:
       common:
         allow_blockchain_dependencies: false
@@ -54,6 +54,9 @@ blockchains:
         allowed_dapp_chain_sync_exts:
           - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
           - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
+      auth_service:
+        pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
+        include_system_cluster: true
     config:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
