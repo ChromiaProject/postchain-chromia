@@ -208,7 +208,7 @@
                         <configuration>
                             <packageName>net.postchain.chain0</packageName>
                             <mainModules>
-                                <mainModule>management_chain_directory1</mainModule>
+                                <mainModule>management_chain_devnet1</mainModule>
                                 <mainModule>anchoring_chain_common</mainModule>
                                 <mainModule>management_chain_mainnet</mainModule>
                                 <mainModule>economy_chain_test</mainModule>

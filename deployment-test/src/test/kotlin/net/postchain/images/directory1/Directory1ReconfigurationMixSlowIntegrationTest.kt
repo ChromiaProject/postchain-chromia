@@ -430,10 +430,10 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
                         "}")
     }
 
-    // Inject rell code as isolated fle in the management_chain_directory1 module
+    // Inject rell code as isolated fle in the management_chain_common module
     private fun addTestCode(config: String, rellModule: String) =
             config.replace("<entry key=\"sources\">[\\v\\s]*<dict>".toRegex(RegexOption.MULTILINE),
-                    "<entry key=\"sources\"><dict><entry key=\"management_chain_directory1/postchain_chromia_test.rell\"><string>" +
+                    "<entry key=\"sources\"><dict><entry key=\"management_chain_common/postchain_chromia_test.rell\"><string>" +
                             rellModule +
                             "</string></entry>"
             )
