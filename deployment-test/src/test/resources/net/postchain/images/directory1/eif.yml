@@ -18,6 +18,33 @@ blockchains:
             evm_read_offset: 0
             read_offset: 0
             events: !include events.yml
+  evm_event_receiver_token_chain:
+    module: eif_event_receiver_dynamic_icmf_config
+    config:
+      gtx:
+        modules:
+          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      eif:
+        chains:
+          ethereum:
+            network_id: 1337
+            skip_to_height: 0
+            evm_read_offset: 0
+            read_offset: 0
+            events: !include events.yml
+      icmf:
+        receiver:
+          directory-chain:
+            topics:
+              - "L_blockchain_rid_topic"
+    moduleArgs:
+      eif_event_receiver_dynamic_icmf_config:
+        configuration_chain: "token_chain"
   transaction_submitter:
     module: transaction_submitter
     moduleArgs:
