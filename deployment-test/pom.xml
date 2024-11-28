@@ -212,6 +212,7 @@
                                 <mainModule>anchoring_chain_common</mainModule>
                                 <mainModule>management_chain_mainnet</mainModule>
                                 <mainModule>economy_chain_test</mainModule>
+                                <mainModule>token_chain</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>

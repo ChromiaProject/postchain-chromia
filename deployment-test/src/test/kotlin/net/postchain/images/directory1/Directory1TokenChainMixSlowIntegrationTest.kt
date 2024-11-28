@@ -1,6 +1,7 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -12,34 +13,58 @@ import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
+import net.postchain.chain0.common_proposal.getCommonProposalsRange
+import net.postchain.chain0.common_proposal.makeCommonVoteOperation
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
 import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
+import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
+import net.postchain.chain0.lib.ft4.core.accounts.AuthType
+import net.postchain.chain0.lib.ft4.core.accounts.strategies.transfer.fee.rasTransferFeeOperation
+import net.postchain.chain0.lib.ft4.external.accounts.strategies.registerAccountOperation
+import net.postchain.chain0.lib.ft4.external.crosschain.APPLY_TRANSFER
+import net.postchain.chain0.lib.ft4.external.crosschain.COMPLETE_TRANSFER
+import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
+import net.postchain.chain0.lib.hbridge.BridgeMode
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
+import net.postchain.chain0.token_chain.BridgeConfiguration
+import net.postchain.chain0.token_chain.MintingPolicy
+import net.postchain.chain0.token_chain.initTokenChainOperation
+import net.postchain.chain0.token_chain.mintTokenOperation
+import net.postchain.chain0.token_chain.proposeTokenBridgeOperation
+import net.postchain.chain0.token_chain.proposeTokenOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initEvmEventReceiverTokenChainOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initTokenChainOperation
+import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
 import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
+import net.postchain.eif.hbridge.getBridgeContracts
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
+import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -128,7 +153,6 @@ class Directory1TokenChainMixSlowIntegrationTest {
         private val INITIAL_SUPPLY = BigInteger.valueOf(1_000_000_000L)
         private const val DEPOSIT_NUMBER = 5
         private val depositAmount = BigInteger.valueOf(1000)
-        private val totalDepositedAmount = DEPOSIT_NUMBER.toBigInteger() * depositAmount
         private lateinit var chrAssetId: ByteArray
 
         // EIF / users
@@ -139,6 +163,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
         private val aliceEvmAddressStr = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
         private val aliceEvmAddress = aliceEvmAddressStr.hexStringToByteArray()
         private lateinit var aliceAuthenticator: FTAuthenticator
+        private lateinit var aliceTcAuthenticator: FTAuthenticator
 
         // EIF / users / Bob
         private val bobPubkey = "02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80".hexStringToByteArray()
@@ -149,6 +174,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
         private lateinit var bobAccountId: ByteArray
 
         private lateinit var tcBrid: BlockchainRid
+        private lateinit var testTokenAssetId: ByteArray
 
         init {
             // Initialize EVM container
@@ -347,7 +373,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
     @Order(5)
     fun `Deploy token chain EVM receiver`() {
         testLogger.info("Deploying EIF Event Receiver Chain for token chain")
-        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/eif_event_receiver.xml")!!
+        val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/evm_event_receiver_token_chain.xml")!!
                 .readText()
         )
 
@@ -368,7 +394,10 @@ class Directory1TokenChainMixSlowIntegrationTest {
         testLogger.info("Deploying token chain")
         val gtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/token_chain.xml")!!
                 .readText()
-                .replace(EIF_TC_EVENT_RECEIVER_BRID_PLACEHOLDER, eventReceiverBrid.toHex())
+                .replace(
+                        "<string>${EIF_TC_EVENT_RECEIVER_BRID_PLACEHOLDER}</string>",
+                        "<bytea>${eventReceiverBrid.toHex()}</bytea>"
+                )
                 .replace("<bytea>00</bytea>", "<bytea>${ecBrid.toHex()}</bytea>")
         )
 
@@ -380,7 +409,141 @@ class Directory1TokenChainMixSlowIntegrationTest {
         assertThat(tcRid).isNotNull()
         tcBrid = BlockchainRid(tcRid!!)
 
+        node1.client(tcBrid, listOf(bobKeyPair)).transactionBuilder().initTokenChainOperation()
+                .postTransactionUntilConfirmed("Init ${TC_CHAIN_NAME}")
+
         testLogger.info { "${TC_CHAIN_NAME} deployed: ${tcBrid}" }
+
+        // get tCHR assetId
+        awaitQueryResult {
+            node1.client(tcBrid).getAssetsByName(ASSET_NAME, null, null).data[0]["id"]?.asByteArray()
+        }!!
+    }
+
+    @Test
+    @Order(7)
+    fun `Perform cross-chain transfers between EC and TC`() {
+        testLogger.info("Initializing cross chain transfer dApp")
+        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
+                ClusterManagementImpl(node1.c0),
+                mapOf(
+                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
+                )
+        ))
+        val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
+        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+
+        testLogger.info("Transfer tCHR to TC from EC")
+        val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
+
+        val amount = BigInteger("100000000") // 100 tchr
+        performCrossChainTransfer(iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, tcBrid, amount)
+
+        node1.client(tcBrid, listOf(aliceKeyPair)).transactionBuilder()
+                .rasTransferFeeOperation(
+                chrAssetId,
+                AuthDescriptor(
+                        AuthType.valueOf(aliceAuthenticator.authDescriptor.authType.name),
+                        aliceAuthenticator.authDescriptor.args.asArray().toList(),
+                        aliceAuthenticator.authDescriptor.rules),
+                null
+        ).registerAccountOperation()
+                .postTransactionUntilConfirmed("Register account")
+
+        val afterTransferEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
+        val afterTransferTcAliceBalance = node1.client(tcBrid, listOf(aliceKeyPair)).getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount
+        assertThat(initialEcAliceBalance - afterTransferEcAliceBalance).isEqualTo(amount)
+        assertThat(afterTransferTcAliceBalance).isEqualTo(amount.subtract(BigInteger("10000000")))
+    }
+
+    @Test
+    @Order(8)
+    fun `Propose token`() {
+        aliceTcAuthenticator = FTAuthenticator(aliceKeyPair, node1.client(tcBrid, listOf(aliceKeyPair)))
+
+        aliceTcAuthenticator.transactionBuilder()
+                .proposeTokenOperation("Test Token", "TT", 6, "http://wwww.icon.com",
+                        listOf(MintingPolicy(
+                                setOf(aliceAuthenticator.accountId.wrap()),
+                                BigInteger.ZERO,
+                                1000,
+                                BigInteger.TEN,
+                                true
+                        )),
+                        listOf())
+                .postTransactionUntilConfirmed("Propose new token")
+
+        castVoteOnLatestProposal()
+
+        val tokens = node1.client(tcBrid).getAssetsByName("Test Token", null, null).data
+        assertThat(tokens).hasSize(1)
+        val testToken = tokens[0].asDict()
+        testTokenAssetId = testToken["id"]!!.asByteArray()
+
+        aliceTcAuthenticator.transactionBuilder()
+                .mintTokenOperation(testTokenAssetId, BigInteger.TEN)
+                .postTransactionUntilConfirmed("Mint 10 tokens")
+        assertThat(node1.client(tcBrid, listOf(aliceKeyPair)).getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)!!.amount)
+                .isEqualTo(BigInteger.TEN)
+    }
+
+    @Test
+    @Order(9)
+    fun `Propose token bridge`() {
+        val bridgeContract = WrappedByteArray.fromHex(bridgeAddress.substring(2))
+
+        aliceTcAuthenticator.transactionBuilder()
+                .proposeTokenBridgeOperation(testTokenAssetId, listOf(BridgeConfiguration(
+                        evmContainerNetworkId,
+                        bridgeContract,
+                        WrappedByteArray.fromHex(testTokenAddress.substring(2)),
+                        BridgeMode.foreign,
+                        false
+                ))).postTransactionUntilConfirmed("Propose token bridge")
+
+        castVoteOnLatestProposal()
+
+        val bridgeContracts = node1.client(tcBrid).getBridgeContracts(evmContainerNetworkId)
+        assertThat(bridgeContracts).hasSize(1)
+        assertThat(bridgeContracts.first().contractAddress).isEqualTo(bridgeContract)
+
+        testLogger.info { "Await query on event receiver to report new dynamic topic" }
+        awaitQueryResult {
+            val eventReceiverContracts = node1.client(eventReceiverBrid).query("eif.get_contracts", gtv("network_id" to gtv(evmContainerNetworkId)))
+                    .asArray().map { WrappedByteArray.fromHex(it.asString()) }
+            assertThat(eventReceiverContracts).hasSize(1)
+            assertThat(eventReceiverContracts.first()).isEqualTo(bridgeContract)
+        }
+    }
+
+    @Test
+    @Order(10)
+    fun `Make a deposit on new bridge`() {
+        testLogger.info { "Deposit token on EVM" }
+
+        // deposit on EVM
+        bridge.deposit(Address(testToken.contractAddress), Uint256(depositAmount)).send()
+
+        // check the balance on EVM
+        val aliceBalance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
+        assertEquals(aliceBalance.value, INITIAL_SUPPLY - depositAmount)
+
+        // check the asset balance on Chromia
+        awaitQueryResult {
+            val balance = node1.client(tcBrid).getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)
+            assertThat(balance?.amount).isEqualTo(BigInteger.TEN + depositAmount)
+        }
+    }
+
+    private fun castVoteOnLatestProposal() {
+        with(node1.client(tcBrid, listOf(bobKeyPair))) {
+            val latestProposalId = getCommonProposalsRange(0, Long.MAX_VALUE, true).last().rowid
+
+            transactionBuilder()
+                    .makeCommonVoteOperation(PubKey(bobPubkey), latestProposalId, true)
+                    .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
+
+        }
     }
 
     private fun registerAccount(blockchainRid: BlockchainRid, userKeyPair: KeyPair, username: String): FTAuthenticator {
@@ -428,5 +591,53 @@ class Directory1TokenChainMixSlowIntegrationTest {
                 BigInteger(evmSig.v).longValueExact()
         )
         return signature
+    }
+
+    private fun performCrossChainTransfer(
+            iccfProofTxMaterialBuilder: IccfProofTxMaterialBuilder,
+            hashCalculator: GtvMerkleHashCalculator,
+            sourceAccountAuthenticator: FTAuthenticator,
+            sourceChain: BlockchainRid,
+            destinationChain: BlockchainRid,
+            amount: BigInteger = BigInteger.TEN
+    ) {
+        val initTransferTxRid = sourceAccountAuthenticator.transactionBuilder()
+                .initTransferOperation(sourceAccountAuthenticator.accountId, chrAssetId, amount, listOf(destinationChain.data), Long.MAX_VALUE)
+                .postAwaitConfirmation().txRid
+
+        val initTransferTx = GtvDecoder.decodeGtv(node1.client(sourceChain).getTransaction(initTransferTxRid))
+
+        val initTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    initTransferTxRid,
+                    initTransferTx.merkleHash(hashCalculator),
+                    listOf(aliceKeyPair.pubKey),
+                    sourceChain,
+                    destinationChain,
+                    forceIntraNetworkIccfOperation = true
+            )
+        }!!
+
+        val applyTransferTxRid = initTxProof.txBuilder
+                .addOperation(APPLY_TRANSFER, initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
+                .postTransactionUntilConfirmed("Apply transfer tx").txRid
+
+        val applyTransferTx = GtvDecoder.decodeGtv(node1.client(destinationChain).getTransaction(applyTransferTxRid))
+
+        val applyTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    applyTransferTxRid,
+                    applyTransferTx.merkleHash(hashCalculator),
+                    listOf(),
+                    destinationChain,
+                    sourceChain,
+                    forceIntraNetworkIccfOperation = true
+            )
+        }!!
+
+        applyTxProof.txBuilder
+                .addOperation(COMPLETE_TRANSFER, applyTransferTx, gtv(1))
+                .postAwaitConfirmation()
+
     }
 }
