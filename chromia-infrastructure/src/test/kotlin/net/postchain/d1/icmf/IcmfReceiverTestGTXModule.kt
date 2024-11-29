@@ -18,7 +18,7 @@ import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.constraint
 import org.jooq.impl.DSL.table
-import org.jooq.util.postgres.PostgresDataType
+import org.jooq.impl.SQLDataType
 
 class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
         Unit,
@@ -29,11 +29,11 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
     companion object {
         const val testMessageTable = "test_messages"
 
-        val COLUMN_ID: Field<Long> = DSL.field("id", PostgresDataType.BIGSERIAL.nullable(false))
-        val COLUMN_SENDER: Field<ByteArray> = DSL.field("sender", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_TOPIC: Field<String> = DSL.field("topic", PostgresDataType.TEXT.nullable(false))
-        val COLUMN_BODY: Field<ByteArray> = DSL.field("body", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_HEIGHT: Field<Long> = DSL.field("height", PostgresDataType.BIGINT.nullable(false))
+        val COLUMN_ID: Field<Long> = DSL.field("id", SQLDataType.BIGINT.nullable(false).identity(true))
+        val COLUMN_SENDER: Field<ByteArray> = DSL.field("sender", SQLDataType.BLOB.nullable(false))
+        val COLUMN_TOPIC: Field<String> = DSL.field("topic", SQLDataType.CLOB.nullable(false))
+        val COLUMN_BODY: Field<ByteArray> = DSL.field("body", SQLDataType.BLOB.nullable(false))
+        val COLUMN_HEIGHT: Field<Long> = DSL.field("height", SQLDataType.BIGINT.nullable(false))
     }
 
     override fun initializeDB(ctx: EContext) {

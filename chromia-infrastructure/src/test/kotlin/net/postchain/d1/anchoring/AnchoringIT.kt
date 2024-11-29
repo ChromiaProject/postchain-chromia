@@ -34,7 +34,7 @@ import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.field
 import org.jooq.impl.DSL.table
-import org.jooq.util.postgres.PostgresDataType
+import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -115,8 +115,8 @@ class AnchoringIT : ManagedModeTest() {
         val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
 
-        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
-        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
+        val blockchainRidColumn = field("blockchain_rid", SQLDataType.BLOB)
+        val blockHeightColumn = field("block_height", SQLDataType.BIGINT)
         withReadConnection(getChainNodes(anchorChain)[0].postchainContext.blockBuilderStorage, anchorChain) {
             val db = DatabaseAccess.of(it)
 
@@ -459,8 +459,8 @@ class AnchoringIT : ManagedModeTest() {
         val blockDataFull = anchorBlockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
 
-        val blockchainRidColumn = field("blockchain_rid", PostgresDataType.BYTEA)
-        val blockHeightColumn = field("block_height", PostgresDataType.BIGINT)
+        val blockchainRidColumn = field("blockchain_rid", SQLDataType.BLOB)
+        val blockHeightColumn = field("block_height", SQLDataType.BIGINT)
 
         withReadConnection(getChainNodes(anchorChain)[0].postchainContext.blockBuilderStorage, anchorChain) {
             val db = DatabaseAccess.of(it)
