@@ -112,18 +112,22 @@ Configuration:
           pattern: "%msg%n"
       - name: TC_EvmContainerAppender
         fileName: "logs/tc/evm_container.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node1Appender
         fileName: "logs/tc/node1.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node2Appender
         fileName: "logs/tc/node2.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node3Appender
         fileName: "logs/tc/node3.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
   Loggers:
