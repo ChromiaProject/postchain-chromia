@@ -353,7 +353,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         // Register Alice account
         aliceAuthenticator = registerAccount(ecBrid, aliceKeyPair, "Alice")
-        linkAccount(aliceAuthenticator, aliceEvmAddress)
+        linkAccount(aliceAuthenticator, aliceEvmAddress, ecBrid)
 
         // Claim initial supply
         aliceAuthenticator.verifyOperationAuthFlags("faucet")
@@ -446,6 +446,8 @@ class Directory1TokenChainMixSlowIntegrationTest {
                 null
         ).registerAccountOperation()
                 .postTransactionUntilConfirmed("Register account")
+        aliceTcAuthenticator = FTAuthenticator(aliceKeyPair, node1.client(tcBrid, listOf(aliceKeyPair)))
+        linkAccount(aliceTcAuthenticator, aliceEvmAddress, tcBrid)
 
         val afterTransferEcAliceBalance = node1.ec.getBalance(aliceAuthenticator.accountId)
         val afterTransferTcAliceBalance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount
@@ -456,7 +458,6 @@ class Directory1TokenChainMixSlowIntegrationTest {
     @Test
     @Order(8)
     fun `Propose token`() {
-        aliceTcAuthenticator = FTAuthenticator(aliceKeyPair, node1.client(tcBrid, listOf(aliceKeyPair)))
 
         aliceTcAuthenticator.transactionBuilder()
                 .proposeTokenOperation("Test Token", "TT", 6, "http://wwww.icon.com",
@@ -507,7 +508,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
         testLogger.info { "Await query on event receiver to report new dynamic topic" }
         awaitQueryResult {
             val eventReceiverContracts = node1.client(eventReceiverBrid).query("eif.get_contracts", gtv("network_id" to gtv(evmContainerNetworkId)))
-                    .asArray().map { WrappedByteArray.fromHex(it.asString().uppercase()) }
+                    .asArray().map { WrappedByteArray.fromHex(it.asString().replace("0x", "")) }
             assertThat(eventReceiverContracts).hasSize(1)
             assertThat(eventReceiverContracts.first()).isEqualTo(bridgeContract)
         }
@@ -551,29 +552,29 @@ class Directory1TokenChainMixSlowIntegrationTest {
         return FTAuthenticator(userKeyPair, node1.client(blockchainRid, listOf(userKeyPair)))
     }
 
-    private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray) {
-        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair, userAuthenticator.accountId)
+    private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray, brid: BlockchainRid) {
+        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair, userAuthenticator.accountId, brid)
 
         userAuthenticator.client.transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(userEvmAddress), listOf(signature))
-                .ftAuthOperation(aliceAuthenticator.accountId, aliceAuthenticator.authDescriptor.id.data)
+                .ftAuthOperation(userAuthenticator.accountId, userAuthenticator.authDescriptor.id.data)
                 .linkEvmEoaAccountOperation(userEvmAddress)
                 .postTransactionUntilConfirmed("Link EVM account")
     }
 
-    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair, accountId: ByteArray): Signature {
+    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair, accountId: ByteArray, brid: BlockchainRid): Signature {
         val opName = LINK_EVM_EOA_ACCOUNT
         val opArgs = gtv(listOf(gtv(addressByteArray)))
 
         val nonce = gtv(listOf(
-                gtv(ecBrid.data),
+                gtv(brid),
                 gtv(opName),
                 opArgs,
                 gtv(0),
         )).merkleHash(hashCalculator)
 
-        val template = node1.client(ecBrid).getAuthMessageTemplate(opName, opArgs)
-        val message = template.replace("{blockchain_rid}", ecBrid.toHex().uppercase())
+        val template = node1.client(brid).getAuthMessageTemplate(opName, opArgs)
+        val message = template.replace("{blockchain_rid}", brid.toHex().uppercase())
                 .replace("{nonce}", nonce.toHex().uppercase())
                 .replace("{account_id}", accountId.toHex())
 
