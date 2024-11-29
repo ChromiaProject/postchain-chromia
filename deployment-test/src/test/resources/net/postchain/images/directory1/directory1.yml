@@ -291,7 +291,7 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
           - "net.postchain.d1.iccf.IccfGTXModule"
-          - "net.postchain.eif.EifGTXModule"
+          - "net.postchain.eif.EifGTXModule" # TODO sync with config in directory-chain
       sync_ext:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       icmf:
