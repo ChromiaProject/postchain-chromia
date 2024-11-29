@@ -35,7 +35,7 @@
         <directory.chain.version>1.73.6</directory.chain.version>
         <rell.version>0.14.3</rell.version>
         <rell.maven.plugin.version>0.12.5</rell.maven.plugin.version>
-        <eif.version>0.5.44</eif.version>
+        <eif.version>0.6.5</eif.version>
         <web3j.version>4.12.0</web3j.version>
         <web3j-plugin.version>4.11.3</web3j-plugin.version>
         <kotlin.version>2.0.0</kotlin.version>

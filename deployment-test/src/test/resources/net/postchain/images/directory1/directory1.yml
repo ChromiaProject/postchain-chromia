@@ -283,4 +283,4 @@ blockchains:
         amount_to_mint: 1000000000
 
 compile:
-  rellVersion: 0.13.12
+  rellVersion: 0.13.13
