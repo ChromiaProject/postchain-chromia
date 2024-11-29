@@ -14,7 +14,7 @@ import org.jooq.impl.DSL.field
 import org.jooq.impl.DSL.max
 import org.jooq.impl.DSL.table
 import org.jooq.impl.DSL.using
-import org.jooq.util.postgres.PostgresDataType
+import org.jooq.impl.SQLDataType
 
 class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
@@ -27,19 +27,19 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
         const val TABLE_NAME_SENT_ICMF_MESSAGE = "${PREFIX}.sent_icmf_message"
 
-        val COLUMN_CLUSTER: Field<String> = field("cluster", PostgresDataType.TEXT.nullable(false))
-        val COLUMN_SENDER: Field<ByteArray> = field("sender", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_TOPIC: Field<String> = field("topic", PostgresDataType.TEXT.nullable(false))
-        val COLUMN_HEIGHT: Field<Long> = field("height", PostgresDataType.BIGINT.nullable(false))
-        val COLUMN_SERIAL: Field<Long> = field("serial", PostgresDataType.BIGSERIAL.nullable(false))
-        val COLUMN_ANCHOR_HEIGHT: Field<Long> = field("anchor_height", PostgresDataType.BIGINT.nullable(false))
-        val COLUMN_MESSAGE_HASH: Field<ByteArray> = field("message_hash", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_ID: Field<Long> = field("id", PostgresDataType.BIGSERIAL.nullable(false))
-        val COLUMN_TRANSACTION: Field<Long> = field("transaction", PostgresDataType.BIGINT.nullable(false))
-        val COLUMN_BODY: Field<ByteArray> = field("body", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_RECEIVER: Field<ByteArray> = field("receiver", PostgresDataType.BYTEA.nullable(false))
-        val COLUMN_SKIP_TO_HEIGHT: Field<Long> = field("skip_to_height", PostgresDataType.BIGINT.nullable(false))
-        val COLUMN_SENDER_NULLABLE: Field<ByteArray> = field("sender", PostgresDataType.BYTEA.nullable(true))
+        val COLUMN_CLUSTER: Field<String> = field("cluster", SQLDataType.CLOB.nullable(false))
+        val COLUMN_SENDER: Field<ByteArray> = field("sender", SQLDataType.BLOB.nullable(false))
+        val COLUMN_TOPIC: Field<String> = field("topic", SQLDataType.CLOB.nullable(false))
+        val COLUMN_HEIGHT: Field<Long> = field("height", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_SERIAL: Field<Long> = field("serial", SQLDataType.BIGINT.nullable(false).identity(true))
+        val COLUMN_ANCHOR_HEIGHT: Field<Long> = field("anchor_height", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_MESSAGE_HASH: Field<ByteArray> = field("message_hash", SQLDataType.BLOB.nullable(false))
+        val COLUMN_ID: Field<Long> = field("id", SQLDataType.BIGINT.nullable(false).identity(true))
+        val COLUMN_TRANSACTION: Field<Long> = field("transaction", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_BODY: Field<ByteArray> = field("body", SQLDataType.BLOB.nullable(false))
+        val COLUMN_RECEIVER: Field<ByteArray> = field("receiver", SQLDataType.BLOB.nullable(false))
+        val COLUMN_SKIP_TO_HEIGHT: Field<Long> = field("skip_to_height", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_SENDER_NULLABLE: Field<ByteArray> = field("sender", SQLDataType.BLOB.nullable(true))
     }
 
     private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
@@ -173,7 +173,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                         .orderBy(COLUMN_SERIAL)
                         .limit(1)
                         .fetchOne()
-            }.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH], it[COLUMN_CLUSTER], it[COLUMN_ANCHOR_HEIGHT]) }
+            }?.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH], it[COLUMN_CLUSTER], it[COLUMN_ANCHOR_HEIGHT]) }
 
     override fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int> =
             DatabaseAccess.of(ctx).run {
@@ -309,6 +309,6 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
 
     private fun DSLContext.tableExists(schema: String, tableName: String): Boolean {
-        return meta().tables.any { it.name == tableName && it.schema.name == schema }
+        return meta().tables.any { it.name == tableName && it.schema?.name == schema }
     }
 }
