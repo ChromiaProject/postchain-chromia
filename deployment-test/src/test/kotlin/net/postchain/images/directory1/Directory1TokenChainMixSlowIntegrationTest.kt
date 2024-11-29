@@ -151,7 +151,6 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         // EIF / balances
         private val INITIAL_SUPPLY = BigInteger.valueOf(1_000_000_000L)
-        private const val DEPOSIT_NUMBER = 5
         private val depositAmount = BigInteger.valueOf(1000)
         private lateinit var chrAssetId: ByteArray
 
@@ -169,11 +168,9 @@ class Directory1TokenChainMixSlowIntegrationTest {
         private val bobPubkey = "02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80".hexStringToByteArray()
         private val bobPrivkey = "B31AB878C62B0E940B345C659A456D3573CF25960823C34C7BEEB5D1F813BEFD".hexStringToByteArray()
         private val bobKeyPair = KeyPair(bobPubkey, bobPrivkey)
-        private val bobEvmAddressStr = "661683e5d36E83B38B1a20247ba6F5c410dC165d"
-        private val bobEvmAddress = bobEvmAddressStr.hexStringToByteArray()
-        private lateinit var bobAccountId: ByteArray
 
         private lateinit var tcBrid: BlockchainRid
+        private val PostchainContainer.tc get() = client(tcBrid)
         private lateinit var testTokenAssetId: ByteArray
 
         init {
@@ -412,18 +409,18 @@ class Directory1TokenChainMixSlowIntegrationTest {
         node1.client(tcBrid, listOf(bobKeyPair)).transactionBuilder().initTokenChainOperation()
                 .postTransactionUntilConfirmed("Init ${TC_CHAIN_NAME}")
 
-        testLogger.info { "${TC_CHAIN_NAME} deployed: ${tcBrid}" }
+        testLogger.info { "$TC_CHAIN_NAME deployed: $tcBrid" }
 
         // get tCHR assetId
         awaitQueryResult {
-            node1.client(tcBrid).getAssetsByName(ASSET_NAME, null, null).data[0]["id"]?.asByteArray()
+            node1.tc.getAssetsByName(ASSET_NAME, null, null).data[0]["id"]?.asByteArray()
         }!!
     }
 
     @Test
     @Order(7)
     fun `Perform cross-chain transfers between EC and TC`() {
-        testLogger.info("Initializing cross chain transfer dApp")
+        testLogger.info("Initializing cross chain transfer from EC to TC")
         val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
                 ClusterManagementImpl(node1.c0),
                 mapOf(
@@ -450,8 +447,8 @@ class Directory1TokenChainMixSlowIntegrationTest {
         ).registerAccountOperation()
                 .postTransactionUntilConfirmed("Register account")
 
-        val afterTransferEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
-        val afterTransferTcAliceBalance = node1.client(tcBrid, listOf(aliceKeyPair)).getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount
+        val afterTransferEcAliceBalance = node1.ec.getBalance(aliceAuthenticator.accountId)
+        val afterTransferTcAliceBalance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount
         assertThat(initialEcAliceBalance - afterTransferEcAliceBalance).isEqualTo(amount)
         assertThat(afterTransferTcAliceBalance).isEqualTo(amount.subtract(BigInteger("10000000")))
     }
@@ -475,7 +472,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         castVoteOnLatestProposal()
 
-        val tokens = node1.client(tcBrid).getAssetsByName("Test Token", null, null).data
+        val tokens = node1.tc.getAssetsByName("Test Token", null, null).data
         assertThat(tokens).hasSize(1)
         val testToken = tokens[0].asDict()
         testTokenAssetId = testToken["id"]!!.asByteArray()
@@ -483,7 +480,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
         aliceTcAuthenticator.transactionBuilder()
                 .mintTokenOperation(testTokenAssetId, BigInteger.TEN)
                 .postTransactionUntilConfirmed("Mint 10 tokens")
-        assertThat(node1.client(tcBrid, listOf(aliceKeyPair)).getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)!!.amount)
+        assertThat(node1.tc.getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)!!.amount)
                 .isEqualTo(BigInteger.TEN)
     }
 
@@ -503,14 +500,14 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         castVoteOnLatestProposal()
 
-        val bridgeContracts = node1.client(tcBrid).getBridgeContracts(evmContainerNetworkId)
+        val bridgeContracts = node1.tc.getBridgeContracts(evmContainerNetworkId)
         assertThat(bridgeContracts).hasSize(1)
         assertThat(bridgeContracts.first().contractAddress).isEqualTo(bridgeContract)
 
         testLogger.info { "Await query on event receiver to report new dynamic topic" }
         awaitQueryResult {
             val eventReceiverContracts = node1.client(eventReceiverBrid).query("eif.get_contracts", gtv("network_id" to gtv(evmContainerNetworkId)))
-                    .asArray().map { WrappedByteArray.fromHex(it.asString()) }
+                    .asArray().map { WrappedByteArray.fromHex(it.asString().uppercase()) }
             assertThat(eventReceiverContracts).hasSize(1)
             assertThat(eventReceiverContracts.first()).isEqualTo(bridgeContract)
         }
@@ -530,8 +527,8 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         // check the asset balance on Chromia
         awaitQueryResult {
-            val balance = node1.client(tcBrid).getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)
-            assertThat(balance?.amount).isEqualTo(BigInteger.TEN + depositAmount)
+            val balance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)
+            assertThat(balance?.amount).isEqualTo(BigInteger.TEN.plus(depositAmount))
         }
     }
 
@@ -563,7 +560,6 @@ class Directory1TokenChainMixSlowIntegrationTest {
                 .linkEvmEoaAccountOperation(userEvmAddress)
                 .postTransactionUntilConfirmed("Link EVM account")
     }
-
 
     private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair, accountId: ByteArray): Signature {
         val opName = LINK_EVM_EOA_ACCOUNT
