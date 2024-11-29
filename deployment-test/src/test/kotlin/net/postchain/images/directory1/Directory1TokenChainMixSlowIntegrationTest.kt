@@ -8,6 +8,7 @@ import assertk.assertions.isTrue
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import mu.KotlinLogging
+import net.postchain.chain0.GtxTransaction
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
@@ -15,6 +16,7 @@ import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common_proposal.getCommonProposalsRange
 import net.postchain.chain0.common_proposal.makeCommonVoteOperation
+import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
@@ -30,6 +32,8 @@ import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
 import net.postchain.chain0.lib.hbridge.BridgeMode
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
+import net.postchain.chain0.proposal.voting.createVoterSetOperation
+import net.postchain.chain0.proposal_container.proposeContainerOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.chain0.token_chain.BridgeConfiguration
 import net.postchain.chain0.token_chain.MintingPolicy
@@ -37,6 +41,7 @@ import net.postchain.chain0.token_chain.initTokenChainOperation
 import net.postchain.chain0.token_chain.mintTokenOperation
 import net.postchain.chain0.token_chain.proposeTokenBridgeOperation
 import net.postchain.chain0.token_chain.proposeTokenOperation
+import net.postchain.chain0.token_chain.rasIccfOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initEvmEventReceiverTokenChainOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initTokenChainOperation
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -59,6 +64,7 @@ import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
 import net.postchain.eif.hbridge.getBridgeContracts
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
+import net.postchain.eif.lib.ft4.external.accounts.getAccountById
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
@@ -67,7 +73,9 @@ import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.ManagedModeBase
@@ -172,6 +180,8 @@ class Directory1TokenChainMixSlowIntegrationTest {
         private lateinit var tcBrid: BlockchainRid
         private val PostchainContainer.tc get() = client(tcBrid)
         private lateinit var testTokenAssetId: ByteArray
+
+        private lateinit var accountCreationChainBrid: BlockchainRid
 
         init {
             // Initialize EVM container
@@ -457,6 +467,24 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
     @Test
     @Order(8)
+    fun `Add account creation chain`() {
+        testLogger.info("Add container for account creation dapp")
+        val containerVoterSet = "account_creation_dapp_container_vs"
+        val containerName = "account_creation_dapp_container"
+        node1.c0.transactionBuilder()
+                .createVoterSetOperation(node1.providerPubkey, containerVoterSet, 1, listOf(node1.provider.pubKey.data), null)
+                .proposeContainerOperation(node1.providerPubkey, systemCluster, containerName, containerVoterSet, "")
+                .postTransactionUntilConfirmed("Add $containerName")
+
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
+
+        testLogger.info("Deploying account creation dapp")
+        deployDapp("test_token_chain_account_creation", containerName)
+        accountCreationChainBrid = dapps["test_token_chain_account_creation"]!!
+    }
+
+    @Test
+    @Order(9)
     fun `Propose token`() {
 
         aliceTcAuthenticator.transactionBuilder()
@@ -468,7 +496,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
                                 BigInteger.TEN,
                                 true
                         )),
-                        listOf())
+                        listOf(accountCreationChainBrid.data))
                 .postTransactionUntilConfirmed("Propose new token")
 
         castVoteOnLatestProposal()
@@ -486,7 +514,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     fun `Propose token bridge`() {
         val bridgeContract = WrappedByteArray.fromHex(bridgeAddress.substring(2))
 
@@ -515,7 +543,7 @@ class Directory1TokenChainMixSlowIntegrationTest {
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `Make a deposit on new bridge`() {
         testLogger.info { "Deposit token on EVM" }
 
@@ -528,9 +556,58 @@ class Directory1TokenChainMixSlowIntegrationTest {
 
         // check the asset balance on Chromia
         awaitQueryResult {
-            val balance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, testTokenAssetId)
+            val balance = node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, testTokenAssetId)
             assertThat(balance?.amount).isEqualTo(BigInteger.TEN.plus(depositAmount))
         }
+    }
+
+    @Test
+    @Order(12)
+    fun `Create a new account on token chain`() {
+        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
+                ClusterManagementImpl(node1.c0),
+                mapOf(
+                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
+                )
+        ))
+        val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
+
+        val newUser = cryptoSystem.generateKeyPair()
+
+        val accountCreationTxRid = node1.client(accountCreationChainBrid, listOf(newUser)).transactionBuilder()
+                .addOperation("create_token_chain_account", GtvObjectMapper.toGtvArray(AuthDescriptor(
+                        AuthType.S,
+                        listOf(
+                                gtv(listOf(
+                                        gtv("A"), gtv("T")
+                                )),
+                                gtv(newUser.pubKey.data)
+                        ),
+                        GtvNull)))
+                .postTransactionUntilConfirmed("Creating account").txRid
+
+        val accountCreationTx = GtvDecoder.decodeGtv(node1.client(accountCreationChainBrid).getTransaction(accountCreationTxRid))
+
+        val accountCreationTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    accountCreationTxRid,
+                    accountCreationTx.merkleHash(hashCalculator),
+                    listOf(newUser.pubKey),
+                    accountCreationChainBrid,
+                    tcBrid,
+                    iccfTxSigners = listOf(newUser)
+            )
+        }!!
+
+        val initalBalance = node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!
+        accountCreationTxProof.txBuilder
+                .addOperation("ras_iccf", accountCreationTx, gtv(testTokenAssetId))
+                .registerAccountOperation()
+                .postTransactionUntilConfirmed("Registering account via ICCF proof")
+
+        assertThat(node1.tc.getAccountById(gtv(newUser.pubKey.data).merkleHash(hashCalculator))).isNotNull()
+        assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
+                .isEqualTo(initalBalance.amount.subtract(BigInteger("10000000")))
     }
 
     private fun castVoteOnLatestProposal() {
