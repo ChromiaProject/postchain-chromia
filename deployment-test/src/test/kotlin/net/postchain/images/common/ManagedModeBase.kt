@@ -15,7 +15,7 @@ import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common_proposal.getCommonProposalsRange
-import net.postchain.chain0.common_proposal.makeCommonVoteOperation
+import net.postchain.chain0.common_proposal.makeCommonVoteV65Operation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
@@ -26,6 +26,7 @@ import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.findBlockchainRid
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
+import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -104,8 +105,10 @@ open class ManagedModeBase {
     lateinit var ecBrid: BlockchainRid
     private var nodeDbs = mutableMapOf<PostchainContainer, ChainDatabaseCommunicator>()
 
+    protected lateinit var tcBrid: BlockchainRid
     protected val PostchainContainer.c0 get() = client(chain0Brid)
     protected val PostchainContainer.ec get() = client(ecBrid)
+    protected val PostchainContainer.tc get() = client(tcBrid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
 
     fun nodes() = buildList {
@@ -426,12 +429,16 @@ open class ManagedModeBase {
     )
 
     protected fun makeVoteOnLatestProposal(node: PostchainContainer) {
+        makeVoteOnLatestProposal(node.ec)
+    }
 
-        with(node.ec) {
+    protected fun makeVoteOnLatestProposal(client: PostchainClient) {
+
+        with(client) {
             val latestProposalId = getCommonProposalsRange(0, Long.MAX_VALUE, true).last().rowid
 
             transactionBuilder()
-                    .makeCommonVoteOperation(PubKey(node.providerPubkey), latestProposalId, true)
+                    .makeCommonVoteV65Operation(latestProposalId, true)
                     .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
         }
     }

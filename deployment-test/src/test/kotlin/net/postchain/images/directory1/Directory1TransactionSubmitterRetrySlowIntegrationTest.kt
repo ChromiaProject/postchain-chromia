@@ -4,8 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -32,11 +30,9 @@ import net.postchain.eif.transaction_submitter.getTransactionTakenBy
 import net.postchain.eif.transaction_submitter.getTransactions
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.images.common.ManagedModeBase
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.kotlin.untilNotNull
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -47,14 +43,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.generated.Bytes32
-import org.web3j.crypto.Credentials
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
 import org.web3j.tx.Contract
-import org.web3j.tx.FastRawTransactionManager
-import org.web3j.tx.TransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
-import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.util.concurrent.TimeUnit
 import net.postchain.eif.transaction_submitter.getTransaction as getEvmTransaction
 
@@ -72,101 +61,55 @@ import net.postchain.eif.transaction_submitter.getTransaction as getEvmTransacti
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterRetrySlowIntegrationTest {
+class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmTxs_EvmContainerLogger") {
 
-    companion object : ManagedModeBase() {
+    private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
+    private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
+    private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
+    private val node4Logger = KotlinLogging.logger("EvmTxs_Node4Logger")
+    override val logsSubdir = "evm_tx_submitter"
 
-        private const val EVM_TX_SUBMITTER_CHAIN = "evm_transaction_submitter_chain"
+    private lateinit var directoryChainValidator: DirectoryChainValidator
+    private lateinit var validator: ManagedValidator
 
-        private val evmContainerLogger = KotlinLogging.logger("EvmTxs_EvmContainerLogger")
-        private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
-        private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
-        private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-        private val node4Logger = KotlinLogging.logger("EvmTxs_Node4Logger")
-        override val logsSubdir = "evm_tx_submitter"
-        private val provider1KeyPair = KeyPair.of(
-                "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
-                "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
-        private val provider2KeyPair = KeyPair.of(
-                "03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95",
-                "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5")
-        private val provider3KeyPair = KeyPair.of(
-                "03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871",
-                "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905")
-        private val provider4KeyPair = KeyPair.of(
-                "02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635",
-                "2C3ED78A578575FD9E67996164A6B281C8AEE29D9AAEE9900088749E33C99150")
+    private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
+    private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
 
-        // Initialize EVM container
-        private val evmContainer: GethContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
-                .withNetwork(network)
-                .apply {
-                    start()
-                }
+    private lateinit var txsClient: PostchainClient
+    private var txId: Long = -1
 
-        private val web3j: Web3j = Web3j.build(HttpService(evmContainer.getExternalGethUrl()))
-        private val transactionManager: TransactionManager = FastRawTransactionManager(
-                web3j,
-                Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610"),
-                PollingTransactionReceiptProcessor(web3j, 1000, 30)
-        )
-        private val gasProvider = DefaultGasProvider()
+    init {
 
-        private lateinit var directoryChainValidator: DirectoryChainValidator
-        private lateinit var validator: ManagedValidator
+        // Nodes
+        chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
 
-        private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
-        private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
+        node1 = createTxsPostchainContainer("node1", node1Logger.underlyingLogger, provider1KeyPair)
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
 
-        private lateinit var txsClient: PostchainClient
-        private var txId: Long = -1
+        node2 = createTxsPostchainContainer("node2", node2Logger.underlyingLogger, provider2KeyPair)
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
 
-        init {
+        node3 = createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
 
-            // Nodes
-            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
+        removeSubnodeContainers()
+        startNodesAndChain0()
+    }
 
-            node1 = createTxsPostchainContainer("node1", node1Logger.underlyingLogger, provider1KeyPair)
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-
-            node2 = createTxsPostchainContainer("node2", node2Logger.underlyingLogger, provider2KeyPair)
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-
-            node3 = createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1TransactionSubmitterRetrySlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
-            val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
-            return artifactJson.get("bytecode").asString
-        }
-
-        private fun createTxsPostchainContainer(hostname: String, logger: org.slf4j.Logger, keyPair: KeyPair): PostchainContainer {
-            return postchainServer(hostname, Slf4jLogConsumer(logger, true),
-                    keyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            evmContainer.stop()
-            super.breakdown()
-        }
+    private fun createTxsPostchainContainer(hostname: String, logger: org.slf4j.Logger, keyPair: KeyPair): PostchainContainer {
+        return postchainServer(hostname, Slf4jLogConsumer(logger, true),
+                keyPair,
+                "config-no-subnodes")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
     }
 
     @Test

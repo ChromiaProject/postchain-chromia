@@ -249,10 +249,10 @@ blockchains:
       economy_chain:
         bsc_asset_network_id: 97
         bsc_asset_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-        bsc_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0" # TODO fix
-        eth_asset_network_id: 11155111
+        bsc_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
+        eth_asset_network_id: 1337
         eth_asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
-        eth_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0" # TODO fix
+        eth_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6

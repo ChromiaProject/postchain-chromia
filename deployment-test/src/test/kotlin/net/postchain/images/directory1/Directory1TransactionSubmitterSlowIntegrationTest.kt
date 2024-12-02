@@ -7,8 +7,6 @@ import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -42,10 +40,8 @@ import net.postchain.eif.transaction_submitter.signer_update.getCurrentEvmSigner
 import net.postchain.eif.transaction_submitter.signer_update.latestSignerListUpdateTxs
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.images.common.ManagedModeBase
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -58,134 +54,85 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.generated.Bytes32
-import org.web3j.crypto.Credentials
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
 import org.web3j.tx.Contract
-import org.web3j.tx.FastRawTransactionManager
-import org.web3j.tx.TransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
-import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterSlowIntegrationTest {
+class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_EvmContainerLogger") {
 
-    companion object : ManagedModeBase() {
+    private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
+    private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
+    private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
+    override val logsSubdir = "evm_tx_submitter"
 
-        private const val EVM_TX_SUBMITTER_CHAIN = "evm_transaction_submitter_chain"
+    private val dappContainer = "dappContainer"
+    private val dappContainerVoterSet = "dappContainer_vs"
 
-        private val evmContainerLogger = KotlinLogging.logger("EvmTxs_EvmContainerLogger")
-        private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
-        private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
-        private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-        override val logsSubdir = "evm_tx_submitter"
-        private val provider1KeyPair = KeyPair.of(
-                "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
-                "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
+    private lateinit var directoryChainValidator: DirectoryChainValidator
+    private lateinit var anchoring: Anchoring
+    private lateinit var validator: ManagedValidator
 
-        private val dappContainer = "dappContainer"
-        private val dappContainerVoterSet = "dappContainer_vs"
+    private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
+    private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
+    private val anchoringBinary = getBinaryFromArtifactResource("/artifacts/contracts/anchoring/Anchoring.sol/Anchoring.json")
 
-        private val evmContainer: GethContainer
-        private val web3j: Web3j
-        private val transactionManager: TransactionManager
-        private val gasProvider = DefaultGasProvider()
+    private lateinit var txsClient: PostchainClient
 
-        private lateinit var directoryChainValidator: DirectoryChainValidator
-        private lateinit var anchoring: Anchoring
-        private lateinit var validator: ManagedValidator
+    init {
+        // Nodes
+        chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
+        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+                provider1KeyPair,
+                "config-mix")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
-        private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
-        private val anchoringBinary = getBinaryFromArtifactResource("/artifacts/contracts/anchoring/Anchoring.sol/Anchoring.json")
+        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+                KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                "config-mix")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        private lateinit var txsClient: PostchainClient
+        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+                KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                "config-mix")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
+                .withClasspathResourceMapping(
+                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
+                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
+                )
+                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
+                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+                .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
+                .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
+                .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
 
-        init {
-            // Initialize EVM container
-            evmContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
-                    .withNetwork(network)
-                    .apply {
-                        start()
-                    }
-
-            // Web3j
-            web3j = Web3j.build(HttpService(evmContainer.getExternalGethUrl()))
-            transactionManager = FastRawTransactionManager(
-                    web3j,
-                    Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610"),
-                    PollingTransactionReceiptProcessor(web3j, 1000, 30)
-            )
-
-            // Nodes
-            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-mix")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
-                    "config-mix")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-
-            node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
-                    "config-mix")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                    .withMasterDockerConfig()
-                    .withClasspathResourceMapping(
-                            "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                            PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                    )
-                    .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                    .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-                    .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_RPC_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS", "1000")
-                    .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
-
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1TransactionSubmitterSlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
-            val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
-            return artifactJson.get("bytecode").asString
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            evmContainer.stop()
-            super.breakdown()
-        }
+        removeSubnodeContainers()
+        startNodesAndChain0()
     }
 
     @Test
@@ -384,7 +331,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest {
 
             testLogger.info("Verifying anchoring. Current - Height: ${node1.c0.currentBlockHeight()}, TX Submitter Height: " +
                     "${txsClient.currentBlockHeight()}, EVM: $anchoredHeight, signers. ${currentEvmSignerList.joinToString(", ") { it.toHex() }}, " +
-                    "anchored heights seen: ${anchoredHeights}")
+                    "anchored heights seen: $anchoredHeights")
 
             assertThat(currentEvmSignerList.size).isEqualTo(signers.size)
             assertThat(anchoredHeights.size).isGreaterThanOrEqualTo(awaitAnchoredHeights)

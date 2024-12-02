@@ -71,18 +71,22 @@ Configuration:
           pattern: "%msg%n"
       - name: EC_EvmContainerAppender
         fileName: "logs/ec/evm_container.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node1Appender
         fileName: "logs/ec/node1.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node2Appender
         fileName: "logs/ec/node2.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node3Appender
         fileName: "logs/ec/node3.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EvmTxs_EvmContainerAppender
