@@ -291,7 +291,7 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
           - "net.postchain.d1.iccf.IccfGTXModule"
-          - "net.postchain.eif.EifGTXModule" # TODO sync with config in directory-chain
+          - "net.postchain.eif.EifGTXModule"
       sync_ext:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       icmf:
@@ -314,25 +314,25 @@ blockchains:
           "1337": 0
       lib.ft4.core.auth:
         evm_signatures_authorized_operations:
-          - eif.hbridge.link_evm_eoa_account # TODO sync with config in directory-chain
+          - eif.hbridge.link_evm_eoa_account
       lib.ft4.core.accounts.strategies.transfer:
         rules:
           - sender_blockchain:
               - "$"
-              - x"00" # TODO sync with config in directory-chain
+              - x"00"
             sender: "*"
             recipient: "*"
             asset:
               - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
                 min_amount: 10000000L # 10.0 tCHR
-                issuing_blockchain_rid: x"00" # TODO sync with config in directory-chain + check that asset name match
+                issuing_blockchain_rid: x"00"
             timeout_days: 10
             strategy: "fee"
       lib.ft4.core.accounts.strategies.transfer.fee:
         asset:
           - name: "tCHR"  # Should match `economy_chain_module_args.asset_name`
             amount: 10000000L # 10.0 tCHR
-            issuing_blockchain_rid: x"00" # TODO sync with config in directory-chain + check that asset name match
+            issuing_blockchain_rid: x"00"
 
 compile:
   rellVersion: 0.13.13
