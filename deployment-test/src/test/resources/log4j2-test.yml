@@ -71,18 +71,22 @@ Configuration:
           pattern: "%msg%n"
       - name: EC_EvmContainerAppender
         fileName: "logs/ec/evm_container.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node1Appender
         fileName: "logs/ec/node1.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node2Appender
         fileName: "logs/ec/node2.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node3Appender
         fileName: "logs/ec/node3.log"
+        append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EvmTxs_EvmContainerAppender
@@ -107,6 +111,26 @@ Configuration:
           pattern: "%msg%n"
       - name: EvmTxs_Node4Appender
         fileName: "logs/evm_tx_submitter/node4.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: TC_EvmContainerAppender
+        fileName: "logs/tc/evm_container.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: TC_Node1Appender
+        fileName: "logs/tc/node1.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: TC_Node2Appender
+        fileName: "logs/tc/node2.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: TC_Node3Appender
+        fileName: "logs/tc/node3.log"
         append: false
         PatternLayout:
           pattern: "%msg%n"
@@ -252,3 +276,26 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: EvmTxs_Node4Appender
+
+
+      # TC tests
+      - name: TC_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TC_EvmContainerAppender
+      - name: TC_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TC_Node1Appender
+      - name: TC_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TC_Node2Appender
+      - name: TC_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TC_Node3Appender

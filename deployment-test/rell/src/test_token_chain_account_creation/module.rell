@@ -1,0 +1,7 @@
+module;
+
+import lib.ft4.accounts;
+
+operation create_token_chain_account(accounts.auth_descriptor) {
+    // We accept everything :)
+}

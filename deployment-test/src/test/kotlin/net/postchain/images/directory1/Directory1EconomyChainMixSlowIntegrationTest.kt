@@ -10,8 +10,6 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.addProviderKeyOperation
@@ -50,7 +48,6 @@ import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
-import net.postchain.chain0.economy_chain_test_auth_server.registerAccountOperation
 import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
@@ -58,9 +55,6 @@ import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
 import net.postchain.chain0.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.chain0.lib.ft4.external.accounts.updateMainAuthDescriptorOperation
-import net.postchain.chain0.lib.ft4.external.crosschain.APPLY_TRANSFER
-import net.postchain.chain0.lib.ft4.external.crosschain.COMPLETE_TRANSFER
-import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.model.ProviderInfo
@@ -88,7 +82,6 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
-import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
 import net.postchain.eif.hbridge.getEoaAddressesForAccount
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
@@ -98,15 +91,12 @@ import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.images.common.ManagedModeBase
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -120,39 +110,27 @@ import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Uint256
-import org.web3j.crypto.Credentials
 import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Keys
 import org.web3j.crypto.Sign
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
 import org.web3j.tx.Contract
-import org.web3j.tx.FastRawTransactionManager
-import org.web3j.tx.TransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
-import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1EconomyChainMixSlowIntegrationTest {
+class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContainerLogger") {
 
-    private val ecAdminKeyPair = KeyPair.of(
-            "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3",
-            "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0")
-    private val PostchainContainer.ecAdmin get() = client(ecBrid, listOf(ecAdminKeyPair))
-
-    companion object : ManagedModeBase() {
+    companion object {
 
         const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
         const val EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER = "EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER"
         const val EIF_EC_STRATEGY_SENDER_BLOCKCHAIN = "EIF_EC_STRATEGY_SENDER_BLOCKCHAIN"
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
-        const val EC_CHAIN_NAME = "economy_chain"
 
         const val ETH_ASSET_ADDRESS = "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
+        const val ETH_BRIDGE_ADDRESS = "B2ee8499B5e73795F28287A0603d66db6843AAAA"
         const val ETH_ASSET_NETWORK_ID = "11155111"
         const val ASSET_NAME = "tCHR"
 
@@ -166,142 +144,73 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         const val EXTRA_STORAGE_PRICE = 1L
         const val PROVIDER1_VS = "provider1_vs"
         const val PROVIDER2_VS = "provider2_vs"
-
-        private val evmContainerLogger = KotlinLogging.logger("EC_EvmContainerLogger")
-        private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
-        private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
-        private val node3Logger = KotlinLogging.logger("EC_Node3Logger")
-        override val logsSubdir = "ec"
-
-        val hashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
-
-        private val node1KeyPair = KeyPair.of(
-                "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
-                "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
-
-        lateinit var containerName: String
-        lateinit var dappBrid: BlockchainRid
-        lateinit var CAC1: BlockchainRid
-        lateinit var CAC2: BlockchainRid
-
-        // EIF
-        private val evmContainer: GethContainer
-        private val evmContainerCredentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-        private val evmContainerNetworkId = 1337L
-        private val web3j: Web3j
-        private val transactionManager: TransactionManager
-        private val gasProvider = DefaultGasProvider()
-        private lateinit var validator: Validator
-        private lateinit var bridge: TokenBridge
-        private lateinit var bridgeAddress: String
-        private lateinit var testToken: TestToken
-        private lateinit var testTokenAddress: String
-        private val node0EvmAddress = Address("659e4a3726275edFD125F52338ECe0d54d15BD99")
-        private lateinit var eventReceiverBrid: BlockchainRid
-
-        // EIF / ABI
-        private val validatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/Validator.sol/Validator.json")
-        private val tokenBridgeBinary = getBinaryFromArtifactResource("/artifacts/contracts/TokenBridge.sol/TokenBridge.json")
-        private val testTokenBinary = getBinaryFromArtifactResource("/artifacts/contracts/token/TestToken.sol/TestToken.json")
-
-        // EIF / balances
-        private val INITIAL_SUPPLY = BigInteger.valueOf(1_000_000_000L)
         private const val DEPOSIT_NUMBER = 5
-        private val depositAmount = BigInteger.valueOf(1000)
-        private val totalDepositedAmount = DEPOSIT_NUMBER.toBigInteger() * depositAmount
-        private lateinit var assetId: ByteArray
+    }
 
-        // EIF / users
-        // EIF / users / Alice
-        private val alicePubkey = "038f888dec563b5bc253e87abc90afd26c3287021d10236ea19d248043dc39e0b8".hexStringToByteArray()
-        private val alicePrivkey = "71b5b7f8de0661af934a5e4612f3d0ba183e639bdf4e7452fb6457ed3cfbc825".hexStringToByteArray()
-        private val aliceKeyPair = KeyPair(alicePubkey, alicePrivkey)
-        private val aliceEvmAddressStr = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
-        private val aliceEvmAddress = aliceEvmAddressStr.hexStringToByteArray()
-        private lateinit var aliceAuthenticator: FTAuthenticator
+    private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
+    private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
+    private val node3Logger = KotlinLogging.logger("EC_Node3Logger")
+    override val logsSubdir = "ec"
 
-        // EIF / users / Bob
-        private val bobPubkey = "02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80".hexStringToByteArray()
-        private val bobPrivkey = "B31AB878C62B0E940B345C659A456D3573CF25960823C34C7BEEB5D1F813BEFD".hexStringToByteArray()
-        private val bobKeyPair = KeyPair(bobPubkey, bobPrivkey)
-        private val bobEvmAddressStr = "661683e5d36E83B38B1a20247ba6F5c410dC165d"
-        private val bobEvmAddress = bobEvmAddressStr.hexStringToByteArray()
-        private lateinit var bobAccountId: ByteArray
+    lateinit var containerName: String
+    lateinit var dappBrid: BlockchainRid
+    lateinit var CAC1: BlockchainRid
+    lateinit var CAC2: BlockchainRid
 
-        init {
-            // Initialize EVM container
-            evmContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
-                    .withNetwork(network)
-                    .apply {
-                        start()
-                    }
+    // EIF
+    private lateinit var validator: Validator
+    private lateinit var bridge: TokenBridge
+    private lateinit var bridgeAddress: String
+    private lateinit var testToken: TestToken
+    private lateinit var testTokenAddress: String
+    private lateinit var eventReceiverBrid: BlockchainRid
 
-            // Web3j
-            web3j = Web3j.build(HttpService(evmContainer.getExternalGethUrl()))
-            transactionManager = FastRawTransactionManager(
-                    web3j,
-                    evmContainerCredentials,
-                    PollingTransactionReceiptProcessor(web3j, 1000, 30)
-            )
+    // EIF / balances
+    private val INITIAL_SUPPLY = BigInteger.valueOf(1_000_000_000L)
+    private val depositAmount = BigInteger.valueOf(1000)
+    private val totalDepositedAmount = DEPOSIT_NUMBER.toBigInteger() * depositAmount
+    private lateinit var assetId: ByteArray
 
-            // Nodes
-            chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    node1KeyPair,
-                    "config-mix"
-            ).withEifEnv()
+    // EIF / users
+    private lateinit var aliceAuthenticator: FTAuthenticator
 
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
-                    "config-mix"
-            )
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    .withEifEnv()
+    init {
+        // Nodes
+        chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
+        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+                node1KeyPair,
+                "config-mix"
+        ).withEifEnv()
 
-            node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
-                    "config-mix"
-            )
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                    .withMasterDockerConfig()
-                    .withClasspathResourceMapping(
-                            "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                            PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                    )
-                    .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                    .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
-                    .withEifEnv()
+        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+                KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                "config-mix"
+        )
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEifEnv()
 
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
+        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+                KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                "config-mix"
+        )
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
+                .withClasspathResourceMapping(
+                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
+                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
+                )
+                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
+                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                .withEifEnv()
 
-        private fun PostchainContainer.withEifEnv(): PostchainContainer {
-            withEnv("POSTCHAIN_EIF_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-            withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_READ_AHEAD", 200.toString())
-            withEnv("POSTCHAIN_EIF_ETHEREUM_MAX_QUEUE_SIZE", 100.toString())
-            withEnv("POSTCHAIN_EIF_EVM_MAX_TRY_ERRORS", 1.toString())
-            return this
-        }
-
-        private fun getBinaryFromArtifactResource(resourcePath: String): String {
-            val artifactFile = Directory1EconomyChainMixSlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
-            val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
-            return artifactJson.get("bytecode").asString
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            evmContainer.stop()
-            super.breakdown()
-        }
+        removeSubnodeContainers()
+        startNodesAndChain0()
     }
 
     @Test
@@ -412,6 +321,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
                 )
                 // use `TST TestToken ERC-20` instead of `CHR Chromia ERC-20`
                 .replace(ETH_ASSET_ADDRESS, testTokenAddress.substring(2))
+                .replace(ETH_BRIDGE_ADDRESS, bridgeAddress.substring(2))
                 .replace(ETH_ASSET_NETWORK_ID, evmContainerNetworkId.toString())
         )
 
@@ -442,8 +352,8 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         testLogger.info("Registering FT accounts")
 
         // Register Alice account
-        aliceAuthenticator = registerAccount(ecBrid, aliceKeyPair, "Alice")
-        linkAccount(aliceAuthenticator, aliceEvmAddress)
+        aliceAuthenticator = registerAccount(node1, ecAdminKeyPair, ecBrid, aliceKeyPair, "Alice")
+        linkAccount(aliceAuthenticator, aliceEvmAddress, ecBrid)
 
         // Claim initial supply
         aliceAuthenticator.verifyOperationAuthFlags("faucet")
@@ -609,7 +519,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
         val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
 
-        val aliceDappAuthenticator = registerAccount(dappBrid, aliceKeyPair, "Alice")
+        val aliceDappAuthenticator = registerAccount(node1, ecAdminKeyPair, dappBrid, aliceKeyPair, "Alice")
 
         node1.tx(dappBrid, "init", gtv(ecBrid), gtv(assetId))
 
@@ -618,7 +528,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val initialDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
         assertThat(initialDappAliceBalance).isNull()
 
-        performCrossChainTransfer(iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, dappBrid)
+        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, dappBrid, BigInteger.TEN, assetId, listOf(aliceKeyPair.pubKey))
 
         val afterTransferEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         val afterTransferDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)!!.amount
@@ -626,7 +536,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         assertThat(afterTransferDappAliceBalance).isEqualTo(BigInteger.TEN)
 
         testLogger.info("Transfer tCHR to EC from dApp")
-        performCrossChainTransfer(iccfProofTxMaterialBuilder, merkleHashCalculator, aliceDappAuthenticator, dappBrid, ecBrid)
+        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceDappAuthenticator, dappBrid, ecBrid, BigInteger.TEN, assetId, listOf(aliceKeyPair.pubKey))
 
         val afterTransferBackEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         val afterTransferBackDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
@@ -739,7 +649,7 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         val accountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
 
         val updateMainAuthDescriptorSignature = getUpdateMainAuthDescriptorSignature(addressByteArray, accountMainAuthDescriptor, evmKeyPair)
-        val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair, accountId)
+        val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair, accountId, ecBrid)
 
         node1.client(ecBrid, listOf(node1KeyPair)).transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(addressByteArray), listOf(linkEvmEoaAccountSignature))
@@ -908,52 +818,6 @@ class Directory1EconomyChainMixSlowIntegrationTest {
         }
     }
 
-    private fun registerAccount(blockchainRid: BlockchainRid, userKeyPair: KeyPair, username: String): FTAuthenticator {
-        node1.client(blockchainRid, listOf(ecAdminKeyPair)).transactionBuilder().addNop()
-                .registerAccountOperation(userKeyPair.pubKey)
-                .postTransactionUntilConfirmed("Register $username account")
-
-        return FTAuthenticator(userKeyPair, node1.client(blockchainRid, listOf(userKeyPair)))
-    }
-
-    private fun getLinkEvmEoaAccountSignature(addressByteArray: ByteArray, evmKeyPair: ECKeyPair, accountId: ByteArray): Signature {
-        val opName = LINK_EVM_EOA_ACCOUNT
-        val opArgs = gtv(listOf(gtv(addressByteArray)))
-
-        val nonce = gtv(listOf(
-                gtv(ecBrid.data),
-                gtv(opName),
-                opArgs,
-                gtv(0),
-        )).merkleHash(hashCalculator)
-
-        val template = node1.client(ecBrid).getAuthMessageTemplate(opName, opArgs)
-        val message = template.replace("{blockchain_rid}", ecBrid.toHex().uppercase())
-                .replace("{nonce}", nonce.toHex().uppercase())
-                .replace("{account_id}", accountId.toHex())
-
-        val evmSig = Sign.signPrefixedMessage(
-                message.toByteArray(StandardCharsets.UTF_8),
-                evmKeyPair
-        )
-        val signature = Signature(
-                evmSig.r.wrap(),
-                evmSig.s.wrap(),
-                BigInteger(evmSig.v).longValueExact()
-        )
-        return signature
-    }
-
-    private fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray) {
-        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair, userAuthenticator.accountId)
-
-        userAuthenticator.client.transactionBuilder().addNop()
-                .evmSignaturesOperation(listOf(userEvmAddress), listOf(signature))
-                .ftAuthOperation(aliceAuthenticator.accountId, aliceAuthenticator.authDescriptor.id.data)
-                .linkEvmEoaAccountOperation(userEvmAddress)
-                .postTransactionUntilConfirmed("Link EVM account")
-    }
-
     private fun getUpdateMainAuthDescriptorSignature(addressByteArray: ByteArray, accountMainAuthDescriptor: Ft4GetAccountMainAuthDescriptorResult, keyPair: ECKeyPair): Signature {
         val authDescriptorArgs = gtv(gtv(gtv("A"), gtv("T")), gtv(addressByteArray))
         val authDescriptor = gtv(
@@ -987,52 +851,5 @@ class Directory1EconomyChainMixSlowIntegrationTest {
                 BigInteger(signatureData.v).longValueExact()
         )
         return signature
-    }
-
-    private fun performCrossChainTransfer(
-            iccfProofTxMaterialBuilder: IccfProofTxMaterialBuilder,
-            hashCalculator: GtvMerkleHashCalculator,
-            sourceAccountAuthenticator: FTAuthenticator,
-            sourceChain: BlockchainRid,
-            destinationChain: BlockchainRid
-    ) {
-        val initTransferTxRid = sourceAccountAuthenticator.transactionBuilder()
-                .initTransferOperation(sourceAccountAuthenticator.accountId, assetId, BigInteger.TEN, listOf(destinationChain.data), Long.MAX_VALUE)
-                .postAwaitConfirmation().txRid
-
-        val initTransferTx = GtvDecoder.decodeGtv(node1.client(sourceChain).getTransaction(initTransferTxRid))
-
-        val initTxProof = awaitQueryResult {
-            iccfProofTxMaterialBuilder.build(
-                    initTransferTxRid,
-                    initTransferTx.merkleHash(hashCalculator),
-                    listOf(aliceKeyPair.pubKey),
-                    sourceChain,
-                    destinationChain,
-                    forceIntraNetworkIccfOperation = true
-            )
-        }!!
-
-        val applyTransferTxRid = initTxProof.txBuilder
-                .addOperation(APPLY_TRANSFER, initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
-                .postAwaitConfirmation().txRid
-
-        val applyTransferTx = GtvDecoder.decodeGtv(node1.client(destinationChain).getTransaction(applyTransferTxRid))
-
-        val applyTxProof = awaitQueryResult {
-            iccfProofTxMaterialBuilder.build(
-                    applyTransferTxRid,
-                    applyTransferTx.merkleHash(hashCalculator),
-                    listOf(),
-                    destinationChain,
-                    sourceChain,
-                    forceIntraNetworkIccfOperation = true
-            )
-        }!!
-
-        applyTxProof.txBuilder
-                .addOperation(COMPLETE_TRANSFER, applyTransferTx, gtv(1))
-                .postAwaitConfirmation()
-
     }
 }

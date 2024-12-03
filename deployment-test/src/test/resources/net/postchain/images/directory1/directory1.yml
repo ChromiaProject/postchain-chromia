@@ -249,8 +249,10 @@ blockchains:
       economy_chain:
         bsc_asset_network_id: 97
         bsc_asset_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-        eth_asset_network_id: 11155111
+        bsc_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
+        eth_asset_network_id: 1337
         eth_asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
+        eth_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6
@@ -281,6 +283,56 @@ blockchains:
         admin_pubkey: x"02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3"
       economy_chain_test_mint_on_ras_staking:
         amount_to_mint: 1000000000
+  token_chain:
+    module: token_chain
+    config:
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          local:
+            - topic: L_evm_block_events
+              bc-rid: EIF_TC_EVENT_RECEIVER_BRID_PLACEHOLDER
+    moduleArgs:
+      token_chain:
+        listing_fee: 1
+        init_pubkey: x"02E0A8A3C79C9F18B7CEAD2493435AC926B4A527EF670B873F5F1410084EFF9C80" # Bob
+        asset_name: "tCHR"
+        asset_symbol: "tCHR"
+        asset_decimals: 6
+        asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
+        economy_chain_blockchain_rid: x"00"
+        proposal_revoke_timeout_days: 1
+      lib.hbridge:
+        evm_read_offsets:
+          "1337": 0
+      lib.ft4.core.auth:
+        evm_signatures_authorized_operations:
+          - eif.hbridge.link_evm_eoa_account
+      lib.ft4.core.accounts.strategies.transfer:
+        rules:
+          - sender_blockchain:
+              - "$"
+              - x"00"
+            sender: "*"
+            recipient: "*"
+            asset:
+              - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
+                min_amount: 10000000L # 10.0 tCHR
+                issuing_blockchain_rid: x"00"
+            timeout_days: 10
+            strategy: "fee"
+      lib.ft4.core.accounts.strategies.transfer.fee:
+        asset:
+          - name: "tCHR"  # Should match `economy_chain_module_args.asset_name`
+            amount: 10000000L # 10.0 tCHR
+            issuing_blockchain_rid: x"00"
 
 compile:
   rellVersion: 0.13.13

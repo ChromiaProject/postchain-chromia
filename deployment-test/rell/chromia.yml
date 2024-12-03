@@ -63,6 +63,8 @@ blockchains:
       gtx:
         modules:
           - "net.postchain.d1.iccf.IccfGTXModule"
+  test_token_chain_account_creation:
+    module: test_token_chain_account_creation
 
 libs:
   ft4:
