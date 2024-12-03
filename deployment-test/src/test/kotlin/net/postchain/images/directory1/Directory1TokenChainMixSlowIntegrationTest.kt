@@ -497,7 +497,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         val initialBalance = node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!
         accountCreationTxProof.txBuilder
-                .addOperation("ras_iccf", accountCreationTx, gtv(testTokenAssetId))
+                .addOperation("ras_token_iccf", accountCreationTx, gtv(testTokenAssetId))
                 .registerAccountOperation()
                 .postTransactionUntilConfirmed("Registering account via ICCF proof")
 
