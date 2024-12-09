@@ -2,14 +2,18 @@ package net.postchain.d1.anchoring
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import net.postchain.DynamicValueAnswer
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -17,8 +21,18 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.Clock
+
+const val MAX_ANCHORING_DELAY = 1000L
+const val MAX_ANCHORING_BLOCKS_PER_ANCHOR_BLOCK = 100L
 
 class AnchoringSpecialTxExtensionTest {
+
+    private var currentMillis = DynamicValueAnswer(1L)
+
+    private val clock: Clock = mock {
+        on { millis() } doAnswer currentMillis
+    }
 
     lateinit var anchoringReceiverFactory: AnchoringReceiverFactory
     lateinit var sut: AnchoringSpecialTxExtension
@@ -60,7 +74,7 @@ class AnchoringSpecialTxExtensionTest {
             on { create(any(), any()) } doReturn anchoringReceiver
         }
 
-        sut = AnchoringSpecialTxExtension(anchoringReceiverFactory)
+        sut = AnchoringSpecialTxExtension(clock, anchoringReceiverFactory)
         sut.isSigner = { true }
         sut.clusterManagement = mock()
         sut.blockchainConfigProvider = mock()
@@ -182,5 +196,31 @@ class AnchoringSpecialTxExtensionTest {
         verify(pipe1, times(2)).fetchNextRange(any())
         // 3 times b/c mightHaveNewPackets = true
         verify(pipe2, times(3)).fetchNextRange(any())
+    }
+
+    @Test
+    fun `do not build block if there is nothing to anchor`() {
+        assertFalse(sut.shouldBuildBlock())
+    }
+
+    @Test
+    fun `do build block if below max blocks but with waiting blocks and max delay time has passed`() {
+        whenever(pipe1.numberOfNewPackets()).doReturn(1L)
+        assertFalse(sut.shouldBuildBlock()) // Initialize first time
+        assertFalse(sut.shouldBuildBlock())
+        addTime(MAX_ANCHORING_DELAY + 1)
+        assertTrue(sut.shouldBuildBlock())
+    }
+
+    @Test
+    fun `do build block if enough blocks needs to be anchored`() {
+        whenever(pipe1.numberOfNewPackets()).doReturn(1L)
+        assertFalse(sut.shouldBuildBlock()) // Too few
+        whenever(pipe1.numberOfNewPackets()).doReturn(MAX_ANCHORING_BLOCKS_PER_ANCHOR_BLOCK)
+        assertTrue(sut.shouldBuildBlock())
+    }
+
+    private fun addTime(millis: Long) {
+        currentMillis.value = currentMillis.value + millis
     }
 }

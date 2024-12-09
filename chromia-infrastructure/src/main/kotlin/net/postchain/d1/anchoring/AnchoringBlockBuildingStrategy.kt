@@ -8,6 +8,7 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import java.time.Clock
 
+@Deprecated("This logic is now included in AnchoringSpecialTxExtension")
 class AnchoringBlockBuildingStrategy(configData: BaseBlockBuildingStrategyConfigurationData,
                                      blockQueries: BlockQueries,
                                      txQueue: TransactionQueue,

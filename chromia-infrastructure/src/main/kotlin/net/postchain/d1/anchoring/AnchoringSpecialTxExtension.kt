@@ -18,6 +18,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
+import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.d1.Validation
@@ -32,13 +33,16 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
-import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
+import java.time.Clock
 import java.time.Duration
 
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: AnchoringReceiverFactory) : GTXSpecialTxExtension {
+open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUTC(),
+                                       private val anchoringReceiverFactory: AnchoringReceiverFactory)
+    : GTXBlockBuildingAffectingSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -56,6 +60,8 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
     lateinit var anchoringConfig: AnchoringBlockchainConfigData
     var maxTxSize: Long = -1
+
+    private var firstAnchorBlockTime = 0L
 
     /** This is for querying ourselves, i.e. the "anchoring Rell app" */
     private lateinit var module: GTXModule
@@ -326,6 +332,31 @@ open class AnchoringSpecialTxExtension(private val anchoringReceiverFactory: Anc
     }
 
     private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
+
+    override fun blockCommitted(blockData: BlockData) {
+        firstAnchorBlockTime = 0
+    }
+
+    override fun shouldBuildBlock(): Boolean {
+        if (!::anchoringConfig.isInitialized) return false
+
+        val now = clock.millis()
+        if (firstAnchorBlockTime > 0 && now - firstAnchorBlockTime > anchoringConfig.maxAnchoringDelay) return true
+
+        val numberOfBlocksToAnchor: Long = try {
+            numberOfBlocksToAnchor()
+        } catch (e: Exception) {
+            logger.error("Could not fetch number of blocks to anchor", e)
+            return false
+        }
+        if (numberOfBlocksToAnchor >= anchoringConfig.maxAnchoringBlocksPerAnchorBlock) return true
+        if (firstAnchorBlockTime == 0L && numberOfBlocksToAnchor > 0) {
+            firstAnchorBlockTime = now
+            return false
+        }
+
+        return false
+    }
 
     /**
      * Not really a domain object, just used to return some data
