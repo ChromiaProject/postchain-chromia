@@ -103,7 +103,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
     private lateinit var eventReceiverBrid: BlockchainRid
 
     // EIF / balances
-    private val INITIAL_SUPPLY = BigInteger.valueOf(1_000_000_000L)
+    private val initialSupply = BigInteger.valueOf(1_000_000_000L)
     private val depositAmount = BigInteger.valueOf(1000)
     private lateinit var chrAssetId: ByteArray
 
@@ -204,8 +204,8 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
         testToken = Contract.deployRemoteCall(TestToken::class.java, web3j, transactionManager, gasProvider, testTokenBinary, "").send().apply {
-            mint(Address(transactionManager.fromAddress), Uint256(INITIAL_SUPPLY)).send()
-            approve(Address(bridge.contractAddress), Uint256(INITIAL_SUPPLY)).send()
+            mint(Address(transactionManager.fromAddress), Uint256(initialSupply)).send()
+            approve(Address(bridge.contractAddress), Uint256(initialSupply)).send()
         }
         testTokenAddress = testToken.contractAddress
 
@@ -214,7 +214,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         // Assert initial balance
         val balance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
-        assertEquals(INITIAL_SUPPLY, balance.value)
+        assertEquals(initialSupply, balance.value)
     }
 
     @Test
@@ -268,7 +268,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         testLogger.info("Alice account balance is: $aliceBalance")
-        assertThat(aliceBalance).isEqualTo(INITIAL_SUPPLY)
+        assertThat(aliceBalance).isEqualTo(initialSupply)
     }
 
     @Test
@@ -338,7 +338,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         testLogger.info("Transfer tCHR to TC from EC")
         val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
 
-        val amount = BigInteger("100000000") // 100 tchr
+        val amount = BigInteger("300000000") // we need at least 210 tchr = 10 for account creation fee, 100 for token + 100 for bridge
         performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid,
                 tcBrid, amount, chrAssetId, listOf(aliceKeyPair.pubKey))
 
@@ -448,7 +448,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         // check the balance on EVM
         val aliceBalance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
-        assertEquals(aliceBalance.value, INITIAL_SUPPLY - depositAmount)
+        assertEquals(aliceBalance.value, initialSupply - depositAmount)
 
         // check the asset balance on Chromia
         awaitQueryResult {
@@ -470,7 +470,8 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         val newUser = cryptoSystem.generateKeyPair()
 
-        val accountCreationTxRid = node1.client(accountCreationChainBrid, listOf(newUser)).transactionBuilder()
+        val acClient = node1.client(accountCreationChainBrid, listOf(newUser))
+        val accountCreationTxRid = acClient.transactionBuilder()
                 .addOperation("create_token_chain_account", GtvObjectMapper.toGtvArray(AuthDescriptor(
                         AuthType.S,
                         listOf(
@@ -481,9 +482,9 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                         ),
                         GtvNull)))
                 .postTransactionUntilConfirmed("Creating account").txRid
+        awaitConfirmedTx(acClient, accountCreationTxRid, "Creating account")
 
-        val accountCreationTx = GtvDecoder.decodeGtv(node1.client(accountCreationChainBrid).getTransaction(accountCreationTxRid))
-
+        val accountCreationTx = GtvDecoder.decodeGtv(acClient.getTransaction(accountCreationTxRid))
         val accountCreationTxProof = awaitQueryResult {
             iccfProofTxMaterialBuilder.build(
                     accountCreationTxRid,
