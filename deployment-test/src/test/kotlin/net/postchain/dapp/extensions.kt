@@ -7,13 +7,13 @@ import java.lang.Thread.sleep
 import java.time.Duration
 
 /**
- * When we call the "client" it will try 20 times to get the status for the TX, so
+ * When we call the "client" it will try 100 times to get the status for the TX, so
  * we don't have to do much ourselves here.
  *
  * We will repeat the TX ONLY if we get REJECTED, b/c that's a serious problem
  *
  * (WAITING is considered successful, but it could mean that something is wrong since the
- * client tried 20 times and still didn't get "CONFIRMED".)
+ * client tried 100 times and still didn't get "CONFIRMED".)
  *
  */
 fun Postable.postTransactionUntilConfirmed(
