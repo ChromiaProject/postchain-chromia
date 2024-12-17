@@ -29,12 +29,10 @@ import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.clusterAnchorin
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid3
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid2
-import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.receiverCluster
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.remoteSenderChainRid
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.systemAnchoringChainRid
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
-import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -778,7 +776,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
 
-            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isZero()
         }
 
@@ -923,7 +921,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         buildBlock(dappChain1)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
-            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isZero()
         }
 
@@ -1020,7 +1018,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         buildBlock(dappChain1)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
-            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isZero()
         }
 
@@ -1060,7 +1058,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
-            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isEqualTo(2)
             with (result[0]) {
                 assertThat(topic).isEqualTo("L_topic-2")
@@ -1082,7 +1080,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         buildBlock(dappChain1, removeTopicsTx)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
-            val result = dbOperations.loadDappProvidedReceiverTopics(ctx, receiverCluster, ChainUtil.ridOf(dappChain1).data)
+            val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isZero()
         }
     }

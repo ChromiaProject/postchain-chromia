@@ -48,6 +48,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
 
     override fun initializeDB(ctx: EContext) {
         dbOperations.initialize(ctx)
+        specialTxExtension.initialDappProvidedTopics = dbOperations.loadDappProvidedReceiverTopics(ctx)
     }
 
     override fun makeBlockBuilderExtensions() = listOf(blockBuilderExtension)
