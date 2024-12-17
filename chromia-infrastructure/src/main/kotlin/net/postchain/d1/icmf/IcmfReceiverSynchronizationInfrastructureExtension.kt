@@ -71,40 +71,37 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 val rawIcmfReceiverConfig = configuration.rawConfig["icmf"]?.get("receiver")
                         ?: throw UserMistake("Missing configuration key icmf/receiver")
 
-                addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider)
+                addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, txExt.initialDappProvidedTopics)
 
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
                     blockBuilder.addEventListener { update ->
 
                         withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
-                            val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
                             update.forEach {
                                 if (it.replace) {
-                                    dbOperations.deleteDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data)
+                                    dbOperations.deleteDappProvidedReceiverTopics(ctx)
                                 }
                                 if (!it.topics.isNullOrEmpty()) {
-                                    dbOperations.saveDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data, it.topics)
+                                    dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
                                 }
                             }
                             true
                         }
 
                         removeReceivers(configuration.chainID, txExt)
-                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider)
+                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, update.flatMap {
+                            it.topics ?: emptyList()
+                        })
                     }
                 }
             }
         }
     }
 
-    private fun addReceivers(engine: BlockchainEngine, configuration: BlockchainConfiguration, clusterManagement: ClusterManagement, rawIcmfReceiverConfig: Gtv, txExt: IcmfReceiverSpecialTxExtension, maxBlockSize: Long, maxTxSize: Long, queryProvider: ChromiaQueryProvider, blockchainConfigProvider: BlockchainConfigProvider, clientProvider: ChromiaClientProvider) {
+    private fun addReceivers(engine: BlockchainEngine, configuration: BlockchainConfiguration, clusterManagement: ClusterManagement, rawIcmfReceiverConfig: Gtv, txExt: IcmfReceiverSpecialTxExtension, maxBlockSize: Long, maxTxSize: Long, queryProvider: ChromiaQueryProvider, blockchainConfigProvider: BlockchainConfigProvider, clientProvider: ChromiaClientProvider, dappProvidedTopics: List<IcmfReceiverEventTopic>) {
 
-        val config = withReadConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
-            val cluster = clusterManagement.getClusterOfBlockchain(configuration.blockchainRid)
-            val dappProvidedTopics = dbOperations.loadDappProvidedReceiverTopics(ctx, cluster, configuration.blockchainRid.data)
-            mergeConfigs(IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig), dappProvidedTopics)
-        }
+        val config = mergeConfigs(IcmfReceiverBlockchainConfigData.fromGtv(rawIcmfReceiverConfig), dappProvidedTopics)
         txExt.icmfReceiverBlockchainConfigData = config
         txExt.specialTxSizeMargin = config.specialTxMarginBytes
 

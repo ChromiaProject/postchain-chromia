@@ -47,6 +47,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     var maxTxSize: Long = -1
     var specialTxSizeMargin = -1L
     lateinit var directoryChainBrid: BlockchainRid
+    lateinit var initialDappProvidedTopics: List<IcmfReceiverEventTopic>
 
     private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, AnchoredHeaderOp.OP_NAME, NonAnchoredHeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
