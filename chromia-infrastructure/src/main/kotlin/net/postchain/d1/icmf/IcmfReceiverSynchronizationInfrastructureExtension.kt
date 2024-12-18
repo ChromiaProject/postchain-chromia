@@ -77,6 +77,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
                     blockBuilder.addEventListener { update ->
 
+                        val dappProvidedTopics: MutableList<IcmfReceiverEventTopic> = mutableListOf()
                         withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
                             update.forEach {
                                 if (it.replace) {
@@ -86,13 +87,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                                     dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
                                 }
                             }
+                            dappProvidedTopics.addAll(dbOperations.loadDappProvidedReceiverTopics(ctx))
                             true
                         }
 
                         removeReceivers(configuration.chainID, txExt)
-                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, update.flatMap {
-                            it.topics ?: emptyList()
-                        })
+                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, dappProvidedTopics)
                     }
                 }
             }
