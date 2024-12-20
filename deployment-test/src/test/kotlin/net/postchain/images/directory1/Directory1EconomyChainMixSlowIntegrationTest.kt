@@ -95,7 +95,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
@@ -306,7 +306,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                 gtv("EVM"),
                 gtv(evmContainerNetworkId),
                 gtv(testTokenAddress.substring(2).hexStringToByteArray())
-        ).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+        ).merkleHash(GtvMerkleHashCalculatorV1(Secp256K1CryptoSystem()))
 
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!
                 .readText()
@@ -517,7 +517,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                 )
         ))
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
         val aliceDappAuthenticator = registerAccount(node1, ecAdminKeyPair, dappBrid, aliceKeyPair, "Alice")
 

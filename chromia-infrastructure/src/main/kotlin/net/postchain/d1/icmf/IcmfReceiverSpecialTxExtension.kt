@@ -18,7 +18,7 @@ import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.Gtx
@@ -70,7 +70,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         val allOps = mutableListOf<OpData>()
         val messageLimit = AtomicLong(icmfReceiverBlockchainConfigData.messageLimit)
         createNonAnchoredOperations(bctx, hashCalculator, allOps, nonAnchoredReceivers.flatMap { it.getRelevantPipes() }, BASE_SPECIAL_TX_OVERHEAD, messageLimit).let { size ->
@@ -82,7 +82,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     private fun createNonAnchoredOperations(
             bctx: BlockEContext,
-            hashCalculator: GtvMerkleHashCalculator,
+            hashCalculator: GtvMerkleHashCalculatorV1,
             allOps: MutableList<OpData>,
             pipes: List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>>,
             initialSize: Int,
@@ -124,7 +124,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
 
     private fun createAnchoredOperations(
             bctx: BlockEContext,
-            hashCalculator: GtvMerkleHashCalculator,
+            hashCalculator: GtvMerkleHashCalculatorV1,
             allOps: MutableList<OpData>,
             pipes: List<IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>>,
             initialSize: Int,
@@ -192,7 +192,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             allOps: MutableList<OpData>,
             isFull: Boolean,
             currentPrevMessageBlockHeight: Long,
-            hashCalculator: GtvMerkleHashCalculator,
+            hashCalculator: GtvMerkleHashCalculatorV1,
             messageLimit: AtomicLong,
             headerOpCreator: (ByteArray, ByteArray) -> OpData
     ): Pair<Int, Boolean> {
@@ -245,7 +245,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             bctx: BlockEContext,
             ops: List<OpData>
     ): Boolean {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         var currentAnchorHeaderData: AnchorHeaderValidationInfo? = null
         val headerBlockRidsByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         var currentHeaderData: HeaderValidationInfo? = null
@@ -451,7 +451,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     private fun validateHeaders(
             headerBlockRids: Map<String, MutableList<ByteArray>>,
             currentAnchorHeaderData: AnchorHeaderValidationInfo?,
-            hashCalculator: GtvMerkleHashCalculator,
+            hashCalculator: GtvMerkleHashCalculatorV1,
             bctx: BlockEContext
     ): Boolean {
         if (currentAnchorHeaderData != null && headerBlockRids.isNotEmpty()) {
@@ -556,7 +556,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 return false
             }
 
-            val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+            val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
             val computedHash = gtv(hashes.map { gtv(it) }).merkleHash(hashCalculator)
             if (!topicData.hash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for topic: $topic")

@@ -9,7 +9,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.eif.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
 import net.postchain.eif.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 
 class FTAuthenticator(
@@ -21,7 +21,7 @@ class FTAuthenticator(
     val authDescriptor: Ft4GetAccountMainAuthDescriptorResult = client.getAccountMainAuthDescriptor(accountId)
 
     companion object {
-        private val hashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
+        private val hashCalculator = GtvMerkleHashCalculatorV1(Secp256K1CryptoSystem())
     }
 
     fun transactionBuilder(): TransactionBuilder = client.transactionBuilder()

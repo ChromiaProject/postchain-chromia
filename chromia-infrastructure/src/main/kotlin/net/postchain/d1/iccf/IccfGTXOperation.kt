@@ -18,7 +18,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
@@ -38,7 +38,7 @@ class IccfGTXOperation(
     private val nodeManagement = iccfContext.nodeManagement
     private val queryProvider = iccfContext.queryProvider
     private val nodeIsReplica = iccfContext.nodeIsReplica
-    private val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val GtvMerkleHashCalculatorV1 = GtvMerkleHashCalculatorV1(cryptoSystem)
     private val myCluster = clusterManagement.getClusterOfBlockchain(opData.blockchainRID)
     private val nonCustomOps = setOf(ICCF_OP_NAME, GtxNop.OP_NAME, GtxTimeB.OP_NAME)
 
@@ -101,9 +101,9 @@ class IccfGTXOperation(
         }
         verifySourceBlockAnchoringOperationIsPresentInClusterAnchoringTX(clusterAnchoringTx, clusterAnchoringTxOpIndex, sourceBlockRid, sourceTxConfirmationProof)
 
-        val clusterAnchoringTxHash = clusterAnchoringTxGtv.merkleHash(gtvMerkleHashCalculator)
+        val clusterAnchoringTxHash = clusterAnchoringTxGtv.merkleHash(GtvMerkleHashCalculatorV1)
         val clusterAnchoringTxConfirmationProof = GtvObjectMapper.fromGtv(clusterAnchoringTxProof, ConfirmationProof::class.java)
-        val clusterAnchoringBlockRid = GtvDecoder.decodeGtv(clusterAnchoringTxConfirmationProof.blockHeader).merkleHash(gtvMerkleHashCalculator)
+        val clusterAnchoringBlockRid = GtvDecoder.decodeGtv(clusterAnchoringTxConfirmationProof.blockHeader).merkleHash(GtvMerkleHashCalculatorV1)
 
         verifyWitnessesAndMerkleProofTree(clusterAnchoringTxConfirmationProof, clusterAnchoringTx.gtxBody.blockchainRid, clusterAnchoringBlockRid, clusterAnchoringTxHash)
         verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringTx, clusterAnchoringBlockRid)
@@ -116,7 +116,7 @@ class IccfGTXOperation(
     }
 
     private fun verifyMerkleProofTree(confirmationProof: ConfirmationProof, decodedBlockHeader: BlockHeaderData, txHash: ByteArray) {
-        val proofRootHash = confirmationProof.merkleProofTree.merkleHash(gtvMerkleHashCalculator)
+        val proofRootHash = confirmationProof.merkleProofTree.merkleHash(GtvMerkleHashCalculatorV1)
         if (!decodedBlockHeader.getMerkleRootHash().contentEquals(proofRootHash)) {
             throw UserMistake("Proof tree root hash mismatch, expected ${decodedBlockHeader.getMerkleRootHash().toHex()} but was ${proofRootHash.toHex()}")
         }
@@ -212,7 +212,7 @@ class IccfGTXOperation(
         val sourceTxHash = decodeSafely(args, 1) { it.asByteArray() }
         val sourceTxProof = GtvDecoder.decodeGtv(decodeSafely(args, 2) { it.asByteArray() })
         val sourceTxConfirmationProof = GtvObjectMapper.fromGtv(sourceTxProof, ConfirmationProof::class.java)
-        val sourceBlockRid = GtvDecoder.decodeGtv(sourceTxConfirmationProof.blockHeader).merkleHash(gtvMerkleHashCalculator)
+        val sourceBlockRid = GtvDecoder.decodeGtv(sourceTxConfirmationProof.blockHeader).merkleHash(GtvMerkleHashCalculatorV1)
         return SourceInfo(sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid)
     }
 

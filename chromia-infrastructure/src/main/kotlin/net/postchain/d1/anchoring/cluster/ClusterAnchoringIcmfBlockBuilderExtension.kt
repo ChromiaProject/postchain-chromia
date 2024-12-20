@@ -10,7 +10,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 
 const val EVENT_TYPE = "icmf_header"
@@ -40,7 +40,7 @@ class ClusterAnchoringIcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxE
      * @return extra data for block header
      */
     override fun finalize(): Map<String, Gtv> {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         val hashesByTopic = queuedEvents
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic

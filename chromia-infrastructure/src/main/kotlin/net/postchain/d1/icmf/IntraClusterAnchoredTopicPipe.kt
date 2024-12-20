@@ -14,7 +14,7 @@ import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 
 class IntraClusterAnchoredTopicPipe(
@@ -88,7 +88,7 @@ class IntraClusterAnchoredTopicPipe(
                     IcmfMessage(it, size)
                 }
 
-                val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+                val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem))
 
                 val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                 if (icmfHeaderData == null) {

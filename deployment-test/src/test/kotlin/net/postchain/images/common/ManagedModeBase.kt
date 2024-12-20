@@ -51,7 +51,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.awaitQueryResult
@@ -352,7 +352,7 @@ open class ManagedModeBase {
         val targetDapp = dapps["test_dapp2"]!!
         val txToProve = dappTxs[sourceDapp]!!
 
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(txToProve.gtxBody.calculateTxRid(hashCalculator).toHex()),
                 txToProve.toGtv().merkleHash(hashCalculator),

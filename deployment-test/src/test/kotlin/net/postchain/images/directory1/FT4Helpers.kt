@@ -12,7 +12,7 @@ import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import java.math.BigInteger
 
@@ -32,7 +32,7 @@ fun registerAccount(
 fun performCrossChainTransfer(
         node: PostchainContainer,
         iccfProofTxMaterialBuilder: IccfProofTxMaterialBuilder,
-        hashCalculator: GtvMerkleHashCalculator,
+        hashCalculator: GtvMerkleHashCalculatorV1,
         sourceAccountAuthenticator: FTAuthenticator,
         sourceChain: BlockchainRid,
         destinationChain: BlockchainRid,

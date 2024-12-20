@@ -17,7 +17,7 @@ import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.AfterAll
 import org.testcontainers.containers.output.Slf4jLogConsumer
@@ -87,7 +87,7 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
         val opName = LINK_EVM_EOA_ACCOUNT
         val opArgs = gtv(listOf(gtv(addressByteArray)))
 
-        val hashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
+        val hashCalculator = GtvMerkleHashCalculatorV1(Secp256K1CryptoSystem())
         val nonce = gtv(listOf(
                 gtv(brid),
                 gtv(opName),

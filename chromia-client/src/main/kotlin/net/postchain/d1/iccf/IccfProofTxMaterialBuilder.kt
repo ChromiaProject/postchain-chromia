@@ -17,13 +17,13 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 
 class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClientProvider) {
     private val cryptoSystem = chromiaClientProvider.cryptoSystem
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     private val clusterManagement = chromiaClientProvider.clusterManagement
 
     fun build(

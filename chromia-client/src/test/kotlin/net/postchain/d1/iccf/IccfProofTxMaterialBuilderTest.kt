@@ -33,7 +33,7 @@ import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
@@ -56,7 +56,7 @@ class IccfProofTxMaterialBuilderTest {
     private val mockServerUrl = "http://localhost:7740"
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
     private val sourceBlockchainRID = BlockchainRid.buildRepeat(0)
     private val clusterATargetBlockchainRID = BlockchainRid.buildRepeat(1)

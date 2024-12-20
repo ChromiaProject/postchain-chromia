@@ -21,7 +21,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
@@ -42,7 +42,7 @@ import org.mockito.kotlin.verify
 class IccfValidationTest {
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     private val sourceBlockchainRid = BlockchainRid.buildRepeat(0)
     private val targetBlockchainRid = BlockchainRid.buildRepeat(1)
     private val clusterAnchoringChainRid = BlockchainRid.buildRepeat(2)

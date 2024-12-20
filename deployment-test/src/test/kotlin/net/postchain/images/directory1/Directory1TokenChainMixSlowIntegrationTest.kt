@@ -55,7 +55,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
@@ -333,7 +333,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 )
         ))
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
         testLogger.info("Transfer tCHR to TC from EC")
         val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)

@@ -40,7 +40,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
 import org.apache.logging.log4j.core.Logger
@@ -729,7 +729,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         )
 
         buildBlockNoWait(nodes, dappChain, 2)
-        awaitChainRestarted(dappChain, 1, skipToHeightConfig.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        awaitChainRestarted(dappChain, 1, skipToHeightConfig.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem)))
 
         // skip config should be applied, verify that we don't care about messages at height 1
         setupNonAnchoredQueriesMock(messageHeight = 1, prevMessageHeight = 0)
@@ -1121,7 +1121,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     private fun createBlockDetail(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, topic: String, messageHeight: Long = 0, prevMessageHeight: Long = -1): BlockDetail {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
                 gtv(ByteArray(32) { messageHeight.toByte() }),
@@ -1160,7 +1160,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     private fun buildAnchorHeader(icmfHeaders: List<ByteArray>, prevHeight: Long = -1, topic: String = "my-topic"): BlockDetail {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         val icmfBlockRids = icmfHeaders.map {
             val decodedHeader = BlockHeaderData.fromBinary(it)
             val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)

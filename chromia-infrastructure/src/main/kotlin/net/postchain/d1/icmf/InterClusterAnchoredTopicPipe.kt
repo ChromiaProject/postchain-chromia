@@ -27,7 +27,7 @@ import net.postchain.d1.getCachedPeers
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -86,7 +86,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     }
 
     private suspend fun fetchMessages() {
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
@@ -275,7 +275,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 IcmfMessage(it, size)
             }
 
-            val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+            val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
             val computedHash = gtv(bodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator)
 
             if (!expectedMessagesHash.contentEquals(computedHash)) {

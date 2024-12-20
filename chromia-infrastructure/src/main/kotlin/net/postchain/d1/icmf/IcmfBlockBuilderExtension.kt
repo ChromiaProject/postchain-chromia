@@ -11,7 +11,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 
 const val ICMF_MESSAGE_TYPE = "icmf_message"
@@ -52,7 +52,7 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
      * @return extra data for block header
      */
     override fun finalize(): Map<String, Gtv> {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         return if (queuedEvents.isNotEmpty()) {
             val hashesByTopic = queuedEvents
                     .groupBy { it.topic }

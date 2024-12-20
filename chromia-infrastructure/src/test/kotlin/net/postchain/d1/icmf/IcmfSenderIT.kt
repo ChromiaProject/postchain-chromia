@@ -13,7 +13,7 @@ import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
 import org.awaitility.Duration
@@ -138,10 +138,9 @@ class IcmfSenderIT : IcmfBaseIT() {
         for (node in getChainNodes(dappChain)) {
             withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) {
                 val blockQueries = node.getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
-                val blockRid = blockQueries.getBlockRid(height).get()
-                val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
+                val blockHeader = blockQueries.getBlockAtHeight(height).get()!!.header
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
-                val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+                val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
                 val expectedHash = gtv(expectedMessages.map { message -> gtv(gtv(message).merkleHash(hashCalculator)) })
                         .merkleHash(hashCalculator)
 
@@ -171,8 +170,7 @@ class IcmfSenderIT : IcmfBaseIT() {
         for (node in getChainNodes(dappChain)) {
             withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) {
                 val blockQueries = node.getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
-                val blockRid = blockQueries.getBlockRid(height).get()
-                val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
+                val blockHeader = blockQueries.getBlockAtHeight(height).get()!!.header
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
                 assertThat(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]).isNull()
             }
