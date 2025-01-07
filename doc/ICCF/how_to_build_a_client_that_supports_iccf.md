@@ -2,7 +2,7 @@
 
 This documentation is intended for client developers that want to build support for ICCF in their client.
 
-Kotlin reference implementation [IccfProofTxMaterialBuilder](https://gitlab.com/chromaway/postchain-chromia/-/blob/dev/chromia-client/src/main/kotlin/net/postchain/d1/iccf/IccfProofTxMaterialBuilder.kt).
+Kotlin reference implementation [IccfProofTxMaterialBuilder](https://gitlab.com/chromaway/core/postchain-client/-/blob/dev/chromia-client/src/main/kotlin/net/postchain/d1/iccf/IccfProofTxMaterialBuilder.kt).
 
 ## Client provider
 
@@ -11,7 +11,7 @@ It is highly recommended that you build support in your client for node discover
 Specifically this means building a utility function that given a blockchain RID returns a client for that blockchain with all the nodes running the chain as possible endpoint URLs.
 
 This can be done by querying management chain with query `cm_get_blockchain_api_urls(blockchain_rid: byte_array)`. \
-See [ChromiaClientProvider](https://gitlab.com/chromaway/postchain-chromia/-/blob/dev/chromia-client/src/main/kotlin/net/postchain/d1/client/ChromiaClientProvider.kt) as a reference.
+See [ChromiaClientProvider](https://gitlab.com/chromaway/core/postchain-client/-/blob/dev/chromia-client/src/main/kotlin/net/postchain/d1/client/ChromiaClientProvider.kt) as a reference.
 
 ## Intra network
 

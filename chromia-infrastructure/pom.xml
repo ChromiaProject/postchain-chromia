@@ -41,7 +41,7 @@
             <artifactId>chromia-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.postchain</groupId>
+            <groupId>net.postchain.client</groupId>
             <artifactId>chromia-client</artifactId>
         </dependency>
         <dependency>

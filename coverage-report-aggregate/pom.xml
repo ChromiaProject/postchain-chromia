@@ -18,16 +18,6 @@
         <!-- Postchain modules to aggregate coverage reports -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>chromia-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>chromia-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
             <artifactId>chromia-infrastructure</artifactId>
             <version>${project.version}</version>
         </dependency>
