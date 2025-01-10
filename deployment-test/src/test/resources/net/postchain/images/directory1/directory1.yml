@@ -327,17 +327,24 @@ blockchains:
           - eif.hbridge.link_evm_eoa_account
       lib.ft4.core.accounts.strategies.transfer:
         rules:
-          - sender_blockchain:
-              - "$"
-              - x"00"
+          - sender_blockchain: "*"
             sender: "*"
             recipient: "*"
             asset:
               - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
-                min_amount: 10000000L # 10.0 tCHR
+                min_amount: 1000000L # 1.0 tCHR
                 issuing_blockchain_rid: x"00"
             timeout_days: 10
             strategy: "fee"
+          - sender_blockchain: x"00"
+            sender: "X"
+            recipient: "X"
+            asset:
+              - name: "tCHR" # Should match `economy_chain_module_args.asset_name`
+                min_amount: 1L # Smallest possible unit of tCHR should be OK
+                issuing_blockchain_rid: x"00"
+            timeout_days: 10
+            strategy: "open"
       lib.ft4.core.accounts.strategies.transfer.fee:
         asset:
           - name: "tCHR"  # Should match `economy_chain_module_args.asset_name`
