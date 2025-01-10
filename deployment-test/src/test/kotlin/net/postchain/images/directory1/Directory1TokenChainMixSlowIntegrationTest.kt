@@ -17,7 +17,7 @@ import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOpe
 import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
-import net.postchain.chain0.lib.ft4.core.accounts.strategies.transfer.fee.rasTransferFeeOperation
+import net.postchain.chain0.lib.ft4.core.accounts.strategies.transfer.open.rasTransferOpenOperation
 import net.postchain.chain0.lib.ft4.external.accounts.strategies.registerAccountOperation
 import net.postchain.chain0.lib.hbridge.BridgeMode
 import net.postchain.chain0.model.ProviderInfo
@@ -338,13 +338,12 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         testLogger.info("Transfer tCHR to TC from EC")
         val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
 
-        val amount = BigInteger("300000000") // we need at least 210 tchr = 10 for account creation fee, 100 for token + 100 for bridge
+        val amount = BigInteger("300000000") // we need at least 200 tchr = 100 for token + 100 for bridge
         performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid,
                 tcBrid, amount, chrAssetId, listOf(aliceKeyPair.pubKey))
 
         node1.client(tcBrid, listOf(aliceKeyPair)).transactionBuilder()
-                .rasTransferFeeOperation(
-                chrAssetId,
+                .rasTransferOpenOperation(
                 AuthDescriptor(
                         AuthType.valueOf(aliceAuthenticator.authDescriptor.authType.name),
                         aliceAuthenticator.authDescriptor.args.asArray().toList(),
@@ -358,7 +357,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         val afterTransferEcAliceBalance = node1.ec.getBalance(aliceAuthenticator.accountId)
         val afterTransferTcAliceBalance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount
         assertThat(initialEcAliceBalance - afterTransferEcAliceBalance).isEqualTo(amount)
-        assertThat(afterTransferTcAliceBalance).isEqualTo(amount.subtract(BigInteger("10000000")))
+        assertThat(afterTransferTcAliceBalance).isEqualTo(amount)
     }
 
     @Test
