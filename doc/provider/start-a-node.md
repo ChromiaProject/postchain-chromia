@@ -4,7 +4,7 @@ Before you start a node, postgres must be installed. See official [postgres](htt
 documentation or start a postgres instance using Docker:
 
 ```shell
-docker run --name postgres -e POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8" -e POSTGRES_PASSWORD=<postgres-user> -e POSTGRES_USER=<postgres-pw> -p 5432:5432 -d postgres:14.14-alpine3.20@sha256:2bc30c8766a199d04c65abac9b4c08d0498cf96ebd256a02c31e8cc6ad95a4d6
+docker run --name postgres -e POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8" -e POSTGRES_PASSWORD=<postgres-user> -e POSTGRES_USER=<postgres-pw> -p 5432:5432 -d postgres:16.6-alpine3.21@sha256:aba1fab94626cf8b0f4549055214239a37e0a690f03f142b7bca05b9ed36c6db
 ```
 
 A node running Chromia can be started as a Docker container or as a native process. A node configuration file is 

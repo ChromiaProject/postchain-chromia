@@ -6,7 +6,7 @@ import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 
-class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:14.14-alpine3.20@sha256:2bc30c8766a199d04c65abac9b4c08d0498cf96ebd256a02c31e8cc6ad95a4d6"))
+class ChromaWayPostgresContainer(dockerImageName: DockerImageName = DockerImageName.parse("postgres:16.6-alpine3.21@sha256:aba1fab94626cf8b0f4549055214239a37e0a690f03f142b7bca05b9ed36c6db"))
     : JdbcDatabaseContainer<ChromaWayPostgresContainer>(dockerImageName) {
 
     companion object {
