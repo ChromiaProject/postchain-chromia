@@ -24,7 +24,7 @@ checkout_commit() {
 build_docker_images() {
   local revision="$1"
   local platform="$2"
-  local docker_image="registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.0.4@sha256:88452414ed925621474c30416be80d35acd9cfe5a2d5b74cc73f571a6fa61cce"
+  local docker_image="registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.0.5@sha256:263fc66ab6ed7b3ee9afbd3726c6ea65dc16e186d41fee2b1844bcad71f7f864"
 
   local os_type
 
