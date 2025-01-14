@@ -14,11 +14,14 @@ import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
+import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
+import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
 import net.postchain.chain0.evm_transaction_submitter.getEvmTransactionSubmitterChainRid
 import net.postchain.chain0.evm_transaction_submitter.initEvmTransactionSubmitterChainOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposeContainerOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.PostchainClient
@@ -73,12 +76,14 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
     private lateinit var directoryChainValidator: DirectoryChainValidator
     private lateinit var anchoring: Anchoring
     private lateinit var validator: ManagedValidator
+    private lateinit var ecValidator: ManagedValidator
 
     private val directoryChainValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/DirectoryChainValidator.sol/DirectoryChainValidator.json")
     private val managedValidatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/validatorupdate/ManagedValidator.sol/ManagedValidator.json")
     private val anchoringBinary = getBinaryFromArtifactResource("/artifacts/contracts/anchoring/Anchoring.sol/Anchoring.json")
 
     private lateinit var txsClient: PostchainClient
+    private lateinit var txSubmitterBrid: BlockchainRid
 
     init {
         // Nodes
@@ -148,8 +153,15 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                     .postTransactionUntilConfirmed("init")
             assertThat(getSummary().providers).isEqualTo(1L)
             assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            assertAnchoringChainProperties()
+
+            // We pretend that this is EC just to be able to test system chain bridges
+            val configGtv = compileDapp("test_dapp3")
+            transactionBuilder()
+                    .initEconomyChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv))
+                    .postTransactionUntilConfirmed("Added mocked economy chain")
+            ecBrid = BlockchainRid(node1.c0.getEconomyChainRid()!!)
         }
-        assertAnchoringChainProperties()
     }
 
     @Test
@@ -169,6 +181,10 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
         // Deploy anchoring contract
         val encodedAnchoringConstructor = FunctionEncoder.encodeConstructor(listOf(Address(validator.contractAddress), Bytes32(systemAnchoringBrid.data)))
         anchoring = Contract.deployRemoteCall(Anchoring::class.java, web3j, transactionManager, gasProvider, anchoringBinary, encodedAnchoringConstructor).send()
+
+        // Deploy mocked validator contract
+        ecValidator = Contract.deployRemoteCall(ManagedValidator::class.java, web3j, transactionManager, gasProvider, managedValidatorBinary, encodedValidatorConstructor).send()
+        ecValidator.setBlockchainRid(Bytes32(ecBrid.data)).send()
     }
 
     @Test
@@ -191,7 +207,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 .postTransactionUntilConfirmed("Add $EVM_TX_SUBMITTER_CHAIN")
 
         val evmTransactionSubmitterChainRid = node1.c0.getEvmTransactionSubmitterChainRid()
-        val txSubmitterBrid = BlockchainRid(evmTransactionSubmitterChainRid!!)
+        txSubmitterBrid = BlockchainRid(evmTransactionSubmitterChainRid!!)
         txsClient = node1.client(txSubmitterBrid, listOf(provider1KeyPair))
 
         testLogger.info { "$EVM_TX_SUBMITTER_CHAIN deployed: $txSubmitterBrid" }
@@ -232,9 +248,37 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
         assertAnchoringInProgress(listOf(node1.pubkey, node2.pubkey))
     }
 
-    // In order to verify that anchoring check works on both subnode and non-subnode chains we start a dapp in a container
     @Test
     @Order(6)
+    fun `Verify system bridge can be added dynamically`() {
+        val xml = this::class.java.getResource("/directory1deployment/transaction_submitter_with_system_bridge.xml")!!
+                .readText()
+                .replace("DIRECTORY_CHAIN_VALIDATOR_VALUE", directoryChainValidator.contractAddress.substring(2))
+                .replace("x\"DIRECTORY_CHAIN_BRID_VALUE\"", chain0Brid.toHex())
+                .replace("x\"SYSTEM_ANCHORING_CHAIN_BRID_VALUE\"", systemAnchoringBrid.toHex())
+                .replace("ANCHORING_CONTRACT_VALUE", anchoring.contractAddress.substring(2))
+                .replace("VALIDATOR_CONTRACT_VALUE", validator.contractAddress.substring(2))
+                .replace("x\"SYSTEM_CHAIN_BRID_VALUE\"", ecBrid.toHex())
+                .replace("SYSTEM_VALIDATOR_CONTRACT", ecValidator.contractAddress.substring(2))
+        val evmTxSubmitterChainGtvConfig = GtvMLParser.parseGtvML(xml)
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, txSubmitterBrid, GtvEncoder.encodeGtv(evmTxSubmitterChainGtvConfig), "")
+                .postTransactionUntilConfirmed("Add new system chain bridge")
+
+        voteOnAllProposals(listOf(node2.provider, node3.provider))
+
+        // Assert that signer update transaction is submitted successfully
+        Awaitility.await().atMost(3, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted {
+            val latestSignerListUpdateTxs = txsClient.latestSignerListUpdateTxs(ecBrid)
+            testLogger.info { "Waiting for signer update transaction - ${latestSignerListUpdateTxs?.status}" }
+            assertThat(latestSignerListUpdateTxs?.status).isNotNull().isEqualTo(SignerListUpdateStatus.COMPLETED)
+        }
+    }
+
+    // In order to verify that anchoring check works on both subnode and non-subnode chains we start a dapp in a container
+    @Test
+    @Order(7)
     fun `Launch new dApp`() {
         testLogger.info { "Add node3 with subnode arch" }
         val newProviders = listOf(
@@ -268,14 +312,14 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
         deployDapp("test_dapp", dappContainer)
 
         nodes().forEach { node ->
-            assertThat(node.c0.getBlockchains(true).size).isEqualTo(5)
+            assertThat(node.c0.getBlockchains(true).size).isEqualTo(6)
         }
 
         assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities")
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `Verify anchored block heights`() {
         nodes().forEach { node ->
             val dappClient = node.client(dapps["test_dapp"]!!)
