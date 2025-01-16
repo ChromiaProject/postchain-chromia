@@ -118,7 +118,7 @@ class PostchainContainer(
             createClient(brid, signers, merkleHashVersion)
 
     private fun createClient(brid: BlockchainRid, signers: List<KeyPair>, merkleHashVersion: Int): PostchainClient =
-            AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers, merkleHashVersion)))
+            AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers, merkleHashVersion = merkleHashVersion)))
 
     fun peerInfo(): D1PeerInfo = D1PeerInfo(apiPath(), pubkey)
 
