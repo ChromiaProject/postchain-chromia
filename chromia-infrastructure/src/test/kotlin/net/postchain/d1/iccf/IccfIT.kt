@@ -23,7 +23,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.GTXTransaction
@@ -37,7 +37,9 @@ import java.io.File
 
 class IccfIT : ManagedModeTest() {
 
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    // TODO [use-new-algo] use new hash algorithm here and in test configs when Rell is updated
+
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
     private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
     private val sourceDappGtvConfig = GtvMLParser.parseGtvML(
@@ -86,7 +88,8 @@ class IccfIT : ManagedModeTest() {
         buildBlock(targetChain, 0)
         val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
         val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
-        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+        val txRids = targetChainBlockQueries.getBlockTransactionRids(blockRid).get()
+        assertThat(txRids.map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
     @ParameterizedTest
@@ -146,11 +149,11 @@ class IccfIT : ManagedModeTest() {
 
     private fun enqueueTxWithOps(chainId: Long, operations: List<OpData>): GTXTransaction {
         val nodes = getChainNodes(chainId)
-        val gtxBuilder = GtxBuilder(ChainUtil.ridOf(chainId), listOf(), cryptoSystem)
+        val gtxBuilder = GtxBuilder(ChainUtil.ridOf(chainId), listOf(), cryptoSystem, hashCalculator)
         operations.forEach { gtxBuilder.addOperation(it.opName, *it.args) }
 
         val module = (nodes[0].getBlockchainInstance(chainId).blockchainEngine.getConfiguration() as GTXModuleAware).module
-        val tx = GTXTransactionFactory(ChainUtil.ridOf(chainId), module, cryptoSystem)
+        val tx = GTXTransactionFactory(ChainUtil.ridOf(chainId), module, cryptoSystem, hashCalculator)
                 .build(gtxBuilder.finish().buildGtx())
 
         nodes.forEach { it.transactionQueue(chainId).enqueue(tx) }

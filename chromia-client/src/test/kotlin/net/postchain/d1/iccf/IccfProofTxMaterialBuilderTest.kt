@@ -27,13 +27,16 @@ import net.postchain.crypto.Signature
 import net.postchain.crypto.encodeSignature
 import net.postchain.crypto.secp256k1_decodeSignature
 import net.postchain.d1.client.ChromiaClientProvider
+import net.postchain.d1.client.ConfirmationProofData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.generateProof
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
@@ -56,7 +59,7 @@ class IccfProofTxMaterialBuilderTest {
     private val mockServerUrl = "http://localhost:7740"
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     private val sourceBlockchainRID = BlockchainRid.buildRepeat(0)
     private val clusterATargetBlockchainRID = BlockchainRid.buildRepeat(1)
@@ -78,14 +81,16 @@ class IccfProofTxMaterialBuilderTest {
             cryptoSystem.generateKeyPair(),
             cryptoSystem.generateKeyPair()
     )
-    private val clientTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem)
+    private val clientTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem, hashCalculator)
             .addOperation("dummy")
             .finish()
             .sign(cryptoSystem.buildSigMaker(clientTxSigners[0]))
             .sign(cryptoSystem.buildSigMaker(clientTxSigners[1]))
             .buildGtx()
     private val clientTxHash = clientTx.toGtv().merkleHash(hashCalculator)
-    private val dummyBlockHeader = gtv(ByteArray(32))
+    private val dummyBlockHeader = gtv(listOf(GtvNull, GtvNull, GtvNull, GtvNull, GtvNull, GtvNull, gtv(mapOf(
+            EXTRA_HEADER_MERKLE_HASH_VERSION_NAME to gtv(2)
+    ))))
 
     @BeforeEach
     fun setup() {
@@ -167,9 +172,14 @@ class IccfProofTxMaterialBuilderTest {
         )
 
         // Does not really matter what the content of the proof is
-        val anchoringConfirmationProof = GtvEncoder.encodeGtv(gtv(
-                "hash" to gtv(anchoringTx.toGtv().merkleHash(hashCalculator))
-        ))
+        val anchoringConfirmationProof = GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(ConfirmationProofData(
+                anchoringTx.toGtv().merkleHash(hashCalculator),
+                GtvEncoder.encodeGtv(dummyBlockHeader),
+                ByteArray(0),
+                gtv(listOf(gtv(0))).generateProof(listOf(0), hashCalculator),
+                0
+        )))
+
         stubFor(get("/tx/${sourceClusterAnchoringChain.toHex()}/${anchoringTxRid.toHex()}/confirmationProof").willReturn(okForContentType(
                 JsonContentType, """{"proof":"${anchoringConfirmationProof.toHex()}"}"""
         )))
@@ -197,7 +207,7 @@ class IccfProofTxMaterialBuilderTest {
 
     @Test
     fun hashAndSignatureMismatch() {
-        val actualTx = GtxBuilder(sourceBlockchainRID, listOf(clientTxSigners[0].pubKey.data), cryptoSystem)
+        val actualTx = GtxBuilder(sourceBlockchainRID, listOf(clientTxSigners[0].pubKey.data), cryptoSystem, hashCalculator)
                 .addOperation("dummy")
                 .finish()
                 .sign(cryptoSystem.buildSigMaker(clientTxSigners[0]))
@@ -223,7 +233,7 @@ class IccfProofTxMaterialBuilderTest {
 
     @Test
     fun hashMismatchWithReorderedSignatures() {
-        val actualTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem)
+        val actualTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem, hashCalculator)
                 .addOperation("dummy")
                 .finish()
                 .sign(cryptoSystem.buildSigMaker(clientTxSigners[1]))
@@ -250,7 +260,7 @@ class IccfProofTxMaterialBuilderTest {
         val newSignatureSValue = s.negate().mod(CURVE_PARAMS.n)
         val newSignature = encodeSignature(r, newSignatureSValue)
 
-        val actualTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem)
+        val actualTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem, hashCalculator)
                 .addOperation("dummy")
                 .finish()
                 .sign(Signature(clientTxSigners[0].pubKey.data, newSignature))
@@ -270,10 +280,13 @@ class IccfProofTxMaterialBuilderTest {
 
     private fun generateAndStubConfirmationProof(proofHashOverride: Hash? = null): ByteArray {
         // We are only concerned about the hash and block header fields
-        val confirmationProof = GtvEncoder.encodeGtv(gtv(
-                "hash" to gtv(proofHashOverride ?: clientTxHash),
-                "blockHeader" to gtv(GtvEncoder.encodeGtv(dummyBlockHeader))
-        ))
+        val confirmationProof = GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(ConfirmationProofData(
+                proofHashOverride ?: clientTxHash,
+                GtvEncoder.encodeGtv(dummyBlockHeader),
+                ByteArray(0),
+                gtv(listOf(gtv(0))).generateProof(listOf(0), hashCalculator),
+                0
+        )))
 
         stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.gtxBody.calculateTxRid(hashCalculator).toHex()}/confirmationProof").willReturn(okForContentType(
                 JsonContentType, """{"proof":"${confirmationProof.toHex()}"}"""

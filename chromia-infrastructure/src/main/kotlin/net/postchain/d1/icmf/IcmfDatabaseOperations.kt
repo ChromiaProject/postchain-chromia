@@ -14,7 +14,7 @@ interface IcmfDatabaseOperations {
     fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long)
     fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage?
     fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int>
-    fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray)
+    fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long)
     fun imprecateSpilledMessage(ctx: EContext, serial: Long)
     fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray)
     fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long
@@ -41,7 +41,8 @@ data class SpilledMessage(
         val serial: Long,
         val hash: ByteArray,
         val cluster: String,
-        val anchorHeight: Long
+        val anchorHeight: Long,
+        val merkleHashVersion: Long
 )
 
 data class IcmfMessageAtHeight(

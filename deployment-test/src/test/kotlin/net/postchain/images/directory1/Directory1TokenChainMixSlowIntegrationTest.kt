@@ -33,6 +33,8 @@ import net.postchain.chain0.token_chain.proposeTokenBridgeOperation
 import net.postchain.chain0.token_chain.proposeTokenOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initEvmEventReceiverTokenChainOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initTokenChainOperation
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.WrappedByteArray
@@ -55,7 +57,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
@@ -326,14 +328,17 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
     @Order(7)
     fun `Perform cross-chain transfers between EC and TC`() {
         testLogger.info("Initializing cross chain transfer from EC to TC")
-        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
-                ClusterManagementImpl(node1.c0),
-                mapOf(
-                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
-                )
-        ))
+        val chromiaClientProvider = ChromiaClientProvider(
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0),
+                        mapOf(
+                                systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
+                        )
+                ),
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+        )
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
         testLogger.info("Transfer tCHR to TC from EC")
         val initialEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
@@ -459,12 +464,15 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
     @Test
     @Order(12)
     fun `Create a new account on token chain`() {
-        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
-                ClusterManagementImpl(node1.c0),
-                mapOf(
-                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
-                )
-        ))
+        val chromiaClientProvider = ChromiaClientProvider(
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0),
+                        mapOf(
+                                systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
+                        )
+                ),
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+        )
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
 
         val newUser = cryptoSystem.generateKeyPair()

@@ -2,6 +2,8 @@ blockchains:
   test_dapp:
     module: test_dapp
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       blockstrategy:
         maxblocktime: 1000
         maxblocktransactions: 500
@@ -14,6 +16,8 @@ blockchains:
   test_dapp2:
     module: test_dapp2
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -34,6 +38,8 @@ blockchains:
   test_dapp3:
     module: test_dapp3
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -46,6 +52,8 @@ blockchains:
   test_dapp5:
     module: test_dapp5
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       blockstrategy:
         maxblocktime: 2001
         maxblocktransactions: 501
@@ -58,6 +66,8 @@ blockchains:
   test_cross_chain_transfer:
     module: test_cross_chain_transfer
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       blockstrategy:
         maxblocktime: 1000
       gtx:
@@ -65,6 +75,9 @@ blockchains:
           - "net.postchain.d1.iccf.IccfGTXModule"
   test_token_chain_account_creation:
     module: test_token_chain_account_creation
+    config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
 
 libs:
   ft4:

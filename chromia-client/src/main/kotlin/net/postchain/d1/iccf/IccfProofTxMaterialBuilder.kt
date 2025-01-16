@@ -14,16 +14,20 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.d1.client.ChromiaClientProvider
-import net.postchain.gtv.Gtv
+import net.postchain.d1.client.ConfirmationProofData
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 
+const val EXTRA_HEADER_FIELD_INDEX = 6
+const val EXTRA_HEADER_MERKLE_HASH_VERSION_NAME = "merkle_hash_version"
+
 class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClientProvider) {
     private val cryptoSystem = chromiaClientProvider.cryptoSystem
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     private val clusterManagement = chromiaClientProvider.clusterManagement
 
     fun build(
@@ -37,11 +41,13 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
     ): IccfProofTxMaterial {
         val sourceClient = chromiaClientProvider.blockchain(sourceBlockchainRid)
         val txProof = sourceClient.confirmationProof(txToProveRID)
-        val decodedProof = GtvDecoder.decodeGtv(txProof)
-        val proofHash = decodedProof["hash"]?.asByteArray()
+        val decodedProof = GtvDecoder.decodeGtv(txProof).toObject<ConfirmationProofData>()
+        val proofMerkleHashVersion = GtvDecoder.decodeGtv(decodedProof.blockHeader)[EXTRA_HEADER_FIELD_INDEX][EXTRA_HEADER_MERKLE_HASH_VERSION_NAME]?.asInteger()
+                ?: 1
+        val merkleHashCalculator = makeMerkleHashCalculator(proofMerkleHashVersion)
 
-        val (updatedTx, sourceTxHash) = if (!txToProveHash.contentEquals(proofHash)) {
-            verifyUpdatedHash(sourceClient, txToProveRID, proofHash, txToProveSigners)
+        val (updatedTx, sourceTxHash) = if (!txToProveHash.contentEquals(decodedProof.hash)) {
+            verifyUpdatedHash(sourceClient, txToProveRID, decodedProof.hash, txToProveSigners, merkleHashCalculator)
         } else {
             null to txToProveHash
         }
@@ -54,12 +60,12 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         if (!forceIntraNetworkIccfOperation && sourceCluster == targetCluster) { // intra-cluster
             addTransactionProofOperation(txBuilder, sourceBlockchainRid, sourceTxHash, txProof)
         } else { // intra-network
-            addAnchoredProofOperation(txProof, decodedProof, sourceCluster, sourceBlockchainRid, txBuilder, sourceTxHash)
+            addAnchoredProofOperation(txProof, decodedProof.blockHeader, sourceCluster, sourceBlockchainRid, txBuilder, sourceTxHash, merkleHashCalculator)
         }
         return IccfProofTxMaterial(txBuilder, updatedTx)
     }
 
-    private fun verifyUpdatedHash(sourceClient: PostchainClient, txToProveRID: TxRid, proofHash: ByteArray?, txToProveSigners: List<PubKey>): Pair<Gtx, Hash> {
+    private fun verifyUpdatedHash(sourceClient: PostchainClient, txToProveRID: TxRid, proofHash: ByteArray?, txToProveSigners: List<PubKey>, hashCalculator: GtvMerkleHashCalculatorBase): Pair<Gtx, Hash> {
         // Fetch full tx and investigate why we have a mismatch
         val rawTx = sourceClient.getTransaction(txToProveRID)
         val txGtv = GtvDecoder.decodeGtv(rawTx)
@@ -108,9 +114,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         )
     }
 
-    private fun addAnchoredProofOperation(txProof: ByteArray, decodedTxProof: Gtv, sourceCluster: String, sourceBlockchainRid: BlockchainRid, txBuilder: TransactionBuilder, txHash: Hash) {
-        val sourceBlockHeader = decodedTxProof["blockHeader"]?.asByteArray()
-                ?: throw UserMistake("Failed to get blockHeader from confirmation proof")
+    private fun addAnchoredProofOperation(txProof: ByteArray, sourceBlockHeader: ByteArray, sourceCluster: String, sourceBlockchainRid: BlockchainRid, txBuilder: TransactionBuilder, txHash: Hash, hashCalculator: GtvMerkleHashCalculatorBase) {
         val sourceBlockRid = GtvDecoder.decodeGtv(sourceBlockHeader).merkleHash(hashCalculator)
         // Get proof for ac
         val anchoringChainRid = clusterManagement.getClusterInfo(sourceCluster).anchoringChain

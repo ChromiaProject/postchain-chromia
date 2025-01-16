@@ -10,6 +10,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
@@ -18,7 +19,7 @@ import java.io.File
 abstract class IcmfBaseIT : ManagedModeTest() {
 
     fun makeTransaction(node: PostchainTestNode, chainId: Long, vararg ops: GtxOp): Transaction {
-        val builder = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem)
+        val builder = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
         ops.forEach { builder.addOperation(it.opName, *it.args) }
         val txData = builder
                 .addNop()

@@ -1,27 +1,26 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
+import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
-import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
 class IntraClusterAnchoredTopicPipe(
         private val queryProvider: ChromiaQueryProvider,
         override val route: TopicRoute,
         override val id: String,
-        private val cryptoSystem: CryptoSystem,
         private val clusterManagement: ClusterManagement
 ) : IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging()
@@ -88,7 +87,8 @@ class IntraClusterAnchoredTopicPipe(
                     IcmfMessage(it, size)
                 }
 
-                val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+                val merkleHashCalculator = makeMerkleHashCalculator(decodedHeader.getMerkleHashVersion())
+                val blockRid = decodedHeader.toGtv().merkleHash(merkleHashCalculator)
 
                 val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                 if (icmfHeaderData == null) {
@@ -115,6 +115,7 @@ class IntraClusterAnchoredTopicPipe(
                                 rawHeader = header.blockHeader.data,
                                 rawWitness = header.witness.data,
                                 prevMessageBlockHeight = topicData.previousBlockHeight,
+                                merkleHashCalculator = merkleHashCalculator,
                                 messages = messages
                         )
                 )

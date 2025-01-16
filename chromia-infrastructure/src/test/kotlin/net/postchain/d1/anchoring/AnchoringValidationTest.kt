@@ -2,6 +2,7 @@ package net.postchain.d1.anchoring
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -15,7 +16,7 @@ import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GtxOp
@@ -51,13 +52,13 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader0 = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness0 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid0))
         ).getRawData()
 
         val blockHeader1 = makeBlockHeader(blockchainRID, BlockRid(blockRid0), 1)
-        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness1 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
@@ -94,7 +95,7 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
@@ -117,7 +118,7 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), -1)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
@@ -136,13 +137,13 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader0 = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness0 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid0))
         ).getRawData()
 
         val blockHeader1 = makeBlockHeader(blockchainRID, BlockRid.buildRepeat(17), 1)
-        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness1 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
@@ -165,13 +166,13 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader0 = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness0 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid0))
         ).getRawData()
 
         val blockHeader1 = makeBlockHeader(blockchainRID, BlockRid(blockRid0), 2)
-        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness1 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
@@ -217,7 +218,7 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension(bcConfigProvider = bcConfigProvider)
 
         val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
@@ -236,7 +237,7 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension()
 
         val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val invalidSigner = KeyPairHelper.keyPair(1)
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(invalidSigner).signDigest(blockRid))
@@ -257,7 +258,7 @@ class AnchoringValidationTest {
 
         val irrelevantChain = BlockchainRid.buildRepeat(2)
         val blockHeader = makeBlockHeader(irrelevantChain, BlockRid(irrelevantChain.data), 0)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
@@ -277,7 +278,7 @@ class AnchoringValidationTest {
 
         val irrelevantChain = BlockchainRid.buildRepeat(2)
         val blockHeader = makeBlockHeader(irrelevantChain, BlockRid(irrelevantChain.data), 0)
-        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
@@ -312,13 +313,13 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension(config = batchModeConfig)
 
         val blockHeader0 = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness0 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid0))
         ).getRawData()
 
         val blockHeader1 = makeBlockHeader(blockchainRID, BlockRid(blockRid0), 1)
-        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness1 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
@@ -346,13 +347,13 @@ class AnchoringValidationTest {
         val txExtension = createAnchorSpecialTxExtension(config = batchModeConfig)
 
         val blockHeader0 = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0)
-        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid0 = blockHeader0.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness0 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid0))
         ).getRawData()
 
         val blockHeader1 = makeBlockHeader(blockchainRID, BlockRid(blockRid0), 1)
-        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val blockRid1 = blockHeader1.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         val rawWitness1 = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
@@ -400,6 +401,8 @@ class AnchoringValidationTest {
             gtvTimestamp = gtv(height),
             gtvHeight = gtv(height),
             gtvDependencies = GtvNull,
-            gtvExtra = gtv(mapOf())
+            gtvExtra = gtv(mapOf(
+                    MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
+            ))
     ).toGtv()
 }

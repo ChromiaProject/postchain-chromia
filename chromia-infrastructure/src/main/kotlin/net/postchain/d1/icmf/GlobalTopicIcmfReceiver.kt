@@ -106,7 +106,6 @@ class GlobalTopicIcmfReceiver(
                     queryProvider,
                     route,
                     clusterName,
-                    cryptoSystem,
                     clusterManagement
             )
         } else {

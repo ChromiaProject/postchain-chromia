@@ -18,7 +18,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
@@ -36,7 +36,7 @@ class IcmfValidationTest {
     private val anchorBlockchainRID = BlockchainRid.buildRepeat(0)
     private val blockchainRID = BlockchainRid.buildRepeat(1)
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     private val chainID: Long = 1
     private val spilledMessage = gtv("hej")
     private val specialTxSizeMargin = 100 * 1024L
@@ -53,7 +53,8 @@ class IcmfValidationTest {
                 0,
                 spilledMessage.merkleHash(hashCalculator),
                 cluster,
-                0
+                0,
+                2
         )
         on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
         on { loadSpilledMessageCounts(mockContext, cluster, 0, secondTopic) } doReturn mapOf()
@@ -167,7 +168,7 @@ class IcmfValidationTest {
                 messageExtraDataOverride = mapOf(
                         ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
                                 topic to TopicHeaderData(
-                                        gtv(listOf(messageBody)).merkleHash(GtvMerkleHashCalculator(cryptoSystem)),
+                                        gtv(listOf(messageBody)).merkleHash(hashCalculator),
                                         -1L
                                 ).toGtv()
                         ))
@@ -697,7 +698,7 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
         return mapOf()
     }
 
-    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray) {
+    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long) {
         TODO("Not yet implemented")
     }
 

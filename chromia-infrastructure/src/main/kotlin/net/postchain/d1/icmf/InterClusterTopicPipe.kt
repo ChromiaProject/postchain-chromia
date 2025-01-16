@@ -10,6 +10,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
+import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -18,6 +19,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -113,15 +115,16 @@ class InterClusterTopicPipe(
             if (packets.isEmpty() || currentQueueSizeBytes.get() + packetSizeBytes <= maxQueueSizeBytes) {
                 currentPackets.add(
                         IcmfPacket(
-                                                height = height,
-                                                sender = blockchainRid,
-                                                topic = route.topic,
-                                                blockRid = block.rid.data,
-                                                rawHeader = block.header.data,
-                                                rawWitness = block.witness.data,
-                                                prevMessageBlockHeight = topicData.previousBlockHeight,
-                                                messages = messages
-                                        ) to packetSizeBytes)
+                                height = height,
+                                sender = blockchainRid,
+                                topic = route.topic,
+                                blockRid = block.rid.data,
+                                rawHeader = block.header.data,
+                                rawWitness = block.witness.data,
+                                prevMessageBlockHeight = topicData.previousBlockHeight,
+                                merkleHashCalculator = makeMerkleHashCalculator(decodedHeader.getMerkleHashVersion()),
+                                messages = messages
+                        ) to packetSizeBytes)
 
                 currentQueueSizeBytes.addAndGet(packetSizeBytes)
             } else {

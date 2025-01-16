@@ -39,6 +39,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         val COLUMN_RECEIVER: Field<ByteArray> = field("receiver", SQLDataType.BLOB.nullable(false))
         val COLUMN_SKIP_TO_HEIGHT: Field<Long> = field("skip_to_height", SQLDataType.BIGINT.nullable(false))
         val COLUMN_SENDER_NULLABLE: Field<ByteArray> = field("sender", SQLDataType.BLOB.nullable(true))
+        val COLUMN_MERKLE_HASH_VERSION: Field<Long> = field("merkle_hash_version", SQLDataType.BIGINT.defaultValue(1).nullable(false))
     }
 
     private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
@@ -76,6 +77,10 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_MESSAGE_HASH)
                     .constraint(constraint("${PRIMARY_KEY_PREFIX}${spilledMessageTable}").primaryKey(COLUMN_SERIAL.name))
+                    .execute()
+
+            jooq.alterTable(spilledMessageTable)
+                    .addColumnIfNotExists(COLUMN_MERKLE_HASH_VERSION)
                     .execute()
 
             val simTableName = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE).replace("\"", "")
@@ -178,14 +183,14 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
 
     override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? =
             DatabaseAccess.of(ctx).run {
-                createJooq(ctx).select(COLUMN_MESSAGE_HASH, COLUMN_SERIAL, COLUMN_CLUSTER, COLUMN_ANCHOR_HEIGHT)
+                createJooq(ctx).select(COLUMN_MESSAGE_HASH, COLUMN_SERIAL, COLUMN_CLUSTER, COLUMN_ANCHOR_HEIGHT, COLUMN_MERKLE_HASH_VERSION)
                         .from(tableSpilledMessage(ctx))
                         .where(COLUMN_SENDER.eq(sender.data))
                         .and(COLUMN_TOPIC.eq(topic))
                         .orderBy(COLUMN_SERIAL)
                         .limit(1)
                         .fetchOne()
-            }?.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH], it[COLUMN_CLUSTER], it[COLUMN_ANCHOR_HEIGHT]) }
+            }?.map { SpilledMessage(it[COLUMN_SERIAL], it[COLUMN_MESSAGE_HASH], it[COLUMN_CLUSTER], it[COLUMN_ANCHOR_HEIGHT], it[COLUMN_MERKLE_HASH_VERSION]) }
 
     override fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int> =
             DatabaseAccess.of(ctx).run {
@@ -198,7 +203,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                         .fetch()
             }.map { BlockchainRid(it[COLUMN_SENDER]) to it[1] as Int }.toMap()
 
-    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray) {
+    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long) {
         DatabaseAccess.of(ctx).run {
             createJooq(ctx).insertInto(table(tableSpilledMessage(ctx)))
                     .set(COLUMN_SENDER, sender.data)
@@ -206,6 +211,7 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
                     .set(COLUMN_ANCHOR_HEIGHT, anchorHeight)
                     .set(COLUMN_TOPIC, topic)
                     .set(COLUMN_MESSAGE_HASH, hash)
+                    .set(COLUMN_MERKLE_HASH_VERSION, merkleHashVersion)
                     .execute()
         }
     }

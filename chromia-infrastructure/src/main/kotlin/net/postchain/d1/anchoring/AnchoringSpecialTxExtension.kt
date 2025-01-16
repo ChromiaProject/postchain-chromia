@@ -11,6 +11,7 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
+import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -29,7 +30,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
@@ -181,7 +182,8 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                 return false
             }
 
-            val blockRid = headerData.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val hashCalculator = makeMerkleHashCalculator(headerData.getMerkleHashVersion())
+            val blockRid = headerData.toGtv().merkleHash(hashCalculator)
             if (!blockRid.contentEquals(anchorOpData.blockRid)) {
                 logger.warn("Invalid block-rid: ${anchorOpData.blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}, expected: ${blockRid.toHex()}")
                 return false
