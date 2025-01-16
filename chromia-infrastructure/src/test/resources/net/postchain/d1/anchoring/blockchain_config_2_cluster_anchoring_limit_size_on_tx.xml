@@ -9,6 +9,14 @@ This is a Anchor Chain configuration specifically for testing.
  3. Anchor module, which does everything we need around anchoring.
 ================================================================================= -->
 <dict>
+    <entry key="features">
+        <dict>
+            <entry key="merkle_hash_version"><int>2</int></entry>
+        </dict>
+    </entry>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <dict>
             <entry key="name">

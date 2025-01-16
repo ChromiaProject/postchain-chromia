@@ -4,6 +4,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 
 data class IcmfMessage(
         val body: Gtv,
@@ -21,6 +22,7 @@ data class IcmfPacket(
         val rawHeader: ByteArray, // Header of the block
         val rawWitness: ByteArray, // Must send the witness so the recipient can validate
         val prevMessageBlockHeight: Long,
+        val merkleHashCalculator: GtvMerkleHashCalculatorBase,
         val messages: List<IcmfMessage> // (potentially) messages
 )
 

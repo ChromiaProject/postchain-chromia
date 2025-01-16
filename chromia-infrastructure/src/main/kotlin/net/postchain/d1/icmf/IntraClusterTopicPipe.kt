@@ -1,6 +1,7 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
+import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -9,6 +10,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import kotlin.math.max
 
 class IntraClusterTopicPipe(
@@ -81,6 +83,7 @@ class IntraClusterTopicPipe(
                             rawHeader = block.header.data,
                             rawWitness = block.witness.data,
                             prevMessageBlockHeight = topicData.previousBlockHeight,
+                            merkleHashCalculator = makeMerkleHashCalculator(decodedHeader.getMerkleHashVersion()),
                             messages = messages
                     )
             )

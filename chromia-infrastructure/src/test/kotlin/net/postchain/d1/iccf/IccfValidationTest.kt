@@ -2,6 +2,7 @@ package net.postchain.d1.iccf
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.chromia.model.BlockchainState
 import net.postchain.client.core.PostchainBlockClient
@@ -21,7 +22,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
@@ -42,7 +43,7 @@ import org.mockito.kotlin.verify
 class IccfValidationTest {
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     private val sourceBlockchainRid = BlockchainRid.buildRepeat(0)
     private val targetBlockchainRid = BlockchainRid.buildRepeat(1)
     private val clusterAnchoringChainRid = BlockchainRid.buildRepeat(2)
@@ -65,7 +66,9 @@ class IccfValidationTest {
             gtv(0),
             gtv(0),
             GtvNull,
-            gtv(mapOf())
+            gtv(mapOf(
+                    MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
+            ))
     ).toGtv()
     private val sourceBlockRid = sourceBlockHeader.merkleHash(hashCalculator)
     private val sourceBlockWitness = BaseBlockWitness.fromSignatures(sourceBlockchainSigners.map { cryptoSystem.buildSigMaker(it).signDigest(sourceBlockRid) }.toTypedArray())
@@ -91,7 +94,9 @@ class IccfValidationTest {
             gtv(0),
             gtv(0),
             GtvNull,
-            gtv(mapOf())
+            gtv(mapOf(
+                    MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
+            ))
     ).toGtv()
     private val clusterAnchoringBlockRid = clusterAnchoringBlockHeader.merkleHash(hashCalculator)
     private val clusterAnchoringBlockWitness = BaseBlockWitness.fromSignatures(clusterAnchoringChainSigners.map { cryptoSystem.buildSigMaker(it).signDigest(clusterAnchoringBlockRid) }.toTypedArray())
@@ -119,7 +124,9 @@ class IccfValidationTest {
             gtv(0),
             gtv(0),
             GtvNull,
-            gtv(mapOf())
+            gtv(mapOf(
+                    MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
+            ))
     ).toGtv()
     private val batchClusterAnchoringBlockRid = batchClusterAnchoringBlockHeader.merkleHash(hashCalculator)
     private val batchClusterAnchoringBlockWitness = BaseBlockWitness.fromSignatures(clusterAnchoringChainSigners.map {

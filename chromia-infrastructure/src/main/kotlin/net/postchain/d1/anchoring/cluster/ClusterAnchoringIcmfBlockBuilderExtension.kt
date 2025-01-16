@@ -10,7 +10,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 
 const val EVENT_TYPE = "icmf_header"
@@ -20,11 +20,13 @@ class ClusterAnchoringIcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxE
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
+    private lateinit var merkleHashCalculator: GtvMerkleHashCalculatorBase
 
     private val queuedEvents = mutableListOf<AnchorIcmfHeader>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         cryptoSystem = baseBB.cryptoSystem
+        merkleHashCalculator = baseBB.merkleHashCalculator
         baseBB.installEventProcessor(EVENT_TYPE, this)
     }
 
@@ -40,13 +42,12 @@ class ClusterAnchoringIcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxE
      * @return extra data for block header
      */
     override fun finalize(): Map<String, Gtv> {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         val hashesByTopic = queuedEvents
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic
                 .mapValues {
                     TopicHeaderData(
-                            gtv(it.value.map { header -> header.blockRid }).merkleHash(hashCalculator),
+                            gtv(it.value.map { header -> header.blockRid }).merkleHash(merkleHashCalculator),
                             it.value.first().previousHeight
                     ).toGtv()
                 }

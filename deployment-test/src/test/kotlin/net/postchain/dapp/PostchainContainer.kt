@@ -112,11 +112,13 @@ class PostchainContainer(
     fun nodeApiPath() = "http://$nodeHost:$apiPort"
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
 
-    fun client(chainId: Long, signers: List<KeyPair> = listOf(provider)) = client(getBlockchainRid(chainId), signers)
-    fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider)) = createClient(brid, signers)
+    // TODO [use-new-algo] use new hash algorithm here
+    fun client(chainId: Long, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 1) = client(getBlockchainRid(chainId), signers, merkleHashVersion)
+    fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 1) =
+            createClient(brid, signers, merkleHashVersion)
 
-    private fun createClient(brid: BlockchainRid, signers: List<KeyPair>): PostchainClient =
-            AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers)))
+    private fun createClient(brid: BlockchainRid, signers: List<KeyPair>, merkleHashVersion: Int): PostchainClient =
+            AwaitingClient(PostchainClientImpl(PostchainClientConfig(brid, EndpointPool.singleUrl(apiPath()), signers, merkleHashVersion)))
 
     fun peerInfo(): D1PeerInfo = D1PeerInfo(apiPath(), pubkey)
 

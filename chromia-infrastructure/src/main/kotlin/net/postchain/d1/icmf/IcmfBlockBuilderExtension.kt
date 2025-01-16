@@ -11,7 +11,7 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 
 const val ICMF_MESSAGE_TYPE = "icmf_message"
@@ -21,11 +21,13 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
+    private lateinit var merkleHashCalculator: GtvMerkleHashCalculatorBase
 
     private val queuedEvents = mutableListOf<SentIcmfMessageItem>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         cryptoSystem = baseBB.cryptoSystem
+        merkleHashCalculator = baseBB.merkleHashCalculator
         baseBB.installEventProcessor(ICMF_MESSAGE_TYPE, this)
     }
 
@@ -52,14 +54,13 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
      * @return extra data for block header
      */
     override fun finalize(): Map<String, Gtv> {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
         return if (queuedEvents.isNotEmpty()) {
             val hashesByTopic = queuedEvents
                     .groupBy { it.topic }
             val hashByTopic = hashesByTopic
                     .mapValues {
                         TopicHeaderData(gtv(
-                                it.value.map { message -> gtv(message.body.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                it.value.map { message -> gtv(message.body.merkleHash(merkleHashCalculator)) }).merkleHash(merkleHashCalculator),
                                 it.value.first().previousMessageBlockHeight
                         ).toGtv()
                     }

@@ -7,28 +7,6 @@ definitions:
       - 9871
       - "http://node1:7740"
       - ""
-  config: &common_config
-    config_consensus_strategy: HEADER_HASH
-    blockstrategy:
-      maxblocktime: 2000
-    revolt:
-      fast_revolt_status_timeout: 2000
-    signers:
-      - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-    sync_ext:
-      - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
-    gtx:
-      modules:
-        - "net.postchain.d1.icmf.IcmfSenderGTXModule"
-        - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
-        - "net.postchain.eif.transaction.signerupdate.directorychain.SignerUpdateGTXModule"
-    icmf:
-      receiver:
-        anchoring:
-          topics:
-            - G_configuration_updated
-            - G_configuration_failed
-            - G_last_anchored_heights
 
 blockchains:
   manager:
@@ -63,6 +41,8 @@ blockchains:
     config:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       config_consensus_strategy: HEADER_HASH
       fast_revolt_status_timeout: 1000
       blockstrategy:
@@ -84,6 +64,8 @@ blockchains:
   system_anchoring:
     module: anchoring_chain_system
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -104,6 +86,8 @@ blockchains:
   cluster_anchoring:
     module: anchoring_chain_cluster
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -124,6 +108,8 @@ blockchains:
   mainnet:
     module: management_chain_mainnet
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -181,6 +167,8 @@ blockchains:
   economy_chain:
     module: economy_chain_test
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -293,6 +281,8 @@ blockchains:
   token_chain:
     module: token_chain
     config:
+      features:
+        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
       gtx:
         modules:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"

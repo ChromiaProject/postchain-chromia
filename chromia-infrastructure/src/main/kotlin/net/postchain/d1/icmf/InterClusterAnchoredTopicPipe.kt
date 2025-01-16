@@ -10,6 +10,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.slf4j.MDCContext
 import mu.KLogging
+import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -27,7 +28,8 @@ import net.postchain.d1.getCachedPeers
 import net.postchain.d1.rell.anchoring_chain_cluster.icmfGetHeadersWithMessagesAfterHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -86,8 +88,6 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     }
 
     private suspend fun fetchMessages() {
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
         val clusterClient = clientProvider.cluster(clusterName)
@@ -110,14 +110,13 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
 
         val decodedBlockHeaderWithAnchorHeights = signedBlockHeaderWithAnchorHeights.map {
             val decodedHeader = BlockHeaderData.fromBinary(it.blockHeader.data)
-            val blockRid = decodedHeader.toGtv().merkleHash(merkleHashCalculator)
+            val blockRid = decodedHeader.toGtv().merkleHash(makeMerkleHashCalculator(decodedHeader.getMerkleHashVersion()))
             DecodedBlockHeaderWithAnchorHeight(it.blockHeader.data, it.witness.data, it.anchorHeight, decodedHeader, blockRid)
         }
 
         var lastSeenAnchorHeight = fromAnchorHeight
         val icmfAnchorPackets = mutableListOf<IcmfAnchorPacket>()
         for ((anchorHeight, headers) in decodedBlockHeaderWithAnchorHeights.groupBy { it.anchorHeight }.toList().sortedBy { it.first }) {
-            val hash = gtv(headers.map { gtv(it.blockRid) }).merkleHash(merkleHashCalculator)
             val anchorBlock = try {
                 anchoringClient.blockAtHeight(anchorHeight)
             } catch (e: Exception) {
@@ -136,7 +135,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             }
 
             val decodedAnchorHeader = BlockHeaderData.fromBinary(anchorBlock.header.data)
-            val blockRid = decodedAnchorHeader.toGtv().merkleHash(merkleHashCalculator)
+            val anchoringMerkleHashCalculator = makeMerkleHashCalculator(decodedAnchorHeader.getMerkleHashVersion())
+            val blockRid = decodedAnchorHeader.toGtv().merkleHash(anchoringMerkleHashCalculator)
             val peers = getCachedPeers(peerCache, decodedAnchorHeader, blockchainConfigProvider) ?: return
 
             val anchorExtraData = TopicHeaderData.extractTopicHeaderData(decodedAnchorHeader, anchorBlock.header.data, anchorBlock.witness.data, blockRid, cryptoSystem, peers, ICMF_ANCHOR_HEADERS_EXTRA)
@@ -148,6 +148,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 return
             }
 
+            val hash = gtv(headers.map { gtv(it.blockRid) }).merkleHash(anchoringMerkleHashCalculator)
             if (!anchorHeaderData.hash.contentEquals(hash)) {
                 logger.warn("Anchor block header has wrong hash for block-rid: ${blockRid.toHex()} at height: $anchorHeight, expected ${hash.toHex()} but was ${anchorHeaderData.hash.toHex()}")
                 return
@@ -191,7 +192,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                     return
                 }
 
-                val messages = fetchMessages(clusterClient, blockchainRid, header.decodedHeader.getHeight(), topicData.hash)
+                val merkleHashCalculator = makeMerkleHashCalculator(header.decodedHeader.getMerkleHashVersion())
+                val messages = fetchMessages(clusterClient, blockchainRid, header.decodedHeader.getHeight(), topicData.hash, merkleHashCalculator)
 
                 if (messages.isNotEmpty()) {
                     icmfPackets.add(
@@ -203,7 +205,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                                     rawHeader = header.blockHeader,
                                     rawWitness = header.witness,
                                     prevMessageBlockHeight = topicData.previousBlockHeight,
-                                    messages = messages
+                                    merkleHashCalculator = merkleHashCalculator,
+                                    messages = messages,
                             )
                     )
                 }
@@ -242,7 +245,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     private suspend fun fetchMessages(clusterClient: ChromiaClientProvider.ClusterPostchainClient,
                                       blockchainRid: BlockchainRid,
                                       height: Long,
-                                      expectedMessagesHash: ByteArray): List<IcmfMessage> {
+                                      expectedMessagesHash: ByteArray,
+                                      merkleHashCalculator: GtvMerkleHashCalculatorBase): List<IcmfMessage> {
         val client = clusterClient.blockchain(blockchainRid)
 
         while (true) {
@@ -275,8 +279,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 IcmfMessage(it, size)
             }
 
-            val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-            val computedHash = gtv(bodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator)
+            val computedHash = gtv(bodies.map { gtv(it.merkleHash(merkleHashCalculator)) }).merkleHash(merkleHashCalculator)
 
             if (!expectedMessagesHash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")

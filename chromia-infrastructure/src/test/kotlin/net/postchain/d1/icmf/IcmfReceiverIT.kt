@@ -10,6 +10,7 @@ import assertk.assertions.isTrue
 import assertk.assertions.isZero
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.BlockDetail
@@ -40,7 +41,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
 import org.apache.logging.log4j.core.Logger
@@ -729,7 +730,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         )
 
         buildBlockNoWait(nodes, dappChain, 2)
-        awaitChainRestarted(dappChain, 1, skipToHeightConfig.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        awaitChainRestarted(dappChain, 1, skipToHeightConfig.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem)))
 
         // skip config should be applied, verify that we don't care about messages at height 1
         setupNonAnchoredQueriesMock(messageHeight = 1, prevMessageHeight = 0)
@@ -1121,7 +1122,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     private fun createBlockDetail(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, topic: String, messageHeight: Long = 0, prevMessageHeight: Long = -1): BlockDetail {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
                 gtv(ByteArray(32) { messageHeight.toByte() }),
@@ -1133,10 +1134,11 @@ class IcmfReceiverIT : IcmfBaseIT() {
                         mapOf(
                                 ICMF_BLOCK_HEADER_EXTRA to gtv(
                                         topic to TopicHeaderData(
-                                                gtv(listOf(gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }))).merkleHash(hashCalculator),
+                                                gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
                                                 prevMessageHeight
                                         ).toGtv()
-                                )
+                                ),
+                                MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
                         )
                 )
         )
@@ -1160,7 +1162,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     private fun buildAnchorHeader(icmfHeaders: List<ByteArray>, prevHeight: Long = -1, topic: String = "my-topic"): BlockDetail {
-        val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
         val icmfBlockRids = icmfHeaders.map {
             val decodedHeader = BlockHeaderData.fromBinary(it)
             val blockRid = decodedHeader.toGtv().merkleHash(hashCalculator)
@@ -1179,6 +1181,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                                 ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
                                         topic to TopicHeaderData(gtv(icmfBlockRids).merkleHash(hashCalculator), prevHeight).toGtv()
                                 )),
+                                MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
                         )
                 )
         ).toGtv()

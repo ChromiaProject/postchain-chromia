@@ -26,7 +26,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
@@ -112,7 +112,7 @@ class AnchoringIT : ManagedModeTest() {
 
         val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
         val dappBlockRids = (0..3).map { height -> gtv(dappBlockQueries.getBlockRid(height.toLong()).get()!!) }
-        val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
         assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
 
         val blockchainRidColumn = field("blockchain_rid", SQLDataType.BLOB)
@@ -157,7 +157,7 @@ class AnchoringIT : ManagedModeTest() {
                 assertEquals(messagesHash.wrap(), decodedHeader.getExtra()["icmf_send"]!!["G_my-topic"]!!["hash"]!!.asByteArray().wrap())
 
                 val witness = BaseBlockWitness.fromBytes(header["witness"]!!.asByteArray())
-                val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+                val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
                 witness.getSignatures().forEach { signature ->
                     assertTrue(cryptoSystem.verifyDigest(digest, signature))
                 }
@@ -349,7 +349,7 @@ class AnchoringIT : ManagedModeTest() {
 
             val dappBlockQueries = getChainNodes(dappChain)[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
             val dappBlockRids = (fromHeight..toHeight).map { height -> gtv(dappBlockQueries.getBlockRid(height).get()!!) }
-            val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val anchorHash = gtv(dappBlockRids).merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem))
             assertEquals(anchorHash.wrap(), topicHeaderData.hash.wrap())
         }
     }

@@ -65,6 +65,8 @@ import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.chain0.provider_auth.model.ProviderKeyRole
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -95,7 +97,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
@@ -306,7 +308,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                 gtv("EVM"),
                 gtv(evmContainerNetworkId),
                 gtv(testTokenAddress.substring(2).hexStringToByteArray())
-        ).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+        ).merkleHash(GtvMerkleHashCalculatorV2(Secp256K1CryptoSystem()))
 
         val economyChainGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/economy_chain.xml")!!
                 .readText()
@@ -509,15 +511,18 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     @Order(12)
     fun `Perform cross-chain transfers between EC and dapp`() {
         testLogger.info("Initializing cross chain transfer dApp")
-        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
-                ClusterManagementImpl(node1.c0),
-                mapOf(
-                        systemCluster to listOf(node1.peerInfo(), node2.peerInfo()),
-                        APP_CLUSTER1 to listOf(node1.peerInfo())
-                )
-        ))
+        val chromiaClientProvider = ChromiaClientProvider(
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0),
+                        mapOf(
+                                systemCluster to listOf(node1.peerInfo(), node2.peerInfo()),
+                                APP_CLUSTER1 to listOf(node1.peerInfo())
+                        )
+                ),
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+        )
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
-        val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
         val aliceDappAuthenticator = registerAccount(node1, ecAdminKeyPair, dappBrid, aliceKeyPair, "Alice")
 
