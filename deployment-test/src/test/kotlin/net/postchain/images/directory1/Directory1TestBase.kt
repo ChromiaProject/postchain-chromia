@@ -3,7 +3,7 @@ package net.postchain.images.directory1
 import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
@@ -45,7 +45,7 @@ open class Directory1TestBase : ManagedModeBase() {
                 "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05",
                 "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114")
 
-        val hashCalculator = GtvMerkleHashCalculatorV2(Secp256K1CryptoSystem())
+        val hashCalculator = GtvMerkleHashCalculatorV1(Secp256K1CryptoSystem())
     }
 
     @AfterAll
