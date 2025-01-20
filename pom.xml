@@ -19,7 +19,6 @@
 
     <modules>
         <module>directory-chain</module>
-        <module>chromia-client</module>
         <module>deployment-test</module>
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
@@ -79,11 +78,6 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>chromia-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>chromia-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

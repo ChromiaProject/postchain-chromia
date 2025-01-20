@@ -14,7 +14,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.okForContentType
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
-import net.postchain.chain0.anchoring_chain_common.AnchoringTxWithOpIndex
+import net.postchain.chromia.anchoring_chain_common.AnchoringTxWithOpIndex
 import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash

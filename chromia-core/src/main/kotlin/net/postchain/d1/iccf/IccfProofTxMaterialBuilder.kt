@@ -1,6 +1,6 @@
 package net.postchain.d1.iccf
 
-import net.postchain.chain0.anchoring_chain_common.getAnchoringTransactionForBlockRid
+import net.postchain.chromia.anchoring_chain_common.getAnchoringTransactionForBlockRid
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TxRid
 import net.postchain.client.transaction.TransactionBuilder
