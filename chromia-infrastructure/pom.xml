@@ -42,10 +42,6 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>chromia-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
             <artifactId>directory-chain</artifactId>
             <type>pom</type>
         </dependency>
