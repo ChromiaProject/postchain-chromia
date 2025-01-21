@@ -69,7 +69,7 @@ definitions:
 
 blockchains:
   eif_event_receiver:
-    module: eif_event_receiver
+    module: eif_event_receiver_chain_common
     config:
       features:
         merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
@@ -90,7 +90,7 @@ blockchains:
             read_offset: 0
             events: !include events.yml
   evm_event_receiver_token_chain:
-    module: eif_event_receiver_dynamic_icmf_config
+    module: eif_event_receiver_dynamic_icmf_config_chain_common
     config:
       features:
         merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
