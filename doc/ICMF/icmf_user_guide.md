@@ -75,6 +75,37 @@ config:
         - etc.
 ```
 
+### Listening to global topics
+
+Only system chains are allowed to send messages on global topics but all chains can listen to them.
+
+```
+config:
+  icmf:
+    receiver:
+      global:
+        topics: # List your topics here
+          - "G_topic1"
+          - "G_topic2"
+          - etc.
+```
+
+To only listen to specific sender chains:
+
+```
+config:
+  icmf:
+    receiver:
+      global:
+        blockchains: # List your chains topics here
+          - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000001"
+            topic: "G_topic1"
+          - bc-rid: x"0000000000000000000000000000000000000000000000000000000000000002"
+            topic: "G_topic2"
+            skip-to-height: 10 # Skip any messages sent by chain on this topic until this height
+          - etc.
+```
+
 ### Combining ICMF with other extensions
 
 ICMF will normally try to fit as many messages as possible into the block. When running in combination with other
