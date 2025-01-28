@@ -85,8 +85,14 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="lib/icmf/constants.rell">
                                 <param key="lib.icmf.constants" type="string"/>
                             </entry>
+                            <entry key="lib/icmf/receiver.rell">
+                                <param key="lib.icmf.receiver" type="string"/>
+                            </entry>
                             <entry key="messaging/configuration_update_message.rell">
                                 <param key="messaging.configuration_update_message" type="string"/>
+                            </entry>
+                            <entry key="messaging/container_blockchain.rell">
+                                <param key="messaging.container_blockchain" type="string"/>
                             </entry>
                         </dict>
                     </entry>

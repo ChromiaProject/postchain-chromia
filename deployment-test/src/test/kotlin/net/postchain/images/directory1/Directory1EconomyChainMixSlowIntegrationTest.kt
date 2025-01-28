@@ -586,7 +586,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         aliceAuthenticator.verifyOperationAuthFlags("upgrade_container")
         val tcRid = aliceAuthenticator.transactionBuilder()
                 .upgradeContainerOperation(
-                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2)
+                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2, 1)
                 .postTransactionUntilConfirmed("Upgrade Container")
                 .txRid
 

@@ -1,9 +1,16 @@
 package net.postchain.d1.anchoring.cluster
 
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
+import net.postchain.d1.anchoring.resourceusage.ResourceUsageStatisticsSpecialTxExtension
+import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.PostchainContextAware
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
 /**
@@ -14,13 +21,20 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class ClusterAnchoringGTXModule : SimpleGTXModule<Unit>(
-        Unit, mapOf(), mapOf()
-) {
-    private val _specialTxExtensions = listOf(AnchoringSpecialTxExtension { clusterManagement, anchoringBlockchainRid ->
-        val blockchainCluster = clusterManagement.getClusterOfBlockchain(anchoringBlockchainRid)
-        val systemAnchoringChain = clusterManagement.getSystemAnchoringChain()
-        ClusterAnchoringReceiver(blockchainCluster, systemAnchoringChain, clusterManagement)
-    })
+        Unit,
+        mapOf(ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp.OP_NAME to { conf, opData: ExtOpData -> ResourceUsageStatisticsValidateNodeSignatureDummyOp(conf, opData) }),
+        mapOf()
+), PostchainContextAware {
+
+
+    val resourceUsageStatisticsSpecialTxExtension = ResourceUsageStatisticsSpecialTxExtension()
+    private val _specialTxExtensions = listOf(
+            AnchoringSpecialTxExtension { clusterManagement, anchoringBlockchainRid ->
+                val blockchainCluster = clusterManagement.getClusterOfBlockchain(anchoringBlockchainRid)
+                val systemAnchoringChain = clusterManagement.getSystemAnchoringChain()
+                ClusterAnchoringReceiver(blockchainCluster, systemAnchoringChain, clusterManagement)
+            },
+            resourceUsageStatisticsSpecialTxExtension)
 
     override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchoring module creates tables etc
 
@@ -32,4 +46,17 @@ class ClusterAnchoringGTXModule : SimpleGTXModule<Unit>(
      * That's the responsibility of [AnchoringSpecialTxExtension]
      */
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = _specialTxExtensions
+
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+        resourceUsageStatisticsSpecialTxExtension.nodePubkey = postchainContext.appConfig.pubKeyByteArray
+        resourceUsageStatisticsSpecialTxExtension.nodePrivkey = postchainContext.appConfig.privKeyByteArray
+        resourceUsageStatisticsSpecialTxExtension.signers = configuration.signers
+    }
+}
+
+class ResourceUsageStatisticsValidateNodeSignatureDummyOp(private val conf: Unit, private val extOpData: ExtOpData) : GTXOperation(extOpData) {
+    override fun checkCorrectness() {}
+    override fun apply(ctx: TxEContext): Boolean {
+        return true
+    }
 }
