@@ -16,6 +16,13 @@ blockchains:
         allow_blockchain_dependencies: false
         provider_quota_max_actions_per_day: 100
       common.init: *common_init
+      common.queries:
+        developers:
+          - andrei.ursu@chromaway.com
+          - eugene.tykulov@chromaway.com
+          - johan.nilsson@chromaway.com
+          - mikael.staldal@chromaway.com
+          - robert.wideberg@chromaway.com
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -145,6 +152,13 @@ blockchains:
         allow_blockchain_dependencies: false
         provider_quota_max_actions_per_day: 100
       common.init: *common_init
+      common.queries:
+        developers:
+          - andrei.ursu@chromaway.com
+          - eugene.tykulov@chromaway.com
+          - johan.nilsson@chromaway.com
+          - mikael.staldal@chromaway.com
+          - robert.wideberg@chromaway.com
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -263,6 +277,7 @@ blockchains:
         max_bridge_leases_per_container: 10
         evm_transaction_submitters_bonus: 0.1
         container_removal_timeout: -1
+        token_rate_update_interval_ms: 60000 # 60 seconds (approximately every other block)
       economy_chain_test_claim_tchr:
         asset_name: "tCHR"
         asset_symbol: "tCHR"
