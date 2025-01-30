@@ -579,6 +579,43 @@ class IcmfValidationTest {
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
     }
 
+    @Test
+    fun `Non-relevant topics do not need to be anchored`() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val relevantMessages = listOf(gtv("hej"))
+        val block = createBlockDetail(relevantMessages, -1, IcmfTestClusterManagement.keyPair, mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(relevantMessages.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv(),
+                        "another-topic" to TopicHeaderData(
+                                gtv(listOf(gtv("hej2")).map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                ))
+        ))
+
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
+                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv()
+                ))
+        ))
+        val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
+        val rawAnchorWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
+        ).getRawData()
+
+        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+
+        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+
+        val messageOps = createMessageOps(relevantMessages)
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps))
+    }
+
     private fun createTxExt(
             databaseOperations: IcmfDatabaseOperations = dbMock,
             icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig,

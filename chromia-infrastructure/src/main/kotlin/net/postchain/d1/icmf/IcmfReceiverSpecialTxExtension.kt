@@ -255,7 +255,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
                 AnchorHeaderOp.OP_NAME -> {
                     val anchorHeaderOp = AnchorHeaderOp.fromOpData(op) ?: return false
 
-                    if (!validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, bctx)) return false
+                    if (!validateHeaders(headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys }, currentAnchorHeaderData, bctx)) return false
                     if (currentAnchorHeaderData != null) {
                         for (topic in headerBlockRidsByTopic.keys) {
                             if (bodyHashesByTopic.containsKey(topic)) {
@@ -394,7 +394,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx)) {
             return false
         }
-        if (!validateHeaders(headerBlockRidsByTopic, currentAnchorHeaderData, bctx)) {
+        if (!validateHeaders(headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys }, currentAnchorHeaderData, bctx)) {
             return false
         }
 
