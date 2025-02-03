@@ -1,7 +1,32 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (c) 2017 ChromaWay Inc. See README for license information.
 
 set -e
+
+DEFAULT_PG_VERSION=16   # Initializes new versions
+
+echo "Detecting Postgres version"
+if [ -f "$PGDATA/PG_VERSION" ]; then
+  pgdata_version=$(cat "$PGDATA/PG_VERSION")
+  echo "Existing PGDATA version: $pgdata_version"
+fi
+
+PG_VERSION="${pgdata_version:-$DEFAULT_PG_VERSION}"
+pg_bin_var="PG_BIN_${PG_VERSION}"
+if [[ ! -v "$pg_bin_var" ]]; then
+  echo "Variable $pg_bin_var not found"
+  exit 1
+fi
+PG_BIN="${!pg_bin_var}"
+
+if [ ! -d "$PG_BIN" ]; then
+  echo "Error: $PG_BIN directory does not exist."
+  exit 1
+fi
+
+echo "Will use PG version $PG_VERSION with binaries in $PG_BIN"
+echo
+
 # usage: file_env VAR [DEFAULT]
 #    ie: file_env 'XYZ_DB_PASSWORD' 'example'
 # (will allow for "$XYZ_DB_PASSWORD_FILE" to fill in the value of
@@ -80,7 +105,7 @@ if [ "$1" = 'postgres' ]; then
 	chmod 700 "$PGDATA" 2>/dev/null || :
 
 	# Look to see if we marked the db as initialized
-  ALREADY_INITED="$PGDATA/$ALREADY_INITED_FILE"
+  ALREADY_INITED=$PGDATA/.db-initialized
   if [ ! -e "$ALREADY_INITED" ]; then
 
     echo "Initializing a new database"
@@ -91,7 +116,7 @@ if [ "$1" = 'postgres' ]; then
 		if [ "$POSTGRES_INITDB_XLOGDIR" ]; then
 			export POSTGRES_INITDB_ARGS="$POSTGRES_INITDB_ARGS --xlogdir $POSTGRES_INITDB_XLOGDIR"
 		fi
-		eval "initdb --username=postgres $POSTGRES_INITDB_ARGS"
+		eval "$PG_BIN/initdb --username=postgres $POSTGRES_INITDB_ARGS"
 
 		# check password first so we can output the warning before postgres
 		# messes it up
@@ -127,12 +152,12 @@ if [ "$1" = 'postgres' ]; then
 
 		# starting the database server
 		PGUSER="${PGUSER:-postgres}" \
-		pg_ctl -D "$PGDATA" -w start
+    "$PG_BIN/pg_ctl" -D "$PGDATA" -w start
 
 		file_env 'POSTGRES_USER' 'postgres'
 		file_env 'POSTGRES_DB' "$POSTGRES_USER"
 
-		psql=( psql -v ON_ERROR_STOP=1 )
+    psql=("$PG_BIN/psql" -v ON_ERROR_STOP=1)
 
 		if [ "$POSTGRES_DB" != 'postgres' ]; then
 			"${psql[@]}" --username postgres <<-EOSQL
@@ -175,12 +200,12 @@ if [ "$1" = 'postgres' ]; then
 
                 # starting the database server
                 PGUSER="${PGUSER:-postgres}" \
-                pg_ctl -D "$PGDATA" -w start
+                "$PG_BIN/pg_ctl" -D "$PGDATA" -w start
 
                 file_env 'POSTGRES_USER' 'postgres'
                 file_env 'POSTGRES_DB' "$POSTGRES_USER"
 
-                psql=( psql -v ON_ERROR_STOP=1 )
+                psql=( "$PG_BIN/psql" -v ON_ERROR_STOP=1 )
                 psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
 
                 echo
