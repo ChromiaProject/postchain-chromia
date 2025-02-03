@@ -1,4 +1,4 @@
-package net.postchain.d1.anchoring.resourceusage;
+package net.postchain.d1.anchoring.resourceusage
 
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.Metrics
@@ -30,6 +30,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
     private lateinit var cs: CryptoSystem
     private var lastSpaceUpdateTimes = mutableMapOf<String, MutableMap<ResourceType, Long>>()
     private lateinit var sigMaker: SigMaker
+    private var hasResourceUsageOp = false
 
     companion object : KLogging()
 
@@ -98,11 +99,12 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.cs = cs
+        this.hasResourceUsageOp = module.getOperations().contains(ResourceUsageStatisticsOp.OP_NAME)
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return when (position) {
-            SpecialTransactionPosition.Begin -> true
+            SpecialTransactionPosition.Begin -> this.hasResourceUsageOp
             SpecialTransactionPosition.End -> false
         }
     }
