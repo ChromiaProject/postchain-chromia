@@ -97,6 +97,9 @@ docker run -d --name postchain \
     run-node
 ```
 
+> **Note:** Apple M4 CPUs may not be able to start up without disabling SVE, if you run into issues, please try using
+> `-e JAVA_TOOL_OPTIONS="-Xmx2g -XX:UseSVE=0"` instead in the command above.
+
 ## Native background process
 
 The node can be started as a background process using for example `screen`. You can add JVM flags by setting 
