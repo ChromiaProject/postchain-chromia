@@ -55,14 +55,14 @@ stages:
 deploy-snapshot:
   extends: .setup
   stage: deploy
-  rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "dev"
   script:
     - git fetch --unshallow
     - git fetch --tags
     - CURRENT_VERSION=$(git describe --tags --abbrev=0)
     - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-    - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
+    - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-db-lock-fix-SNAPSHOT
     - mvn
       $MAVEN_CLI_OPTS
       --activate-profiles ci,slow-it,docker-push,distro

@@ -56,6 +56,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     private var systemAnchoringBrid: BlockchainRid? = null
 
     private val blockedPipes = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private var skipFirst = true // In case other extensions lock tables
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -72,6 +73,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+        if (skipFirst) {
+            logger.info("Skipping first run")
+            skipFirst = false
+            return emptyList()
+        }
+
         val allOps = mutableListOf<OpData>()
         val messageLimit = AtomicLong(icmfReceiverBlockchainConfigData.messageLimit)
         createNonAnchoredOperations(bctx, allOps, nonAnchoredReceivers.flatMap { it.getRelevantPipes() }, BASE_SPECIAL_TX_OVERHEAD, messageLimit).let { size ->
