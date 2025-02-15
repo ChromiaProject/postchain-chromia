@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getMerkleHashVersion
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
@@ -56,7 +57,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
     private var systemAnchoringBrid: BlockchainRid? = null
 
     private val blockedPipes = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
-    private var skipFirst = true // In case other extensions lock tables
+    private var startupLockCheck = true // In case other extensions lock tables
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -73,10 +74,18 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        if (skipFirst) {
-            logger.info("Skipping first run")
-            skipFirst = false
-            return emptyList()
+        if (startupLockCheck) {
+            if (bctx.chainID == 0L) {
+                DatabaseAccess.of(bctx).apply {
+                    val clusterTableName = tableName(bctx, "cluster")
+                    val rs = bctx.conn.createStatement().executeQuery("SELECT true FROM pg_locks where relation = '$clusterTableName'::regclass")
+                    if (rs.next()) {
+                        startupLockCheck = false
+                        return emptyList()
+                    }
+                }
+            }
+            startupLockCheck = false
         }
 
         val allOps = mutableListOf<OpData>()
