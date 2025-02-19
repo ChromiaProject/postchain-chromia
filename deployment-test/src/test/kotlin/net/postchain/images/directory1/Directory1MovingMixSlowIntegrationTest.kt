@@ -181,6 +181,16 @@ class Directory1MovingMixSlowIntegrationTest {
             }
             assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(5)
         }
+
+        updateDapp("test_dapp", maxBlockTransactions = 1000)
+
+        testLogger.info("Making sure 1 more block of dapp is anchored")
+        awaitUntilAsserted {
+            val lastAnchoredBlock = awaitQueryResult {
+                node1.client(s1CAC).getLastAnchoredBlock(dappBrid)
+            }
+            assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(6)
+        }
     }
 
     @Test

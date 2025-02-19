@@ -26,6 +26,7 @@ import net.postchain.chain0.proposal.getRelevantProposals
 import net.postchain.chain0.proposal.voting.makeVoteOperation
 import net.postchain.chain0.proposal_blockchain.findBlockchainRid
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainOperation
+import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TxRid
 import net.postchain.common.BlockchainRid
@@ -381,6 +382,16 @@ open class ManagedModeBase {
         // Asserting signers of newly added blockchain
         dapps[dappName] = assertChainSigners(txRid, *assertSigners)
         testLogger.info { "Dapp $dappName deployed: ${dapps[dappName]}" }
+    }
+
+    protected fun updateDapp(dappName: String, maxBlockTransactions: Int, faulty: Boolean = false, icmfReceiver: ByteArray? = null) {
+        testLogger.info("Update dapp $dappName")
+
+        val configGtv = compileDapp(dappName, maxBlockTransactions, icmfReceiver, faulty)
+
+        node1.c0.transactionBuilder()
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "")
+                .postTransactionUntilConfirmed("Propose $dappName config")
     }
 
     protected fun getMaxBlockTransactionsOfAllCommittedBlockchainConfigs(node: PostchainContainer, blockchainRid: BlockchainRid): Set<Int> {
