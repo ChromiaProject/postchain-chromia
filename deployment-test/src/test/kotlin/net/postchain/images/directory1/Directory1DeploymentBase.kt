@@ -24,7 +24,6 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
-import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.client.config.PostchainClientConfig
@@ -520,15 +519,5 @@ abstract class Directory1DeploymentBase {
                 assertThat(fooDockerContainer?.state).isEqualTo("exited")
             }
         }
-    }
-
-    private fun updateDapp(dappName: String, maxBlockTransactions: Int, faulty: Boolean, icmfReceiver: ByteArray) {
-        testLogger.info("Update dapp $dappName")
-
-        val configGtv = compileDapp(dappName, maxBlockTransactions, icmfReceiver, faulty)
-
-        node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "")
-                .postTransactionUntilConfirmed("Propose $dappName config")
     }
 }
