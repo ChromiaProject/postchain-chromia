@@ -45,41 +45,41 @@ class GlobalTopicIcmfReceiver(
     private var job: Job? = null
 
     private fun start(): Job {
-        val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
+        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater") + MDCContext()) {
+            val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
 
-        val lastMessageHeights = withReadConnection(storage, myChainId) {
-            dbOperations.loadAllLastMessageHeights(it)
-        }
+            val lastMessageHeights = withReadConnection(storage, myChainId) {
+                dbOperations.loadAllLastMessageHeights(it)
+            }
 
-        val allClusters = clusterManagement.getClusterNames()
-        for (route in routes) {
-            if (route.chains.isNotEmpty()) {
-                route.chains.mapNotNull {
-                    try {
-                        clusterManagement.getClusterOfBlockchain(it)
-                    } catch (e: Exception) {
-                        logger.warn(e) { "Global topic for blockchain rid $it ignored since cluster name lookup failed: ${e.message}" }
-                        null
+            val allClusters = clusterManagement.getClusterNames()
+            for (route in routes) {
+                if (route.chains.isNotEmpty()) {
+                    route.chains.mapNotNull {
+                        try {
+                            clusterManagement.getClusterOfBlockchain(it)
+                        } catch (e: Exception) {
+                            logger.warn(e) { "Global topic for blockchain rid $it ignored since cluster name lookup failed: ${e.message}" }
+                            null
+                        }
+                    }.distinct().forEach { clusterName ->
+                        pipes[clusterName to route] = createPipe(
+                                myCluster,
+                                clusterName,
+                                route,
+                                lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
                     }
-                }.distinct().forEach { clusterName ->
-                    pipes[clusterName to route] = createPipe(
-                            myCluster,
-                            clusterName,
-                            route,
-                            lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
-                }
-            } else {
-                for (clusterName in allClusters) {
-                    pipes[clusterName to route] = createPipe(
-                            myCluster,
-                            clusterName,
-                            route,
-                            lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                } else {
+                    for (clusterName in allClusters) {
+                        pipes[clusterName to route] = createPipe(
+                                myCluster,
+                                clusterName,
+                                route,
+                                lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
+                    }
                 }
             }
-        }
 
-        return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater") + MDCContext()) {
             while (isActive) {
                 delay(pollInterval)
                 try {

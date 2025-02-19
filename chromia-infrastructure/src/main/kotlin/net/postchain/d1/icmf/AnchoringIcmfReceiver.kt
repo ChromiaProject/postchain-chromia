@@ -34,13 +34,13 @@ class AnchoringIcmfReceiver(
     private var systemAnchoringPipesCreated = false
 
     private fun start(): Job {
-        val allClusters = clusterManagement.getClusterNames()
-        if (allClusters.isNotEmpty()) {
-            createSystemAnchoringPipes()
-            createClusterAnchoringPipes(allClusters)
-        }
-
         return CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater") + MDCContext()) {
+            val allClusters = clusterManagement.getClusterNames()
+            if (allClusters.isNotEmpty()) {
+                createSystemAnchoringPipes()
+                createClusterAnchoringPipes(allClusters)
+            }
+
             while (isActive) {
                 delay(pollInterval)
                 try {
