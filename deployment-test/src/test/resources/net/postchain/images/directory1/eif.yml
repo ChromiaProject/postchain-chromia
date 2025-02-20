@@ -37,7 +37,7 @@ definitions:
         anchoring_interval: 5_000
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 2000
       gtx:
@@ -72,7 +72,7 @@ blockchains:
     module: eif_event_receiver_chain_common
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       gtx:
         modules:
           - "net.postchain.eif.EifGTXModule"
@@ -93,7 +93,7 @@ blockchains:
     module: eif_event_receiver_dynamic_icmf_config_chain_common
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       gtx:
         modules:
           - "net.postchain.eif.EifGTXModule"
@@ -134,4 +134,4 @@ blockchains:
         anchoring_interval: 5_000
 
 compile:
-  rellVersion: 0.13.13
+  rellVersion: 0.14.5

@@ -1,5 +1,7 @@
 package net.postchain.d1.anchoring.resourceusage
 
+import assertk.assertThat
+import assertk.assertions.containsOnly
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -141,10 +143,10 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
 
         val containerMetricValues = resourceUsageStatisticsSpecialTxExtension.getContainerMetricValues()
 
-        assertEquals(listOf(
+        assertThat(containerMetricValues).containsOnly(
                 ContainerStats("testContainer1", 1, FREE_SPACE_LEFT_MIB, 1000),
-                ContainerStats("testContainer2", 2, FREE_SPACE_LEFT_MIB, 2000)),
-                containerMetricValues)
+                ContainerStats("testContainer2", 2, FREE_SPACE_LEFT_MIB, 2000)
+        )
     }
 
     @Test

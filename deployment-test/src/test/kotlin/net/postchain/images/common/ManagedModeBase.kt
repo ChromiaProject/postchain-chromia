@@ -390,7 +390,7 @@ open class ManagedModeBase {
         val configGtv = compileDapp(dappName, maxBlockTransactions, icmfReceiver, faulty)
 
         node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "")
+                .proposeConfigurationOperation(node1.providerPubkey, dapps[dappName]!!, GtvEncoder.encodeGtv(configGtv), "", null)
                 .postTransactionUntilConfirmed("Propose $dappName config")
     }
 

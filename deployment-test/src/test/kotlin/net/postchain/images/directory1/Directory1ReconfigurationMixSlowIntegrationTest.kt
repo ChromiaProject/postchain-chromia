@@ -119,7 +119,7 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
 
         testLogger.info("Proposing faulty chain0 config")
         node1.c0.transactionBuilder(listOf(node1.provider))
-                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, chain0Config(true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, chain0Config(true), "", null)
                 .postTransactionUntilConfirmed("Propose a faulty chain0 config")
 
         // Asserting that chain0 is building blocks
@@ -147,7 +147,7 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
 
         testLogger.info("Proposing chain0 config")
         node1.c0.transactionBuilder(listOf(node1.provider))
-                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDapp), "")
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDapp), "", null)
                 .postTransactionUntilConfirmed("Propose a chain0 config")
 
         val testConfig = node1.c0.nmGetBlockchainConfigurationInfo(chain0Brid, node1.c0.currentBlockHeight())!!
@@ -162,7 +162,7 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
 
         testLogger.info("Proposing faulty chain0 config")
         node1.c0.transactionBuilder(listOf(node1.provider))
-                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDappUpdate), "")
+                .proposeConfigurationOperation(node1.providerPubkey, chain0Brid, GtvEncoder.encodeGtv(compileDappUpdate), "", null)
                 .postTransactionUntilConfirmed("Propose a faulty chain0 config")
 
         // Asserting that chain0 is building blocks
@@ -238,15 +238,15 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
         testLogger.info("Proposing different kinds of configs for CAC: config, duplicated config, removing signer, faulty config, config again")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "", null)
                 // propose the same config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18200), "", null)
                 // disable node3
                 .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18300, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18300, true), "", null)
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "", null)
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs")
 
         voteOnAllProposals(listOf(node2.provider, node3.provider))
@@ -260,14 +260,14 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
         testLogger.info("Proposing different kinds of configs for CAC: proposing config, faulty config, adding signer, config again")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose already applied config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18400), "", null)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18500, true), "", null)
                 // re-enable node3
                 .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18600), "")
+                .proposeConfigurationOperation(node1.providerPubkey, clusterAnchoringBrid, cacConfig(18600), "", null)
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #2")
 
         voteOnAllProposals(listOf(node2.provider, node3.provider))
@@ -290,15 +290,15 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
         testLogger.info("Proposing different kinds of configs for SAC: config, duplicated config, removing signer, faulty config, config again")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "", null)
                 // propose the same config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19200), "", null)
                 // disable node3
                 .disableNodeOperation(node3.providerPubkey, node3.pubkey.data)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19300, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19300, true), "", null)
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "", null)
                 .postTransactionUntilConfirmed("Propose different system anchoring chain configs")
 
         voteOnAllProposals(listOf(node2.provider, node3.provider))
@@ -315,14 +315,14 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
         testLogger.info("Proposing different kinds of configs for SAC: proposing config, faulty config, adding signer, config again")
         node1.c0.transactionBuilder(listOf(node1.provider, node2.provider, node3.provider))
                 // propose already applied config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19400), "", null)
                 // propose faulty config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19500, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19500, true), "", null)
                 // re-enable node3
                 .enableNodeOperation(node3.providerPubkey, node3.pubkey.data)
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, systemCluster)
                 // propose config
-                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19600), "")
+                .proposeConfigurationOperation(node1.providerPubkey, systemAnchoringBrid, sacConfig(19600), "", null)
                 .postTransactionUntilConfirmed("Propose different system anchoring chain configs #2")
 
         voteOnAllProposals(listOf(node2.provider, node3.provider))
@@ -381,9 +381,9 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
                 // proposing faulty pending_config1 and pending_removed_signers_config2,
                 // so that config2 will contain base_config1 and will fail
                 // signer update should be retried and eventually succeed
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100, true), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20100, true), "", null)
                 .disableNodeOperation(node2.providerPubkey, node2.pubkey.data)
-                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200), "")
+                .proposeConfigurationOperation(node1.providerPubkey, cac, cacConfig(20200), "", null)
                 .postTransactionUntilConfirmed("Propose different cluster anchoring chain configs #3")
 
         awaitQueryResult {

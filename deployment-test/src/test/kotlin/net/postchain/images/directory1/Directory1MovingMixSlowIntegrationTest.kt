@@ -300,7 +300,7 @@ class Directory1MovingMixSlowIntegrationTest {
                 ContainerClusterManagement(
                         ClusterManagementImpl(node1.c0), mapOf("s1" to listOf(node1.peerInfo()), "s2" to listOf(node2.peerInfo()), "s3" to listOf(node3.peerInfo()))
                 ),
-                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 2)
         )
         verifyICCF(chromiaClientProvider, arrayOf(node1))
     }

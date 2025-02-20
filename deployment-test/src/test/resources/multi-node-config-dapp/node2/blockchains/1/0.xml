@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <dict>
+    <entry key="features">
+        <dict>
+            <entry key="merkle_hash_version"><int>2</int></entry>
+        </dict>
+    </entry>
     <entry key="blockstrategy">
         <dict>
             <entry key="name">

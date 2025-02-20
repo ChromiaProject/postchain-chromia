@@ -519,7 +519,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                                 APP_CLUSTER1 to listOf(node1.peerInfo())
                         )
                 ),
-                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 2)
         )
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
         val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
