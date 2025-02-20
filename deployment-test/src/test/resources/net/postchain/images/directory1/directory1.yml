@@ -23,6 +23,8 @@ blockchains:
           - johan.nilsson@chromaway.com
           - mikael.staldal@chromaway.com
           - robert.wideberg@chromaway.com
+      proposal_blockchain_move:
+        provider_quota_move_cost: 35
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -49,7 +51,7 @@ blockchains:
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       fast_revolt_status_timeout: 1000
       blockstrategy:
@@ -72,7 +74,7 @@ blockchains:
     module: anchoring_chain_system
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -94,7 +96,7 @@ blockchains:
     module: anchoring_chain_cluster
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -116,7 +118,7 @@ blockchains:
     module: management_chain_mainnet
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -159,6 +161,8 @@ blockchains:
           - johan.nilsson@chromaway.com
           - mikael.staldal@chromaway.com
           - robert.wideberg@chromaway.com
+      proposal_blockchain_move:
+        provider_quota_move_cost: 35
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
@@ -182,7 +186,7 @@ blockchains:
     module: economy_chain_test
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
         maxblocktime: 2000
@@ -256,12 +260,13 @@ blockchains:
       lib.auth:
         auth_pubkey: x"0317FF1ECF25B04026B6F9FA1960BA58070FB1CFC98519F7BC02D71ED1B00B1997"
       economy_chain:
-        bsc_asset_network_id: 97
-        bsc_asset_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-        bsc_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-        eth_asset_network_id: 1337
-        eth_asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
-        eth_bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
+        evm_bridges:
+          - network_id: 97
+            asset_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
+            bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
+          - network_id: 1337
+            asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
+            bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6
@@ -278,6 +283,7 @@ blockchains:
         evm_transaction_submitters_bonus: 0.1
         container_removal_timeout: -1
         token_rate_update_interval_ms: 60000 # 60 seconds (approximately every other block)
+        staking_oracle_pubkey: x"02CB22CF3F0EF7BD697D169797DDE3D2A974D626C6D99D5FEDAD5301E2E60E9227"
       economy_chain_test_claim_tchr:
         asset_name: "tCHR"
         asset_symbol: "tCHR"
@@ -297,7 +303,7 @@ blockchains:
     module: token_chain
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       gtx:
         modules:
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
@@ -357,4 +363,4 @@ blockchains:
             issuing_blockchain_rid: x"00"
 
 compile:
-  rellVersion: 0.13.13
+  rellVersion: 0.14.5

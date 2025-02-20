@@ -187,7 +187,7 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
 
         testLogger.info("Propose forced configuration operation")
         val currentHeight = node1.client(dappBrid).currentBlockHeight()
-        node1.c0.transactionBuilder().proposeForcedConfigurationOperation(node1.providerPubkey, dappBrid, GtvEncoder.encodeGtv(compileDapp("test_dapp")), currentHeight, "Propose force configuration")
+        node1.c0.transactionBuilder().proposeForcedConfigurationOperation(node1.providerPubkey, dappBrid, GtvEncoder.encodeGtv(compileDapp("test_dapp")), currentHeight, "Propose force configuration", true)
                 .postTransactionUntilConfirmed("Force configuration for dapp $dappBrid")
 
         testLogger.info("Verify one signer")
@@ -198,7 +198,6 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
 
         testLogger.info("Change bc status to RUNNING")
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "(2)Change to RUNNING")
                 .postTransactionUntilConfirmed("(3)Change state to ${BlockchainState.RUNNING.name} for dapp $dappBrid")
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
 

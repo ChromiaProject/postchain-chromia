@@ -343,7 +343,7 @@ abstract class Directory1DeploymentBase {
                 ContainerClusterManagement(
                         ClusterManagementImpl(node1.c0), mapOf(systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo()))
                 ),
-                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 1) // TODO [use-new-algo] use new hash version
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 2)
         )
         verifyICCF(chromiaClientProvider)
     }

@@ -263,7 +263,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
         val evmTxSubmitterChainGtvConfig = GtvMLParser.parseGtvML(xml)
 
         node1.c0.transactionBuilder()
-                .proposeConfigurationOperation(node1.providerPubkey, txSubmitterBrid, GtvEncoder.encodeGtv(evmTxSubmitterChainGtvConfig), "")
+                .proposeConfigurationOperation(node1.providerPubkey, txSubmitterBrid, GtvEncoder.encodeGtv(evmTxSubmitterChainGtvConfig), "", null)
                 .postTransactionUntilConfirmed("Add new system chain bridge")
 
         voteOnAllProposals(listOf(node2.provider, node3.provider))

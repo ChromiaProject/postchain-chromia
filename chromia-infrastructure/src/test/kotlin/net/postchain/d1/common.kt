@@ -44,6 +44,8 @@ fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
     val messagingNodeAvailabilityReporting = File(RELL_SOURCE_PATH, "messaging/node_availability_reporting.rell").readText()
     val confUpdateMessage = File(RELL_SOURCE_PATH, "messaging/configuration_update_message.rell").readText()
     val containerBlockchainMessage = File(RELL_SOURCE_PATH, "messaging/container_blockchain.rell").readText()
+    val resourceUsageStatisticsMessage = File(RELL_SOURCE_PATH, "messaging/resource_usage_statistics.rell").readText()
+    val resourceUsageStatisticsHelpers = File(RELL_SOURCE_PATH, "common_helpers/resource_usage_statistics.rell").readText()
     return GtvMLParser.parseGtvML(
             Any::class::class.java.getResource(blockchainConfigFile)!!.readText(),
             mapOf(
@@ -55,7 +57,9 @@ fun getClusterAnchoringChainConfig(blockchainConfigFile: String): Gtv {
                     "lib.icmf.receiver" to GtvFactory.gtv(icmfReceiverRellCode),
                     "messaging.configuration_update_message" to GtvFactory.gtv(confUpdateMessage),
                     "messaging.node_availability_reporting" to GtvFactory.gtv(messagingNodeAvailabilityReporting),
-                    "messaging.container_blockchain" to GtvFactory.gtv(containerBlockchainMessage)
+                    "messaging.container_blockchain" to GtvFactory.gtv(containerBlockchainMessage),
+                    "messaging.resource_usage_statistics" to GtvFactory.gtv(resourceUsageStatisticsMessage),
+                    "common_helpers.resource_usage_statistics" to GtvFactory.gtv(resourceUsageStatisticsHelpers)
             )
     )
 }

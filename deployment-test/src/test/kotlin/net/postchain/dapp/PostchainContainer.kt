@@ -112,9 +112,8 @@ class PostchainContainer(
     fun nodeApiPath() = "http://$nodeHost:$apiPort"
     fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
 
-    // TODO [use-new-algo] use new hash algorithm here
-    fun client(chainId: Long, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 1) = client(getBlockchainRid(chainId), signers, merkleHashVersion)
-    fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 1) =
+    fun client(chainId: Long, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 2) = client(getBlockchainRid(chainId), signers, merkleHashVersion)
+    fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 2) =
             createClient(brid, signers, merkleHashVersion)
 
     private fun createClient(brid: BlockchainRid, signers: List<KeyPair>, merkleHashVersion: Int): PostchainClient =

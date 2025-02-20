@@ -3,7 +3,7 @@ blockchains:
     module: test_dapp
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 1000
         maxblocktransactions: 500
@@ -17,7 +17,7 @@ blockchains:
     module: test_dapp2
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -39,7 +39,7 @@ blockchains:
     module: test_dapp3
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
@@ -53,7 +53,7 @@ blockchains:
     module: test_dapp5
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 2001
         maxblocktransactions: 501
@@ -67,7 +67,7 @@ blockchains:
     module: test_cross_chain_transfer
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
       blockstrategy:
         maxblocktime: 1000
       gtx:
@@ -77,7 +77,7 @@ blockchains:
     module: test_token_chain_account_creation
     config:
       features:
-        merkle_hash_version: 1 # TODO [use-new-algo] use new hash version
+        merkle_hash_version: 2
 
 libs:
   ft4:
@@ -86,3 +86,6 @@ libs:
     tagOrBranch: v1.0.0r
     rid: x"FA487D75E63B6B58381F8D71E0700E69BEDEAD3A57D1E6C1A9ABB149FAC9E65F"
     insecure: false
+
+compile:
+  rellVersion: 0.14.5

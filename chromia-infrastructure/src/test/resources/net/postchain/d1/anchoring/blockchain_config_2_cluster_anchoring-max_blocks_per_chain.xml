@@ -94,6 +94,12 @@ This is a Anchor Chain configuration specifically for testing.
                             <entry key="messaging/container_blockchain.rell">
                                 <param key="messaging.container_blockchain" type="string"/>
                             </entry>
+                            <entry key="messaging/resource_usage_statistics.rell">
+                                <param key="messaging.resource_usage_statistics" type="string"/>
+                            </entry>
+                            <entry key="common_helpers/resource_usage_statistics.rell">
+                                <param key="common_helpers.resource_usage_statistics" type="string"/>
+                            </entry>
                         </dict>
                     </entry>
                     <entry key="version">

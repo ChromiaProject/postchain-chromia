@@ -4,7 +4,7 @@
 <dict>
     <entry key="features">
         <dict>
-            <entry key="merkle_hash_version"><int>1</int></entry>
+            <entry key="merkle_hash_version"><int>2</int></entry>
         </dict>
     </entry>
     <entry key="config_consensus_strategy">

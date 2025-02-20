@@ -23,7 +23,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.GTXTransaction
@@ -37,9 +37,7 @@ import java.io.File
 
 class IccfIT : ManagedModeTest() {
 
-    // TODO [use-new-algo] use new hash algorithm here and in test configs when Rell is updated
-
-    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
     private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
     private val sourceDappGtvConfig = GtvMLParser.parseGtvML(
