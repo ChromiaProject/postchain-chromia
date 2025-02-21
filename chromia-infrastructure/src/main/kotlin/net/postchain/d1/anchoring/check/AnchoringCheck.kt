@@ -60,7 +60,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
                 }
                 if (anchoringCheckConfig.evmAnchorCheckIntervalMs >= 0) {
                     if (anchoringCheckConfig.rpcUrls.isNotEmpty() && anchoringCheckConfig.anchoringContractAddress.isNotEmpty()) {
-                        evmCheckJob = checkHighestBlockHeightsAnchoredInEVM(anchorBlockQueries, anchoringCheckConfig)
+                        evmCheckJob = checkHighestBlockHeightsAnchoredInEVM(anchorChainRid, anchorBlockQueries, anchoringCheckConfig)
                     } else {
                         logger.error("EVM anchoring check is not possible due to missing configuration, rpcUrls: ${anchoringCheckConfig.rpcUrls} , anchoringContractAddress: ${anchoringCheckConfig.anchoringContractAddress}")
                     }
@@ -86,7 +86,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
                         }
                         nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK] = EagerDiagnosticValue(cacChecks)
                         delay(verifyLastAnchoredHeightIntervalMs)
-                    } catch (e: CancellationException) {
+                    } catch (_: CancellationException) {
                         break
                     } catch (e: Exception) {
                         logger.error("Unable to check last cluster anchored height with error: ${e.message}", e)
@@ -105,7 +105,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
                             nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_SYSTEM_ANCHORING_CHECK] = EagerDiagnosticValue(sacChecks)
                         }
                         delay(verifyLastSystemAnchoredHeightInterval)
-                    } catch (e: CancellationException) {
+                    } catch (_: CancellationException) {
                         break
                     } catch (e: Exception) {
                         logger.error("Unable to check last system anchored height with error: ${e.message}", e)
@@ -114,15 +114,15 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
                 }
             }
 
-    private fun checkHighestBlockHeightsAnchoredInEVM(systemAnchoringBlockQueries: BlockQueries, config: AnchoringCheckConfig) =
+    private fun checkHighestBlockHeightsAnchoredInEVM(systemAnchoringBrid: BlockchainRid, systemAnchoringBlockQueries: BlockQueries, config: AnchoringCheckConfig) =
             CoroutineScope(Dispatchers.IO).launch(CoroutineName("check-EVM-anchoring") + MDCContext()) {
-                val web3jClient = Web3jClient(config.rpcUrls)
+                val web3jClient = Web3jClient(config.rpcUrls, systemAnchoringBrid)
                 while (isActive) {
                     try {
                         val evmChecks = checkHighestBlockHeightsAnchoredInEVM(web3jClient, config.anchoringContractAddress, systemAnchoringBlockQueries)
                         nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_EVM_ANCHORING_CHECK] = EagerDiagnosticValue(evmChecks)
                         delay(config.evmAnchorCheckIntervalMs)
-                    } catch (e: CancellationException) {
+                    } catch (_: CancellationException) {
                         web3jClient.close()
                         break
                     } catch (e: Exception) {
@@ -150,17 +150,17 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
         var error: String
         try {
             val bcBlockAnchorInCac = clusterAnchorBlockQueries.query("get_anchor_block_by_transaction_block_height", gtv(mapOf("blockchain_rid" to gtv(blockchainRid.data), Pair("transaction_block_height", gtv(cacBlockHeight))))).get()
-            if (!bcBlockAnchorInCac.isNull()) {
+            error = if (!bcBlockAnchorInCac.isNull()) {
                 val bcBlockHeightAnchoredInCac = bcBlockAnchorInCac["block_height"]?.asInteger()
                 val bcBlockAtHeight = bcBlockClient.blockAtHeight(bcBlockHeightAnchoredInCac!!)
                 if (bcBlockAtHeight != null) {
                     val match = bcBlockAtHeight.rid.data.contentEquals(bcBlockAnchorInCac["block_rid"]?.asByteArray())
                     return AnchoringChainCheck(bcBlockHeightAnchoredInCac, match)
                 } else {
-                    error = "Blockchain is behind CAC last anchored block."
+                    "Blockchain is behind CAC last anchored block."
                 }
             } else {
-                error = "Cluster anchor block could not be retrieved."
+                "Cluster anchor block could not be retrieved."
             }
         } catch (e: Exception) {
             logger.error("Unable to check if blockchain $blockchainRid is anchored in CAC with error: ${e.message}", e)
@@ -213,16 +213,16 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
             val sacHeightAnchoredInEvm = lastAnchoredBlock.component1().value.longValueExact()
             val sacBlockRidAnchoredInEvm = lastAnchoredBlock.component2().value
             val sacBlockAtHeight = systemAnchorBlockQueries.getBlockAtHeight(sacHeightAnchoredInEvm, false).get()
-            if (sacBlockAtHeight != null) {
+            error = if (sacBlockAtHeight != null) {
                 val sacBlockRID = sacBlockAtHeight.header.blockRID
                 val sacBlockRidMatchesBlockRidAnchoredInEvm = sacBlockRID.contentEquals(sacBlockRidAnchoredInEvm)
                 if (sacBlockRidMatchesBlockRidAnchoredInEvm) {
                     return checkBlockHeightsAnchoredInSAC(systemAnchorBlockQueries, sacHeightAnchoredInEvm)
                 } else {
-                    error = "SAC anchor block does not match the block anchored in EVM."
+                    "SAC anchor block does not match the block anchored in EVM."
                 }
             } else {
-                error = "SAC is behind EVM last anchored block."
+                "SAC is behind EVM last anchored block."
             }
         } catch (e: Exception) {
             logger.error("Unable to check if SAC is anchored in EVM with error: ${e.message}", e)
