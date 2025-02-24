@@ -53,7 +53,7 @@ blockchains:
       features:
         merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
-      fast_revolt_status_timeout: 1000
+      fast_revolt_status_timeout: 2000
       blockstrategy:
         maxblocktime: 2000
       sync_ext:
@@ -123,7 +123,7 @@ blockchains:
       blockstrategy:
         maxblocktime: 2000
       revolt:
-        fast_revolt_status_timeout: 1000
+        fast_revolt_status_timeout: 2000
       signers:
         - x"0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
       sync_ext:

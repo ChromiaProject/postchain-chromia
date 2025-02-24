@@ -37,6 +37,11 @@ import java.nio.charset.StandardCharsets
 // Test base to get common evm container test resources
 abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
 
+    companion object {
+        const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
+        const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
+    }
+
     val evmContainerLogger = KotlinLogging.logger(evmLoggerName)
     val evmContainerCredentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
     val evmContainer: GethContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
@@ -121,7 +126,7 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
     }
 
     fun getBinaryFromArtifactResource(resourcePath: String): String {
-        val artifactFile = Directory1EconomyChainMixSlowIntegrationTest::class.java.getResource(resourcePath)?.readText()
+        val artifactFile = EvmTestBase::class.java.getResource(resourcePath)?.readText()
         val artifactJson = GsonBuilder().create().fromJson(artifactFile, JsonObject::class.java)
         return artifactJson.get("bytecode").asString
     }
