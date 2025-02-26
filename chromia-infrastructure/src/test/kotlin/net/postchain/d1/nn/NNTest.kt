@@ -4,7 +4,8 @@ import net.postchain.core.EContext
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.gtxOP
-import net.postchain.nn.NNModule
+import net.postchain.nn.DJLTextModel
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 
@@ -25,7 +26,19 @@ class NNTest {
     @Test
     fun testNN() {
         val module = NNTestModule()
-        val nnModule = NNModule()
-        println(nnModule.generateTextWithPyTorchGreedy("Hello fellow kids!"))
+        val DJLTextModel = DJLTextModel()
+
+        try {
+            val input = "Confessions: I"
+            val generatedText: String = DJLTextModel.generateText(input)
+            println("Generated text: $generatedText")
+            assertTrue("Generated text should not be empty", generatedText.isNotEmpty())
+            val isVerified = DJLTextModel.verifyTextGeneration(generatedText, input)
+            assertTrue("Verification should succeed for the generated text", isVerified)
+        } finally {
+            DJLTextModel.close()
+        }
+
+
     }
 }

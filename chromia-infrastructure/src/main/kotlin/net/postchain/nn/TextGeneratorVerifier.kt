@@ -1,15 +1,16 @@
 package net.postchain.nn
 
+import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer
 import ai.djl.inference.Predictor
 import ai.djl.modality.nlp.generate.CausalLMOutput
 import ai.djl.modality.nlp.generate.SearchConfig
 import ai.djl.ndarray.NDArray
 import ai.djl.ndarray.NDList
-import ai.djl.ndarray.NDScope
 import ai.djl.ndarray.index.NDIndex
 import ai.djl.ndarray.types.DataType
 import ai.djl.ndarray.types.Shape
 import java.util.Arrays
+import kotlin.comparisons.maxOf
 
 /**
  * `TextGenerator` is an LMSearch (language model search) which contains multiple
@@ -21,7 +22,8 @@ import java.util.Arrays
  */
 class TextGeneratorVerifier(val predictor: Predictor<NDList, CausalLMOutput>?,
                             val searchName: String?,
-                            val config: SearchConfig?) {
+                            val config: SearchConfig?,
+                            val tokenizer: HuggingFaceTokenizer) {
     /**
      * Returns the value of the positionOffset.
      *
@@ -30,30 +32,109 @@ class TextGeneratorVerifier(val predictor: Predictor<NDList, CausalLMOutput>?,
     var positionOffset: NDArray? = null
         private set
 
-    fun verify(inputIds: NDArray): Boolean {
-        // Initialize the end position of each sentence
-        val endPosition = LongArray(Math.toIntExact(inputIds.shape[0]))
-        Arrays.fill(endPosition, config!!.maxSeqLength.toLong())
-
+    /**
+     * Verifies the generated text by comparing model predictions with the actual tokens,
+     * excluding the prompt tokens from verification.
+     * 
+     * @param inputIds The NDArray containing the token IDs to verify
+     * @param prompt The prompt text that was used to generate the text
+     * @return True if the model predictions match the input tokens (excluding prompt tokens)
+     */
+    fun verify(inputIds: NDArray, prompt: String): Boolean {
+        // Prepare the attention mask and compute the positionOffset.
         val attentionMask = prepareAttentionMaskOffset(inputIds, config)
-        val manager = inputIds.manager
-        while (true) {
-            NDScope().use { ignore ->
-                var pastOutputIds = null
-                var nextInputIds = inputIds
-                var pastAttentionMask = attentionMask
-                var pastKeyValues = null
-                val pastSeqLength = 0L
-                val modelInput = prepareInput(nextInputIds, pastAttentionMask, pastSeqLength, 1)
+        val pastSeqLength = 0L
+        val modelInput = prepareInput(inputIds, attentionMask, pastSeqLength, 1)
 
-                val modelOutput = predictor!!.predict(modelInput)
-                val outputIds = modelOutput.logits.argMax(2)
+        // Perform a single forward pass.
+        val modelOutput = predictor!!.predict(modelInput)
+        // Get predicted token IDs by taking argMax over the vocabulary dimension.
+        val predicted = modelOutput.logits.argMax(2)
 
-                println(Arrays.toString(inputIds.toLongArray()))
-                println(Arrays.toString(outputIds.toLongArray()))
-                println("HOGOO")
+        // Get the original input and predicted tokens as arrays
+        val inputTokens = inputIds.toLongArray()
+        val predictedTokens = predicted.toLongArray()
+
+        println("Input tokens: ${Arrays.toString(inputTokens)}")
+        println("Predicted tokens: ${Arrays.toString(predictedTokens)}")
+
+        println("Input text: ${tokenizer.decode(inputTokens)}")
+        println("Predicted text: ${tokenizer.decode(predictedTokens)}")
+
+        // Get prompt tokens
+        val promptTokens = tokenizer.encode(prompt).getIds()
+        val promptLength = promptTokens.size
+
+        // If the input is shorter than the prompt (shouldn't happen normally), return false
+        if (inputTokens.size <= promptLength) {
+            println("Input is shorter than or equal to prompt length, verification failed")
+            return false
+        }
+
+        // Verify text length is correct (check for EOS token or max sequence length)
+        val hasCorrectLength = verifyTextLength(predictedTokens, promptLength)
+        if (!hasCorrectLength) {
+            println("Text length verification failed")
+            return false
+        }
+
+        if (inputTokens.size != predictedTokens.size) {
+            // note: this cannot happen if model is correct
+            println("Input and predicted tokens sizes do not match")
+            return false
+        }
+
+        // For a sequence [A, B, C], the model predicts [B, C, EOS]
+        // So we need to compare input[i] with predicted[i-1]
+        // We start from the prompt length to skip the prompt tokens
+        
+        // Check if there are enough tokens to compare
+        if (inputTokens.size == promptLength) {
+            println("Not enough tokens to compare after prompt")
+            return true // No generated tokens to verify
+        }
+        
+
+
+        for (i in maxOf(promptLength, 1) until predictedTokens.size) {
+            if (predictedTokens[i - 1] != inputTokens[i]) {
+                println("Mismatch at position $i: predicted=${predictedTokens[i - 1]}, expected=${inputTokens[i]}")
+                return false
             }
         }
+        
+        println("All predicted tokens match the expected next tokens")
+        return true
+    }
+
+    /**
+     * Verifies that the predicted text length is correct based on termination criteria.
+     *
+     * @param predictedTokens The array of predicted token IDs (including prompt if present)
+     * @param promptLength The number of prompt tokens to skip
+     * @return True if the predicted text length is correct
+     */
+    private fun verifyTextLength(predictedTokens: LongArray, promptLength: Int): Boolean {
+        val eosTokenId = config?.eosTokenId ?: -1L
+        val maxSequenceLength = config?.maxSeqLength ?: 60
+
+        if (eosTokenId != -1L) {
+            for (i in promptLength until predictedTokens.size) {
+                if (predictedTokens[i] == eosTokenId) {
+                    println("EOS token found at position $i")
+                    // Verify that generation stopped exactly at the EOS token
+                    return i == predictedTokens.size - 1
+                }
+            }
+        }
+
+        val expectedLength = minOf(promptLength + maxSequenceLength, predictedTokens.size)
+        val isMaxLengthReached = predictedTokens.size == expectedLength
+
+        println("Max sequence length: $maxSequenceLength, "
+                + "Expected length: $expectedLength, "
+                + "Actual length: ${predictedTokens.size}")
+        return isMaxLengthReached
     }
 
     private fun prepareAttentionMaskOffset(inputIds: NDArray, config: SearchConfig?): NDArray {
@@ -111,6 +192,4 @@ class TextGeneratorVerifier(val predictor: Predictor<NDList, CausalLMOutput>?,
 
         return NDList(inputIds, positionIds, attentionMask)
     }
-
-
 }

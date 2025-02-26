@@ -14,8 +14,7 @@ import ai.djl.repository.zoo.ZooModel
 import ai.djl.translate.DeferredTranslatorFactory
 import java.io.Closeable
 
-
-class NNModule() : Closeable {
+class DJLTextModel() : Closeable {
 
     val model: ZooModel<NDList, CausalLMOutput>
     val predictor: Predictor<NDList, CausalLMOutput>
@@ -33,23 +32,38 @@ class NNModule() : Closeable {
                 .optTranslatorFactory(DeferredTranslatorFactory())
                 .build()
 
-        //val clz = Class.forName("ai.djl.pytorch.engine.PtEngineProvider")
         model = criteria.loadModel()
         predictor = model.newPredictor()
         manager = model.ndManager.newSubManager()
         tokenizer = HuggingFaceTokenizer.newInstance("gpt2")
     }
 
-    fun generateTextWithPyTorchGreedy(input: String): String {
+    /**
+     * Generates a text string using PyTorch with greedy search.
+     */
+    fun generateText(input: String): String {
         val generator = TextGenerator(predictor, "greedy", config)
-        val verifier = TextGeneratorVerifier(predictor, "greedy", config)
         val encoding: Encoding = tokenizer.encode(input)
         val inputIds: LongArray = encoding.getIds()
         val inputIdArray: NDArray = manager.create(inputIds).expandDims(0)
         val output: NDArray = generator.generate(inputIdArray)
-        verifier.verify(output)
-        val outputIds: LongArray = output.toLongArray()
-        return tokenizer.decode(outputIds)
+        return tokenizer.decode(output.toLongArray())
+    }
+
+    /**
+     * Verifies a generated text by re-encoding it into token IDs and verifying via the verifier,
+     * excluding the prompt tokens from verification.
+     * 
+     * @param generatedText The complete generated text (including prompt)
+     * @param prompt The prompt text that was used to generate the text
+     * @return True if the model predictions match the generated tokens (excluding prompt tokens)
+     */
+    fun verifyTextGeneration(generatedText: String, prompt: String): Boolean {
+        val encoding: Encoding = tokenizer.encode(generatedText)
+        val outputIds: LongArray = encoding.getIds()
+        val outputIdArray: NDArray = manager.create(outputIds).expandDims(0)
+        val verifier = TextGeneratorVerifier(predictor, "greedy", config, tokenizer)
+        return verifier.verify(outputIdArray, prompt)
     }
 
     override fun close() {
@@ -58,5 +72,4 @@ class NNModule() : Closeable {
         predictor.close()
         model.close()
     }
-
 }

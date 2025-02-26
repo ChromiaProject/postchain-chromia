@@ -12,7 +12,6 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 
 
 class NNRequest(
@@ -39,7 +38,7 @@ class NNSpecialTransactionExtension: GTXSpecialTxExtension {
     val executor = java.util.concurrent.Executors.newFixedThreadPool(1)
 
 
-    val nnModule = NNModule()
+    val nnTextModel = DJLTextModel()
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
@@ -67,7 +66,7 @@ class NNSpecialTransactionExtension: GTXSpecialTxExtension {
                     arrayOf(gtv(request.id))
             ))
             executor.submit {
-                val responseText = nnModule.generateTextWithPyTorchGreedy(request.text)
+                val responseText = nnTextModel.generateText(request.text)
                 val response = Response(request, responseText)
                 pendingResponses[request.id] = response
             }
@@ -76,6 +75,9 @@ class NNSpecialTransactionExtension: GTXSpecialTxExtension {
     }
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
+        // TODO: __nn_response should be validated using the verifier (synchronously?)
+        // TODO: __nn_take_request correctness is going to be validated in Rell code so it
+        //       can be accepted as is
         return true
     }
 
