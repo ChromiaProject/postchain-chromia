@@ -95,11 +95,6 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci
-      package
-      -DskipTests
-    - mvn
-      $MAVEN_CLI_OPTS
       --activate-profiles ci,coverage
       verify
 

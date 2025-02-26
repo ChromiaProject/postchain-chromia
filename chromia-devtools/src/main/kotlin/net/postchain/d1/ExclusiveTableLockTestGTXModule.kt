@@ -1,10 +1,16 @@
 package net.postchain.d1
 
-import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.gtx.SimpleGTXModule
 import java.sql.Statement
+import kotlin.apply
+import kotlin.collections.any
+import kotlin.collections.filter
+import kotlin.collections.forEach
+import kotlin.collections.map
+import kotlin.text.toRegex
+import kotlin.use
 
 /**
  * This is a test module with the purpose to detect deadlocks during chain startup. Place it as second in the
@@ -15,7 +21,7 @@ class ExclusiveTableLockTestGTXModule : SimpleGTXModule<Unit>(
         mapOf(),
         mapOf()
 ) {
-    companion object : KLogging() {
+    companion object : mu.KLogging() {
         // These tables already cause deadlock on update - ignore for now to be able to test for new deadlocks
         val TABLE_IGNORE_LIST = listOf(
                 // Postchain tables

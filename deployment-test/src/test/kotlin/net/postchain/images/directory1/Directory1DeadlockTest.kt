@@ -61,9 +61,9 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
     init {
 
         // Pipeline test? Then copy and mount the test jar from a host directory
-        var testJarFile = "target/deployment-test-dev-tests.jar"
+        var testJarFile = "../chromia-devtools/target/chromia-devtools-dev.jar"
         System.getenv("TEST_MOUNT_DIRECTORY")?.let {
-            val testJarFileOnHost = File("$it/deployment-test-dev-tests.jar")
+            val testJarFileOnHost = File("$it/../chromia-devtools/target/chromia-devtools-dev.jar")
 
             testLogger.info { "Copying test jar file to host mount: ${testJarFileOnHost.absolutePath}" }
 
