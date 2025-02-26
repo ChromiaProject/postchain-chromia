@@ -38,6 +38,9 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.Path
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.pathString
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -61,9 +64,11 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
     init {
 
         // Pipeline test? Then copy and mount the test jar from a host directory
-        var testJarFile = "../chromia-devtools/target/chromia-devtools-dev.jar"
+        var testJarFile = Path("../chromia-devtools/target/")
+                .listDirectoryEntries("chromia-devtools-*.jar")
+                .first().pathString
         System.getenv("TEST_MOUNT_DIRECTORY")?.let {
-            val testJarFileOnHost = File("$it/../chromia-devtools/target/chromia-devtools-dev.jar")
+            val testJarFileOnHost = File("$it/chromia-devtools.jar")
 
             testLogger.info { "Copying test jar file to host mount: ${testJarFileOnHost.absolutePath}" }
 
