@@ -28,7 +28,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
     lateinit var nodePubkey: ByteArray
     lateinit var nodePrivkey: ByteArray
     private lateinit var cs: CryptoSystem
-    private var lastSpaceUpdateTimes = mutableMapOf<String, MutableMap<ResourceType, Long>>()
+    internal var lastSpaceUpdateTimes = mutableMapOf<String, Long>()
     private lateinit var sigMaker: SigMaker
     private var hasResourceUsageOp = false
 
@@ -52,6 +52,10 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
                 val height = bctx.height
                 val signature = sigMaker.signDigest(hash(height))
                 operations.add(ValidateNodeSignatureOp(signature.subjectID, signature.data).toOpData())
+
+                bctx.addAfterCommitHook {
+                    updateContainersLastSpaceUpdateTimes(containerMetricValue)
+                }
             }
             for (containerStats in containerMetricValue) {
                 operations.add(ResourceUsageStatisticsOp(nodePubkey, containerStats.containerName, containerStats.measurementTime, containerStats.resourceType, containerStats.metricValue).toOpData())
@@ -59,7 +63,6 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
         }
         return operations
     }
-
 
     fun getContainerMetricValues(): List<ContainerStats> {
         try {
@@ -81,15 +84,12 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
                 .mapNotNull { metric ->
                     val containerName = metric.id.tags.find { it.key == SUB_CONTAINER_CONTAINER_NAME_TAG }!!.value
                     val containerSpaceMetricTime = containerSpaceTimeMetrics[containerName] ?: 0
-                    val lastSpaceUpdateTime = lastSpaceUpdateTimes[containerName]?.get(resourceType) ?: 0
+                    val lastSpaceUpdateTime = lastSpaceUpdateTimes.getOrDefault(containerName, 0)
 
                     // Discard metric if time now newer than last time
-                    var result: ContainerStats? = null
                     if (containerSpaceMetricTime > lastSpaceUpdateTime) {
-                        lastSpaceUpdateTimes.getOrPut(containerName) { mutableMapOf() }[resourceType] = containerSpaceMetricTime
-                        result = ContainerStats(containerName, containerSpaceMetricTime, resourceType, metric.value().toLong())
-                    }
-                    result
+                        ContainerStats(containerName, containerSpaceMetricTime, resourceType, metric.value().toLong())
+                    } else null
                 }
     }
 
@@ -114,7 +114,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
             logger.warn("Multiple ${ValidateNodeSignatureOp.OP_NAME} found!")
             return false
         }
-        val processedResourceUsageStatisticsOpResourceType = mutableSetOf<ResourceType>()
+        val processedResourceUsageStatisticsOpResourceType = mutableMapOf<String, MutableSet<ResourceType>>()
         var subjectID = ByteArray(0)
         for (op in ops) {
             when (op.opName) {
@@ -155,8 +155,8 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
                         logger.warn("Signature pubkey: $subjectID does not correspond to node pubkey: $nodePubkey assigned to free space left resource measurement.")
                         return false
                     }
-                    if (!processedResourceUsageStatisticsOpResourceType.add(resourceType)) {
-                        logger.warn("Multiple ${ResourceUsageStatisticsOp.OP_NAME} operations of the same resource type detected: $resourceType")
+                    if (!processedResourceUsageStatisticsOpResourceType.getOrPut(opData.containerName) { mutableSetOf() }.add(resourceType)) {
+                        logger.warn("Multiple ${ResourceUsageStatisticsOp.OP_NAME} operations of the same resource type detected for same container: $resourceType")
                         return false
                     }
                 }
@@ -239,6 +239,15 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
         }
 
         fun toOpData() = OpData(OP_NAME, arrayOf(gtv(nodePubkey), gtv(containerName), gtv(mesurementTime), gtv(resourceType.ordinal.toLong()), gtv(metricValue.toString())))
+    }
+
+    fun updateContainersLastSpaceUpdateTimes(containerMetricValue: List<ContainerStats>) {
+        containerMetricValue
+                .map { it.containerName to it.measurementTime }
+                .toSet()
+                .forEach {
+                    lastSpaceUpdateTimes[it.first] = it.second
+                }
     }
 }
 

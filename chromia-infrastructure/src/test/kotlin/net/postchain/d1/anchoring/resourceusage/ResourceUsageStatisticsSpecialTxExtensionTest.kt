@@ -2,6 +2,7 @@ package net.postchain.d1.anchoring.resourceusage
 
 import assertk.assertThat
 import assertk.assertions.containsOnly
+import assertk.assertions.isTrue
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -74,6 +75,7 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         val resourceUsageStatisticsSpecialTxExtension = ResourceUsageStatisticsSpecialTxExtension()
 
         val containerMetricValues = resourceUsageStatisticsSpecialTxExtension.getContainerMetricValues()
+        resourceUsageStatisticsSpecialTxExtension.updateContainersLastSpaceUpdateTimes(containerMetricValues) // This is usually run by createSpecialOperations
         val expected = listOf(
                 ContainerStats("testContainer", 1, FREE_SPACE_LEFT_MIB, 1000),
                 ContainerStats("testContainer", 1, SPACE_USAGE_MIB, 10000),
@@ -81,10 +83,12 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         assertEquals(expected, containerMetricValues)
 
         val emptyContainerMetricValues = resourceUsageStatisticsSpecialTxExtension.getContainerMetricValues()
+        resourceUsageStatisticsSpecialTxExtension.updateContainersLastSpaceUpdateTimes(containerMetricValues) // This is usually run by createSpecialOperations
         assertEquals(listOf<ContainerStats>(), emptyContainerMetricValues)
 
         spaceUpdateTime = 2
         val secondContainerMetricValues = resourceUsageStatisticsSpecialTxExtension.getContainerMetricValues()
+        resourceUsageStatisticsSpecialTxExtension.updateContainersLastSpaceUpdateTimes(containerMetricValues) // This is usually run by createSpecialOperations
         val expected2 = listOf(
                 ContainerStats("testContainer", 2, FREE_SPACE_LEFT_MIB, 1000),
                 ContainerStats("testContainer", 2, SPACE_USAGE_MIB, 10000),
@@ -287,7 +291,24 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
     }
 
     @Test
-    fun validateSpecialOperations_duplicate_operation_resource_type() {
+    fun validateSpecialOperations_duplicate_operation_resource_type_in_different_containers() {
+        val cs = spy(Secp256K1CryptoSystem())
+        val keyPair = cs.generateKeyPair()
+        doReturn(true).`when`(cs).verifyDigest(any(), any())
+        val resourceUsageStatisticsSpecialTxExtension = ResourceUsageStatisticsSpecialTxExtension()
+        resourceUsageStatisticsSpecialTxExtension.init(mock(), 3, mock(), cs)
+
+        val bctx = mock<BlockEContext>()
+        `when`(bctx.height).thenReturn(10)
+        val specialOperations = listOf(ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp(keyPair.pubKey.data, ByteArray(0)).toOpData(),
+                ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(keyPair.pubKey.data, "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData(),
+                ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(keyPair.pubKey.data, "testContainer1", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData())
+
+        assertThat(resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)).isTrue()
+    }
+
+    @Test
+    fun validateSpecialOperations_duplicate_operation_resource_type_in_same_container() {
         val cs = spy(Secp256K1CryptoSystem())
         val keyPair = cs.generateKeyPair()
         doReturn(true).`when`(cs).verifyDigest(any(), any())
