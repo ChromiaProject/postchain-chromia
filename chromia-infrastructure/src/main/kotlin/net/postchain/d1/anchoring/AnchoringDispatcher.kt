@@ -2,8 +2,6 @@
 
 package net.postchain.d1.anchoring
 
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.infra.MasterSyncInfra
 import net.postchain.core.BlockchainInfrastructure
@@ -29,16 +27,12 @@ class AnchoringDispatcher(private val storage: Storage, private val blockchainIn
         }
     }
 
-    fun connectChain(chainID: Long) {
-        val brid = withReadConnection(storage, chainID) {
-            DatabaseAccess.of(it).getBlockchainRid(it)!!
-        }
-
+    fun connectChain(chainID: Long, blockchainRid: BlockchainRid) {
         connectChainInternal(chainID) {
-            AnchoringLocalPipe(chainID, brid, storage)
+            AnchoringLocalPipe(chainID, blockchainRid, storage)
         }
 
-        localChains[chainID] = brid
+        localChains[chainID] = blockchainRid
     }
 
     fun connectSubnodeChain(chainID: Long, brid: BlockchainRid) {
