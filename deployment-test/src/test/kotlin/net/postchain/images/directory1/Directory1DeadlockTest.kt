@@ -24,8 +24,10 @@ import net.postchain.d1.ExclusiveTableLockTestGTXModule
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.getBlockchainHeight
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import org.awaitility.Duration
 import org.junit.jupiter.api.MethodOrderer
@@ -49,12 +51,18 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
     private val node1Logger = KotlinLogging.logger("Deadlock_Node1Logger")
 
-    private lateinit var evmChainConfig: String
-    private lateinit var txsChainConfig: String
+    private lateinit var evmChainConfig: Gtv
+    private lateinit var txsChainConfig: Gtv
+    val systemAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
+    val clusterAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
+    private lateinit var systemAnchoringChainBrid: BlockchainRid
+    private lateinit var clusterAnchoringChainBrid: BlockchainRid
     private lateinit var eventReceiverBrid: BlockchainRid
     private lateinit var txSubmitterBrid: BlockchainRid
 
     // Clients
+    private val PostchainContainer.sac get() = client(systemAnchoringChainBrid)
+    private val PostchainContainer.cac get() = client(clusterAnchoringChainBrid)
     private val PostchainContainer.evm get() = client(eventReceiverBrid)
     private val PostchainContainer.txs get() = client(txSubmitterBrid)
 
@@ -100,16 +108,18 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
         testLogger.info("Setup the network")
 
         with(node1.c0) {
-            val clusterAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
-            val systemAnchoringGtvConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
             transactionBuilder()
-                    .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
+                    .initOperation(GtvEncoder.encodeGtv(systemAnchoringChainConfig), GtvEncoder.encodeGtv(clusterAnchoringChainConfig))
                     .postTransactionUntilConfirmed("init")
             assertThat(getSummary().providers).isEqualTo(1L)
             assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
             assertAnchoringChainProperties()
 
             assertThat(nmFindNextConfigurationHeight(chain0Brid, 0)).isNull()
+
+            val blockchains = node1.c0.getBlockchains(true)
+            systemAnchoringChainBrid = BlockchainRid(blockchains.find { it.name == "system_anchoring" }?.rid!!)
+            clusterAnchoringChainBrid = BlockchainRid(blockchains.find { it.name == "cluster_anchoring_system" }?.rid!!)
         }
     }
 
@@ -118,13 +128,12 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
     fun `Init - EIF Event Receiver Chain`() {
         testLogger.info("Deploying EIF Event Receiver Chain")
 
-        evmChainConfig = this::class.java.getResource("/directory1deployment/eif_event_receiver.xml")!!.readText()
+        evmChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/eif_event_receiver.xml")!!.readText()
                 .replace("<entry key=\"mininterblockinterval\">", "<entry key=\"maxblocktime\"><int>1000</int></entry><entry key=\"mininterblockinterval\">")
-                .replace(EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER, "0xC7b0F970c1EFBB181194Fc15ccD5C4a2c2Ab863B")
-        val gtvConfig = GtvMLParser.parseGtvML(evmChainConfig)
+                .replace(EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER, "0xC7b0F970c1EFBB181194Fc15ccD5C4a2c2Ab863B"))
 
         node1.c0.transactionBuilder()
-                .initEvmEventReceiverChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(gtvConfig))
+                .initEvmEventReceiverChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(evmChainConfig))
                 .postTransactionUntilConfirmed("Add $EVM_EVENT_RECEIVER_CHAIN_NAME")
 
         val erRid = node1.c0.getBlockchains(true).firstOrNull { it.name == EVM_EVENT_RECEIVER_CHAIN_NAME }?.rid
@@ -139,17 +148,15 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
     fun `Init - TXS`() {
         testLogger.info("Deploying Transaction submitter chain")
 
-        txsChainConfig = this::class.java.getResource("/directory1deployment/transaction_submitter.xml")!!.readText()
+        txsChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/transaction_submitter.xml")!!.readText()
                 .replace("DIRECTORY_CHAIN_VALIDATOR_VALUE", "6936b1761eafc2116650b6593bbc86bd79a339a5")
                 .replace("x\"DIRECTORY_CHAIN_BRID_VALUE\"", chain0Brid.toHex())
                 .replace("x\"SYSTEM_ANCHORING_CHAIN_BRID_VALUE\"", systemAnchoringBrid.toHex())
                 .replace("ANCHORING_CONTRACT_VALUE", "6936b1761eafc2116650b6593bbc86bd79a339a5")
-                .replace("VALIDATOR_CONTRACT_VALUE", "39615b16b74589919c9ce1ea73f1fc5d53141a78")
-
-        val gtvConfig = GtvMLParser.parseGtvML(txsChainConfig)
+                .replace("VALIDATOR_CONTRACT_VALUE", "39615b16b74589919c9ce1ea73f1fc5d53141a78"))
 
         node1.c0.transactionBuilder()
-                .initEvmTransactionSubmitterChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(gtvConfig))
+                .initEvmTransactionSubmitterChainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(txsChainConfig))
                 .postTransactionUntilConfirmed("Add transaction submitter chain")
 
         txSubmitterBrid = BlockchainRid(node1.c0.getEvmTransactionSubmitterChainRid()!!)
@@ -158,45 +165,61 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
     @Test
     @Order(20)
+    fun `Lock test - SAC`() {
+
+        testLogger.info("System anchoring chain config with lock module")
+
+        val chainLockConfig = addLockModule(systemAnchoringChainConfig)
+        testUpdateWithLock(systemAnchoringChainBrid, chainLockConfig, node1.sac)
+    }
+
+    @Test
+    @Order(21)
+    fun `Lock test - CAC`() {
+
+        testLogger.info("Cluster anchoring chain config with lock module")
+
+        val chainLockConfig = addLockModule(clusterAnchoringChainConfig)
+        testUpdateWithLock(clusterAnchoringChainBrid, chainLockConfig, node1.cac)
+    }
+
+    @Test
+    @Order(30)
     fun `Lock test - DC`() {
 
         testLogger.info("Updating directory chain config with lock module")
 
 //        val chainLockConfig = GtvMLParser.parseGtvML(addRellLock(chain0Config, "cluster"))
-        val chainLockConfig = addLockModule(chain0Config)
-
-        testUpdateWithLock(chain0Brid, GtvEncoder.encodeGtv(chainLockConfig), node1.c0)
+        val chainLockConfig = addLockModule(GtvMLParser.parseGtvML(chain0Config))
+        testUpdateWithLock(chain0Brid, chainLockConfig, node1.c0)
     }
 
     @Test
-    @Order(21)
+    @Order(40)
     fun `Lock test - EVM receiver`() {
 
-//        val chainLockConfig = GtvMLParser.parseGtvML(addRellLock(evmChainConfig, "cluster"))
-        val chainLockConfig = addLockModule(evmChainConfig)
+        testLogger.info("Updating EVM receiver chain config with lock module")
 
-        testUpdateWithLock(eventReceiverBrid, GtvEncoder.encodeGtv(chainLockConfig), node1.evm)
+        val chainLockConfig = addLockModule(evmChainConfig)
+        testUpdateWithLock(eventReceiverBrid, chainLockConfig, node1.evm)
     }
 
     @Test
-    @Order(22)
+    @Order(50)
     fun `Lock test - TXS`() {
         testLogger.info("Updating transaction submitter chain config with lock module")
 
         val chainLockConfig = addLockModule(txsChainConfig)
-
-        testUpdateWithLock(txSubmitterBrid, GtvEncoder.encodeGtv(chainLockConfig), node1.txs)
+        testUpdateWithLock(txSubmitterBrid, chainLockConfig, node1.txs)
     }
 
-    private fun testUpdateWithLock(bcRid: BlockchainRid, config: ByteArray, chainClient: PostchainClient) {
-
-        testLogger.info("Updating directory chain config with lock module")
+    private fun testUpdateWithLock(bcRid: BlockchainRid, config: Gtv, chainClient: PostchainClient) {
 
         with(node1.c0) {
 
             try {
                 transactionBuilder()
-                        .proposeConfigurationOperation(provider1KeyPair.pubKey.data, bcRid, config, "", null)
+                        .proposeConfigurationOperation(provider1KeyPair.pubKey.data, bcRid, GtvEncoder.encodeGtv(config), "", null)
                         .postTransactionUntilConfirmed("Updated chain config", retries = 10)
 
                 awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
@@ -228,17 +251,17 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
         }
     }
 
-    private fun addLockModule(chain0LockConfig: String) =
-            GtvFactory.gtv(GtvMLParser.parseGtvML(chain0LockConfig).asDict().mapValues { configRootEntry ->
+    private fun addLockModule(config: Gtv) =
+            gtv(config.asDict().mapValues { configRootEntry ->
                 if (configRootEntry.key == "gtx") {
-                    GtvFactory.gtv(configRootEntry.value.asDict().mapValues { configGtxEntry ->
+                    gtv(configRootEntry.value.asDict().mapValues { configGtxEntry ->
                         if (configGtxEntry.key == "modules") {
                             val modules = configGtxEntry.value.asArray()
                                     .filter { it.asString() != "net.postchain.rell.module.RellPostchainModuleFactory" }
                                     .toTypedArray()
-                            GtvFactory.gtv(listOf(
-                                    GtvFactory.gtv("net.postchain.rell.module.RellPostchainModuleFactory"),
-                                    GtvFactory.gtv(lockGtxModule),
+                            gtv(listOf(
+                                    gtv("net.postchain.rell.module.RellPostchainModuleFactory"),
+                                    gtv(lockGtxModule),
                                     *modules,
                             ))
                         } else {

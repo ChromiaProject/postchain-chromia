@@ -43,9 +43,6 @@ class ExclusiveTableLockTestGTXModule : SimpleGTXModule<Unit>(
                 "c0.signer_excluded_from_pending_configuration",
                 "c0.system_anchoring_chain",
                 "c0.unarchiving_blockchain",
-                // TXS - shouldBuildBlock()
-                "c[0-9]+.evm_submit_transaction",
-                "c[0-9]+.evm_submit_transaction_taken_by",
         ).map(String::toRegex)
     }
 
