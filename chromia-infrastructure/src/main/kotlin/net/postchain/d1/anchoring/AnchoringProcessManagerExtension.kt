@@ -83,7 +83,7 @@ open class AnchoringProcessManagerExtension(
             }
 
             // connect process to local dispatcher
-            localDispatcher.connectChain(cfg.chainID)
+            localDispatcher.connectChain(cfg.chainID, engine.blockchainRid)
         }
     }
 
