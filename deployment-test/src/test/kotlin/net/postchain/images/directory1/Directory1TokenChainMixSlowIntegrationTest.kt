@@ -435,8 +435,8 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         testLogger.info { "Await query on event receiver to report new dynamic topic" }
         awaitQueryResult {
-            val eventReceiverContracts = node1.client(eventReceiverBrid).query("eif.get_contracts", gtv("network_id" to gtv(evmContainerNetworkId)))
-                    .asArray().map { it.asByteArray().wrap() }
+            val eventReceiverContracts = node1.client(eventReceiverBrid).query("eif.get_contracts_to_fetch", gtv("network_id" to gtv(evmContainerNetworkId)))
+                    .asArray().map { it.asDict()["address"]?.asByteArray()?.wrap() }
             assertThat(eventReceiverContracts).hasSize(1)
             assertThat(eventReceiverContracts.first()).isEqualTo(bridgeContract)
         }
