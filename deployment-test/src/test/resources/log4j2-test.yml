@@ -134,6 +134,16 @@ Configuration:
         append: false
         PatternLayout:
           pattern: "%msg%n"
+      - name: Deadlock_EvmContainerAppender
+        fileName: "logs/deadlock/evm_container.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Deadlock_Node1Appender
+        fileName: "logs/deadlock/node1.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
   Loggers:
 
     Root:
@@ -299,3 +309,15 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: TC_Node3Appender
+
+      # Deadlock tests
+      - name: EvmDeadlock_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deadlock_EvmContainerAppender
+      - name: Deadlock_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deadlock_Node1Appender

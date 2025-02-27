@@ -24,6 +24,7 @@
         <module>chromia-infrastructure</module>
         <module>docker-images</module>
         <module>coverage-report-aggregate</module>
+        <module>chromia-devtools</module>
     </modules>
     <packaging>pom</packaging>
 
