@@ -24,7 +24,7 @@ blockchains:
           - mikael.staldal@chromaway.com
           - robert.wideberg@chromaway.com
       proposal_blockchain_move:
-        provider_quota_move_cost: 35
+        provider_quota_move_cost: 5
       proposal_blockchain.util:
         max_config_path_depth: 10
         max_config_size: 2097152 # 2 MiB
