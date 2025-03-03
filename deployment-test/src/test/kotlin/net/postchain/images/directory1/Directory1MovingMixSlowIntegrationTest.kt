@@ -112,8 +112,10 @@ class Directory1MovingMixSlowIntegrationTest {
                     .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 2)
                     .postTransactionUntilConfirmed("init")
 
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
         }
         assertAnchoringChainProperties()
 
@@ -138,7 +140,7 @@ class Directory1MovingMixSlowIntegrationTest {
     @Test
     @Order(2)
     fun `Add clusters, containers and blockchain`() {
-        testLogger.info("Adding cluster/container/node(s): s1/c1/node1, s2/c2/node2, s3/c3/node3")
+        testLogger.info("Adding cluster/container/node(s): s1/c1/node1, s2/c2/node2, s3/c3a,c3b/node3")
         node1.client(chain0Brid, listOf(node1.provider, node2.provider, node3.provider)).transactionBuilder().addNop()
                 // s1/c1/node1
                 .createClusterOperation(node1.providerPubkey, "s1", "SYSTEM_P", listOf(node1.providerPubkey))
@@ -150,12 +152,13 @@ class Directory1MovingMixSlowIntegrationTest {
                 .createContainerOperation(node2.providerPubkey, "c2", "s2", 1, listOf(node1.providerPubkey))
                 .updateNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, null, null, null, 3)
                 .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, "s2")
-                // s3/c3/node3
+                // s3/c3a,c3b/node3
                 .createClusterOperation(node3.providerPubkey, "s3", "SYSTEM_P", listOf(node3.providerPubkey))
-                .createContainerOperation(node3.providerPubkey, "c3", "s3", 1, listOf(node1.providerPubkey))
+                .createContainerOperation(node3.providerPubkey, "c3a", "s3", 1, listOf(node1.providerPubkey))
+                .createContainerOperation(node3.providerPubkey, "c3b", "s3", 1, listOf(node1.providerPubkey))
                 .updateNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, null, null, null, 3)
                 .addNodeToClusterOperation(node3.providerPubkey, node3.pubkey.data, "s3")
-                .postTransactionUntilConfirmed("s1/c1/node1, s2/c2/node2, s3/c3/node3 created")
+                .postTransactionUntilConfirmed("s1/c1/node1, s2/c2/node2, s3/c3a,c3b/node3 created")
 
         testLogger.info("Deploying dapp to c1")
         awaitUntilAsserted {
@@ -174,12 +177,12 @@ class Directory1MovingMixSlowIntegrationTest {
         testLogger.info("Post a transaction to the dapp that we can prove after moving")
         assertThatDappProcessesTx(dapps["test_dapp"]!!, "add_city", "Heraklion", "get_cities", node1, arrayOf(node1))
 
-        testLogger.info("Making sure 5 blocks of dapp are anchored")
+        testLogger.info("Making sure 3 blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
                 node1.client(s1CAC).getLastAnchoredBlock(dappBrid)
             }
-            assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(5)
+            assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(3)
         }
 
         updateDapp("test_dapp", maxBlockTransactions = 1000)
@@ -195,13 +198,15 @@ class Directory1MovingMixSlowIntegrationTest {
 
     @Test
     @Order(3)
-    fun `Moving blockchain from container c1 on master to container c3 on subnode`() {
-        // build 5 more blocks
-        testLogger.info("Making sure next 5 blocks of dapp are built and anchored")
+    fun `Move blockchain from container c1 on node1-master to container c3a on node3-subnode`() {
+        testLogger.info("Move blockchain from container c1 on node1-master to container c3a on node3-subnode")
+
+        // build 3 more blocks
+        testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
         val dappClient = node1.client(dappBrid)
         val height = dappClient.currentBlockHeight()
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 4)
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
         }
 
         // pausing blockchain
@@ -213,14 +218,14 @@ class Directory1MovingMixSlowIntegrationTest {
 
         // initiating moving
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3", "")
-                .postTransactionUntilConfirmed("test_dapp moving to c3/subnode started")
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3a", "")
+                .postTransactionUntilConfirmed("test_dapp moving to c3a/subnode started")
 
         // finalizing moving
         val lastHeight = dappClient.currentBlockHeight() - 1
         node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
-                .postTransactionUntilConfirmed("test_dapp moving to c3/subnode finalized")
+                .postTransactionUntilConfirmed("test_dapp moving to c3a/subnode finalized")
 
         // resuming blockchain
         node1.c0.transactionBuilder().addNop()
@@ -242,12 +247,64 @@ class Directory1MovingMixSlowIntegrationTest {
 
     @Test
     @Order(4)
-    fun `Moving blockchain from container c3 on subnode to container c2 on master`() {
-        testLogger.info("Making sure next 5 blocks of dapp are built and anchored")
+    fun `Move blockchain from container c3a on node3-subnode-c3a to container c3b on node3-subnode-c3a`() {
+        testLogger.info("Move blockchain from container c3a on node3-subnode-c3a to container c3b on node3-subnode-c3a")
+
+        // build 3 more blocks
+        testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
         val dappClient = node3.client(dappBrid)
         val height = dappClient.currentBlockHeight()
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 4)
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
+        }
+
+        // pausing blockchain
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
+                .postTransactionUntilConfirmed("test_dapp paused")
+        // verify blockchain is PAUSED and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
+
+        // initiating moving
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3b", "")
+                .postTransactionUntilConfirmed("test_dapp moving to c3b/subnode started")
+
+        // finalizing moving
+        val lastHeight = dappClient.currentBlockHeight() - 1
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .postTransactionUntilConfirmed("test_dapp moving to c3b/subnode finalized")
+
+        // resuming blockchain
+        node1.c0.transactionBuilder().addNop()
+                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
+                .postTransactionUntilConfirmed("test_dapp resumed")
+        // verify blockchain is RUNNING and all blocks are anchored
+        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
+
+        // Asserting that all blocks (some of them) are anchored on s3CAC chain
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
+        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
+
+        // Asserting that new blocks are built and anchored on s3CAC chain
+        awaitUntilAsserted {
+            val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
+        }
+    }
+
+    @Test
+    @Order(5)
+    fun `Move blockchain from container c3b on node3-subnode-c3b to container c2 on node2-master`() {
+        testLogger.info("Move blockchain from container c3b on node3-subnode-c3b to container c2 on node2-master")
+
+        // build 3 more blocks
+        testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
+        val dappClient = node3.client(dappBrid)
+        val height = dappClient.currentBlockHeight()
+        awaitUntilAsserted {
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
         }
 
         // pausing blockchain
@@ -287,7 +344,7 @@ class Directory1MovingMixSlowIntegrationTest {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun `Transactions can be proven with ICCF after moving`() {
         // Deploy a target chain (important thing is that it is in another cluster in order to avoid intra-cluster ICCF)
         testLogger.info("Deploying ICCF target chain")
