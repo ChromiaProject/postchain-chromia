@@ -63,7 +63,7 @@ class IcmfSenderIT : IcmfBaseIT() {
         await.atMost(Duration.ONE_MINUTE).untilAsserted {
             val txStatuses = getChainNodes(dappChain).map { it.transactionQueue().getTransactionStatus(tx.getRID()) }
             assertThat(txStatuses).any { it.isEqualTo(TransactionStatus.REJECTED) }
-            val txRejectReasons = getChainNodes(dappChain).mapNotNull { it.transactionQueue().getRejectionReason(tx.getRID().wrap())?.message }
+            val txRejectReasons = getChainNodes(dappChain).mapNotNull { it.transactionQueue().getRejectionReason(tx.getRID().wrap())?.first?.message }
             assertThat(txRejectReasons.any { it.contains("Message body too big") }).isTrue()
         }
     }

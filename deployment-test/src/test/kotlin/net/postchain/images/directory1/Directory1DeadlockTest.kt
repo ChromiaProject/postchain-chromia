@@ -42,6 +42,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
 import kotlin.io.path.pathString
 
 @Testcontainers
@@ -73,21 +74,21 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
         // Pipeline test? Then copy and mount the test jar from a host directory
         var testJarFile = Path("../chromia-devtools/target/")
-                .listDirectoryEntries("chromia-devtools-*.jar")
-                .first().pathString
+                .listDirectoryEntries()
+                .find {it.name.matches("chromia-devtools-.*.jar".toRegex()) && !it.name.endsWith("-sources.jar") }!!.pathString
         System.getenv("TEST_MOUNT_DIRECTORY")?.let {
             val testJarFileOnHost = File("$it/chromia-devtools.jar")
 
-            testLogger.info { "Copying test jar file to host mount: ${testJarFileOnHost.absolutePath}" }
+            testLogger.info { "Copying test jar $testJarFile to host mount: ${testJarFileOnHost.absolutePath}" }
 
-            File(testJarFile).copyTo(testJarFileOnHost)
+            File(testJarFile).copyTo(testJarFileOnHost, true)
             testJarFile = testJarFileOnHost.absolutePath
         }
 
         node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                 provider1KeyPair,
                 "config-no-subnodes")
-                .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/deployment-test-dev-tests.jar", BindMode.READ_ONLY)
+                .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
                 .withCreateContainerCmdModifier { it.withEntrypoint("java") }
                 .withCommand("-XX:+UnlockDiagnosticVMOptions",
                         "-XX:AbortVMOnException=java.lang.OutOfMemoryError",
@@ -99,6 +100,8 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
         removeSubnodeContainers()
         startNodesAndChain0()
+
+        testLogger.info { "Classpath files: ${node1.execInContainer("ls", "/opt/chromaway/postchain/classpath/").stdout}" }
     }
 
     @Test
