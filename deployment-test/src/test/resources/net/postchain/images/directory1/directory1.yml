@@ -79,7 +79,6 @@ blockchains:
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
-        name: "net.postchain.d1.anchoring.AnchoringBlockBuildingStrategy"
       sync_ext:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       gtx:
@@ -101,7 +100,6 @@ blockchains:
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
-        name: "net.postchain.d1.anchoring.AnchoringBlockBuildingStrategy"
       sync_ext:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       gtx:
