@@ -22,27 +22,12 @@ class ExclusiveTableLockTestGTXModule : SimpleGTXModule<Unit>(
         mapOf()
 ) {
     companion object : mu.KLogging() {
-        // These tables already cause deadlock on update - ignore for now to be able to test for new deadlocks
         val TABLE_IGNORE_LIST = listOf(
-                // Postchain tables
+                // blocks and configurations tables are never altered by chain configurations,
+                // they are managed by postchain and should not be considered as deadlock candidates
                 "c[0-9]+.blocks",
                 "c[0-9]+.configurations",
-                // Entity tables
-                "c0.blockchain",
-                "c0.blockchain_replica_node",
-                "c0.cluster",
-                "c0.cluster_anchoring_chain",
-                "c0.cluster_node",
-                "c0.cluster_replica_node",
-                "c0.container",
-                "c0.container_blockchain",
-                "c0.faulty_blockchain_configuration",
-                "c0.importing_foreign_blockchain",
-                "c0.moving_blockchain",
-                "c0.node",
-                "c0.signer_excluded_from_pending_configuration",
-                "c0.system_anchoring_chain",
-                "c0.unarchiving_blockchain",
+                "c[0-9]+.transactions",
         ).map(String::toRegex)
     }
 
