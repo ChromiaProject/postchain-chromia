@@ -1,0 +1,12 @@
+module;
+
+import hc: ^;
+
+operation submit_compute_request(id: text, type: text, input: byte_array) {
+    hc.submit_compute_request(id, type, input);
+}
+
+query fetch_requests(): list<struct<hc.computation>> =
+        hc.computation @* { } ( $.to_struct() );
+
+query fetch_compute_result(id: text): (result: byte_array?, error: text?) = hc.fetch_compute_result(id);
