@@ -1,0 +1,203 @@
+package net.postchain.hybridcompute
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder
+import mu.KLogging
+import net.postchain.base.SpecialTransactionPosition
+import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockEContext
+import net.postchain.core.Shutdownable
+import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.GTXModule
+import net.postchain.gtx.data.OpData
+import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
+import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+
+class HybridComputeSpecialTransactionExtension(
+        private val engine: HybridComputeEngine,
+        private val computeTimeoutSeconds: Long,
+        private val concurrency: Int
+) : GTXSpecialTxExtension, Shutdownable {
+    companion object : KLogging()
+
+    private lateinit var module: GTXModule
+
+    override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME)
+
+    private val computations = ConcurrentHashMap<String, Computation>() // id -> computation
+
+    private val computer = ThreadPoolExecutor(1, 1,
+            0L, TimeUnit.MILLISECONDS,
+            ArrayBlockingQueue<Runnable?>(concurrency),
+            ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-%d").build()
+    )
+    private val timeouter: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build()
+    )
+
+    override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+        this.module = module
+    }
+
+    override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
+            position == SpecialTransactionPosition.Begin
+
+    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+        if (position != SpecialTransactionPosition.Begin) return listOf()
+        return buildList {
+            for ((id, computation) in computations) {
+                when (computation) {
+                    is FinishedComputation -> {
+                        logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
+                        add(ResponseOp(id, computation.type, computation.output).toOpData())
+                        bctx.addAfterCommitHook { computations.remove(id) }
+                    }
+
+                    is FailedComputation -> {
+                        logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
+                        add(FailureOp(id, computation.type, computation.errorMessage).toOpData())
+                        bctx.addAfterCommitHook { computations.remove(id) }
+                    }
+
+                    is StartedComputation -> {} // nothing to do
+                }
+            }
+
+            var takenRequests = 0
+            for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
+                if (engine.name == request.type) {
+                    if (takenRequests < concurrency && (computations.putIfAbsent(request.id, StartedComputation(request.type)) == null)) {
+                        try {
+                            var timeoutFuture: ScheduledFuture<*>? = null
+                            val future = computer.submit {
+                                logger.info("Starting computation of request id [${request.id}] of type [${request.type}]")
+                                try {
+                                    val output = engine.compute(request.input.data)
+                                    if (!Thread.currentThread().isInterrupted) {
+                                        logger.info("Computation of request id [${request.id}] of type [${request.type}] finished")
+                                        computations.replace(request.id, FinishedComputation(request.type, output))
+                                    } else {
+                                        logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
+                                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                    }
+                                } catch (_: InterruptedException) {
+                                    logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
+                                    computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                } catch (e: UserMistake) {
+                                    logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
+                                    computations.replace(request.id, FailedComputation(request.type, e.message
+                                            ?: "Unknown error"))
+                                } catch (e: Exception) {
+                                    logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
+                                    computations.replace(request.id, FailedComputation(request.type, "Unknown error"))
+                                } finally {
+                                    timeoutFuture?.cancel(false)
+                                }
+                            }
+                            timeoutFuture = timeouter.schedule({
+                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after $computeTimeoutSeconds seconds")
+                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                future.cancel(true) // interrupt the compute thread
+                            }, computeTimeoutSeconds, TimeUnit.SECONDS)
+                            add(RequestTakenOp(request.id).toOpData())
+                            takenRequests++
+                        } catch (_: RejectedExecutionException) {
+                            computations.remove(request.id)
+                        }
+                    }
+                } else {
+                    logger.warn("No engine found for request id [${request.id}] of type [${request.type}]")
+                }
+            }
+        }
+    }
+
+    override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
+        for (op in ops) {
+            when (op.opName) {
+                RequestTakenOp.OP_NAME -> {
+                    RequestTakenOp.fromOpData(op) ?: return false
+                    // request taken correctness is going to be validated in Rell code so it can be accepted as is
+                }
+
+                ResponseOp.OP_NAME -> {
+                    val response = ResponseOp.fromOpData(op) ?: return false
+                    if (engine.name == response.type) {
+                        if (!computations.containsKey(response.id)) {
+                            try {
+                                logger.info("Starting validation for request id [${response.id}] of type [${response.type}]")
+                                // TODO POS-1735 have timeout for the validation
+                                engine.validate(response.output)
+                                logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded")
+                            } catch (e: UserMistake) {
+                                logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
+                                return false
+                            } catch (e: Exception) {
+                                logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
+                                return false
+                            }
+                        } else {
+                            logger.debug { "Skipping validation for request id [${response.id}] of type [${response.type}] on block builder node" }
+                        }
+                    } else {
+                        logger.warn("No engine found for request id [${response.id}] of type [${response.type}]")
+                        return false
+                    }
+                }
+
+                FailureOp.OP_NAME -> {
+                    val failure = FailureOp.fromOpData(op) ?: return false
+                    if (engine.name == failure.type) {
+                        // failure cannot be fully validated, so it can be accepted as is
+                    } else {
+                        logger.warn("No engine found for request id [${failure.id}] of type [${failure.type}]")
+                        return false
+                    }
+                }
+
+                else -> {
+                    logger.warn("Unexpected operation: ${op.opName}")
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    override fun shutdown() {
+        timeouter.shutdownNow()
+        computer.shutdown()
+        logger.info("Shutting down engine")
+        engine.shutdown()
+        logger.info("Shutting down executors")
+        computer.shutdownNow()
+        if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
+            logger.warn("Timeouter did not terminate in time")
+        }
+        if (!computer.awaitTermination(1, TimeUnit.SECONDS)) {
+            logger.warn("Computer did not terminate in time")
+        }
+        computations.filterValues { it is StartedComputation }.let {
+            if (it.isNotEmpty()) {
+                logger.warn("${it.size} computations was not finished: ${it.keys.joinToString(", ")}")
+            }
+        }
+        computations.filterValues { it !is StartedComputation }.let {
+            if (it.isNotEmpty()) {
+                logger.warn("${it.size} finished computations was not reported: ${it.keys.joinToString(", ")}")
+            }
+        }
+        logger.info("Shut down complete")
+    }
+}

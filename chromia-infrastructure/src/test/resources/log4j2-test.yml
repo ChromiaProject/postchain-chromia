@@ -17,7 +17,7 @@ Configuration:
           pattern: ${logpattern}
       - name: SimpleConsoleAppender
         PatternLayout:
-          pattern: "+++ %msg +++%n"
+          pattern: "+++++ %d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n"
     File:
       - name: FileAppender
         fileName: "${logs}/${logfile}.log"
@@ -26,7 +26,7 @@ Configuration:
       - name: SimpleFileAppender
         fileName: "${logs}/${logfile}.log"
         PatternLayout:
-          Pattern: "+++ %msg +++%n"
+          Pattern: "+++++ %d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n"
 
 
   Loggers:
@@ -48,6 +48,13 @@ Configuration:
 
       - name: net.postchain.d1
         level: debug
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
+        - ref: FileAppender
+
+      - name: net.postchain.hybridcompute
+        level: info
         additivity: false
         AppenderRef:
         - ref: ConsoleAppender

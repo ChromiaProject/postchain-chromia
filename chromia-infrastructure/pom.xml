@@ -165,16 +165,53 @@
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>rell-client-gen</id>
+                        <id>rell-client-gen-d1</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
+                            <target>${project.build.directory}/generated-sources/rell-client-d1</target>
                             <packageName>net.postchain.d1.rell</packageName>
                             <mainModules>
                                 <mainModule>anchoring_chain_cluster</mainModule>
                             </mainModules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-client-gen-infra</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>rell-generate-client</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.basedir}/rell/src</source>
+                            <target>${project.build.directory}/generated-sources/rell-client-infra</target>
+                            <packageName>net.postchain.hybridcompute.rell</packageName>
+                            <mainModules>
+                                <mainModule>lib.hybridcompute.test</mainModule>
+                            </mainModules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-compile</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.basedir}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/hybridcompute</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>rell-integration-test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipTests}</skip>
                         </configuration>
                     </execution>
                 </executions>

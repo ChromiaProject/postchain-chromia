@@ -1,0 +1,75 @@
+@test module;
+
+import ^^.*;
+import ^.helpers.*;
+
+function test_hc() {
+    rell.test.tx().op(
+        submit_compute_request_op("one", "nn", x"ABCD")
+    ).run();
+    rell.test.tx().op(
+        submit_compute_request_op("two", "nn", x"1234")
+    ).run();
+    assert_equals(
+        get_requests(),
+        [
+            compute_request(id = "one", type = "nn", input = x"ABCD"),
+            compute_request(id = "two", type = "nn", input = x"1234"),
+        ]
+    );
+    assert_equals(fetch_compute_result("one"), (result=null, error=null));
+
+    rell.test.tx().op(
+        request_taken_op("one")
+    ).run();
+    assert_equals(
+        get_requests(),
+        [
+            compute_request(id = "two", type = "nn", input = x"1234"),
+        ]
+    );
+    rell.test.tx().op(
+        request_taken_op("one")
+    ).nop().run_must_fail("Computation <one> must be NEW, but is TAKEN");
+    assert_equals(fetch_compute_result("one"), (result=null, error=null));
+
+    rell.test.tx().op(
+        response_op("two", "nn", x"0000")
+    ).run_must_fail("Computation <two> must be TAKEN, but is NEW");
+
+    rell.test.tx().op(
+        response_op("one", "xx", x"00")
+    ).run_must_fail("Computation <one> must have type <nn>");
+
+    rell.test.tx().op(
+        response_op("one", "nn", x"AABBCCDD")
+    ).run();
+    assert_equals(fetch_compute_result("one"), (result=x"AABBCCDD", error=null));
+
+    rell.test.tx().op(
+        response_op("one", "nn", x"00")
+    ).run_must_fail("Computation <one> must be TAKEN, but is COMPUTED");
+
+    rell.test.tx().op(
+        request_taken_op("two")
+    ).run();
+    assert_equals(get_requests(), list<compute_request>());
+    assert_equals(fetch_compute_result("two"), (result=null, error=null));
+
+    rell.test.tx().op(
+        failure_op("two", "nn", "Some error")
+    ).run();
+    assert_equals(fetch_compute_result("two"), (result=null, error="Some error"));
+}
+
+function test_computation_not_found() {
+    assert_fails("No computation with id <bogus>", fetch_compute_result("bogus", *));
+
+    rell.test.tx().op(
+        request_taken_op("bogus")
+    ).run_must_fail("No computation with id <bogus>");
+
+    rell.test.tx().op(
+        response_op("bogus", "nn", x"00")
+    ).run_must_fail("No computation with id <bogus>");
+}
