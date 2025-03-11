@@ -1,6 +1,7 @@
 package net.postchain.images.directory1
 
 import assertk.assertThat
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -25,6 +26,7 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.DirectoryChainValidator
 import net.postchain.eif.contracts.ManagedValidator
 import net.postchain.eif.transaction_submitter.TransactionStatus
+import net.postchain.eif.transaction_submitter.getEvmSubmitTransactionNodeFailures
 import net.postchain.eif.transaction_submitter.getEvmTransactionStatus
 import net.postchain.eif.transaction_submitter.getTransactionTakenBy
 import net.postchain.eif.transaction_submitter.getTransactions
@@ -217,7 +219,7 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
             if (transactions.size == 1) transactions[0].rowId else null
         }
 
-        Awaitility.await().atMost(2, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted() {
+        Awaitility.await().atMost(2, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted {
 
             testLogger.info("Waiting for tx to be taken and failed by all 3 nodes")
 
@@ -229,7 +231,7 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
             assertThat(takenBy.size).isEqualTo(3)
         }
 
-        Awaitility.await().atMost(1, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted() {
+        Awaitility.await().atMost(1, TimeUnit.MINUTES).pollInterval(Duration.TWO_SECONDS).untilAsserted {
 
             testLogger.info("Waiting tx go back to status QUEUED")
 
@@ -239,6 +241,10 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
 
             assertThat(status).isNotNull()
             assertThat(status).isEqualTo(TransactionStatus.QUEUED)
+
+            val evmSubmitTransactionNodeFailures = txsClient.getEvmSubmitTransactionNodeFailures(txId)
+            assertThat(evmSubmitTransactionNodeFailures).hasSize(3)
+            assertThat(evmSubmitTransactionNodeFailures.all { it.reason == "Failed to get gas estimate" }).isTrue()
         }
 
         testLogger.info("TX has failed by 3 nodes and is not ready to be picked up by node4 when started")
