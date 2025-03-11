@@ -1,0 +1,79 @@
+@mount('hc')
+module;
+
+enum state {
+    NEW,
+    TAKEN,
+    COMPUTED,
+    FAILED,
+}
+
+entity computation {
+    key id: text;
+    index mutable state;
+    type: text;
+    input: byte_array;
+    mutable output: byte_array;
+    mutable error: text;
+}
+
+struct compute_request {
+    id: text;
+    type: text;
+    input: byte_array;
+}
+
+query get_requests(): list<compute_request> =
+        computation @* { .state == state.NEW } ( compute_request (id = $.id, type = $.type, input = $.input) );
+
+@mount('__hc.')
+operation request_taken(id: text) {
+    request_taken_impl(id);
+}
+
+@mount('__hc.')
+operation response(id: text, type: text, output: byte_array) {
+    response_impl(id, type, output);
+}
+
+@mount('__hc.')
+operation failure(id: text, type: text, error: text) {
+    failure_impl(id, type, error);
+}
+
+function request_taken_impl(id: text) {
+    val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
+    require(computation.state == state.NEW, "Computation <%s> must be NEW, but is %s".format(id, computation.state));
+    computation.state = state.TAKEN;
+}
+
+function response_impl(id: text, type: text, output: byte_array) {
+    val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
+    require(computation.state == state.TAKEN, "Computation <%s> must be TAKEN, but is %s".format(id, computation.state));
+    require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
+    computation.state = state.COMPUTED;
+    computation.output = output;
+}
+
+function failure_impl(id: text, type: text, error: text) {
+    val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
+    require(computation.state == state.TAKEN, "Computation <%s> must be TAKEN, but is %s".format(id, computation.state));
+    require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
+    computation.state = state.FAILED;
+    computation.error = error;
+}
+
+function submit_compute_request(id: text, type: text, input: byte_array) {
+    create computation ( id, state.NEW, type, input = input, output = x"", error = "" );
+}
+
+function fetch_compute_result(id: text): (result: byte_array?, error: text?) {
+    val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
+    if (computation.state == state.COMPUTED) {
+        return (result = computation.output, error = null);
+    } else if (computation.state == state.FAILED) {
+        return (result = null, error = computation.error);
+    } else {
+        return (result = null, error = null);
+    }
+}
