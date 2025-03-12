@@ -41,10 +41,10 @@ internal fun setupMasterNodeConfig(resource: URL): AppConfig {
             fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
     )
     getSubnodeUser()?.apply {
-        testLogger.info { "Postchain subnode user set to: $this" }
-        configOverrides.put(fullKey(KEY_SUBNODE_USER), this)
+        testLogger.debug { "Postchain subnode user set to: $this" }
+        configOverrides[fullKey(KEY_SUBNODE_USER)] = this
     }
-    testLogger.info { "Config overrides: $configOverrides" }
+    testLogger.debug { "Config overrides: $configOverrides" }
     return parseConfig(resource, configOverrides)
 }
 

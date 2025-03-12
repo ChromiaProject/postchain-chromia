@@ -1,0 +1,51 @@
+@mount("bridge")
+module;
+
+import lib.ft4.admin;
+import lib.ft4.assets;
+import lib.ft4.crosschain;
+
+import lib.eif_event_receiver;
+import lib.eif_event_receiver.dynamic_config.*;
+import lib.hbridge;
+
+object state {
+    mutable initialized: boolean = false;
+}
+
+operation init(
+    // asset
+    asset_name: text,
+    asset_symbol: text,
+    asset_decimals: integer,
+    asset_icon_url: text,
+    // bridge
+    network_id: integer,
+    bridge_address: byte_array,
+    token_address: byte_array,
+) {
+    require(state.initialized == false, "Bridge chain is already initialized");
+    state.initialized = true;
+
+    // register FT4 asset
+    val asset = assets.Unsafe.register_asset(
+        asset_name,
+        asset_symbol,
+        asset_decimals,
+        chain_context.blockchain_rid,
+        asset_icon_url
+    );
+
+    // register bridge contract on Event Receiver
+    create contract_config(network_id, bridge_address);
+
+    // register bridge and ERC-20 asset contract on HBridge
+    hbridge.register_bridge_and_erc20_asset(
+        network_id,
+        token_address,
+        asset,
+        hbridge.bridge_mode.foreign,
+        use_snapshots = true,
+        bridge_address = bridge_address
+    );
+}

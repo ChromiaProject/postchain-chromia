@@ -27,7 +27,6 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.KeyPair
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
@@ -35,6 +34,9 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
+import net.postchain.images.directory1.Directory1TestBase.Companion.provider1KeyPair
+import net.postchain.images.directory1.Directory1TestBase.Companion.provider2KeyPair
+import net.postchain.images.directory1.Directory1TestBase.Companion.provider3KeyPair
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -64,16 +66,16 @@ class Directory1MovingMixSlowIntegrationTest {
 
         init {
             node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"),
+                    provider1KeyPair,
                     "config-mix")
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                    provider2KeyPair,
                     "config-mix")
                     .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
                     .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
                     .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                    provider3KeyPair,
                     "config-mix")
                     .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
                     .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)

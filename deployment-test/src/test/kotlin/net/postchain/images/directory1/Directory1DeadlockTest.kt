@@ -114,8 +114,10 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringChainConfig), GtvEncoder.encodeGtv(clusterAnchoringChainConfig))
                     .postTransactionUntilConfirmed("init")
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
             assertAnchoringChainProperties()
 
             assertThat(nmFindNextConfigurationHeight(chain0Brid, 0)).isNull()
