@@ -67,10 +67,12 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
     // Users
     val aliceEvmAddressStr = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
     val aliceEvmAddress = aliceEvmAddressStr.hexStringToByteArray()
-    val bobEvmAddressStr = "661683e5d36E83B38B1a20247ba6F5c410dC165d"
-    val bobEvmAddress = bobEvmAddressStr.hexStringToByteArray()
+    val aliceEvmCredentials = evmContainerCredentials // Alice EVM credentials equals evmContainerCredentials
+    val bobEvmCredentials = Credentials.create(bobKeyPair.privKey.toString())
 
-    val node0EvmAddress = Address("659e4a3726275edFD125F52338ECe0d54d15BD99")
+    val node0EvmAddress = Address(Credentials.create("3132333435363738393031323334353637383930313233343536373839303131").address)
+    val node1EvmAddress = Address(Credentials.create("30807728C8C207C48F6D03C414177CA2C04E92FA683D2D1DC0DCAEA6AE3C6240").address)
+    val node2EvmAddress = Address(Credentials.create("3AFAED9C68D6DB2013DD56554EE69A3C9B1E2AAC112F534B12A5FD4B7928B376").address)
 
     @AfterAll
     override fun tearDown() {
@@ -78,13 +80,14 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
         super.tearDown()
     }
 
-    fun linkAccount(userAuthenticator: FTAuthenticator, userEvmAddress: ByteArray, brid: BlockchainRid) {
-        val signature = getLinkEvmEoaAccountSignature(userEvmAddress, evmContainerCredentials.ecKeyPair, userAuthenticator.accountId, brid)
+    fun linkAccount(userAuthenticator: FTAuthenticator, evmCredentials: Credentials, brid: BlockchainRid) {
+        val evmAddress = evmCredentials.address.substringAfter("0x").hexStringToByteArray()
+        val signature = getLinkEvmEoaAccountSignature(evmAddress, evmCredentials.ecKeyPair, userAuthenticator.accountId, brid)
 
         userAuthenticator.client.transactionBuilder().addNop()
-                .evmSignaturesOperation(listOf(userEvmAddress), listOf(signature))
+                .evmSignaturesOperation(listOf(evmAddress), listOf(signature))
                 .ftAuthOperation(userAuthenticator.accountId, userAuthenticator.authDescriptor.id.data)
-                .linkEvmEoaAccountOperation(userEvmAddress)
+                .linkEvmEoaAccountOperation(evmAddress)
                 .postTransactionUntilConfirmed("Link EVM account")
     }
 
@@ -101,7 +104,8 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
         )).merkleHash(hashCalculator)
 
         val template = node1.client(brid).getAuthMessageTemplate(opName, opArgs)
-        val message = template.replace("{blockchain_rid}", brid.toHex().uppercase())
+        val message = template
+                .replace("{blockchain_rid}", brid.toHex().uppercase())
                 .replace("{nonce}", nonce.toHex().uppercase())
                 .replace("{account_id}", accountId.toHex())
 

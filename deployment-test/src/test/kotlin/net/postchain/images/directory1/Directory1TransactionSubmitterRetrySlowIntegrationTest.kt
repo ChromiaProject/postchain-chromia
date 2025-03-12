@@ -128,8 +128,10 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
                     .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 2)
                     .postTransactionUntilConfirmed("init")
 
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
         }
         assertAnchoringChainProperties()
 

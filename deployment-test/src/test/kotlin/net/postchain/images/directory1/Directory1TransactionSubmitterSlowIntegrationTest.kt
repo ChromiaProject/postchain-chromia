@@ -100,7 +100,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
         node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                provider2KeyPair,
                 "config-mix")
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
                 .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
@@ -114,7 +114,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
         node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                provider3KeyPair,
                 "config-mix")
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
                 .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
@@ -151,8 +151,10 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
             assertAnchoringChainProperties()
 
             // We pretend that this is EC just to be able to test system chain bridges

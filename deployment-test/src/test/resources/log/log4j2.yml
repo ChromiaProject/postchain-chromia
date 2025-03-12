@@ -25,7 +25,7 @@ Configuration:
       - ref: ConsoleAppender
 
     - name: net.postchain.base.BaseBlockchainProcessManager
-      level: debug
+      level: info
       additivity: false
       AppenderRef:
       - ref: ConsoleAppender
@@ -37,7 +37,7 @@ Configuration:
       - ref: ConsoleAppender
 
     - name: net.postchain.managed.ManagedBlockchainConfigurationProvider
-      level: debug
+      level: info
       additivity: false
       AppenderRef:
         - ref: ConsoleAppender

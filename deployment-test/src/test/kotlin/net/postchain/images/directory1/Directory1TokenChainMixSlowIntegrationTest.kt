@@ -121,12 +121,12 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
         node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                node1KeyPair,
+                provider1KeyPair,
                 "config-mix"
         ).withEifEnv()
 
         node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                provider2KeyPair,
                 "config-mix"
         )
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
@@ -135,7 +135,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 .withEifEnv()
 
         node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                provider3KeyPair,
                 "config-mix"
         )
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
@@ -166,8 +166,10 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
         }
         assertAnchoringChainProperties()
 
@@ -260,7 +262,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         // Register Alice account
         aliceAuthenticator = registerAccount(node1, ecAdminKeyPair, ecBrid, aliceKeyPair, "Alice")
-        linkAccount(aliceAuthenticator, aliceEvmAddress, ecBrid)
+        linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
 
         // Claim initial supply
         aliceAuthenticator.verifyOperationAuthFlags("faucet")
@@ -357,7 +359,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         ).registerAccountOperation()
                 .postTransactionUntilConfirmed("Register account")
         aliceTcAuthenticator = FTAuthenticator(aliceKeyPair, node1.client(tcBrid, listOf(aliceKeyPair)))
-        linkAccount(aliceTcAuthenticator, aliceEvmAddress, tcBrid)
+        linkAccount(aliceTcAuthenticator, aliceEvmCredentials, tcBrid)
 
         val afterTransferEcAliceBalance = node1.ec.getBalance(aliceAuthenticator.accountId)
         val afterTransferTcAliceBalance = node1.tc.getAssetBalance(aliceAuthenticator.accountId, chrAssetId)!!.amount

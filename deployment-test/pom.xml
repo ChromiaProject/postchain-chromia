@@ -29,6 +29,11 @@
 
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>chromia-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>directory-chain</artifactId>
             <type>pom</type>
         </dependency>
@@ -130,7 +135,7 @@
                 <executions>
                     <execution>
                         <id>unpack-eif</id>
-                        <phase>generate-resources</phase>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -163,7 +168,7 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>generate-test-resources</phase>
+                        <phase>generate-sources</phase>
                         <configuration>
                             <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
                             <resources>
@@ -190,22 +195,12 @@
                 </executions>
             </plugin>
 
-            <!-- Compile D1 and test dapps -->
+            <!-- Install rell deps, compile D1 and test dapps, generate client code -->
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
                 <executions>
-                    <execution>
-                        <id>install-eif-libs</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>rell-install</goal>
-                        </goals>
-                        <configuration>
-                            <source>${project.build.directory}/postchain-eif-rell/rell/src</source>
-                            <configPath>${project.build.directory}/postchain-eif-rell/rell/chromia.yml</configPath>
-                        </configuration>
-                    </execution>
+                    <!-- D1 -->
                     <execution>
                         <id>rell-d1-client-gen</id>
                         <goals>
@@ -223,8 +218,47 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-eif-client-gen</id>
+                        <id>compile-d1</id>
                         <phase>generate-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <rootFolder>${project.basedir}/..</rootFolder>
+                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/directory1.yml</configFile>
+                            <source>${directory.source}</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                        </configuration>
+                    </execution>
+
+                    <!-- EIF -->
+                    <execution>
+                        <id>eif-install-libs</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>rell-install</goal>
+                        </goals>
+                        <configuration>
+                            <source>${project.build.directory}/postchain-eif-rell/rell/src</source>
+                            <configPath>${project.build.directory}/postchain-eif-rell/rell/chromia.yml</configPath>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>eif-compile-chains</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <rootFolder>${project.basedir}/..</rootFolder>
+                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/eif.yml</configFile>
+                            <source>${project.build.directory}/postchain-eif-rell/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>eif-gen-client</id>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>rell-generate-client</goal>
                         </goals>
@@ -240,22 +274,11 @@
                             </mainModules>
                         </configuration>
                     </execution>
+
+                    <!-- Test dapps -->
                     <execution>
-                        <id>compile-d1</id>
-                        <phase>generate-test-resources</phase>
-                        <goals>
-                            <goal>rell-compile</goal>
-                        </goals>
-                        <configuration>
-                            <rootFolder>${project.basedir}/..</rootFolder>
-                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/directory1.yml</configFile>
-                            <source>${directory.source}</source>
-                            <target>deployment-test/target/test-classes/directory1deployment</target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>compile-test-dapps</id>
-                        <phase>generate-test-resources</phase>
+                        <id>test-dapps-compile</id>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>rell-install</goal>
                             <goal>rell-compile</goal>
@@ -263,41 +286,57 @@
                         <configuration>
                             <rootFolder>${project.basedir}/..</rootFolder>
                             <configFile>deployment-test/rell/chromia.yml</configFile>
-                            <source>deployment-test/target/rell/src</source>
-                            <target>deployment-test/target/test-classes/directory1deployment</target>
+                            <source>${project.build.directory}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>compile-eif-chains</id>
-                        <phase>generate-test-resources</phase>
+                        <id>test-dapps-gen-client</id>
+                        <phase>generate-sources</phase>
                         <goals>
-                            <goal>rell-compile</goal>
+                            <goal>rell-generate-client</goal>
                         </goals>
                         <configuration>
-                            <rootFolder>${project.basedir}/..</rootFolder>
-                            <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/eif.yml</configFile>
-                            <source>deployment-test/target/postchain-eif-rell/rell/src</source>
-                            <target>deployment-test/target/test-classes/directory1deployment</target>
+                            <packageName>net.postchain.testdapps</packageName>
+                            <source>${project.build.directory}/rell/src/</source>
+                            <target>${project.build.directory}/generated-sources/rell-client/testdapps</target>
+                            <force>true</force>
+                            <mainModules>
+                                <mainModule>test_crosschain_massexit.bridge</mainModule>
+                                <mainModule>test_crosschain_massexit.dapp</mainModule>
+                            </mainModules>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- EIF / contracts / add source and resources -->
+            <!-- Add generated code and resources to the classpath -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <version>3.0.0</version>
                 <executions>
                     <execution>
-                        <id>add-test-source</id>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-generated-test-sources</id>
                         <phase>generate-test-sources</phase>
                         <goals>
                             <goal>add-test-source</goal>
                         </goals>
                         <configuration>
                             <sources>
-                                <source>target/generated-test-sources</source>
+                                <source>${project.build.directory}/generated-test-sources</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -311,7 +350,7 @@
                             <resources>
                                 <resource>
                                     <directory>
-                                        target/postchain-eif-contracts
+                                        ${project.build.directory}/postchain-eif-contracts
                                     </directory>
                                 </resource>
                             </resources>
@@ -320,7 +359,7 @@
                 </executions>
             </plugin>
 
-            <!-- EIF / contracts / generate abi and java stubs -->
+            <!-- EIF / web3j: contracts, generate abi and java stubs -->
             <plugin>
                 <groupId>org.web3j</groupId>
                 <artifactId>web3j-maven-plugin</artifactId>
@@ -331,11 +370,13 @@
                     <contract>
                         <includes>
                             <include>TokenBridge</include>
+                            <include>TokenBridgeWithSnapshotWithdraw</include>
                             <include>TestToken</include>
                             <include>Validator</include>
                             <include>Anchoring</include>
                             <include>ManagedValidator</include>
                             <include>DirectoryChainValidator</include>
+                            <include>RecoveryContract</include>
                         </includes>
                     </contract>
                     <pathPrefixes>
@@ -345,16 +386,18 @@
                         <directory>${project.build.directory}/postchain-eif-contracts/abi</directory>
                         <includes>
                             <include>**/TokenBridge.json</include>
+                            <include>**/TokenBridgeWithSnapshotWithdraw.json</include>
                             <include>**/TestToken.json</include>
                             <include>**/Validator.json</include>
                             <include>**/Anchoring.json</include>
                             <include>**/ManagedValidator.json</include>
                             <include>**/DirectoryChainValidator.json</include>
+                            <inlcude>**/RecoveryContract.json</inlcude>
                         </includes>
                     </abiSourceFiles>
                     <outputDirectory>
-                        <abi>${project.basedir}/target/generated-test-resources</abi>
-                        <java>${project.basedir}/target/generated-test-sources</java>
+                        <abi>${project.build.directory}/generated-test-resources</abi>
+                        <java>${project.build.directory}/generated-test-sources</java>
                     </outputDirectory>
                     <outputFormat>java,abi</outputFormat>
                 </configuration>
@@ -367,7 +410,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- /EIF -->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

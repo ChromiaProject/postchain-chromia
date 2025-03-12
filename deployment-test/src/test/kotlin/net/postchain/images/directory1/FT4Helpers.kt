@@ -61,7 +61,9 @@ fun performCrossChainTransfer(
             .addOperation(APPLY_TRANSFER, initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
             .postTransactionUntilConfirmed("Apply transfer tx").txRid
 
-    val applyTransferTx = GtvDecoder.decodeGtv(node.client(destinationChain).getTransaction(applyTransferTxRid))
+    val applyTransferTx = awaitQueryResult {
+        GtvDecoder.decodeGtv(node.client(destinationChain).getTransaction(applyTransferTxRid))
+    }!!
 
     val applyTxProof = awaitQueryResult {
         iccfProofTxMaterialBuilder.build(

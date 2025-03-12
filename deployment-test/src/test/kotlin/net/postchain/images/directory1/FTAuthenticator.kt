@@ -14,7 +14,8 @@ import net.postchain.gtv.merkleHash
 
 class FTAuthenticator(
         val keyPair: KeyPair,
-        val client: PostchainClient
+        val client: PostchainClient,
+        val username: String = "username",
 ) {
 
     val accountId: ByteArray = gtv(keyPair.pubKey.data).merkleHash(hashCalculator)

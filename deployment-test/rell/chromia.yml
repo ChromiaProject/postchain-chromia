@@ -1,3 +1,28 @@
+definitions:
+  - &common_ft4_args
+    lib.ft4.core.accounts:
+      rate_limit:
+        active: true
+        max_points: 200
+        recovery_time: 5000
+        points_at_account_creation: 100
+    lib.ft4.core.auth:
+      evm_signatures_authorized_operations:
+        - eif.hbridge.link_evm_eoa_account
+    lib.ft4.core.accounts.strategies.transfer:
+      rules:
+        - sender_blockchain:
+            - "*"
+          sender: "*"
+          recipient: "*"
+          asset: "*"
+          timeout_days: 10
+          strategy: "open"
+    lib.ft4.core.admin:
+      admin_pubkey: 03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070 # key0
+    lib.access.admin:
+      admin_pubkey: 03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070 # key0
+
 blockchains:
   test_dapp:
     module: test_dapp
@@ -13,6 +38,7 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+
   test_dapp2:
     module: test_dapp2
     config:
@@ -35,6 +61,7 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+
   test_dapp3:
     module: test_dapp3
     config:
@@ -49,6 +76,7 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
+
   test_dapp5:
     module: test_dapp5
     config:
@@ -63,8 +91,9 @@ blockchains:
     moduleArgs:
       main:
         admin: x'030AB2EA43A545578C8BA13E0A6948E3A120E9C1AF87B9F864CCB469529CF4F653'
-  test_cross_chain_transfer:
-    module: test_cross_chain_transfer
+
+  test_crosschain_transfer:
+    module: test_crosschain_transfer
     config:
       features:
         merkle_hash_version: 2
@@ -73,11 +102,68 @@ blockchains:
       gtx:
         modules:
           - "net.postchain.d1.iccf.IccfGTXModule"
+
   test_token_chain_account_creation:
     module: test_token_chain_account_creation
     config:
       features:
         merkle_hash_version: 2
+
+  test_crosschain_massexit_bridge:
+    module: test_crosschain_massexit.bridge
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        maxblocktime: 1000
+      eif:
+        # event receiver
+        chains:
+          ethereum:
+            network_id: 1337
+            skip_to_height: 0
+            evm_read_offset: 0
+            read_offset: 0
+            events: !include events.yml
+        # event processing
+        snapshot:
+          levels_per_page: 2
+          snapshots_to_keep: 2
+          version: 2
+      gtx:
+        modules:
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+      sync_ext:
+        - "net.postchain.eif.EifSynchronizationInfrastructureExtension"
+    moduleArgs:
+      <<: *common_ft4_args
+      lib.eif_event_receiver:
+        enable_icmf: false
+      lib.hbridge:
+        version: 2
+
+  test_crosschain_massexit_dapp:
+    module: test_crosschain_massexit.dapp
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        maxblocktime: 1000
+      eif:
+        # event processing
+        snapshot:
+          levels_per_page: 2
+          snapshots_to_keep: 2
+          version: 2
+      gtx:
+        modules:
+          - "net.postchain.d1.iccf.IccfGTXModule"
+          - "net.postchain.eif.EifGTXModule"
+    moduleArgs:
+      <<: *common_ft4_args
+      lib.hbridge:
+        version: 2
 
 libs:
   ft4:
@@ -86,6 +172,32 @@ libs:
     tagOrBranch: v1.1.0r
     rid: x"FEEB0633698E7650D29DCCFE2996AD57CDC70AA3BDF770365C3D442D9DFC2A5E"
     insecure: false
+  iccf:
+    registry: https://gitlab.com/chromaway/core/directory-chain
+    path: src/lib/iccf
+    tagOrBranch: 1.73.7
+    rid: x"050298A4A457D8E8922CF662765739A3A16B3256C49BE646FA7D198ECF0214C5"
+    insecure: false
+  eif:
+    registry: https://gitlab.com/chromaway/postchain-eif
+    path: postchain-eif-rell/rell/src/eif
+    tagOrBranch: 0.11.1
+    rid: x"AB40EDB0B534726B5F3AA288A5D31BE840B24BA670775E4F95C1B2512F5B8F22"
+    insecure: false
+  eif_event_receiver:
+    registry: https://gitlab.com/chromaway/postchain-eif
+    path: postchain-eif-rell/rell/src/eif_event_receiver
+    tagOrBranch: 0.11.1
+    rid: x"B20700DA8FE4FC7E5880BCCCB6FBE0B6A22CD6FAB61CDF9CE20E06B62D4902F4"
+    insecure: false
+  hbridge:
+    registry: https://gitlab.com/chromaway/postchain-eif
+    path: postchain-eif-rell/rell/src/hbridge
+    tagOrBranch: 0.11.1
+    rid: x"E47EBE9F69D5DD82E950E3A901EE565B6CA11483728C41FF424E1FE2451388BB"
+    insecure: false
 
 compile:
+  source: src
+  target: target
   rellVersion: 0.14.5

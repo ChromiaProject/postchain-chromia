@@ -144,6 +144,23 @@ Configuration:
         append: false
         PatternLayout:
           pattern: "%msg%n"
+      - name: XCME_EvmContainerAppender
+        fileName: "logs/crosschain_massexit/evm_container.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: XCME_Node1Appender
+        fileName: "logs/crosschain_massexit/node1.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: XCME_Node2Appender
+        fileName: "logs/crosschain_massexit/node2.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: XCME_Node3Appender
+        fileName: "logs/crosschain_massexit/node3.log"
   Loggers:
 
     Root:
@@ -321,3 +338,25 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: Deadlock_Node1Appender
+
+      # Cross-chain Mass Exit
+      - name: XCME_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: XCME_EvmContainerAppender
+      - name: XCME_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: XCME_Node1Appender
+      - name: XCME_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: XCME_Node2Appender
+      - name: XCME_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: XCME_Node3Appender

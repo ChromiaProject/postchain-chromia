@@ -1,0 +1,46 @@
+@mount("dapp")
+module;
+
+import lib.ft4.admin;
+import lib.ft4.assets;
+import lib.ft4.crosschain;
+
+import lib.hbridge;
+
+object state {
+    mutable initialized: boolean = false;
+}
+
+operation init(
+    // asset
+    asset_id: byte_array,
+    asset_issuing_blockchain_rid: byte_array,
+    // evm
+    network_id: integer,
+    recovery_address: byte_array,
+    token_address: byte_array,
+) {
+    require(state.initialized == false, "Dapp chain is already initialized");
+    state.initialized = true;
+
+    val asset_origin = crosschain.Unsafe.register_crosschain_asset(
+        asset_id,
+        "Chromia",
+        "CHR",
+        18,
+        asset_issuing_blockchain_rid,
+        "https://chromaway.com/chr",
+        "ft4",
+        x"",
+        asset_issuing_blockchain_rid
+    );
+
+    hbridge.register_bridge_and_erc20_asset(
+        network_id,
+        token_address,
+        asset_origin.asset,
+        hbridge.bridge_mode.foreign,
+        use_snapshots = true,
+        bridge_address = recovery_address
+    );
+}

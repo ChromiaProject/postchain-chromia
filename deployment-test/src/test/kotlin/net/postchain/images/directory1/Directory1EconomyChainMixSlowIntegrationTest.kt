@@ -178,12 +178,12 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
         node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                node1KeyPair,
+                provider1KeyPair,
                 "config-mix"
         ).withEifEnv()
 
         node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                KeyPair.of("03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95", "FFC28105CFE2CC336624DCDFDEDB58157B37ED565C29F11A3B54B8F721DBA7C5"),
+                provider2KeyPair,
                 "config-mix"
         )
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
@@ -192,7 +192,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                 .withEifEnv()
 
         node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                KeyPair.of("03D01591E5466B07AC1D1F77BEBE2164AB0BA31366FBF005907F28FD144D64B871", "AD329F5C4E4DDF226D1A4948D7A2CCB34E76F64D4972B934FDBBDBEF4CA7B905"),
+                provider3KeyPair,
                 "config-mix"
         )
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
@@ -223,8 +223,10 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
             transactionBuilder()
                     .initOperation(GtvEncoder.encodeGtv(systemAnchoringGtvConfig), GtvEncoder.encodeGtv(clusterAnchoringGtvConfig))
                     .postTransactionUntilConfirmed("init")
-            assertThat(getSummary().providers).isEqualTo(1L)
-            assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            awaitUntilAsserted {
+                assertThat(getSummary().providers).isEqualTo(1L)
+                assertThat(getNodeData(node1.nodeKeyPair.pubKey).active).isTrue()
+            }
         }
         assertAnchoringChainProperties()
 
@@ -353,7 +355,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Register Alice account
         aliceAuthenticator = registerAccount(node1, ecAdminKeyPair, ecBrid, aliceKeyPair, "Alice")
-        linkAccount(aliceAuthenticator, aliceEvmAddress, ecBrid)
+        linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
 
         // Claim initial supply
         aliceAuthenticator.verifyOperationAuthFlags("faucet")
@@ -490,7 +492,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
         assertThat(containerData.cluster).isEqualTo(APP_CLUSTER1)
-        assertThat(containerData.proposedByPubkey).isEqualTo(node1KeyPair.pubKey.wData)
+        assertThat(containerData.proposedByPubkey).isEqualTo(provider1KeyPair.pubKey.wData)
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
 
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
@@ -501,8 +503,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     @Order(11)
     fun `Deploy dapp`() {
         testLogger.info("Deploying dapp to c1")
-        deployDapp("test_cross_chain_transfer", containerName, assertSigners = arrayOf(node1))
-        dappBrid = dapps["test_cross_chain_transfer"]!!
+        deployDapp("test_crosschain_transfer", containerName, assertSigners = arrayOf(node1))
+        dappBrid = dapps["test_crosschain_transfer"]!!
     }
 
     @Test
@@ -605,7 +607,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
         assertThat(containerData.cluster).isEqualTo(APP_CLUSTER2)
-        assertThat(containerData.proposedByPubkey).isEqualTo(node1KeyPair.pubKey.wData)
+        assertThat(containerData.proposedByPubkey).isEqualTo(provider1KeyPair.pubKey.wData)
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
 
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
@@ -647,14 +649,14 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val evmKeyPair = ECKeyPair.create(BigInteger(metamaskPrivateKey, 16))
         val addressString = Keys.getAddress(evmKeyPair.publicKey)
         val addressByteArray = addressString.hexStringToByteArray()
-        val accountId = gtv(node1KeyPair.pubKey.data).merkleHash(hashCalculator)
+        val accountId = gtv(provider1KeyPair.pubKey.data).merkleHash(hashCalculator)
 
         val accountMainAuthDescriptor = node1.client(ecBrid).getAccountMainAuthDescriptor(accountId)
 
         val updateMainAuthDescriptorSignature = getUpdateMainAuthDescriptorSignature(addressByteArray, accountMainAuthDescriptor, evmKeyPair)
         val linkEvmEoaAccountSignature = getLinkEvmEoaAccountSignature(addressByteArray, evmKeyPair, accountId, ecBrid)
 
-        node1.client(ecBrid, listOf(node1KeyPair)).transactionBuilder().addNop()
+        node1.client(ecBrid, listOf(provider1KeyPair)).transactionBuilder().addNop()
                 .evmSignaturesOperation(listOf(addressByteArray), listOf(linkEvmEoaAccountSignature))
                 .ftAuthOperation(accountId, accountMainAuthDescriptor.id.data)
                 .linkEvmEoaAccountOperation(addressByteArray)
