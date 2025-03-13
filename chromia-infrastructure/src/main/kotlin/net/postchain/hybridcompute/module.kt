@@ -25,6 +25,7 @@ data class HybridComputeConfig(
         val concurrency: Long,
 )
 
+@Suppress("unused")
 class HybridComputeGTXModuleFactory : GTXModuleFactory {
     override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): GTXModule {
         val moduleConfig = config.asDict()["hybridcompute"]?.toObject<HybridComputeConfig>()
@@ -32,6 +33,7 @@ class HybridComputeGTXModuleFactory : GTXModuleFactory {
         require(moduleConfig.computeTimeoutSeconds > 0) { "compute_timeout_seconds must be greater than 0" }
         require(moduleConfig.concurrency > 0) { "concurrency must be greater than 0" }
         val engine = newInstanceOf<HybridComputeEngine>(moduleConfig.engine)
+        engine.init(config, blockchainRID)
         return HybridComputeGTXModule(engine, moduleConfig.computeTimeoutSeconds, moduleConfig.concurrency.toInt())
     }
 }
