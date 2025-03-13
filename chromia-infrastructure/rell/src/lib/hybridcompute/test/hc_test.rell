@@ -5,16 +5,16 @@ import ^.helpers.*;
 
 function test_hc() {
     rell.test.tx().op(
-        submit_compute_request_op("one", "nn", x"ABCD")
+        submit_compute_request_op("one", "nn", "ABCD".to_gtv())
     ).run();
     rell.test.tx().op(
-        submit_compute_request_op("two", "nn", x"1234")
+        submit_compute_request_op("two", "nn", "1234".to_gtv())
     ).run();
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "one", type = "nn", input = x"ABCD"),
-            compute_request(id = "two", type = "nn", input = x"1234"),
+            compute_request(id = "one", type = "nn", input = "ABCD".to_gtv()),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
         ]
     );
     assert_equals(fetch_compute_result("one"), (result=null, error=null));
@@ -25,7 +25,7 @@ function test_hc() {
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "two", type = "nn", input = x"1234"),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
         ]
     );
     rell.test.tx().op(
@@ -34,20 +34,20 @@ function test_hc() {
     assert_equals(fetch_compute_result("one"), (result=null, error=null));
 
     rell.test.tx().op(
-        response_op("two", "nn", x"0000")
+        response_op("two", "nn", "0000".to_gtv())
     ).run_must_fail("Computation <two> must be TAKEN, but is NEW");
 
     rell.test.tx().op(
-        response_op("one", "xx", x"00")
+        response_op("one", "xx", "00".to_gtv())
     ).run_must_fail("Computation <one> must have type <nn>");
 
     rell.test.tx().op(
-        response_op("one", "nn", x"AABBCCDD")
+        response_op("one", "nn", "AABBCCDD".to_gtv())
     ).run();
-    assert_equals(fetch_compute_result("one"), (result=x"AABBCCDD", error=null));
+    assert_equals(fetch_compute_result("one"), (result="AABBCCDD".to_gtv(), error=null));
 
     rell.test.tx().op(
-        response_op("one", "nn", x"00")
+        response_op("one", "nn", "00".to_gtv())
     ).run_must_fail("Computation <one> must be TAKEN, but is COMPUTED");
 
     rell.test.tx().op(
@@ -70,6 +70,6 @@ function test_computation_not_found() {
     ).run_must_fail("No computation with id <bogus>");
 
     rell.test.tx().op(
-        response_op("bogus", "nn", x"00")
+        response_op("bogus", "nn", "00".to_gtv())
     ).run_must_fail("No computation with id <bogus>");
 }

@@ -2,7 +2,7 @@ module;
 
 import ^^.*;
 
-operation submit_compute_request_op(id: text, type: text, input: byte_array) {
+operation submit_compute_request_op(id: text, type: text, input: gtv) {
     submit_compute_request(id, type, input);
 }
 
@@ -10,7 +10,7 @@ operation request_taken_op(id: text) {
     request_taken_impl(id);
 }
 
-operation response_op(id: text, type: text, output: byte_array) {
+operation response_op(id: text, type: text, output: gtv) {
     response_impl(id, type, output);
 }
 

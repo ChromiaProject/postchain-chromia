@@ -2,6 +2,7 @@ package net.postchain.hybridcompute
 
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GtxOpData
 import net.postchain.gtx.data.OpData
@@ -35,10 +36,10 @@ class RequestTakenOp(
 class ResponseOp(
         val id: String,
         val type: String,
-        val output: ByteArray,
+        val output: Gtv,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation response(id: text, type: text, output: byte_array)
+        // @mount('__hc.') operation response(id: text, type: text, output: gtv)
         const val OP_NAME = "__hc.response"
 
         fun fromOpData(opData: GtxOpData): ResponseOp? {
@@ -49,7 +50,7 @@ class ResponseOp(
             }
 
             return try {
-                ResponseOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2].asByteArray())
+                ResponseOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2])
             } catch (e: UserMistake) {
                 logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
                 null
@@ -57,7 +58,7 @@ class ResponseOp(
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), gtv(output)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), output))
 }
 
 class FailureOp(
@@ -94,6 +95,6 @@ sealed interface Computation {
 
 class StartedComputation(override val type: String) : Computation
 
-class FinishedComputation(override val type: String, val output: ByteArray) : Computation
+class FinishedComputation(override val type: String, val output: Gtv) : Computation
 
 class FailedComputation(override val type: String, val errorMessage: String) : Computation

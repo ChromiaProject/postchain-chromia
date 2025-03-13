@@ -20,11 +20,11 @@ entity computation {
 struct compute_request {
     id: text;
     type: text;
-    input: byte_array;
+    input: gtv;
 }
 
 query get_requests(): list<compute_request> =
-        computation @* { .state == state.NEW } ( compute_request (id = $.id, type = $.type, input = $.input) );
+        computation @* { .state == state.NEW } ( compute_request (id = $.id, type = $.type, input = gtv.from_bytes($.input)) );
 
 @mount('__hc.')
 operation request_taken(id: text) {
@@ -32,7 +32,7 @@ operation request_taken(id: text) {
 }
 
 @mount('__hc.')
-operation response(id: text, type: text, output: byte_array) {
+operation response(id: text, type: text, output: gtv) {
     response_impl(id, type, output);
 }
 
@@ -47,12 +47,12 @@ function request_taken_impl(id: text) {
     computation.state = state.TAKEN;
 }
 
-function response_impl(id: text, type: text, output: byte_array) {
+function response_impl(id: text, type: text, output: gtv) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     require(computation.state == state.TAKEN, "Computation <%s> must be TAKEN, but is %s".format(id, computation.state));
     require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
     computation.state = state.COMPUTED;
-    computation.output = output;
+    computation.output = output.to_bytes();
 }
 
 function failure_impl(id: text, type: text, error: text) {
@@ -63,14 +63,14 @@ function failure_impl(id: text, type: text, error: text) {
     computation.error = error;
 }
 
-function submit_compute_request(id: text, type: text, input: byte_array) {
-    create computation ( id, state.NEW, type, input = input, output = x"", error = "" );
+function submit_compute_request(id: text, type: text, input: gtv) {
+    create computation ( id, state.NEW, type, input = input.to_bytes(), output = x"", error = "" );
 }
 
-function fetch_compute_result(id: text): (result: byte_array?, error: text?) {
+function fetch_compute_result(id: text): (result: gtv?, error: text?) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     if (computation.state == state.COMPUTED) {
-        return (result = computation.output, error = null);
+        return (result = gtv.from_bytes(computation.output), error = null);
     } else if (computation.state == state.FAILED) {
         return (result = null, error = computation.error);
     } else {
