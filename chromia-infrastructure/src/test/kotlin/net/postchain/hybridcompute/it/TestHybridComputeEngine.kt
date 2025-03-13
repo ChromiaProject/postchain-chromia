@@ -1,7 +1,9 @@
 package net.postchain.hybridcompute.it
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.hybridcompute.HybridComputeEngine
 
 sealed interface TestEngineBehavior {
@@ -85,7 +87,15 @@ class TestHybridComputeEngine : HybridComputeEngine {
 
     override val name: String = "test"
 
+    private var initialized = false
+
+    override fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid) {
+        logger.info("init")
+        initialized = true
+    }
+
     override fun compute(input: ByteArray): ByteArray {
+        require(initialized) { "Not initialized" }
         logger.info("Compute starting")
         val behavior = TestEngineBehavior.decode(input)
         val output = behavior.compute(input)
@@ -94,11 +104,16 @@ class TestHybridComputeEngine : HybridComputeEngine {
     }
 
     override fun validate(output: ByteArray) {
+        require(initialized) { "Not initialized" }
         logger.info("Validate starting")
         val behavior = TestEngineBehavior.decode(output)
         behavior.validate(output)
         logger.info("Validate finished")
     }
 
-    override fun shutdown() { }
+    override fun shutdown() {
+        require(initialized) { "Not initialized" }
+        logger.info("shutdown")
+        initialized = false
+    }
 }
