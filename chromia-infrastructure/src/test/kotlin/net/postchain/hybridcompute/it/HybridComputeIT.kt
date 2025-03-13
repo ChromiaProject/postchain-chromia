@@ -8,6 +8,7 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.enqueueTx
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.hybridcompute.rell.lib.hybridcompute.Computation
 import net.postchain.hybridcompute.rell.lib.hybridcompute.State
@@ -53,7 +54,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "success",
                 state = State.NEW,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -63,7 +64,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "success",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -78,12 +79,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                     id = "success",
                     state = State.COMPUTED,
                     type = "test",
-                    input = input.wrap(),
-                    output = input.wrap(),
+                    input = GtvEncoder.encodeGtv(input).wrap(),
+                    output = GtvEncoder.encodeGtv(input).wrap(),
                     error = ""
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(HcFetchComputeResultResult(
-                    result = input.wrap(),
+                    result = input,
                     error = null
             ))
         }
@@ -104,7 +105,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "fail",
                 state = State.NEW,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -114,7 +115,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "fail",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -129,7 +130,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     id = "fail",
                     state = State.FAILED,
                     type = "test",
-                    input = input.wrap(),
+                    input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
                     error = "Fail"
             ))
@@ -155,7 +156,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "error",
                 state = State.NEW,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -165,7 +166,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "error",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -180,7 +181,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     id = "error",
                     state = State.FAILED,
                     type = "test",
-                    input = input.wrap(),
+                    input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
                     error = "Unknown error"
             ))
@@ -206,7 +207,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "timeout",
                 state = State.NEW,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -216,7 +217,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "timeout",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -231,7 +232,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     id = "timeout",
                     state = State.FAILED,
                     type = "test",
-                    input = input.wrap(),
+                    input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
                     error = "Computation timed out after 5 seconds"
             ))
@@ -257,7 +258,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "invalid",
                 state = State.NEW,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -267,7 +268,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "invalid",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))
@@ -288,7 +289,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 id = "invalid",
                 state = State.TAKEN,
                 type = "test",
-                input = input.wrap(),
+                input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
                 error = ""
         ))

@@ -27,7 +27,7 @@ interface HybridComputeEngine : Shutdownable {
      * @return result of the computation, including enough information to validate it later (possibly the full input).
      * @throws net.postchain.common.exception.UserMistake if computation failed
      */
-    fun compute(input: ByteArray): ByteArray
+    fun compute(input: Gtv): Gtv
 
     /**
      * Validates a previously performed computation.
@@ -38,5 +38,5 @@ interface HybridComputeEngine : Shutdownable {
      *
      * @throws net.postchain.common.exception.UserMistake if not valid
      */
-    fun validate(output: ByteArray)
+    fun validate(output: Gtv)
 }

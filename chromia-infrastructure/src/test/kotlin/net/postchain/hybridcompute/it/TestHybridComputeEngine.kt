@@ -4,79 +4,81 @@ import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.hybridcompute.HybridComputeEngine
 
 sealed interface TestEngineBehavior {
-    fun encode(): ByteArray
+    fun encode(): Gtv
 
-    fun compute(input: ByteArray): ByteArray
-    fun validate(bytes: ByteArray) {}
+    fun compute(input: Gtv): Gtv
+    fun validate(bytes: Gtv) {}
 
     companion object {
-        fun decode(input: ByteArray): TestEngineBehavior {
-            return when(input[0]) {
-                CompleteComputation.TAG -> CompleteComputation(input[1])
-                FailComputation.TAG -> FailComputation(input[1])
-                ErrorComputation.TAG -> ErrorComputation(input[1])
-                InvalidComputation.TAG -> InvalidComputation(input[1])
+        fun decode(input: Gtv): TestEngineBehavior {
+            val inputArray = input.asArray()
+            return when(inputArray[0].asInteger().toInt()) {
+                CompleteComputation.TAG -> CompleteComputation(input[1].asInteger().toInt())
+                FailComputation.TAG -> FailComputation(input[1].asInteger().toInt())
+                ErrorComputation.TAG -> ErrorComputation(input[1].asInteger().toInt())
+                InvalidComputation.TAG -> InvalidComputation(input[1].asInteger().toInt())
                 else -> throw IllegalArgumentException("Unknown test engine behavior")
             }
         }
     }
 }
 
-class CompleteComputation(val delaySeconds: Byte) : TestEngineBehavior {
+class CompleteComputation(val delaySeconds: Int) : TestEngineBehavior {
     companion object {
-        const val TAG: Byte = 0
+        const val TAG = 0
     }
 
-    override fun encode(): ByteArray = byteArrayOf(TAG, delaySeconds.toByte())
+    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
 
-    override fun compute(input: ByteArray): ByteArray {
+    override fun compute(input: Gtv): Gtv {
         Thread.sleep(delaySeconds * 1000L)
         return input
     }
 }
 
-class FailComputation(val delaySeconds: Byte) : TestEngineBehavior {
+class FailComputation(val delaySeconds: Int) : TestEngineBehavior {
     companion object {
-        const val TAG: Byte = 1
+        const val TAG = 1
     }
 
-    override fun encode(): ByteArray = byteArrayOf(TAG, delaySeconds.toByte())
+    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
 
-    override fun compute(input: ByteArray): ByteArray {
+    override fun compute(input: Gtv): Gtv {
         Thread.sleep(delaySeconds * 1000L)
         throw UserMistake("Fail")
     }
 }
 
-class ErrorComputation(val delaySeconds: Byte) : TestEngineBehavior {
+class ErrorComputation(val delaySeconds: Int) : TestEngineBehavior {
     companion object {
-        const val TAG: Byte = 2
+        const val TAG = 2
     }
 
-    override fun encode(): ByteArray = byteArrayOf(TAG, delaySeconds.toByte())
+    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
 
-    override fun compute(input: ByteArray): ByteArray {
+    override fun compute(input: Gtv): Gtv {
         Thread.sleep(delaySeconds * 1000L)
         throw RuntimeException("Error")
     }
 }
 
-class InvalidComputation(val delaySeconds: Byte) : TestEngineBehavior {
+class InvalidComputation(val delaySeconds: Int) : TestEngineBehavior {
     companion object {
-        const val TAG: Byte = 3
+        const val TAG = 3
     }
 
-    override fun encode(): ByteArray = byteArrayOf(TAG, delaySeconds.toByte())
+    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
 
-    override fun compute(input: ByteArray): ByteArray {
+    override fun compute(input: Gtv): Gtv {
         Thread.sleep(delaySeconds * 1000L)
         return input
     }
 
-    override fun validate(bytes: ByteArray) {
+    override fun validate(bytes: Gtv) {
         throw UserMistake("Invalid")
     }
 }
@@ -94,7 +96,7 @@ class TestHybridComputeEngine : HybridComputeEngine {
         initialized = true
     }
 
-    override fun compute(input: ByteArray): ByteArray {
+    override fun compute(input: Gtv): Gtv {
         require(initialized) { "Not initialized" }
         logger.info("Compute starting")
         val behavior = TestEngineBehavior.decode(input)
@@ -103,7 +105,7 @@ class TestHybridComputeEngine : HybridComputeEngine {
         return output
     }
 
-    override fun validate(output: ByteArray) {
+    override fun validate(output: Gtv) {
         require(initialized) { "Not initialized" }
         logger.info("Validate starting")
         val behavior = TestEngineBehavior.decode(output)

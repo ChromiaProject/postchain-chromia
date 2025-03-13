@@ -83,7 +83,7 @@ class HybridComputeSpecialTransactionExtension(
                             val future = computer.submit {
                                 logger.info("Starting computation of request id [${request.id}] of type [${request.type}]")
                                 try {
-                                    val output = engine.compute(request.input.data)
+                                    val output = engine.compute(request.input)
                                     if (!Thread.currentThread().isInterrupted) {
                                         logger.info("Computation of request id [${request.id}] of type [${request.type}] finished")
                                         computations.replace(request.id, FinishedComputation(request.type, output))
