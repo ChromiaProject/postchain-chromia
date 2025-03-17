@@ -355,7 +355,7 @@ open class ManagedModeBase {
 
         val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
         val iccfMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                TxRid(txToProve.gtxBody.calculateTxRid(hashCalculator).toHex()),
+                TxRid(txToProve.calculateTxRid(hashCalculator).toHex()),
                 txToProve.toGtv().merkleHash(hashCalculator),
                 listOf(),
                 sourceDapp,

@@ -1,4 +1,3 @@
-@mount("bridge")
 module;
 
 import lib.ft4.admin;

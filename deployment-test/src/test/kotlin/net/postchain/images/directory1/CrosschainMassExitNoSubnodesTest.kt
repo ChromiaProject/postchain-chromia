@@ -18,6 +18,7 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.TxRid
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -38,7 +39,6 @@ import net.postchain.eif.encodeSignatureWithV
 import net.postchain.eif.getEthereumAddress
 import net.postchain.eif.hbridge.getRecoveryContract
 import net.postchain.eif.hbridge.getStateSlotIdsForAddress
-import net.postchain.eif.hbridge.registerRecoveryContractOperation
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.assets.transferOperation
@@ -50,11 +50,14 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.testdapps.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.testdapps.lib.ft4.core.accounts.AuthType
 import net.postchain.testdapps.lib.ft4.external.admin.registerAccountOperation
+import net.postchain.testdapps.lib.hbridge.REGISTER_RECOVERY_CONTRACT
 import net.postchain.testdapps.test_crosschain_massexit.bridge.initOperation
 import net.postchain.testdapps.test_crosschain_massexit.dapp.initOperation
+import net.postchain.testdapps.test_crosschain_massexit.dapp.registerRecoveryContractOperation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.MethodOrderer
@@ -337,12 +340,29 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
     @Test
     @Order(8)
     fun `Register recovery contract of dapp chain on bridge chain`() {
-        testLogger.info { "Register recovery contract of dapp chain on bridge chain" }
+        testLogger.info { "Register recovery contract of dapp chain on dapp chain" }
+
+        // Register recovery contract on the dapp chain
+        val txToProveBuilder = aliceDappAccount.client.transactionBuilder(signers = emptyList())
+                .registerRecoveryContractOperation(evmContainerNetworkId, addressToByteArray(recoveryContract.contractAddress))
+                .addNop()
+        txToProveBuilder.postTransactionUntilConfirmed("Register recovery contract on dapp chain")
+        val txToProve = txToProveBuilder.finish().buildGtx()
+
+        val iccfMaterial = IccfProofTxMaterialBuilder(buildChromiaClientProvider()).build(
+                TxRid(txToProve.calculateTxRid(hashCalculator).toHex()),
+                txToProve.toGtv().merkleHash(hashCalculator),
+                listOf(),
+                dappBrid,
+                bridgeBrid,
+                forceIntraNetworkIccfOperation = true
+        )
+        val actualTxToProve = iccfMaterial.updatedTx ?: txToProve
 
         // Register the recovery contract on bridge chain
-        aliceBridgeAccount.client.transactionBuilder()
-                .registerRecoveryContractOperation(dappBrid, evmContainerNetworkId, addressToByteArray(recoveryContract.contractAddress))
-                .addNop()
+        testLogger.info { "Register recovery contract of dapp chain on bridge chain" }
+        iccfMaterial.txBuilder
+                .addOperation(REGISTER_RECOVERY_CONTRACT, actualTxToProve.toGtv(), gtv(0L))
                 .postTransactionUntilConfirmed("Register recovery contract on bridge chain")
 
         // Assert that recover contract is set
@@ -415,14 +435,9 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
     fun `Alice transfers tokens from bridge to dapp chain`() {
         testLogger.info { "Alice transfers 900 $tokenSymbol from bridge to dapp chain" }
 
-        val chromiaClientProvider = ChromiaClientProvider(ContainerClusterManagement(
-                ClusterManagementImpl(node1.c0),
-                mapOf(systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo()))
-        ))
-
         performCrossChainTransfer(
                 node1,
-                IccfProofTxMaterialBuilder(chromiaClientProvider),
+                IccfProofTxMaterialBuilder(buildChromiaClientProvider()),
                 merkleHashCalculator,
                 aliceBridgeAccount,
                 bridgeBrid,
@@ -611,6 +626,13 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
                     "accountNumber" to gtv(accountNumber)
             )
     ).toObject<AccountStateMerkleProof>()
+
+    private fun buildChromiaClientProvider() = ChromiaClientProvider(
+            ContainerClusterManagement(
+                    ClusterManagementImpl(node1.c0),
+                    mapOf(systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo()))
+            )
+    )
 
     fun ByteArray.web3BlockHeader() = DynamicBytes(this)
     fun List<EifSignature>.web3Signatures() = DynamicArray(DynamicBytes::class.java, this.map { DynamicBytes(it.sig) })
