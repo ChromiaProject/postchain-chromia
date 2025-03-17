@@ -6,6 +6,8 @@ import net.postchain.gtv.Gtv
 
 /**
  * Hybrid compute engine.
+ *
+ * Methods might be invoked on different threads.
  */
 interface HybridComputeEngine : Shutdownable {
     /**
@@ -14,9 +16,20 @@ interface HybridComputeEngine : Shutdownable {
     val name: String
 
     /**
-     * Will be invoked after instantiation, before any other method is invoked.
+     * Will be invoked directly after instantiation, before any other method is invoked.
+     *
+     * This method should only do basic parsing and validation of configuration, and should finish quickly.
+     * Any heavy or time-consuming initialization should be performed in the `load` method.
      */
     fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid)
+
+    /**
+     * Will be invoked at some point after `init`, before any other method is invoked.
+     *
+     * Any heavy or time-consuming initialization should be performed in this method,
+     * and it should block until the initialization is finished.
+     */
+    fun load()
 
     /**
      * Performs a computation.

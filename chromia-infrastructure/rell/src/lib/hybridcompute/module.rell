@@ -63,10 +63,27 @@ function failure_impl(id: text, type: text, error: text) {
     computation.error = error;
 }
 
+/**
+ * Submits a compute request.
+ *
+ * @param id A unique identifier for the compute request.
+ * @param type Which engine to use
+ * @param input Input to the compute
+ */
 function submit_compute_request(id: text, type: text, input: gtv) {
     create computation ( id, state.NEW, type, input = input.to_bytes(), output = x"", error = "" );
 }
 
+/**
+ * Fetches the result of a previously submitted compute request.
+ *
+ * If the result is not yet ready, `(null, null)` will be returned.
+ *
+ * @param id The identifier of the compute request for which the result is being fetched.
+ * @return A tuple containing:
+ *         - result (optional): The result of the computation, or null if the result is not ready yet or an error occurred.
+ *         - error (optional): An error message if the computation failed, or null if no error occurred.
+ */
 function fetch_compute_result(id: text): (result: gtv?, error: text?) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     if (computation.state == state.COMPUTED) {
