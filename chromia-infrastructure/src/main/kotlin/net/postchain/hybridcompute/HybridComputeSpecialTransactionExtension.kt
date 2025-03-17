@@ -23,6 +23,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 class HybridComputeSpecialTransactionExtension(
         private val engine: HybridComputeEngine,
@@ -32,6 +34,8 @@ class HybridComputeSpecialTransactionExtension(
     companion object : KLogging()
 
     private lateinit var module: GTXModule
+    private lateinit var loader: Thread
+    private val loaded = AtomicBoolean(false)
 
     override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME)
 
@@ -48,6 +52,18 @@ class HybridComputeSpecialTransactionExtension(
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
+        loader = thread(name = "hybridcompute-load") {
+            logger.info("Loading engine")
+            try {
+                engine.load()
+                logger.info("Engine loaded")
+                loaded.set(true)
+            } catch (e: UserMistake) {
+                logger.warn("Loading engine failed: ${e.message}")
+            } catch (e: Exception) {
+                logger.warn("Loading engine failed unexpectedly: $e", e)
+            }
+        }
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
@@ -55,6 +71,10 @@ class HybridComputeSpecialTransactionExtension(
 
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         if (position != SpecialTransactionPosition.Begin) return listOf()
+        if (!loaded.get()) {
+            logger.info("Engine not loaded yet, returning empty list from createSpecialOperations")
+            return listOf()
+        }
         return buildList {
             for ((id, computation) in computations) {
                 when (computation) {
@@ -134,6 +154,10 @@ class HybridComputeSpecialTransactionExtension(
                 ResponseOp.OP_NAME -> {
                     val response = ResponseOp.fromOpData(op) ?: return false
                     if (engine.name == response.type) {
+                        if (!loaded.get()) {
+                            logger.warn("Engine not loaded yet, returning false from validateSpecialOperations")
+                            return false
+                        }
                         if (!computations.containsKey(response.id)) {
                             try {
                                 logger.info("Starting validation for request id [${response.id}] of type [${response.type}]")
@@ -178,6 +202,11 @@ class HybridComputeSpecialTransactionExtension(
     override fun shutdown() {
         timeouter.shutdownNow()
         computer.shutdown()
+        if (!loaded.get()) {
+            logger.warn("Loading not finished yet, interrupting it")
+            loader.interrupt()
+            loader.join(1000)
+        }
         logger.info("Shutting down engine")
         engine.shutdown()
         logger.info("Shutting down executors")

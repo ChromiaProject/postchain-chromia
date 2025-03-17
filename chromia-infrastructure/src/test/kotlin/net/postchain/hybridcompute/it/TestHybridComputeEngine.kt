@@ -90,14 +90,24 @@ class TestHybridComputeEngine : HybridComputeEngine {
     override val name: String = "test"
 
     private var initialized = false
+    private var loaded = false
 
     override fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid) {
         logger.info("init")
         initialized = true
     }
 
+    override fun load() {
+        require(initialized) { "Not initialized" }
+        logger.info("Load starting")
+        Thread.sleep(1000)
+        logger.info("Load finished")
+        loaded = true
+    }
+
     override fun compute(input: Gtv): Gtv {
         require(initialized) { "Not initialized" }
+        require(loaded) { "Not loaded" }
         logger.info("Compute starting")
         val behavior = TestEngineBehavior.decode(input)
         val output = behavior.compute(input)
@@ -107,6 +117,7 @@ class TestHybridComputeEngine : HybridComputeEngine {
 
     override fun validate(output: Gtv) {
         require(initialized) { "Not initialized" }
+        require(loaded) { "Not loaded" }
         logger.info("Validate starting")
         val behavior = TestEngineBehavior.decode(output)
         behavior.validate(output)
