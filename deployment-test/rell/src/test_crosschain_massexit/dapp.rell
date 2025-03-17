@@ -1,4 +1,3 @@
-@mount("dapp")
 module;
 
 import lib.ft4.admin;
@@ -43,4 +42,8 @@ operation init(
         use_snapshots = true,
         bridge_address = recovery_address
     );
+}
+
+operation register_recovery_contract(network_id: integer, contract_address: byte_array) {
+    log("Recovery contract for network %d registered: ".format(network_id, contract_address));
 }

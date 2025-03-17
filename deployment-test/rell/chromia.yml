@@ -175,26 +175,26 @@ libs:
   iccf:
     registry: https://gitlab.com/chromaway/core/directory-chain
     path: src/lib/iccf
-    tagOrBranch: 1.73.7
-    rid: x"050298A4A457D8E8922CF662765739A3A16B3256C49BE646FA7D198ECF0214C5"
+    tagOrBranch: 1.82.4
+    rid: x"9C359787B75927733034EA1CEE74EEC8829D2907E4FC94790B5E9ABE4396575D"
     insecure: false
   eif:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif
-    tagOrBranch: 0.11.1
+    tagOrBranch: 0.13.1
     rid: x"AB40EDB0B534726B5F3AA288A5D31BE840B24BA670775E4F95C1B2512F5B8F22"
     insecure: false
   eif_event_receiver:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif_event_receiver
-    tagOrBranch: 0.11.1
+    tagOrBranch: 0.13.1
     rid: x"B20700DA8FE4FC7E5880BCCCB6FBE0B6A22CD6FAB61CDF9CE20E06B62D4902F4"
     insecure: false
   hbridge:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/hbridge
-    tagOrBranch: 0.11.1
-    rid: x"E47EBE9F69D5DD82E950E3A901EE565B6CA11483728C41FF424E1FE2451388BB"
+    tagOrBranch: 0.13.1
+    rid: x"3DE398220EF81C16C4ACD8FE93DC39943FE253AEC79358D9231CC4D1968FEAA1"
     insecure: false
 
 compile:
