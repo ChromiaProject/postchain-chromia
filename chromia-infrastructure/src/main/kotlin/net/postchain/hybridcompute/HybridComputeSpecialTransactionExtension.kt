@@ -25,6 +25,8 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 class HybridComputeSpecialTransactionExtension(
         private val engine: HybridComputeEngine,
@@ -53,10 +55,12 @@ class HybridComputeSpecialTransactionExtension(
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
         loader = thread(name = "hybridcompute-load") {
-            logger.info("Loading engine")
+            logger.info("Loading engine...")
             try {
-                engine.load()
-                logger.info("Engine loaded")
+                val duration = measureTime {
+                    engine.load()
+                }
+                logger.info("Engine loaded in $duration")
                 loaded.set(true)
             } catch (e: UserMistake) {
                 logger.warn("Loading engine failed: ${e.message}")
@@ -101,11 +105,11 @@ class HybridComputeSpecialTransactionExtension(
                         try {
                             var timeoutFuture: ScheduledFuture<*>? = null
                             val future = computer.submit {
-                                logger.info("Starting computation of request id [${request.id}] of type [${request.type}]")
+                                logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
                                 try {
-                                    val output = engine.compute(request.input)
+                                    val (output, duration) = measureTimedValue { engine.compute(request.input) }
                                     if (!Thread.currentThread().isInterrupted) {
-                                        logger.info("Computation of request id [${request.id}] of type [${request.type}] finished")
+                                        logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
                                         computations.replace(request.id, FinishedComputation(request.type, output))
                                     } else {
                                         logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
@@ -160,10 +164,12 @@ class HybridComputeSpecialTransactionExtension(
                         }
                         if (!computations.containsKey(response.id)) {
                             try {
-                                logger.info("Starting validation for request id [${response.id}] of type [${response.type}]")
+                                logger.info("Starting validation for request id [${response.id}] of type [${response.type}]...")
                                 // TODO POS-1735 have timeout for the validation
-                                engine.validate(response.output)
-                                logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded")
+                                val duration = measureTime {
+                                    engine.validate(response.output)
+                                }
+                                logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
                             } catch (e: UserMistake) {
                                 logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
                                 return false
@@ -207,8 +213,11 @@ class HybridComputeSpecialTransactionExtension(
             loader.interrupt()
             loader.join(1000)
         }
-        logger.info("Shutting down engine")
-        engine.shutdown()
+        logger.info("Shutting down engine...")
+        val duration = measureTime {
+            engine.shutdown()
+        }
+        logger.info("Engine shutdown in $duration")
         logger.info("Shutting down executors")
         computer.shutdownNow()
         if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
