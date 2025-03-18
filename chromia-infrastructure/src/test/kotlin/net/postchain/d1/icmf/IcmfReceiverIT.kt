@@ -18,7 +18,9 @@ import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
+import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
@@ -64,6 +66,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
@@ -1110,6 +1113,74 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
     }
 
+    @Test
+    fun `Metadata receiver rell code`() {
+        setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse))
+        setupQueriesMocks()
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = getMetadataReceiverTestConfig(
+                "/net/postchain/d1/icmf/receiver/blockchain_config_metadata_receiver_1.xml"
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            nodes.forEach {
+                val result = it.blockQueries(dappChain).query("get_messages", gtv(mapOf())).get().asArray()
+                assertThat(result).hasSize(3)
+                // 2 messages sent on height 0, 1 on height 1
+                assertThat(result[0].asDict()["height"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[0].asDict()["timestamp"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[1].asDict()["height"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[1].asDict()["timestamp"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[2].asDict()["height"]!!.asInteger()).isEqualTo(1L)
+                assertThat(result[2].asDict()["timestamp"]!!.asInteger()).isEqualTo(1L)
+            }
+        }
+    }
+
+    @Test
+    fun `Metadata receiver rell code handling spill`() {
+        val messageBody = gtv("m".repeat(90 * 1024))
+        val secondMessageBody = gtv("n".repeat(90 * 1024))
+        val queryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(messageBody, secondMessageBody))
+
+        setupClientMocks(listOf(queryResponse), listOf(messageBody, secondMessageBody))
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = getMetadataReceiverTestConfig(
+                "/net/postchain/d1/icmf/receiver/blockchain_config_metadata_receiver_spill_1.xml"
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            nodes.forEach {
+                val result = it.blockQueries(dappChain).query("get_messages", gtv(mapOf())).get().asArray()
+                assertThat(result).hasSize(2)
+                // 2 messages sent on height 0
+                // we have to dig in previous block to find height and timestamp for second message
+                assertThat(result[0].asDict()["height"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[0].asDict()["timestamp"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[1].asDict()["height"]!!.asInteger()).isEqualTo(0L)
+                assertThat(result[1].asDict()["timestamp"]!!.asInteger()).isEqualTo(0L)
+            }
+        }
+    }
+
     private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic"): Gtv {
         val blockDetail = createBlockDetail(blockchainRid, messageBodies, topic, messageHeight, prevMessageHeight)
         return gtv(
@@ -1127,7 +1198,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 gtv(blockchainRid.data),
                 gtv(ByteArray(32) { messageHeight.toByte() }),
                 gtv(ByteArray(32)),
-                gtv(0),
+                gtv(messageHeight), // Set it equal to height for more interesting assertions
                 gtv(messageHeight),
                 GtvNull,
                 gtv(
@@ -1173,7 +1244,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 gtv(clusterAnchoringChainRid.data),
                 gtv(clusterAnchoringChainRid.data),
                 gtv(ByteArray(32)),
-                gtv(0),
+                gtv(prevHeight + 1), // Set it equal to height for more interesting assertions
                 gtv(prevHeight + 1),
                 GtvNull,
                 gtv(
@@ -1240,4 +1311,19 @@ class IcmfReceiverIT : IcmfBaseIT() {
             }
         }
     }
+
+    private fun getMetadataReceiverTestConfig(configFile: String): Gtv {
+        val constants = File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText()
+        val dynamicTopics = File(RELL_SOURCE_PATH, "lib/icmf/dynamic_topics.rell").readText()
+        val metadataReceiver = File(RELL_SOURCE_PATH, "lib/icmf/metadata_receiver.rell").readText()
+        return GtvMLParser.parseGtvML(
+                javaClass.getResource(configFile)!!.readText(),
+                mapOf(
+                        "constants" to gtv(constants),
+                        "dynamic_topics" to gtv(dynamicTopics),
+                        "metadata_receiver" to gtv(metadataReceiver),
+                )
+        )
+    }
+
 }

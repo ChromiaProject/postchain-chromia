@@ -7,7 +7,6 @@ import net.postchain.base.configuration.KEY_SYNC
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.d1.icmf.DEFAULT_MESSAGE_QUERY_LIMIT
 import net.postchain.d1.icmf.IcmfDatabaseOperationsImpl
 import net.postchain.devtools.ManagedModeTest
@@ -15,6 +14,7 @@ import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.gtvml.GtvMLParser
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
@@ -74,7 +74,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
     }
 
     private fun startSystemAnchoringChain(): Long {
-        val anchorGtvConfig = getSystemAnchoringChainConfig()
+        val anchorGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/system_anchoring.xml")!!.readText())
         return startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 }

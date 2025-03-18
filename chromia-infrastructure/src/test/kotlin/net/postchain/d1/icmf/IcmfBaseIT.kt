@@ -28,6 +28,10 @@ abstract class IcmfBaseIT : ManagedModeTest() {
                 .decodeTransaction(txData)
     }
 
+    private fun getIcmfDynamicTopicsCode(): Pair<String, Gtv> {
+        return "lib.icmf.dynamic_topics" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/dynamic_topics.rell").readText())
+    }
+
     private fun getIcmfConstantsCode(): Pair<String, Gtv> {
         return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
     }
@@ -45,7 +49,7 @@ abstract class IcmfBaseIT : ManagedModeTest() {
         val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() + additionRellCode
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource(configFile)!!.readText(),
-                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfReceiverCode(), getIcmfConstantsCode()))
+                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfReceiverCode(), getIcmfConstantsCode(), getIcmfDynamicTopicsCode()))
 
         val dappConfigString = modifyConfig(GtvMLEncoder.encodeXMLGtv(dappGtvConfig))
 

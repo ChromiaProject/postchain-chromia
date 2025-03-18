@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <dict>
+    <entry key="features">
+        <dict>
+            <entry key="merkle_hash_version"><int>2</int></entry>
+        </dict>
+    </entry>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <dict>
             <entry key="name">
@@ -21,55 +29,75 @@
             <bytea>03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94</bytea>
         </array>
     </entry>
-    <entry key="icmf">
-        <dict>
-            <entry key="receiver">
-                <dict>
-                </dict>
-            </entry>
-        </dict>
-    </entry>
     <entry key="gtx">
-        <!--
-        If multiple GTX modules are used, allowoverrides will decide if query- and operation names of
-        modules are overridable. If false (default) an error will be thrown on startup if two or more
-        modules have name collisions. If true, The last module with a colliding name will take precedence
-        (blockchain.1.gtx.allowoverrides=true).
-        -->
         <dict>
             <entry key="modules">
                 <array>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
-                    <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
-                    <string>net.postchain.d1.icmf.IcmfReceiverTestGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
                 </array>
             </entry>
             <entry key="rell">
                 <dict>
                     <entry key="modules">
                         <array>
-                            <string>lib.icmf</string>
+                            <string>receiver</string>
                         </array>
                     </entry>
                     <entry key="sources">
                         <dict>
-                            <entry key="lib/icmf/module.rell">
-                                <param key="lib.icmf" type="string"/>
-                            </entry>
                             <entry key="lib/icmf/constants.rell">
-                                <param key="lib.icmf.constants" type="string"/>
+                                <param key="constants" type="string"/>
                             </entry>
                             <entry key="lib/icmf/dynamic_topics.rell">
-                                <param key="lib.icmf.dynamic_topics" type="string"/>
+                                <param key="dynamic_topics" type="string"/>
                             </entry>
-                            <entry key="lib/icmf/receiver.rell">
-                                <param key="lib.icmf.receiver" type="string"/>
+                            <entry key="lib/icmf/metadata_receiver.rell">
+                                <param key="metadata_receiver" type="string"/>
+                            </entry>
+                            <entry key="receiver.rell">
+                                <string>module;
+
+import lib.icmf.metadata_receiver.*;
+
+entity message {
+    body: text;
+    height: integer;
+    timestamp: integer;
+}
+
+@extend(receive_icmf_message) function receive_message(sender: byte_array, height: integer, timestamp: integer, topic: text, body: gtv) {
+    create message(text.from_gtv(body), height, timestamp);
+}
+
+query get_messages () { return message @* {} ( .body, .height, .timestamp ); }
+</string>
                             </entry>
                         </dict>
                     </entry>
+                    <entry key="strictGtvConversion">
+                        <int>1</int>
+                    </entry>
                     <entry key="version">
                         <string>0.13.10</string>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="icmf">
+        <dict>
+            <entry key="receiver">
+                <dict>
+                    <entry key="global">
+                        <dict>
+                            <entry key="topics">
+                                <array>
+                                    <string>my-topic</string>
+                                </array>
+                            </entry>
+                        </dict>
                     </entry>
                 </dict>
             </entry>

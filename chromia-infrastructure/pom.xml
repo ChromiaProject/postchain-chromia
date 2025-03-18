@@ -194,7 +194,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>rell-compile</id>
+                        <id>rell-compile-hc</id>
                         <phase>generate-test-resources</phase>
                         <goals>
                             <goal>rell-compile</goal>
@@ -202,6 +202,17 @@
                         <configuration>
                             <source>${project.basedir}/rell/src</source>
                             <target>${project.build.directory}/test-classes/hybridcompute</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-compile-anchoring</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configFile>${project.basedir}/src/test/resources/net/postchain/d1/anchoring/chromia.yml</configFile>
+                            <target>${project.build.directory}/test-classes/anchoring</target>
                         </configuration>
                     </execution>
                     <execution>
