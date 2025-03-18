@@ -9,9 +9,11 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+      sync_ext:
+        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
-          - "net.postchain.hybridcompute.HybridComputeGTXModuleFactory"
+          - "net.postchain.hybridcompute.HybridComputeGTXModule"
       hybridcompute:
         engine: "net.postchain.hybridcompute.it.TestHybridComputeEngine"
         compute_timeout_seconds: 5

@@ -17,6 +17,7 @@ import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
@@ -28,12 +29,11 @@ import kotlin.concurrent.thread
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
-class HybridComputeSpecialTransactionExtension(
-        private val engine: HybridComputeEngine,
-        private val computeTimeoutSeconds: Long,
-        private val concurrency: Int
-) : GTXSpecialTxExtension, Shutdownable {
+class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdownable {
     companion object : KLogging()
+
+    internal lateinit var config: HybridComputeConfig
+    internal lateinit var engine: HybridComputeEngine
 
     private lateinit var module: GTXModule
     private lateinit var loader: Thread
@@ -43,17 +43,24 @@ class HybridComputeSpecialTransactionExtension(
 
     private val computations = ConcurrentHashMap<String, Computation>() // id -> computation
 
-    private val computer = ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
-            ArrayBlockingQueue<Runnable?>(concurrency),
-            ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-%d").build()
-    )
-    private val timeouter: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
-            ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build()
-    )
+    private val computer: ExecutorService by lazy {
+        ThreadPoolExecutor(1, 1,
+                0L, TimeUnit.MILLISECONDS,
+                ArrayBlockingQueue<Runnable?>(config.concurrency.toInt()),
+                ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-%d").build()
+        )
+    }
+    private val timeouter: ScheduledExecutorService by lazy {
+        Executors.newSingleThreadScheduledExecutor(
+                ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build()
+        )
+    }
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
+    }
+
+    fun load() {
         loader = thread(name = "hybridcompute-load") {
             logger.info("Loading engine...")
             try {
@@ -101,7 +108,7 @@ class HybridComputeSpecialTransactionExtension(
             var takenRequests = 0
             for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
                 if (engine.name == request.type) {
-                    if (takenRequests < concurrency && (computations.putIfAbsent(request.id, StartedComputation(request.type)) == null)) {
+                    if (takenRequests < config.concurrency && (computations.putIfAbsent(request.id, StartedComputation(request.type)) == null)) {
                         try {
                             var timeoutFuture: ScheduledFuture<*>? = null
                             val future = computer.submit {
@@ -113,11 +120,11 @@ class HybridComputeSpecialTransactionExtension(
                                         computations.replace(request.id, FinishedComputation(request.type, output))
                                     } else {
                                         logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
-                                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                     }
                                 } catch (_: InterruptedException) {
                                     logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
-                                    computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                    computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                 } catch (e: UserMistake) {
                                     logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
                                     computations.replace(request.id, FailedComputation(request.type, e.message
@@ -130,10 +137,10 @@ class HybridComputeSpecialTransactionExtension(
                                 }
                             }
                             timeoutFuture = timeouter.schedule({
-                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after $computeTimeoutSeconds seconds")
-                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after $computeTimeoutSeconds seconds"))
+                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
+                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                 future.cancel(true) // interrupt the compute thread
-                            }, computeTimeoutSeconds, TimeUnit.SECONDS)
+                            }, config.computeTimeoutSeconds, TimeUnit.SECONDS)
                             add(RequestTakenOp(request.id).toOpData())
                             takenRequests++
                         } catch (_: RejectedExecutionException) {
