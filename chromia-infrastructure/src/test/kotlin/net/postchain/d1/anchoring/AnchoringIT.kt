@@ -13,8 +13,6 @@ import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK_HEADER
 import net.postchain.d1.anchoring.MultiOpAnchoringSpecialTxBuilder.Companion.GTX_OP_OVERHEAD
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
-import net.postchain.d1.getClusterAnchoringChainConfig
-import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
@@ -67,8 +65,8 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     @ParameterizedTest
     @ValueSource(strings = [
-        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml",
-        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_batch.xml"
+        "/anchoring/cluster_anchoring.xml",
+        "/anchoring/cluster_anchoring_batch.xml"
     ])
     fun happyAnchor(configFile: String) {
         startManagedSystem(4, 0)
@@ -189,7 +187,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun verifyLastClusterAnchoredHeight() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -221,13 +219,13 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun verifyLastClusterAnchoredHeightWithMultipleCACs() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
         val dappChain2 = startDappChain()
 
-        val anchorChain2 = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain2 = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         // --------------------
         // Dapp chain: Build 4 blocks
@@ -264,7 +262,7 @@ class AnchoringIT : ManagedModeTest() {
     fun verifyNodeWithDappChainWithLowerHeightThanLastClusterAnchoredHeight() {
         startManagedSystem(4, 0)
         val peerInfoMap = nodes.first().postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -310,7 +308,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `happy anchoring with maxBlocksPerChain limit reached`() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring-max_blocks_per_chain.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring_max_blocks_per_chain.xml")
         val blocks = 7L
 
         val dappChain = startDappChain()
@@ -358,7 +356,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun onlyClusterChainsAreAnchored() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         val dappChain = startDappChain()
 
@@ -391,7 +389,7 @@ class AnchoringIT : ManagedModeTest() {
     fun systemAnchoringAnchorsClusterAnchoringBlocks() {
         startManagedSystem(4, 0)
         val systemAnchoringChain = startSystemAnchoringChain()
-        val clusterAnchoringChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")
+        val clusterAnchoringChain = startClusterAnchoringChain("/anchoring/cluster_anchoring.xml")
 
         buildBlock(clusterAnchoringChain, 0L)
         buildBlock(systemAnchoringChain, 0L)
@@ -412,7 +410,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun capSizeOfAnchoringTransactionOnMaxBlockSize() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring_limit_size.xml")
 
         verifyCap(anchorChain)
     }
@@ -421,7 +419,7 @@ class AnchoringIT : ManagedModeTest() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun capSizeOfAnchoringTransactionOnMaxTxSize() {
         startManagedSystem(4, 0)
-        val anchorChain = startClusterAnchoringChain("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_limit_size_on_tx.xml")
+        val anchorChain = startClusterAnchoringChain("/anchoring/cluster_anchoring_limit_size_on_tx.xml")
 
         verifyCap(anchorChain)
     }
@@ -494,12 +492,12 @@ class AnchoringIT : ManagedModeTest() {
     }
 
     private fun startClusterAnchoringChain(blockchainConfigFile: String): Long {
-        val anchorGtvConfig = getClusterAnchoringChainConfig(blockchainConfigFile)
+        val anchorGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource(blockchainConfigFile)!!.readText())
         return startNewBlockchain(setOf(0, 1, 2, 3), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 
     private fun startSystemAnchoringChain(): Long {
-        val anchorGtvConfig = getSystemAnchoringChainConfig()
+        val anchorGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/system_anchoring.xml")!!.readText())
         return startNewBlockchain(setOf(0, 1, 2, 3), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
     }
 

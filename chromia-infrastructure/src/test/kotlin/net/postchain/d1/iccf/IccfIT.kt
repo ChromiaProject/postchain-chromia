@@ -9,8 +9,6 @@ import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.anchoring.D1TestInfrastructureFactory
-import net.postchain.d1.getClusterAnchoringChainConfig
-import net.postchain.d1.getSystemAnchoringChainConfig
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoringTransactionForBlockRid
 import net.postchain.devtools.ManagedModeTest
@@ -64,8 +62,8 @@ class IccfIT : ManagedModeTest() {
     fun intraCluster() {
         startManagedSystem(4, 0)
 
-        startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig("/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml")))
+        startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/system_anchoring.xml")!!.readText())))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/cluster_anchoring.xml")!!.readText())))
 
         val sourceChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         val targetChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
@@ -92,14 +90,14 @@ class IccfIT : ManagedModeTest() {
 
     @ParameterizedTest
     @ValueSource(strings = [
-        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring.xml",
-        "/net/postchain/d1/anchoring/blockchain_config_2_cluster_anchoring_batch.xml"
+        "/anchoring/cluster_anchoring.xml",
+        "/anchoring/cluster_anchoring_batch.xml"
     ])
     fun intraNetwork(clusterAnchoringConfig: String) {
         startManagedSystem(4, 0)
 
-        val systemAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getSystemAnchoringChainConfig()))
-        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(getClusterAnchoringChainConfig(clusterAnchoringConfig)))
+        val systemAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/system_anchoring.xml")!!.readText())))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource(clusterAnchoringConfig)!!.readText())))
 
         val sourceChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
         startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))

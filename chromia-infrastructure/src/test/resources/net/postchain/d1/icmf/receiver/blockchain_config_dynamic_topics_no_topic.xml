@@ -60,6 +60,9 @@
                             <entry key="lib/icmf/constants.rell">
                                 <param key="lib.icmf.constants" type="string"/>
                             </entry>
+                            <entry key="lib/icmf/dynamic_topics.rell">
+                                <param key="lib.icmf.dynamic_topics" type="string"/>
+                            </entry>
                             <entry key="lib/icmf/receiver.rell">
                                 <param key="lib.icmf.receiver" type="string"/>
                             </entry>

@@ -1317,7 +1317,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         val dynamicTopics = File(RELL_SOURCE_PATH, "lib/icmf/dynamic_topics.rell").readText()
         val metadataReceiver = File(RELL_SOURCE_PATH, "lib/icmf/metadata_receiver.rell").readText()
         return GtvMLParser.parseGtvML(
-                Any::class::class.java.getResource(configFile)!!.readText(),
+                javaClass.getResource(configFile)!!.readText(),
                 mapOf(
                         "constants" to gtv(constants),
                         "dynamic_topics" to gtv(dynamicTopics),
