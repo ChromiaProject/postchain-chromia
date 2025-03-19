@@ -20,7 +20,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
@@ -66,7 +65,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
@@ -769,7 +767,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     @Test
     fun `dapp receiver config - add local topic and read messages`() {
 
-        setupNonAnchoredQueriesMock(messageHeight = 2, topic = "topic-defined-in-config")
+        setupNonAnchoredQueriesMock(messageHeight = 2, topic = "L_topic-defined-in-config")
         addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
         addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
 
@@ -810,7 +808,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 assertThat(messages).hasSize(3)
 
                 assertThat(messages[0].sender).isEqualTo(localSenderChainRid)
-                assertThat(messages[0].topic).isEqualTo("topic-defined-in-config")
+                assertThat(messages[0].topic).isEqualTo("L_topic-defined-in-config")
                 assertThat(messages[0].body.contentEquals(localSenderEncodedMessageBody)).isTrue()
 
                 assertThat(messages[1].sender).isEqualTo(localSenderChainRid2)
@@ -838,7 +836,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappChain = deployDynamicTopicDappChain(configFile = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics_no_topic.xml")
+        val dappChain = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
@@ -875,7 +873,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappChain = deployDynamicTopicDappChain(configFile = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics_no_topic.xml")
+        val dappChain = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
 
         // Add topics
         val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
@@ -921,7 +919,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappChain1 = deployDynamicTopicDappChain(configFile = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics_no_topic.xml")
+        val dappChain1 = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
         buildBlock(dappChain1)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
@@ -1018,7 +1016,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappChain1 = deployDynamicTopicDappChain(configFile = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics_no_topic.xml")
+        val dappChain1 = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
         buildBlock(dappChain1)
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
@@ -1120,9 +1118,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappGtvConfig = getMetadataReceiverTestConfig(
-                "/net/postchain/d1/icmf/receiver/blockchain_config_metadata_receiver_1.xml"
-        )
+        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata.xml")!!.readText())
 
         val dappChain = startNewBlockchain(
                 setOf(0, 1, 2),
@@ -1156,9 +1152,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappGtvConfig = getMetadataReceiverTestConfig(
-                "/net/postchain/d1/icmf/receiver/blockchain_config_metadata_receiver_spill_1.xml"
-        )
+        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata_and_spill.xml")!!.readText())
 
         val dappChain = startNewBlockchain(
                 setOf(0, 1, 2),
@@ -1281,22 +1275,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
     )
 
     private fun deployDynamicTopicDappChain(
-            configFile: String = "/net/postchain/d1/icmf/receiver/blockchain_config_dynamic_topics.xml",
-            additionRellCode: String = "",
-            modifyConfig: (String) -> String = { it }
-    ) =
-        deployDappChain(
-                configFile = configFile,
-                additionRellCode =
-                """
-                    import .receiver.*;
-                    operation receiver_icmf_update_topics_op(topics: list<icmf_receiver_topic>, replace: boolean) {
-                        receiver_icmf_update_topics(topics, replace);
-                    }
-                """.trimIndent() + additionRellCode,
-        ) {
-            modifyConfig(it).replace("operation __icmf_message", "operation disabled__icmf_message")
-        }
+            configFile: String = "/icmf/dynamic_receiver.xml",
+    ) = deployDappChain(configFile = configFile)
 
 
     private fun getTestMessages(node: PostchainTestNode, chainId: Long): List<TestMessage> {
@@ -1310,20 +1290,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
                         .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
             }
         }
-    }
-
-    private fun getMetadataReceiverTestConfig(configFile: String): Gtv {
-        val constants = File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText()
-        val dynamicTopics = File(RELL_SOURCE_PATH, "lib/icmf/dynamic_topics.rell").readText()
-        val metadataReceiver = File(RELL_SOURCE_PATH, "lib/icmf/metadata_receiver.rell").readText()
-        return GtvMLParser.parseGtvML(
-                javaClass.getResource(configFile)!!.readText(),
-                mapOf(
-                        "constants" to gtv(constants),
-                        "dynamic_topics" to gtv(dynamicTopics),
-                        "metadata_receiver" to gtv(metadataReceiver),
-                )
-        )
     }
 
 }

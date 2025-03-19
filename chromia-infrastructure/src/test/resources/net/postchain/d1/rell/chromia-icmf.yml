@@ -1,0 +1,89 @@
+definitions:
+  common_config: &common_config
+    features:
+      merkle_hash_version: 2
+    blockstrategy:
+      name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+    configurationfactory: NOT_USED
+    signers:
+      - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
+      - x"031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
+      - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
+
+blockchains:
+  sender:
+    module: sender
+    config:
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfSenderTestGTXModule"
+  sender_with_query_limit:
+    module: sender
+    config:
+      <<: *common_config
+      icmf:
+        sender:
+          message_query_limit: 3
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfSenderTestGTXModule"
+  receiver_with_metadata:
+    module: receiver_with_metadata
+    config:
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          global:
+            topics:
+              - "my-topic"
+  receiver_with_metadata_and_spill:
+    module: receiver_with_metadata
+    config:
+      <<: *common_config
+      blockstrategy:
+        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+        maxblocksize: 204800
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          global:
+            blockchains:
+              - bc-rid: x"0202020202020202020202020202020202020202020202020202020202020202"
+                topic: my-topic
+  dynamic_receiver:
+    module: dynamic_receiver
+    config:
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverTestGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          local:
+            - bc-rid: x"0303030303030303030303030303030303030303030303030303030303030303"
+              topic: "L_topic-defined-in-config"
+  dynamic_receiver_no_topics:
+    module: dynamic_receiver
+    config:
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverTestGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver: {}

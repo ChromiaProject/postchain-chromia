@@ -172,12 +172,6 @@ libs:
     tagOrBranch: v1.1.0r
     rid: x"FEEB0633698E7650D29DCCFE2996AD57CDC70AA3BDF770365C3D442D9DFC2A5E"
     insecure: false
-  iccf:
-    registry: https://gitlab.com/chromaway/core/directory-chain
-    path: src/lib/iccf
-    tagOrBranch: 1.82.4
-    rid: x"9C359787B75927733034EA1CEE74EEC8829D2907E4FC94790B5E9ABE4396575D"
-    insecure: false
   eif:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif

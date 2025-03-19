@@ -1,0 +1,5 @@
+import lib.icmf.dynamic_topics.*;
+
+operation receiver_icmf_update_topics_op(topics: list<icmf_receiver_topic>, replace: boolean) {
+    receiver_icmf_update_topics(topics, replace);
+}

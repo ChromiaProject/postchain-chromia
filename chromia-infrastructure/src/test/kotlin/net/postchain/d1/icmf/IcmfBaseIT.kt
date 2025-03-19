@@ -1,20 +1,15 @@
 package net.postchain.d1.icmf
 
 import net.postchain.core.Transaction
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.ChainUtil
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
-import java.io.File
 
 abstract class IcmfBaseIT : ManagedModeTest() {
 
@@ -28,35 +23,16 @@ abstract class IcmfBaseIT : ManagedModeTest() {
                 .decodeTransaction(txData)
     }
 
-    private fun getIcmfDynamicTopicsCode(): Pair<String, Gtv> {
-        return "lib.icmf.dynamic_topics" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/dynamic_topics.rell").readText())
-    }
-
-    private fun getIcmfConstantsCode(): Pair<String, Gtv> {
-        return "lib.icmf.constants" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/constants.rell").readText())
-    }
-
-    private fun getIcmfReceiverCode(): Pair<String, Gtv> {
-        return "lib.icmf.receiver" to gtv(File(RELL_SOURCE_PATH, "lib/icmf/receiver.rell").readText())
-    }
-
     fun deployDappChain(
             signers: Set<Int> = setOf(0, 1, 2),
-            configFile: String = "/net/postchain/d1/icmf/sender/blockchain_config_1.xml",
-            additionRellCode: String = "",
-            modifyConfig: (String) -> String = { it }
+            configFile: String = "/icmf/sender.xml"
     ): Long {
-        val icmfTestCode = File(RELL_SOURCE_PATH, "lib/icmf/module.rell").readText() + additionRellCode
-        val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource(configFile)!!.readText(),
-                mapOf("lib.icmf" to gtv(icmfTestCode), getIcmfReceiverCode(), getIcmfConstantsCode(), getIcmfDynamicTopicsCode()))
-
-        val dappConfigString = modifyConfig(GtvMLEncoder.encodeXMLGtv(dappGtvConfig))
+        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource(configFile)!!.readText())
 
         return startNewBlockchain(
                 signers,
                 setOf(),
-                rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(dappConfigString)),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
                 blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
     }
 }

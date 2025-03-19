@@ -1,0 +1,5 @@
+import lib.icmf.*;
+
+operation test_message(topic: text, message: text) {
+    send_message(topic, message.to_gtv());
+}

@@ -1,0 +1,13 @@
+import lib.icmf.metadata_receiver.*;
+
+entity message {
+    body: text;
+    height: integer;
+    timestamp: integer;
+}
+
+@extend(receive_icmf_message) function receive_message(sender: byte_array, height: integer, timestamp: integer, topic: text, body: gtv) {
+    create message(text.from_gtv(body), height, timestamp);
+}
+
+query get_messages () { return message @* {} ( .body, .height, .timestamp ); }
