@@ -17,6 +17,7 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
+import net.postchain.common.createLogCaptor
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
@@ -29,8 +30,8 @@ import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_TOPIC
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.clusterAnchoringChainRid
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid
-import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid3
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid2
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid3
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.remoteSenderChainRid
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.systemAnchoringChainRid
 import net.postchain.devtools.PostchainTestNode
@@ -45,9 +46,6 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
-import org.apache.logging.log4j.core.Logger
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
@@ -483,12 +481,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun maxMessageSize() {
-        val context = LoggerContext.getContext(false)
-        val logger = context.getLogger(InterClusterAnchoredTopicPipe::class.java)
-        val appender = ListAppender("List").apply {
-            start()
-        }
-        context.configuration.addLoggerAppender(logger as Logger, appender)
+        val appender = createLogCaptor(InterClusterAnchoredTopicPipe::class.java, "List")
 
         val messageBody = gtv("imtoobig".repeat(2 * 1024 * 1024))
         val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
