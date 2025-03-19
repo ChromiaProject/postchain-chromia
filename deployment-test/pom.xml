@@ -180,10 +180,8 @@
                                 <resource>
                                     <directory>${maven.multiModuleProjectDirectory}/${directory.source}</directory>
                                     <includes>
-                                        <include>lib/icmf/module.rell</include>
-                                        <include>lib/icmf/constants.rell</include>
-                                        <include>lib/icmf/receiver.rell</include>
-                                        <include>lib/iccf/module.rell</include>
+                                        <include>lib/icmf/**/*.rell</include>
+                                        <include>lib/iccf/**/*.rell</include>
                                     </includes>
                                 </resource>
                             </resources>

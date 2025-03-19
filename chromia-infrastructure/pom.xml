@@ -160,6 +160,37 @@
 
     <build>
         <plugins>
+            <!-- Collect rell code to compile -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
+                            <resources>
+                                <!-- Rell code for tests -->
+                                <resource>
+                                    <directory>${project.basedir}/src/test/resources/net/postchain/d1/rell/src</directory>
+                                </resource>
+                                <!-- Source code of D1 components needed for tests -->
+                                <resource>
+                                    <directory>${maven.multiModuleProjectDirectory}/${directory.source}</directory>
+                                    <includes>
+                                        <include>lib/icmf/**/*.rell</include>
+                                        <include>lib/iccf/**/*.rell</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>
@@ -202,6 +233,30 @@
                         <configuration>
                             <source>${project.basedir}/rell/src</source>
                             <target>${project.build.directory}/test-classes/hybridcompute</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-compile-icmf-test-code</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configFile>${project.basedir}/src/test/resources/net/postchain/d1/rell/chromia-icmf.yml</configFile>
+                            <source>${project.build.directory}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/icmf</target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rell-compile-iccf-test-code</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>rell-compile</goal>
+                        </goals>
+                        <configuration>
+                            <configFile>${project.basedir}/src/test/resources/net/postchain/d1/rell/chromia-iccf.yml</configFile>
+                            <source>${project.build.directory}/rell/src</source>
+                            <target>${project.build.directory}/test-classes/iccf</target>
                         </configuration>
                     </execution>
                     <execution>

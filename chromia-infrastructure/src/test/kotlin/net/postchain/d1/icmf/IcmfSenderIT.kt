@@ -28,15 +28,16 @@ class IcmfSenderIT : IcmfBaseIT() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("L_my-topic"))
+        val topic = "L_my-topic"
+        val dappChain = deployDappChain()
 
         // Messages in block 0
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.map {
-            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(it)))
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
-        verifyMessages(dappChain, 0, "L_my-topic", -1, block0Messages, block0Messages)
+        verifyMessages(dappChain, 0, topic, -1, block0Messages, block0Messages)
 
         // No messages in block 1
         buildBlock(dappChain, 1)
@@ -44,21 +45,22 @@ class IcmfSenderIT : IcmfBaseIT() {
         // Messages in block 2
         val block2Messages = listOf("test2", "test3")
         val block2Txs = block2Messages.map {
-            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(it)))
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
         }
         buildBlock(dappChain, 2, *block2Txs.toTypedArray())
         // Expecting previous height to be 0
-        verifyMessages(dappChain, 2, "L_my-topic", 0, block2Messages, block0Messages + block2Messages)
+        verifyMessages(dappChain, 2, topic, 0, block2Messages, block0Messages + block2Messages)
     }
 
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("L_my-topic"))
+        val topic = "L_my-topic"
+        val dappChain = deployDappChain()
 
         val message = "imtoobig".repeat(2 * 1024 * 1024)
-        val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(message)))
+        val tx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(topic), gtv(message)))
         buildBlock(dappChain, 0, tx)
         await.atMost(Duration.ONE_MINUTE).untilAsserted {
             val txStatuses = getChainNodes(dappChain).map { it.transactionQueue().getTransactionStatus(tx.getRID()) }
@@ -72,11 +74,12 @@ class IcmfSenderIT : IcmfBaseIT() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header with not allowed topic`() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("my-topic"))
+        val topic = "my-topic"
+        val dappChain = deployDappChain()
 
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.map {
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
         verifyMessagesMissing(dappChain, 0)
@@ -86,11 +89,12 @@ class IcmfSenderIT : IcmfBaseIT() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header for normal chain with global topic`() {
         startManagedSystem(3, 0)
-        val dappChain = deployDappChain(additionRellCode = icmfSendRellCode("G_my-topic"))
+        val topic = "G_my-topic"
+        val dappChain = deployDappChain()
 
         val block0Messages = listOf("test0", "test1")
         val block0Txs = block0Messages.map {
-            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
         }
         buildBlock(dappChain, 0, *block0Txs.toTypedArray())
         verifyMessagesMissing(dappChain, 0)
@@ -100,24 +104,22 @@ class IcmfSenderIT : IcmfBaseIT() {
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun `message query limit is respected`() {
         startManagedSystem(3, 0)
+        val topic = "L_my-topic"
 
         // Query limit is 3
-        val dappChain = deployDappChain(
-                configFile = "/net/postchain/d1/icmf/sender/blockchain_config_1_with_query_limit.xml",
-                additionRellCode = icmfSendRellCode("L_my-topic")
-        )
+        val dappChain = deployDappChain(configFile = "/icmf/sender_with_query_limit.xml")
 
         // Send 2 msgs per block
         for (i in 0..2) {
             val blockMessages = listOf("test_first_$i", "test_second_$i")
             val blockTxs = blockMessages.map {
-                makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(it)))
+                makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
             }
             buildBlock(dappChain, i.toLong(), *blockTxs.toTypedArray())
         }
 
         val messages = nodes[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
-                .query(QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT, gtv(mapOf("topic" to gtv("L_my-topic"), "height" to gtv(-1))))
+                .query(QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT, gtv(mapOf("topic" to gtv(topic), "height" to gtv(-1))))
                 .get()
                 .asArray()
 
@@ -175,13 +177,5 @@ class IcmfSenderIT : IcmfBaseIT() {
                 assertThat(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]).isNull()
             }
         }
-    }
-
-    private fun icmfSendRellCode(icmfTopic: String): String {
-        return """
-                    operation test_message(text) {
-                        send_message("$icmfTopic", text.to_gtv());
-                    }
-                """
     }
 }

@@ -7,7 +7,6 @@ import net.postchain.client.core.PostchainQuery
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
-import net.postchain.d1.RELL_SOURCE_PATH
 import net.postchain.d1.anchoring.D1TestInfrastructureFactory
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoringTransactionForBlockRid
@@ -31,19 +30,14 @@ import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.io.File
 
 class IccfIT : ManagedModeTest() {
 
     private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
-    private val iccfRellCode = File(RELL_SOURCE_PATH, "lib/iccf/module.rell").readText()
-    private val iccfRellTestCode = javaClass.getResource("/net/postchain/d1/iccf/rell/iccf_test.rell")!!.readText()
     private val sourceDappGtvConfig = GtvMLParser.parseGtvML(
             javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_source_1.xml")!!.readText())
     private val targetDappGtvConfig = GtvMLParser.parseGtvML(
-            javaClass.getResource("/net/postchain/d1/iccf/blockchain_config_target_1.xml")!!.readText(), mapOf(
-            "lib.iccf" to gtv(iccfRellCode + iccfRellTestCode)
-    ))
+            javaClass.getResource("/iccf/iccf_target.xml")!!.readText())
     private val signers = setOf(0, 1, 2, 3)
 
     override fun createManagedNodeDataSource(): MockManagedNodeDataSource {
