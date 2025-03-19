@@ -6,6 +6,9 @@ import net.postchain.gtv.mapper.Name
 data class HybridComputeConfig(
         val engine: String,
 
+        @Name("load_timeout_seconds")
+        val loadTimeoutSeconds: Long,
+
         @Name("compute_timeout_seconds")
         val computeTimeoutSeconds: Long,
 
