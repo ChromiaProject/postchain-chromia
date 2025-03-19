@@ -2,13 +2,11 @@ package net.postchain.hybridcompute.it
 
 import assertk.assertThat
 import assertk.assertions.contains
+import net.postchain.common.createLogCaptor
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.hybridcompute.HybridComputeSpecialTransactionExtension
-import org.apache.logging.log4j.core.Logger
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions
@@ -34,12 +32,7 @@ class HybridComputeLoadFailIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `failed loading`() {
-        val context = LoggerContext.getContext(false)
-        val logger = context.getLogger(HybridComputeSpecialTransactionExtension::class.java)
-        val appender = ListAppender("LoadFailure").apply {
-            start()
-        }
-        context.configuration.addLoggerAppender(logger as Logger, appender)
+        val appender = createLogCaptor(HybridComputeSpecialTransactionExtension::class.java, "LoadFailure")
 
         doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test_load_fail.xml")
 
