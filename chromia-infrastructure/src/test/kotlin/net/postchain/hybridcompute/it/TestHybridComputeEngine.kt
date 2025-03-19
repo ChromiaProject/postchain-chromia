@@ -92,8 +92,17 @@ class TestHybridComputeEngine : HybridComputeEngine {
     private var initialized = false
     private var loaded = false
 
+    private var loadFail = false
+    private var loadTimeout = false
+
     override fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid) {
         logger.info("init")
+        if (blockchainConfig["hybridcompute"]!!.asDict()["load_fail"]?.asBoolean() == true) {
+            loadFail = true
+        }
+        if (blockchainConfig["hybridcompute"]!!.asDict()["load_timeout"]?.asBoolean() == true) {
+            loadTimeout = true
+        }
         initialized = true
     }
 
@@ -101,6 +110,12 @@ class TestHybridComputeEngine : HybridComputeEngine {
         require(initialized) { "Not initialized" }
         logger.info("Load starting")
         Thread.sleep(1000)
+        if (loadFail) {
+            throw UserMistake("Load failed")
+        }
+        if (loadTimeout) {
+            Thread.sleep(10000)
+        }
         logger.info("Load finished")
         loaded = true
     }

@@ -61,6 +61,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     }
 
     fun load() {
+        var timeoutFuture: ScheduledFuture<*>? = null
         loader = thread(name = "hybridcompute-load") {
             logger.info("Loading engine...")
             try {
@@ -71,10 +72,18 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                 loaded.set(true)
             } catch (e: UserMistake) {
                 logger.warn("Loading engine failed: ${e.message}")
+            } catch (_: InterruptedException) {
+                logger.debug { "Loading engine interrupted" }
             } catch (e: Exception) {
                 logger.warn("Loading engine failed unexpectedly: $e", e)
+            } finally {
+                timeoutFuture?.cancel(false)
             }
         }
+        timeoutFuture = timeouter.schedule({
+            logger.warn("Loading timed out after ${config.loadTimeoutSeconds} seconds, interrupting it")
+            loader.interrupt()
+        }, config.loadTimeoutSeconds, TimeUnit.SECONDS)
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
@@ -215,7 +224,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     override fun shutdown() {
         timeouter.shutdownNow()
         computer.shutdown()
-        if (!loaded.get()) {
+        if (!loaded.get() && loader.isAlive) {
             logger.warn("Loading not finished yet, interrupting it")
             loader.interrupt()
             loader.join(1000)
