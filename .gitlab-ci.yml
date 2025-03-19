@@ -67,6 +67,7 @@ deploy-snapshot:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,slow-it,docker-push,distro
       -Drevision=$SNAPSHOT_VERSION
+      -Djib.to.tags=latest-snapshot
       clean source:jar deploy
 
 # Triggered by that a semver tag was pushed
