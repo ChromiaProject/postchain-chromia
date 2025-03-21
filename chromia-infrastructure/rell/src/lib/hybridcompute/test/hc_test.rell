@@ -17,7 +17,7 @@ function test_hc() {
             compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
         ]
     );
-    assert_equals(fetch_compute_result("one"), (result=null, error=null));
+    assert_null(fetch_compute_result("one"));
 
     rell.test.tx().op(
         request_taken_op("one")
@@ -31,7 +31,7 @@ function test_hc() {
     rell.test.tx().op(
         request_taken_op("one")
     ).nop().run_must_fail("Computation <one> must be NEW, but is TAKEN");
-    assert_equals(fetch_compute_result("one"), (result=null, error=null));
+    assert_null(fetch_compute_result("one"));
 
     rell.test.tx().op(
         response_op("two", "nn", "0000".to_gtv())
@@ -44,7 +44,8 @@ function test_hc() {
     rell.test.tx().op(
         response_op("one", "nn", "AABBCCDD".to_gtv())
     ).run();
-    assert_equals(fetch_compute_result("one"), (result="AABBCCDD".to_gtv(), error=null));
+    assert_equals(fetch_compute_result("one"), compute_result(result="AABBCCDD".to_gtv(), error=null,
+        tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
 
     rell.test.tx().op(
         response_op("one", "nn", "00".to_gtv())
@@ -54,12 +55,13 @@ function test_hc() {
         request_taken_op("two")
     ).run();
     assert_equals(get_requests(), list<compute_request>());
-    assert_equals(fetch_compute_result("two"), (result=null, error=null));
+    assert_null(fetch_compute_result("two"));
 
     rell.test.tx().op(
         failure_op("two", "nn", "Some error")
     ).run();
-    assert_equals(fetch_compute_result("two"), (result=null, error="Some error"));
+    assert_equals(fetch_compute_result("two"), compute_result(result=null, error="Some error",
+        tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
 }
 
 function test_computation_not_found() {
