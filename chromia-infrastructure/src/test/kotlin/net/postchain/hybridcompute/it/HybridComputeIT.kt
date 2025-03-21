@@ -3,6 +3,8 @@ package net.postchain.hybridcompute.it
 import assertk.assertThat
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import net.postchain.common.wrap
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -11,8 +13,8 @@ import net.postchain.enqueueTx
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.hybridcompute.rell.lib.hybridcompute.Computation
+import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.State
-import net.postchain.hybridcompute.rell.lib.hybridcompute.test.HcFetchComputeResultResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchRequests
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.submitComputeRequestOperation
@@ -56,7 +58,9 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
 
         buildBlock(chainIid.toLong())
@@ -66,26 +70,30 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
-
+        assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isNull()
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
+            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
+            assertThat(txRid).isNotNull()
             assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
                     id = "success",
                     state = State.COMPUTED,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
                     output = GtvEncoder.encodeGtv(input).wrap(),
-                    error = ""
+                    error = "",
+                    resultTxRid = txRid!!.wrap(),
+                    resultOpIndex = 0,
             ))
-            assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(HcFetchComputeResultResult(
+            assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(ComputeResult(
                     result = input,
-                    error = null
+                    error = null,
+                    txRid = txRid.wrap(),
+                    opIndex = 0,
             ))
         }
     }
@@ -107,7 +115,9 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
 
         buildBlock(chainIid.toLong())
@@ -117,26 +127,31 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isNull()
 
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
+            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
+            assertThat(txRid).isNotNull()
             assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
                     id = "fail",
                     state = State.FAILED,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
-                    error = "Fail"
+                    error = "Fail",
+                    resultTxRid = txRid!!.wrap(),
+                    resultOpIndex = 0,
             ))
-            assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isEqualTo(HcFetchComputeResultResult(
+            assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isEqualTo(ComputeResult(
                     result = null,
-                    error = "Fail"
+                    error = "Fail",
+                    txRid = txRid.wrap(),
+                    opIndex = 0,
             ))
         }
     }
@@ -158,7 +173,9 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
 
         buildBlock(chainIid.toLong())
@@ -168,26 +185,31 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isNull()
 
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
+            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
+            assertThat(txRid).isNotNull()
             assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
                     id = "error",
                     state = State.FAILED,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
-                    error = "Unknown error"
+                    error = "Unknown error",
+                    resultTxRid = txRid!!.wrap(),
+                    resultOpIndex = 0,
             ))
-            assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isEqualTo(HcFetchComputeResultResult(
+            assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isEqualTo(ComputeResult(
                     result = null,
-                    error = "Unknown error"
+                    error = "Unknown error",
+                    txRid = txRid.wrap(),
+                    opIndex = 0,
             ))
         }
     }
@@ -209,7 +231,9 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
 
         buildBlock(chainIid.toLong())
@@ -219,26 +243,31 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isNull()
 
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
+            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
+            assertThat(txRid).isNotNull()
             assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
                     id = "timeout",
                     state = State.FAILED,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
                     output = ByteArray(0).wrap(),
-                    error = "Computation timed out after 5 seconds"
+                    error = "Computation timed out after 5 seconds",
+                    resultTxRid = txRid!!.wrap(),
+                    resultOpIndex = 0,
             ))
-            assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isEqualTo(HcFetchComputeResultResult(
+            assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isEqualTo(ComputeResult(
                     result = null,
-                    error = "Computation timed out after 5 seconds"
+                    error = "Computation timed out after 5 seconds",
+                    txRid = txRid.wrap(),
+                    opIndex = 0,
             ))
         }
     }
@@ -260,7 +289,9 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
 
         buildBlock(chainIid.toLong())
@@ -270,12 +301,11 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
 
         // Wait until computation is finished
         Thread.sleep(2*1000)
@@ -291,11 +321,10 @@ class HybridComputeIT : IntegrationTestSetup() {
                 type = "test",
                 input = GtvEncoder.encodeGtv(input).wrap(),
                 output = ByteArray(0).wrap(),
-                error = ""
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
         ))
-        assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isEqualTo(HcFetchComputeResultResult(
-                result = null,
-                error = null
-        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
     }
 }

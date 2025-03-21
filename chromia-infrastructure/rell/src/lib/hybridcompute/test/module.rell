@@ -9,4 +9,4 @@ operation submit_compute_request(id: text, type: text, input: gtv) {
 query fetch_requests(): list<struct<hc.computation>> =
         hc.computation @* { } ( $.to_struct() );
 
-query fetch_compute_result(id: text): (result: gtv?, error: text?) = hc.fetch_compute_result(id);
+query fetch_compute_result(id: text): hc.compute_result? = hc.fetch_compute_result(id);

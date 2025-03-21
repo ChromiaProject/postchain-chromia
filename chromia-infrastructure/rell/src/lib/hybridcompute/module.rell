@@ -15,6 +15,8 @@ entity computation {
     input: byte_array;
     mutable output: byte_array;
     mutable error: text;
+    mutable result_tx_rid: byte_array = x"";
+    mutable result_op_index: integer = -1;
 }
 
 struct compute_request {
@@ -53,6 +55,8 @@ function response_impl(id: text, type: text, output: gtv) {
     require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
     computation.state = state.COMPUTED;
     computation.output = output.to_bytes();
+    computation.result_tx_rid = op_context.transaction.tx_rid;
+    computation.result_op_index = op_context.op_index;
 }
 
 function failure_impl(id: text, type: text, error: text) {
@@ -61,6 +65,8 @@ function failure_impl(id: text, type: text, error: text) {
     require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
     computation.state = state.FAILED;
     computation.error = error;
+    computation.result_tx_rid = op_context.transaction.tx_rid;
+    computation.result_op_index = op_context.op_index;
 }
 
 /**
@@ -71,26 +77,43 @@ function failure_impl(id: text, type: text, error: text) {
  * @param input Input to the compute
  */
 function submit_compute_request(id: text, type: text, input: gtv) {
-    create computation ( id, state.NEW, type, input = input.to_bytes(), output = x"", error = "" );
+    create computation ( id, state.NEW, type, input = input.to_bytes(), output = x"", error = "",
+        result_tx_rid = x"", result_op_index = -1 );
+}
+
+struct compute_result {
+    /** The result of the computation, or null if an error occurred. */
+    result: gtv?;
+
+    /** An error message if the computation failed, or null if no error occurred. */
+    error: text?;
+
+    /** RID of the transaction where the result was reported. */
+    tx_rid: byte_array;
+
+    /** Index of the operation where the result was reported. */
+    op_index: integer;
 }
 
 /**
  * Fetches the result of a previously submitted compute request.
  *
- * If the result is not yet ready, `(null, null)` will be returned.
- *
  * @param id The identifier of the compute request for which the result is being fetched.
- * @return A tuple containing:
- *         - result (optional): The result of the computation, or null if the result is not ready yet or an error occurred.
- *         - error (optional): An error message if the computation failed, or null if no error occurred.
+ * @return The result, or `null` if not ready yet
  */
-function fetch_compute_result(id: text): (result: gtv?, error: text?) {
+function fetch_compute_result(id: text): compute_result? {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     if (computation.state == state.COMPUTED) {
-        return (result = gtv.from_bytes(computation.output), error = null);
+        return compute_result(
+            result = gtv.from_bytes(computation.output), error = null,
+            tx_rid = computation.result_tx_rid, op_index = computation.result_op_index
+        );
     } else if (computation.state == state.FAILED) {
-        return (result = null, error = computation.error);
+        return compute_result(
+            result = null, error = computation.error,
+            tx_rid = computation.result_tx_rid, op_index = computation.result_op_index
+        );
     } else {
-        return (result = null, error = null);
+        return null;
     }
 }
