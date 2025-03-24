@@ -1,1 +1,3 @@
 ignore:
+  - vulnerability: CVE-2024-40896 # Critical issue in libxml2 used by PG14
+
