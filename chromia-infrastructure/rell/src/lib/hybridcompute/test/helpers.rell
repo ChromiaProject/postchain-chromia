@@ -17,3 +17,14 @@ operation response_op(id: text, type: text, output: gtv) {
 operation failure_op(id: text, type: text, error: text) {
     failure_impl(id, type, error);
 }
+
+object result {
+    mutable id: text = "";
+    mutable error: text = "";
+}
+
+@extend(on_compute_result)
+function (id: text, compute_result) {
+    result.id = id;
+    result.error = compute_result.error ?: "";
+}

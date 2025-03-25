@@ -32,6 +32,7 @@ function test_hc() {
         request_taken_op("one")
     ).nop().run_must_fail("Computation <one> must be NEW, but is TAKEN");
     assert_null(fetch_compute_result("one"));
+    assert_equals(result.id, "");
 
     rell.test.tx().op(
         response_op("two", "nn", "0000".to_gtv())
@@ -46,6 +47,8 @@ function test_hc() {
     ).run();
     assert_equals(fetch_compute_result("one"), compute_result(result="AABBCCDD".to_gtv(), error=null,
         tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
+    assert_equals(result.id, "one");
+    assert_equals(result.error, "");
 
     rell.test.tx().op(
         response_op("one", "nn", "00".to_gtv())
@@ -62,6 +65,8 @@ function test_hc() {
     ).run();
     assert_equals(fetch_compute_result("two"), compute_result(result=null, error="Some error",
         tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
+    assert_equals(result.id, "two");
+    assert_equals(result.error, "Some error");
 }
 
 function test_computation_not_found() {

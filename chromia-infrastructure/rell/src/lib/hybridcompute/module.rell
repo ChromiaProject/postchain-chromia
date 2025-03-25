@@ -57,6 +57,13 @@ function response_impl(id: text, type: text, output: gtv) {
     computation.output = output.to_bytes();
     computation.result_tx_rid = op_context.transaction.tx_rid;
     computation.result_op_index = op_context.op_index;
+
+    on_compute_result(id, compute_result(
+        result = output,
+        error = null,
+        tx_rid = op_context.transaction.tx_rid,
+        op_index = op_context.op_index
+    ));
 }
 
 function failure_impl(id: text, type: text, error: text) {
@@ -67,6 +74,13 @@ function failure_impl(id: text, type: text, error: text) {
     computation.error = error;
     computation.result_tx_rid = op_context.transaction.tx_rid;
     computation.result_op_index = op_context.op_index;
+
+    on_compute_result(id, compute_result(
+        result = null,
+        error = error,
+        tx_rid = op_context.transaction.tx_rid,
+        op_index = op_context.op_index
+    ));
 }
 
 /**
@@ -98,22 +112,34 @@ struct compute_result {
 /**
  * Fetches the result of a previously submitted compute request.
  *
- * @param id The identifier of the compute request for which the result is being fetched.
+ * @param id The identifier of the compute request for which the result is being fetched
  * @return The result, or `null` if not ready yet
  */
 function fetch_compute_result(id: text): compute_result? {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     if (computation.state == state.COMPUTED) {
         return compute_result(
-            result = gtv.from_bytes(computation.output), error = null,
-            tx_rid = computation.result_tx_rid, op_index = computation.result_op_index
+            result = gtv.from_bytes(computation.output),
+            error = null,
+            tx_rid = computation.result_tx_rid,
+            op_index = computation.result_op_index
         );
     } else if (computation.state == state.FAILED) {
         return compute_result(
-            result = null, error = computation.error,
-            tx_rid = computation.result_tx_rid, op_index = computation.result_op_index
+            result = null,
+            error = computation.error,
+            tx_rid = computation.result_tx_rid,
+            op_index = computation.result_op_index
         );
     } else {
         return null;
     }
 }
+
+/**
+ * Called when a computation is finished, successfully or failed.
+ *
+ * @param id The identifier of the compute request
+ * @param compute_result  The result
+ */
+@extendable function on_compute_result(id: text, compute_result) {}
