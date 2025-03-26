@@ -12,6 +12,10 @@ data class HybridComputeConfig(
         @Name("compute_timeout_seconds")
         val computeTimeoutSeconds: Long,
 
+        @DefaultValue(defaultLong = -1)
+        @Name("compute_cluster_timeout_seconds")
+        val computeClusterTimeoutSeconds: Long,
+
         @DefaultValue(defaultLong = 1)
         val concurrency: Long,
 )

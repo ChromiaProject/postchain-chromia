@@ -15,6 +15,10 @@ import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
+import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUEST
+import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
+import net.postchain.hybridcompute.rell.lib.hybridcompute.TakenComputeRequest
+import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -38,8 +42,9 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     private lateinit var module: GTXModule
     private lateinit var loader: Thread
     private val loaded = AtomicBoolean(false)
+    var hasDistributedTimeout: Boolean = false
 
-    override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME)
+    override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME, ClusterTimeoutOp.OP_NAME)
 
     private val computations = ConcurrentHashMap<String, Computation>() // id -> computation
 
@@ -160,8 +165,20 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                     logger.warn("No engine found for request id [${request.id}] of type [${request.type}]")
                 }
             }
+            if (hasDistributedTimeout) {
+                for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<TakenComputeRequest>() }) {
+                    val takenTimestamp = request.takenTimestamp
+                    if (isComputeClusterTimeout(takenTimestamp)) {
+                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] not reported by back by computing node after ${config.computeClusterTimeoutSeconds} seconds")
+                        add(ClusterTimeoutOp(request.id, request.type).toOpData())
+                    }
+                }
+            }
         }
     }
+
+    fun isComputeClusterTimeout(takenTimestamp: Long) =
+            takenTimestamp + config.computeClusterTimeoutSeconds * 1000 < Instant.now().toEpochMilli()
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         for (op in ops) {
@@ -208,6 +225,20 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                         // failure cannot be fully validated, so it can be accepted as is
                     } else {
                         logger.warn("No engine found for request id [${failure.id}] of type [${failure.type}]")
+                        return false
+                    }
+                }
+
+                ClusterTimeoutOp.OP_NAME -> {
+                    val clusterTimeoutOp = ClusterTimeoutOp.fromOpData(op) ?: return false
+
+                    if (engine.name == clusterTimeoutOp.type) {
+                        val request = module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv(clusterTimeoutOp.id))))
+                        if (request.isNull() || !isComputeClusterTimeout(request.toObject<TakenComputeRequest>().takenTimestamp)) {
+                            return false
+                        }
+                    } else {
+                        logger.warn("No engine found for request id [${clusterTimeoutOp.id}] of type [${clusterTimeoutOp.type}]")
                         return false
                     }
                 }

@@ -17,6 +17,7 @@ entity computation {
     mutable error: text;
     mutable result_tx_rid: byte_array = x"";
     mutable result_op_index: integer = -1;
+    index mutable taken_timestamp: timestamp = 0;
 }
 
 struct compute_request {
@@ -25,8 +26,20 @@ struct compute_request {
     input: gtv;
 }
 
+struct taken_compute_request {
+    id: text;
+    type: text;
+    taken_timestamp: timestamp;
+}
+
 query get_requests(): list<compute_request> =
         computation @* { .state == state.NEW } ( compute_request (id = $.id, type = $.type, input = gtv.from_bytes($.input)) );
+
+query get_taken_requests(): list<taken_compute_request> =
+        computation @* { .state == state.TAKEN } ( taken_compute_request (.id , .type, .taken_timestamp) );
+
+query get_taken_request(id: text): taken_compute_request? =
+        computation @? { .id == id, .state == state.TAKEN } ( taken_compute_request (.id , .type, .taken_timestamp) );
 
 @mount('__hc.')
 operation request_taken(id: text) {
@@ -43,10 +56,16 @@ operation failure(id: text, type: text, error: text) {
     failure_impl(id, type, error);
 }
 
+@mount('__hc.')
+operation cluster_timeout(id: text, type: text) {
+    failure_impl(id, type, "Cluster timeout.");
+}
+
 function request_taken_impl(id: text) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     require(computation.state == state.NEW, "Computation <%s> must be NEW, but is %s".format(id, computation.state));
     computation.state = state.TAKEN;
+    computation.taken_timestamp = op_context.last_block_time;
 }
 
 function response_impl(id: text, type: text, output: gtv) {
