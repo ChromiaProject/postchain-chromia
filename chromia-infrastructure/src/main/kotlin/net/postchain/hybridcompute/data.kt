@@ -89,6 +89,33 @@ class FailureOp(
     fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), gtv(error)))
 }
 
+class ClusterTimeoutOp(
+        val id: String,
+        val type: String
+) {
+    companion object : KLogging() {
+        // @mount('__hc.') operation cluster_timeout(id: text, type: text, error: text)
+        const val OP_NAME = "__hc.cluster_timeout"
+
+        fun fromOpData(opData: GtxOpData): ClusterTimeoutOp? {
+            if (opData.opName != OP_NAME) return null
+            if (opData.args.size != 2) {
+                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
+                return null
+            }
+
+            return try {
+                ClusterTimeoutOp(opData.args[0].asString(), opData.args[1].asString())
+            } catch (e: UserMistake) {
+                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
+                null
+            }
+        }
+    }
+
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type)))
+}
+
 sealed interface Computation {
     val type: String
 }

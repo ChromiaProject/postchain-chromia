@@ -8,6 +8,7 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
 
 @Suppress("unused")
 class HybridComputeSynchronizationInfrastructureExtension(postchainContext: PostchainContext) :
@@ -27,6 +28,7 @@ class HybridComputeSynchronizationInfrastructureExtension(postchainContext: Post
                 engine.init(configuration.rawConfig, configuration.blockchainRid)
                 txExt.config = config
                 txExt.engine = engine
+                txExt.hasDistributedTimeout = GET_TAKEN_REQUESTS in configuration.module.getQueries() && config.computeClusterTimeoutSeconds > 0
                 txExt.load()
             }
         }

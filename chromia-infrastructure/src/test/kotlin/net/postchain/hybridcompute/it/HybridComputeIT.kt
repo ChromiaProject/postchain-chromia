@@ -61,10 +61,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = 0
         ))
 
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).containsOnly(Computation(
                 id = "success",
                 state = State.TAKEN,
                 type = "test",
@@ -73,13 +75,15 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = requests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isNull()
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
-            assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+            val requests = query(chainIid.toLong()).fetchRequests()
+            assertThat(requests).containsOnly(Computation(
                     id = "success",
                     state = State.COMPUTED,
                     type = "test",
@@ -88,6 +92,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
+                    takenTimestamp = requests[0].takenTimestamp
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(ComputeResult(
                     result = input,
@@ -118,10 +123,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = 0
         ))
 
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).containsOnly(Computation(
                 id = "fail",
                 state = State.TAKEN,
                 type = "test",
@@ -130,6 +137,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = requests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isNull()
 
@@ -137,7 +145,8 @@ class HybridComputeIT : IntegrationTestSetup() {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
-            assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+            val requests = query(chainIid.toLong()).fetchRequests()
+            assertThat(requests).containsOnly(Computation(
                     id = "fail",
                     state = State.FAILED,
                     type = "test",
@@ -146,6 +155,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Fail",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
+                    takenTimestamp = requests[0].takenTimestamp
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isEqualTo(ComputeResult(
                     result = null,
@@ -176,10 +186,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = 0
         ))
 
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).containsOnly(Computation(
                 id = "error",
                 state = State.TAKEN,
                 type = "test",
@@ -188,6 +200,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = requests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isNull()
 
@@ -195,7 +208,8 @@ class HybridComputeIT : IntegrationTestSetup() {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
-            assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+            val requests = query(chainIid.toLong()).fetchRequests()
+            assertThat(requests).containsOnly(Computation(
                     id = "error",
                     state = State.FAILED,
                     type = "test",
@@ -204,6 +218,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Unknown error",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
+                    takenTimestamp = requests[0].takenTimestamp
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isEqualTo(ComputeResult(
                     result = null,
@@ -234,10 +249,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = 0
         ))
 
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).containsOnly(Computation(
                 id = "timeout",
                 state = State.TAKEN,
                 type = "test",
@@ -246,6 +263,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = requests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isNull()
 
@@ -253,7 +271,8 @@ class HybridComputeIT : IntegrationTestSetup() {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
-            assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+            val requests = query(chainIid.toLong()).fetchRequests()
+            assertThat(requests).containsOnly(Computation(
                     id = "timeout",
                     state = State.FAILED,
                     type = "test",
@@ -262,6 +281,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Computation timed out after 5 seconds",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
+                    takenTimestamp = requests[0].takenTimestamp
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isEqualTo(ComputeResult(
                     result = null,
@@ -292,10 +312,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = 0
         ))
 
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).containsOnly(Computation(
                 id = "invalid",
                 state = State.TAKEN,
                 type = "test",
@@ -304,6 +326,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = requests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
 
@@ -315,7 +338,8 @@ class HybridComputeIT : IntegrationTestSetup() {
         buildBlock(chainIid.toLong())
         buildBlock(chainIid.toLong())
         buildBlock(chainIid.toLong())
-        assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
+        val takenRequests = query(chainIid.toLong()).fetchRequests()
+        assertThat(takenRequests).containsOnly(Computation(
                 id = "invalid",
                 state = State.TAKEN,
                 type = "test",
@@ -324,6 +348,7 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
+                takenTimestamp = takenRequests[0].takenTimestamp
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
     }
