@@ -204,31 +204,6 @@ class IccfProofTxMaterialBuilderTest {
     }
 
     @Test
-    fun hashAndSignatureMismatch() {
-        val actualTx = GtxBuilder(sourceBlockchainRID, listOf(clientTxSigners[0].pubKey.data), cryptoSystem, hashCalculator)
-                .addOperation("dummy")
-                .finish()
-                .sign(cryptoSystem.buildSigMaker(clientTxSigners[0]))
-                .buildGtx()
-        val actualTxHash = actualTx.toGtv().merkleHash(hashCalculator)
-
-        generateAndStubConfirmationProof(actualTxHash)
-
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
-                JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
-        )))
-
-        assertThrows<UserMistake> {
-            IccfProofTxMaterialBuilder(chromiaClientProvider).build(
-                    TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
-                    clientTxHash,
-                    sourceBlockchainRID,
-                    clusterATargetBlockchainRID
-            )
-        }
-    }
-
-    @Test
     fun hashMismatchWithReformattedSignature() {
         // For every ECDSA signature (r,s), the signature (r, -s (mod N)) is a valid signature of the same message
         // Source: https://en.bitcoin.it/wiki/Transaction_malleability#Signature_Malleability
@@ -252,6 +227,36 @@ class IccfProofTxMaterialBuilderTest {
         )))
 
         verifyIntraClusterIccf(txProof, actualTxHash)
+    }
+
+    @Test
+    fun incorrectSignature() {
+        val incorrectSignature = cryptoSystem.buildSigMaker(clientTxSigners[0]).signDigest(gtv("incorrect").merkleHash(hashCalculator))
+
+        val actualTx = Gtx(
+                GtxBody(
+                        sourceBlockchainRID,
+                        listOf(GtxOp("dummy")),
+                        clientTxSigners.map { it.pubKey.data }
+                ),
+                listOf(incorrectSignature.data, clientTx.signatures[1])
+        )
+        val actualTxHash = actualTx.toGtv().merkleHash(hashCalculator)
+
+        generateAndStubConfirmationProof(actualTxHash)
+
+        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
+                JsonContentType, """{"tx":"${actualTx.encodeHex()}"}"""
+        )))
+
+        assertThrows<UserMistake> {
+            IccfProofTxMaterialBuilder(chromiaClientProvider).build(
+                    TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
+                    clientTxHash,
+                    sourceBlockchainRID,
+                    clusterATargetBlockchainRID
+            )
+        }
     }
 
     private fun generateAndStubConfirmationProof(proofHashOverride: Hash? = null): ByteArray {
