@@ -11,7 +11,6 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.crypto.KeyPair
-import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.client.ConfirmationProofData
@@ -33,7 +32,6 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
     fun build(
             txToProveRID: TxRid,
             txToProveHash: Hash,
-            txToProveSigners: List<PubKey>,
             sourceBlockchainRid: BlockchainRid,
             targetBlockchainRid: BlockchainRid,
             iccfTxSigners: List<KeyPair> = listOf(),
@@ -47,7 +45,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         val merkleHashCalculator = makeMerkleHashCalculator(proofMerkleHashVersion)
 
         val (updatedTx, sourceTxHash) = if (!txToProveHash.contentEquals(decodedProof.hash)) {
-            verifyUpdatedHash(sourceClient, txToProveRID, decodedProof.hash, txToProveSigners, merkleHashCalculator)
+            verifyUpdatedHash(sourceClient, txToProveRID, decodedProof.hash, merkleHashCalculator)
         } else {
             null to txToProveHash
         }
@@ -65,7 +63,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         return IccfProofTxMaterial(txBuilder, updatedTx)
     }
 
-    private fun verifyUpdatedHash(sourceClient: PostchainClient, txToProveRID: TxRid, proofHash: ByteArray?, txToProveSigners: List<PubKey>, hashCalculator: GtvMerkleHashCalculatorBase): Pair<Gtx, Hash> {
+    private fun verifyUpdatedHash(sourceClient: PostchainClient, txToProveRID: TxRid, proofHash: ByteArray?, hashCalculator: GtvMerkleHashCalculatorBase): Pair<Gtx, Hash> {
         // Fetch full tx and investigate why we have a mismatch
         val rawTx = sourceClient.getTransaction(txToProveRID)
         val txGtv = GtvDecoder.decodeGtv(rawTx)
@@ -79,9 +77,6 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         }
 
         val tx = Gtx.fromGtv(txGtv)
-        if (txToProveSigners.size != tx.signatures.size) {
-            throw UserMistake("Transaction signatures amount ${tx.signatures.size} do not match expected amount of signers ${txToProveSigners.size}")
-        }
 
         val txRid = tx.calculateTxRid(hashCalculator)
         if (!txRid.contentEquals(txToProveRID.rid.hexStringToByteArray())) {
@@ -89,17 +84,12 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
             throw ProgrammerMistake("Unable to verify source transaction proof, got a different transaction from query than we asked for")
         }
 
-        for (signer in txToProveSigners) {
-            var hasSignature = false
-
-            // Signatures may have been re-ordered or reformatted
-            for (signature in tx.signatures) {
-                if (cryptoSystem.verifyDigest(txRid, Signature(signer.data, signature))) {
-                    hasSignature = true
-                    break
-                }
+        // Signatures may have been reformatted
+        tx.gtxBody.signers.forEachIndexed { index, signer ->
+            val signature = tx.signatures[index]
+            if (!cryptoSystem.verifyDigest(txRid, Signature(signer, signature))) {
+                throw UserMistake("Incorrect signature $signature for signer $signer in fetched source transaction")
             }
-            if (!hasSignature) throw UserMistake("Expected signer $signer has not signed source transaction")
         }
 
         return tx to fetchedTxHash

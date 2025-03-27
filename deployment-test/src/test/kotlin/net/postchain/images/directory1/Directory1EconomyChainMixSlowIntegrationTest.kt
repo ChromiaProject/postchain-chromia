@@ -533,7 +533,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val initialDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
         assertThat(initialDappAliceBalance).isNull()
 
-        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, dappBrid, BigInteger.TEN, assetId, listOf(aliceKeyPair.pubKey))
+        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid, dappBrid, BigInteger.TEN, assetId)
 
         val afterTransferEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         val afterTransferDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)!!.amount
@@ -541,7 +541,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         assertThat(afterTransferDappAliceBalance).isEqualTo(BigInteger.TEN)
 
         testLogger.info("Transfer tCHR to EC from dApp")
-        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceDappAuthenticator, dappBrid, ecBrid, BigInteger.TEN, assetId, listOf(aliceKeyPair.pubKey))
+        performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceDappAuthenticator, dappBrid, ecBrid, BigInteger.TEN, assetId)
 
         val afterTransferBackEcAliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         val afterTransferBackDappAliceBalance = node1.client(dappBrid, listOf(aliceKeyPair)).getAssetBalance(aliceDappAuthenticator.accountId, assetId)
