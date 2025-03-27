@@ -84,8 +84,9 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
             throw ProgrammerMistake("Unable to verify source transaction proof, got a different transaction from query than we asked for")
         }
 
-        tx.signatures.forEachIndexed { index, signature ->
-            val signer = tx.gtxBody.signers[index]
+        // Signatures may have been reformatted
+        tx.gtxBody.signers.forEachIndexed { index, signer ->
+            val signature = tx.signatures[index]
             if (!cryptoSystem.verifyDigest(txRid, Signature(signer, signature))) {
                 throw UserMistake("Incorrect signature $signature for signer $signer in fetched source transaction")
             }
