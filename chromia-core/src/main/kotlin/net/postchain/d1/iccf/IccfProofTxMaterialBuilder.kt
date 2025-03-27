@@ -92,7 +92,7 @@ class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClien
         for (signer in txToProveSigners) {
             var hasSignature = false
 
-            // Signatures may have been re-ordered or reformatted
+            // Signatures may have been reformatted
             for (signature in tx.signatures) {
                 if (cryptoSystem.verifyDigest(txRid, Signature(signer.data, signature))) {
                     hasSignature = true

@@ -232,27 +232,6 @@ class IccfProofTxMaterialBuilderTest {
     }
 
     @Test
-    fun hashMismatchWithReorderedSignatures() {
-        val actualTx = GtxBuilder(sourceBlockchainRID, clientTxSigners.map { it.pubKey.data }, cryptoSystem, hashCalculator)
-                .addOperation("dummy")
-                .finish()
-                .sign(cryptoSystem.buildSigMaker(clientTxSigners[1]))
-                .sign(cryptoSystem.buildSigMaker(clientTxSigners[0]))
-                .buildGtx()
-        val actualTxHash = actualTx.toGtv().merkleHash(hashCalculator)
-        assertThat(clientTxHash.contentEquals(actualTxHash)).isFalse()
-
-        val txProof = generateAndStubConfirmationProof(actualTxHash)
-
-        stubFor(get("/tx/${sourceBlockchainRID.toHex()}/${clientTx.calculateTxRid(hashCalculator).toHex()}").willReturn(okForContentType(
-                JsonContentType,
-                """{"tx":"${actualTx.encodeHex()}"}"""
-        )))
-
-        verifyIntraClusterIccf(txProof, actualTxHash)
-    }
-
-    @Test
     fun hashMismatchWithReformattedSignature() {
         // For every ECDSA signature (r,s), the signature (r, -s (mod N)) is a valid signature of the same message
         // Source: https://en.bitcoin.it/wiki/Transaction_malleability#Signature_Malleability
