@@ -168,7 +168,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
             if (hasDistributedTimeout) {
                 for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<TakenComputeRequest>() }) {
                     val takenTimestamp = request.takenTimestamp
-                    if (isComputeClusterTimeout(takenTimestamp)) {
+                    if (isComputeClusterTimeout(takenTimestamp, Instant.now().toEpochMilli())) {
                         logger.warn("Computation of request id [${request.id}] of type [${request.type}] not reported by back by computing node after ${config.computeClusterTimeoutSeconds} seconds")
                         add(ClusterTimeoutOp(request.id, request.type).toOpData())
                     }
@@ -177,8 +177,8 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
         }
     }
 
-    fun isComputeClusterTimeout(takenTimestamp: Long) =
-            takenTimestamp + config.computeClusterTimeoutSeconds * 1000 < Instant.now().toEpochMilli()
+    fun isComputeClusterTimeout(takenTimestamp: Long, now: Long) =
+            takenTimestamp + config.computeClusterTimeoutSeconds * 1000 < now
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         for (op in ops) {
@@ -234,7 +234,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
 
                     if (engine.name == clusterTimeoutOp.type) {
                         val request = module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv(clusterTimeoutOp.id))))
-                        if (request.isNull() || !isComputeClusterTimeout(request.toObject<TakenComputeRequest>().takenTimestamp)) {
+                        if (request.isNull() || !isComputeClusterTimeout(request.toObject<TakenComputeRequest>().takenTimestamp, Instant.now().toEpochMilli())) {
                             return false
                         }
                     } else {

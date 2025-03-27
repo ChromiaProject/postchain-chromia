@@ -135,7 +135,6 @@ class IccfProofTxMaterialBuilderTest {
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
-                clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
                 clusterBTargetBlockchainRID
         )
@@ -187,7 +186,6 @@ class IccfProofTxMaterialBuilderTest {
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
-                clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
                 clusterATargetBlockchainRID,
                 forceIntraNetworkIccfOperation = true
@@ -224,7 +222,6 @@ class IccfProofTxMaterialBuilderTest {
             IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                     TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
                     clientTxHash,
-                    clientTxSigners.map { it.pubKey },
                     sourceBlockchainRID,
                     clusterATargetBlockchainRID
             )
@@ -278,7 +275,6 @@ class IccfProofTxMaterialBuilderTest {
         val iccfTxMaterial = IccfProofTxMaterialBuilder(chromiaClientProvider).build(
                 TxRid(clientTx.calculateTxRid(hashCalculator).toHex()),
                 clientTxHash,
-                clientTxSigners.map { it.pubKey },
                 sourceBlockchainRID,
                 clusterATargetBlockchainRID
         )

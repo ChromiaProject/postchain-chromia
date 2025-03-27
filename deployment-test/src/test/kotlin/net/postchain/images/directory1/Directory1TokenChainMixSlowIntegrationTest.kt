@@ -347,7 +347,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         val amount = BigInteger("300000000") // we need at least 200 tchr = 100 for token + 100 for bridge
         performCrossChainTransfer(node1, iccfProofTxMaterialBuilder, merkleHashCalculator, aliceAuthenticator, ecBrid,
-                tcBrid, amount, chrAssetId, listOf(aliceKeyPair.pubKey))
+                tcBrid, amount, chrAssetId)
 
         node1.client(tcBrid, listOf(aliceKeyPair)).transactionBuilder()
                 .rasTransferOpenOperation(
@@ -498,7 +498,6 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
             iccfProofTxMaterialBuilder.build(
                     accountCreationTxRid,
                     accountCreationTx.merkleHash(hashCalculator),
-                    listOf(newUser.pubKey),
                     accountCreationChainBrid,
                     tcBrid,
                     iccfTxSigners = listOf(newUser)

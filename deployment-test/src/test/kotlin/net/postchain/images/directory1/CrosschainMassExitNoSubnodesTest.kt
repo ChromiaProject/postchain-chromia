@@ -352,7 +352,6 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         val iccfMaterial = IccfProofTxMaterialBuilder(buildChromiaClientProvider()).build(
                 TxRid(txToProve.calculateTxRid(hashCalculator).toHex()),
                 txToProve.toGtv().merkleHash(hashCalculator),
-                listOf(),
                 dappBrid,
                 bridgeBrid,
                 forceIntraNetworkIccfOperation = true
@@ -443,8 +442,7 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
                 bridgeBrid,
                 dappBrid,
                 900.toBigInteger(),
-                assetId,
-                listOf(aliceKeyPair.pubKey)
+                assetId
         )
 
         // Check the balances

@@ -38,7 +38,6 @@ fun performCrossChainTransfer(
         destinationChain: BlockchainRid,
         amount: BigInteger = BigInteger.TEN,
         assetId: ByteArray,
-        txToProveSigners: List<PubKey>,
 ) {
     val initTransferTxRid = sourceAccountAuthenticator.transactionBuilder()
             .initTransferOperation(sourceAccountAuthenticator.accountId, assetId, amount, listOf(destinationChain.data), Long.MAX_VALUE)
@@ -50,7 +49,6 @@ fun performCrossChainTransfer(
         iccfProofTxMaterialBuilder.build(
                 initTransferTxRid,
                 initTransferTx.merkleHash(hashCalculator),
-                txToProveSigners,
                 sourceChain,
                 destinationChain,
                 forceIntraNetworkIccfOperation = true
@@ -69,7 +67,6 @@ fun performCrossChainTransfer(
         iccfProofTxMaterialBuilder.build(
                 applyTransferTxRid,
                 applyTransferTx.merkleHash(hashCalculator),
-                listOf(),
                 destinationChain,
                 sourceChain,
                 forceIntraNetworkIccfOperation = true

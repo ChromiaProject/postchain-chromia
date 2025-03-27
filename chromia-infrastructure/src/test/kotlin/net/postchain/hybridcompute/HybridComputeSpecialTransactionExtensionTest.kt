@@ -18,8 +18,9 @@ class HybridComputeSpecialTransactionExtensionTest {
                 computeClusterTimeoutSeconds = computeClusterTimeoutSeconds,
                 concurrency = 1
         )
-        assertFalse(extension.isComputeClusterTimeout(Instant.now().toEpochMilli() - computeClusterTimeoutSeconds * 1000))
-        assertTrue(extension.isComputeClusterTimeout(Instant.now().toEpochMilli() - computeClusterTimeoutSeconds * 1000 - 1))
+        val now = Instant.now().toEpochMilli()
+        assertFalse(extension.isComputeClusterTimeout(now - computeClusterTimeoutSeconds * 1000, now))
+        assertTrue(extension.isComputeClusterTimeout(now - computeClusterTimeoutSeconds * 1000 - 1, now))
     }
 }
 
