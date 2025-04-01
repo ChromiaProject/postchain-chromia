@@ -491,7 +491,7 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         )
 
         // Retrieve extraProofData from stateProof (see `HBridgeForeignModeIT` in the `postchain-eif` repo)
-        val stateSlotIds = aliceBridgeAccount.client.getStateSlotIdsForAddress(addressToByteArray(recoveryContract.contractAddress))
+        val stateSlotIds = aliceBridgeAccount.client.getStateSlotIdsForAddress(addressToByteArray(recoveryContract.contractAddress), evmContainerNetworkId)
         val stateProof = getAccountStateMerkleProof(aliceBridgeAccount.client, lastBlockHeight, stateSlotIds.first())
 
         val evmSignatures = BaseBlockWitness.fromBytes(bridgeMassExitBlock.witness.data).getSignatures().map {
@@ -522,7 +522,7 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         )
 
         // Retrieve extraProofData from stateProof (see `HBridgeForeignModeIT` in the `postchain-eif` repo)
-        val stateSlotIds = aliceDappAccount.client.getStateSlotIdsForAddress(aliceEvmAddress)
+        val stateSlotIds = aliceDappAccount.client.getStateSlotIdsForAddress(aliceEvmAddress, evmContainerNetworkId)
         val stateProof = getAccountStateMerkleProof(aliceDappAccount.client, lastBlockHeight, stateSlotIds.first())
 
         val evmSignatures = BaseBlockWitness.fromBytes(dappMassExitBlock.witness.data).getSignatures().map {
@@ -546,7 +546,7 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         testLogger.info { "Transfer tokens from bridge contract to recovery contract of dapp chain" }
 
         // Get dapp chain account state
-        val stateSlotIds = aliceBridgeAccount.client.getStateSlotIdsForAddress(addressToByteArray(recoveryContract.contractAddress))
+        val stateSlotIds = aliceBridgeAccount.client.getStateSlotIdsForAddress(addressToByteArray(recoveryContract.contractAddress), evmContainerNetworkId)
         val stateProof = getAccountStateMerkleProof(aliceBridgeAccount.client, bridgeMassExitBlock.height, stateSlotIds.first())
 
         // Withdraw tokens to recovery contract
@@ -568,7 +568,7 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         val lastBlockHeight = aliceDappAccount.client.currentBlockHeight() - 1
 
         // Get Alice account state on the dapp chain
-        val aliceStateSlotIds = aliceDappAccount.client.getStateSlotIdsForAddress(addressToByteArray(aliceEvmAddressStr))
+        val aliceStateSlotIds = aliceDappAccount.client.getStateSlotIdsForAddress(addressToByteArray(aliceEvmAddressStr), evmContainerNetworkId)
         val stateProof = getAccountStateMerkleProof(aliceDappAccount.client, lastBlockHeight, aliceStateSlotIds.first())
 
         // Withdraw tokens from recovery contract
