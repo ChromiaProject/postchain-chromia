@@ -8,8 +8,13 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.SigMaker
+import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -44,6 +49,11 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     private val loaded = AtomicBoolean(false)
     var hasDistributedTimeout: Boolean = false
 
+    private lateinit var nodePubkey: ByteArray
+    private lateinit var sigMaker: SigMaker
+    private lateinit var cs: CryptoSystem
+    private lateinit var blockchainRID: BlockchainRid
+
     override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME, ClusterTimeoutOp.OP_NAME)
 
     private val computations = ConcurrentHashMap<String, Computation>() // id -> computation
@@ -63,6 +73,13 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
+        this.cs = cs
+        this.blockchainRID = blockchainRID
+    }
+
+    fun initSigMaker(pubKeyByteArray: ByteArray, privKeyByteArray: ByteArray) {
+        this.nodePubkey = pubKeyByteArray
+        this.sigMaker = cs.buildSigMaker(KeyPair(nodePubkey, privKeyByteArray))
     }
 
     fun load() {
@@ -105,13 +122,15 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                 when (computation) {
                     is FinishedComputation -> {
                         logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
-                        add(ResponseOp(id, computation.type, computation.output).toOpData())
+                        val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                        add(ResponseOp(id, computation.type, computation.output, signature.subjectID, signature.data).toOpData())
                         bctx.addAfterCommitHook { computations.remove(id) }
                     }
 
                     is FailedComputation -> {
                         logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
-                        add(FailureOp(id, computation.type, computation.errorMessage).toOpData())
+                        val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                        add(FailureOp(id, computation.type, computation.errorMessage, signature.subjectID, signature.data).toOpData())
                         bctx.addAfterCommitHook { computations.remove(id) }
                     }
 
@@ -155,7 +174,8 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                                 computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                 future.cancel(true) // interrupt the compute thread
                             }, config.computeTimeoutSeconds, TimeUnit.SECONDS)
-                            add(RequestTakenOp(request.id).toOpData())
+                            val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
+                            add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
                             takenRequests++
                         } catch (_: RejectedExecutionException) {
                             computations.remove(request.id)
@@ -184,8 +204,11 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
         for (op in ops) {
             when (op.opName) {
                 RequestTakenOp.OP_NAME -> {
-                    RequestTakenOp.fromOpData(op) ?: return false
-                    // request taken correctness is going to be validated in Rell code so it can be accepted as is
+                    val request = RequestTakenOp.fromOpData(op) ?: return false
+                    if (!cs.verifyDigest(hash(request.id, blockchainRID.toHex(), bctx.height), Signature(request.processedBy, request.signatureData))) {
+                        logger.warn { "Validate request taken operation failed for request id [${request.id}]. Invalid signature." }
+                        return false
+                    }
                 }
 
                 ResponseOp.OP_NAME -> {
@@ -213,6 +236,9 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                         } else {
                             logger.debug { "Skipping validation for request id [${response.id}] of type [${response.type}] on block builder node" }
                         }
+                        if (isSignatureInvalid(op.opName, bctx, response.id, response.signatureData)) {
+                            return false
+                        }
                     } else {
                         logger.warn("No engine found for request id [${response.id}] of type [${response.type}]")
                         return false
@@ -222,7 +248,9 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                 FailureOp.OP_NAME -> {
                     val failure = FailureOp.fromOpData(op) ?: return false
                     if (engine.name == failure.type) {
-                        // failure cannot be fully validated, so it can be accepted as is
+                        if (isSignatureInvalid(op.opName, bctx, failure.id, failure.signatureData)) {
+                            return false
+                        }
                     } else {
                         logger.warn("No engine found for request id [${failure.id}] of type [${failure.type}]")
                         return false
@@ -233,7 +261,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                     val clusterTimeoutOp = ClusterTimeoutOp.fromOpData(op) ?: return false
 
                     if (engine.name == clusterTimeoutOp.type) {
-                        val request = module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv(clusterTimeoutOp.id))))
+                        val request = getTakenRequestById(bctx, clusterTimeoutOp.id)
                         if (request.isNull() || !isComputeClusterTimeout(request.toObject<TakenComputeRequest>().takenTimestamp, Instant.now().toEpochMilli())) {
                             return false
                         }
@@ -250,6 +278,21 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
             }
         }
         return true
+    }
+
+    private fun isSignatureInvalid(opName: String, bctx: BlockEContext, id: String, signatureData: ByteArray): Boolean {
+        val request = getTakenRequestById(bctx, id)
+        if (!request.isNull()) {
+            val takenComputeRequest = request.toObject<TakenComputeRequest>()
+            if (!cs.verifyDigest(hash(id, blockchainRID.toHex(), bctx.height), Signature(takenComputeRequest.processedBy.data, signatureData))) {
+                logger.warn { "Validate $opName operation failed for request id [${takenComputeRequest.id}] of type [${takenComputeRequest.type}]. Invalid signature." }
+                return true
+            }
+        } else {
+            logger.warn { "Validate $opName operation failed. Taken request not found by id [${id}]." }
+            return true
+        }
+        return false
     }
 
     override fun shutdown() {
@@ -285,4 +328,8 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
         }
         logger.info("Shut down complete")
     }
+
+    private fun hash(id: String, blockchainRID: String, height: Long) = gtv(gtv(id), gtv(blockchainRID), gtv(height)).merkleHash(GtvMerkleHashCalculatorV2(cs))
+
+    private fun getTakenRequestById(bctx: BlockEContext, id: String) = module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv(id))))
 }

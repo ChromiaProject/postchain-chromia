@@ -20,7 +20,7 @@ function test_hc() {
     assert_null(fetch_compute_result("one"));
 
     rell.test.tx().op(
-        request_taken_op("one")
+        request_taken_op("one", rell.test.keypairs.alice.pub)
     ).run();
     assert_equals(
         get_requests(),
@@ -29,7 +29,7 @@ function test_hc() {
         ]
     );
     rell.test.tx().op(
-        request_taken_op("one")
+        request_taken_op("one", rell.test.keypairs.alice.pub)
     ).nop().run_must_fail("Computation <one> must be NEW, but is TAKEN");
     assert_null(fetch_compute_result("one"));
     assert_equals(result.id, "");
@@ -55,7 +55,7 @@ function test_hc() {
     ).run_must_fail("Computation <one> must be TAKEN, but is COMPUTED");
 
     rell.test.tx().op(
-        request_taken_op("two")
+        request_taken_op("two", rell.test.keypairs.alice.pub)
     ).run();
     assert_equals(get_requests(), list<compute_request>());
     assert_null(fetch_compute_result("two"));
@@ -73,7 +73,7 @@ function test_computation_not_found() {
     assert_fails("No computation with id <bogus>", fetch_compute_result("bogus", *));
 
     rell.test.tx().op(
-        request_taken_op("bogus")
+        request_taken_op("bogus", rell.test.keypairs.alice.pub)
     ).run_must_fail("No computation with id <bogus>");
 
     rell.test.tx().op(
