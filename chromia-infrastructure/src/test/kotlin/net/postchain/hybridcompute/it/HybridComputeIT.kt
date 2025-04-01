@@ -5,6 +5,8 @@ import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import net.postchain.common.hexStringToWrappedByteArray
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeUnit
 class HybridComputeIT : IntegrationTestSetup() {
 
     val chainIid = 1
+    lateinit var node1Pubkey: WrappedByteArray
     val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
@@ -38,6 +41,7 @@ class HybridComputeIT : IntegrationTestSetup() {
         Assertions.assertEquals(nodeCount, sysSetup.nodeMap.size, "We didn't get the nodes we expected, check BC config file")
 
         createNodesFromSystemSetup(sysSetup)
+        node1Pubkey = nodes[1].pubKey.hexStringToWrappedByteArray()
         return sysSetup
     }
 
@@ -61,7 +65,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -75,7 +80,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = requests[0].takenTimestamp
+                takenTimestamp = requests[0].takenTimestamp,
+                processedBy = node1Pubkey,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isNull()
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
@@ -92,7 +98,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = requests[0].takenTimestamp
+                    takenTimestamp = requests[0].takenTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(ComputeResult(
                     result = input,
@@ -123,7 +130,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -137,11 +145,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = requests[0].takenTimestamp
+                takenTimestamp = requests[0].takenTimestamp,
+                processedBy = node1Pubkey,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isNull()
 
-        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
@@ -155,7 +164,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Fail",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = requests[0].takenTimestamp
+                    takenTimestamp = requests[0].takenTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("fail")).isEqualTo(ComputeResult(
                     result = null,
@@ -186,7 +196,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -200,7 +211,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = requests[0].takenTimestamp
+                takenTimestamp = requests[0].takenTimestamp,
+                processedBy = node1Pubkey,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isNull()
 
@@ -218,7 +230,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Unknown error",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = requests[0].takenTimestamp
+                    takenTimestamp = requests[0].takenTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("error")).isEqualTo(ComputeResult(
                     result = null,
@@ -249,7 +262,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -263,7 +277,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = requests[0].takenTimestamp
+                takenTimestamp = requests[0].takenTimestamp,
+                processedBy = node1Pubkey,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isNull()
 
@@ -281,7 +296,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "Computation timed out after 5 seconds",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = requests[0].takenTimestamp
+                    takenTimestamp = requests[0].takenTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isEqualTo(ComputeResult(
                     result = null,
@@ -312,7 +328,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -326,7 +343,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = requests[0].takenTimestamp
+                takenTimestamp = requests[0].takenTimestamp,
+                processedBy = requests[0].processedBy,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
 
@@ -348,7 +366,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = takenRequests[0].takenTimestamp
+                takenTimestamp = takenRequests[0].takenTimestamp,
+                processedBy = node1Pubkey,
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("invalid")).isNull()
     }

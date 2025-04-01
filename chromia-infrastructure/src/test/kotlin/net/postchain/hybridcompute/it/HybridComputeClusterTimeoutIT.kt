@@ -2,9 +2,9 @@ package net.postchain.hybridcompute.it
 
 import assertk.assertThat
 import assertk.assertions.containsOnly
-import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -13,15 +13,11 @@ import net.postchain.enqueueTx
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.hybridcompute.rell.lib.hybridcompute.Computation
-import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.State
-import net.postchain.hybridcompute.rell.lib.hybridcompute.clusterTimeoutOperation
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchRequests
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.submitComputeRequestOperation
 import net.postchain.query
-import org.awaitility.Awaitility
-import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -62,7 +58,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = 0
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
         ))
 
         buildBlock(chainIid.toLong())
@@ -76,7 +73,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
                 resultOpIndex = -1,
-                takenTimestamp = takenRequests[0].takenTimestamp
+                takenTimestamp = takenRequests[0].takenTimestamp,
+                processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isNull()
 
@@ -101,7 +99,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 error = "Cluster timeout.",
                 resultTxRid = txRid!!.wrap(),
                 resultOpIndex = 0,
-                takenTimestamp = failedRequest[0].takenTimestamp
+                takenTimestamp = failedRequest[0].takenTimestamp,
+                processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
         ))
     }
 }
