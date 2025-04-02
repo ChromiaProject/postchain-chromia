@@ -43,6 +43,8 @@ query get_taken_requests(): list<taken_compute_request> =
 query get_taken_request(id: text): taken_compute_request? =
         computation @? { .id == id, .state == state.TAKEN } ( taken_compute_request (.id , .type, .taken_timestamp, .processed_by) );
 
+query is_request_failed(id: text) = exists(computation @? { .id == id, .state == state.FAILED });
+
 @mount('__hc.')
 operation request_taken(id: text, processed_by: byte_array, signature_data: byte_array) {
     request_taken_impl(id, processed_by);

@@ -1,7 +1,9 @@
 package net.postchain.hybridcompute.it
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsOnly
+import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.common.hexStringToWrappedByteArray
@@ -13,11 +15,14 @@ import net.postchain.enqueueTx
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.hybridcompute.rell.lib.hybridcompute.Computation
+import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.State
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchComputeResult
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.fetchRequests
 import net.postchain.hybridcompute.rell.lib.hybridcompute.test.submitComputeRequestOperation
 import net.postchain.query
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -43,17 +48,17 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
     fun `compute cluster timeout`() {
         doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test_cluster_timeout.xml")
 
-        val input = CompleteComputation(6).encode()
+        val input1 = CompleteComputation(6).encode()
 
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
-            it.submitComputeRequestOperation("timeout", "test", input)
+            it.submitComputeRequestOperation("timeout", "test", input1)
         }
         buildBlock(chainIid.toLong())
         assertThat(query(chainIid.toLong()).fetchRequests()).containsOnly(Computation(
                 id = "timeout",
                 state = State.NEW,
                 type = "test",
-                input = GtvEncoder.encodeGtv(input).wrap(),
+                input = GtvEncoder.encodeGtv(input1).wrap(),
                 output = ByteArray(0).wrap(),
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
@@ -68,7 +73,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 id = "timeout",
                 state = State.TAKEN,
                 type = "test",
-                input = GtvEncoder.encodeGtv(input).wrap(),
+                input = GtvEncoder.encodeGtv(input1).wrap(),
                 output = ByteArray(0).wrap(),
                 error = "",
                 resultTxRid = ByteArray(0).wrap(),
@@ -94,7 +99,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 id = "timeout",
                 state = State.FAILED,
                 type = "test",
-                input = GtvEncoder.encodeGtv(input).wrap(),
+                input = GtvEncoder.encodeGtv(input1).wrap(),
                 output = ByteArray(0).wrap(),
                 error = "Cluster timeout.",
                 resultTxRid = txRid!!.wrap(),
@@ -102,5 +107,64 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
                 takenTimestamp = failedRequest[0].takenTimestamp,
                 processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
         ))
+
+        val input2 = CompleteComputation(1).encode()
+
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success", "test", input2)
+        }
+        buildBlock(chainIid.toLong())
+        assertThat(query(chainIid.toLong()).fetchRequests()).contains(Computation(
+                id = "success",
+                state = State.NEW,
+                type = "test",
+                input = GtvEncoder.encodeGtv(input2).wrap(),
+                output = ByteArray(0).wrap(),
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
+                takenTimestamp = 0,
+                processedBy = ByteArray(0).wrap(),
+        ))
+
+        buildBlock(chainIid.toLong())
+        val requests = query(chainIid.toLong()).fetchRequests()
+        assertThat(requests).contains(Computation(
+                id = "success",
+                state = State.TAKEN,
+                type = "test",
+                input = GtvEncoder.encodeGtv(input2).wrap(),
+                output = ByteArray(0).wrap(),
+                error = "",
+                resultTxRid = ByteArray(0).wrap(),
+                resultOpIndex = -1,
+                takenTimestamp = requests[1].takenTimestamp,
+                processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+        ))
+        assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isNull()
+        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+            buildBlock(chainIid.toLong())
+            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
+            assertThat(txRid).isNotNull()
+            val requests = query(chainIid.toLong()).fetchRequests()
+            assertThat(requests).contains(Computation(
+                    id = "success",
+                    state = State.COMPUTED,
+                    type = "test",
+                    input = GtvEncoder.encodeGtv(input2).wrap(),
+                    output = GtvEncoder.encodeGtv(input2).wrap(),
+                    error = "",
+                    resultTxRid = txRid!!.wrap(),
+                    resultOpIndex = 0,
+                    takenTimestamp = requests[1].takenTimestamp,
+                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+            ))
+            assertThat(query(chainIid.toLong()).fetchComputeResult("success")).isEqualTo(ComputeResult(
+                    result = input2,
+                    error = null,
+                    txRid = txRid.wrap(),
+                    opIndex = 0,
+            ))
+        }
     }
 }
