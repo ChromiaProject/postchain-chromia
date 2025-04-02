@@ -22,6 +22,7 @@ import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUEST
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
+import net.postchain.hybridcompute.rell.lib.hybridcompute.IS_REQUEST_FAILED
 import net.postchain.hybridcompute.rell.lib.hybridcompute.TakenComputeRequest
 import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
@@ -118,6 +119,9 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
             return listOf()
         }
         return buildList {
+            if (hasDistributedTimeout) {
+                computations.keys.removeIf { id -> module.query(bctx, IS_REQUEST_FAILED, gtv(Pair("id", gtv(id)))).asBoolean() }
+            }
             for ((id, computation) in computations) {
                 when (computation) {
                     is FinishedComputation -> {
