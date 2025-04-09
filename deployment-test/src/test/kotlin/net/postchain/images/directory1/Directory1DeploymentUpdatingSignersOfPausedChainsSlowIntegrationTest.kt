@@ -17,11 +17,11 @@ import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
+import net.postchain.chain0.proposal_blockchain.approveProposedForcedConfigurationOperation
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain.proposeForcedConfigurationOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -192,6 +192,11 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
         val currentHeight = node1.client(dappBrid).currentBlockHeight()
         node1.c0.transactionBuilder().proposeForcedConfigurationOperation(node1.providerPubkey, dappBrid, GtvEncoder.encodeGtv(compileDapp("test_dapp")), currentHeight, "Propose force configuration", true)
                 .postTransactionUntilConfirmed("Force configuration for dapp $dappBrid")
+
+        testLogger.info("Approving forced configuration")
+        node1.c0.transactionBuilder(listOf(node1.provider))
+                .approveProposedForcedConfigurationOperation(node1.providerPubkey, dappBrid)
+                .postTransactionUntilConfirmed("Approve forced configuration for dapp $dappBrid")
 
         testLogger.info("Verify one signer")
         awaitUntilAsserted {
