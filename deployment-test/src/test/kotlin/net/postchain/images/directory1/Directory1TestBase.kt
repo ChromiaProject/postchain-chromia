@@ -14,7 +14,7 @@ open class Directory1TestBase : ManagedModeBase() {
 
     companion object {
 
-        val ecAdminKeyPair = KeyPair.of(
+        val accountCreatorKeyPair = KeyPair.of(
                 "02552192E2FA6F1C1229EB74FBDC9F27EEB87641BA11B29F9094D4F729C081AFA3",
                 "E9CF8BC054D6F853FA9457D95EDBCA76EF52CEAD2913674031513FB015F5B5C0")
         val provider1KeyPair = KeyPair.of(

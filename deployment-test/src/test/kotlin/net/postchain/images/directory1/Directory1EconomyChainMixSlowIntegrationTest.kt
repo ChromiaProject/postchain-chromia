@@ -174,6 +174,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     // EIF / users
     private lateinit var aliceAuthenticator: FTAuthenticator
 
+    private val dappAdminKeyPair = accountCreatorKeyPair
+
     init {
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
@@ -354,7 +356,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         testLogger.info("Registering FT accounts")
 
         // Register Alice account
-        aliceAuthenticator = registerAccount(node1, ecAdminKeyPair, ecBrid, aliceKeyPair, "Alice")
+        aliceAuthenticator = createAccount(node1, accountCreatorKeyPair, ecBrid, aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
 
         // Claim initial supply
@@ -524,7 +526,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
         val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
-        val aliceDappAuthenticator = registerAccount(node1, ecAdminKeyPair, dappBrid, aliceKeyPair, "Alice")
+        val aliceDappAuthenticator = registerAccount(node1, dappAdminKeyPair, dappBrid, aliceKeyPair, "Alice")
 
         node1.tx(dappBrid, "init", gtv(ecBrid), gtv(assetId))
 

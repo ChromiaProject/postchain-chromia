@@ -39,7 +39,6 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
-import net.postchain.crypto.KeyPair
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.dapp.PostchainContainer
@@ -261,7 +260,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         testLogger.info("Registering FT accounts")
 
         // Register Alice account
-        aliceAuthenticator = registerAccount(node1, ecAdminKeyPair, ecBrid, aliceKeyPair, "Alice")
+        aliceAuthenticator = createAccount(node1, accountCreatorKeyPair, ecBrid, aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
 
         // Claim initial supply
@@ -426,7 +425,8 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                         bridgeContract,
                         WrappedByteArray.fromHex(testTokenAddress.substring(2)),
                         BridgeMode.foreign,
-                        false
+                        false,
+                        0
                 ))).postTransactionUntilConfirmed("Propose token bridge")
 
         makeVoteOnLatestProposal(node1.client(tcBrid, listOf(bobKeyPair)))
