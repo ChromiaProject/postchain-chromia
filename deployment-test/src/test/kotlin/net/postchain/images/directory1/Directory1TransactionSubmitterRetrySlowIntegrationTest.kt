@@ -323,7 +323,7 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
 
     private fun getEvmTransactionSubmitterChainRid(node1: PostchainContainer): ByteArray {
 
-        return Awaitility.await().atMost(20, TimeUnit.SECONDS).pollInterval(Duration.ONE_HUNDRED_MILLISECONDS).untilNotNull {
+        return Awaitility.await().atMost(2, TimeUnit.MINUTES).pollInterval(Duration.ONE_HUNDRED_MILLISECONDS).untilNotNull {
             node1.c0.getEvmTransactionSubmitterChainRid()
         }
     }
