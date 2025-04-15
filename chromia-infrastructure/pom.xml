@@ -330,7 +330,7 @@
                     </abiSourceFiles>
                     <outputDirectory>
                         <abi>${project.basedir}/target/generated-resources</abi>
-                        <java>${project.basedir}/target/generated-sources</java>
+                        <java>${project.basedir}/target/generated-sources/eif</java>
                     </outputDirectory>
                     <outputFormat>java,abi</outputFormat>
                 </configuration>
@@ -356,7 +356,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>target/generated-sources</source>
+                                <source>target/generated-sources/eif</source>
                             </sources>
                         </configuration>
                     </execution>
