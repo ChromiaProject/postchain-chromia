@@ -415,7 +415,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         testLogger.info("Adding tag")
         with(node1.ec) {
             transactionBuilder()
-                    .createTagOperation(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .createTagOperation(node1.providerPubkey,APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
 
             makeVoteOnLatestProposal(node2)
@@ -432,8 +432,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         with(node1.ec) {
             transactionBuilder()
-                    .createClusterOperation(APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
-                    .createClusterOperation(APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG)
+                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4)
+                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4)
                     .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
 
             // Approve both APP_CLUSTER1 and APP_CLUSTER2
@@ -689,7 +689,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Add a second key to provider 1
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey)).transactionBuilder()
-                .addProviderKeyOperation(ProviderKeyRole.main, providerSecondKey.pubKey)
+                .addProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.main, providerSecondKey.pubKey)
                 .postTransactionUntilConfirmed("Add key to provider 1")
 
         // Both keys are valid since the default threshold is 1
@@ -715,7 +715,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Change the threshold to super-majority
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey)).transactionBuilder()
-                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 0)
+                .setProviderKeyThresholdOperation(node1.providerPubkey, ProviderKeyRole.main, 0)
                 .postTransactionUntilConfirmed("Threshold set to super-majority")
 
         // Verify keys returned by query
@@ -739,8 +739,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Add third and fourth key
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey, providerFourthKey)).transactionBuilder()
-                .addProviderKeyOperation(ProviderKeyRole.main, providerThirdKey.pubKey)
-                .addProviderKeyOperation(ProviderKeyRole.main, providerFourthKey.pubKey)
+                .addProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.main, providerThirdKey.pubKey)
+                .addProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.main, providerFourthKey.pubKey)
                 .postTransactionUntilConfirmed("Add third and fourth key")
 
         // Super-majority requires 3 out of 4 keys
@@ -759,7 +759,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Add third key to a different role
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey)).transactionBuilder()
-                .addProviderKeyOperation(ProviderKeyRole.configuration_proposal_vote, providerThirdKey.pubKey)
+                .addProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.configuration_proposal_vote, providerThirdKey.pubKey)
                 .postTransactionUntilConfirmed("Add third key to ${ProviderKeyRole.configuration_proposal_vote}")
 
         // No change here - still super-majority requires 3 out of 4 keys
@@ -791,8 +791,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Revoke the first key and set threshold to 2 - key removed key is signing the transaction before it is being removed
         node1.client(chain0Brid, listOf(node1.provider, providerSecondKey, providerThirdKey, providerFourthKey)).transactionBuilder()
-                .revokeProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
-                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 2)
+                .revokeProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.main, node1.provider.pubKey)
+                .setProviderKeyThresholdOperation(node1.providerPubkey, ProviderKeyRole.main, 2)
                 .postTransactionUntilConfirmed("Revoke first provider key")
 
         // 2 keys will be enough
@@ -807,8 +807,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
         // Reset keys for following tests - add node key back and set threshold to 1
         node1.client(chain0Brid, listOf(node1.provider)).transactionBuilder()
-                .addProviderKeyOperation(ProviderKeyRole.main, node1.provider.pubKey)
-                .setProviderKeyThresholdOperation(ProviderKeyRole.main, 1)
+                .addProviderKeyOperation(node1.providerPubkey, ProviderKeyRole.main, node1.provider.pubKey)
+                .setProviderKeyThresholdOperation(node1.providerPubkey, ProviderKeyRole.main, 1)
                 .postTransactionUntilConfirmed("Reset keys")
     }
 

@@ -15,7 +15,7 @@ import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.cm_api.cmGetSystemAnchoringChain
 import net.postchain.chain0.common_proposal.getCommonProposalsRange
-import net.postchain.chain0.common_proposal.makeCommonVoteV65Operation
+import net.postchain.chain0.common_proposal.makeCommonVoteOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.nm_api.nmComputeBlockchainInfoList
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
@@ -439,16 +439,16 @@ open class ManagedModeBase {
     )
 
     protected fun makeVoteOnLatestProposal(node: PostchainContainer) {
-        makeVoteOnLatestProposal(node.ec)
+        makeVoteOnLatestProposal(node.providerPubkey, node.ec)
     }
 
-    protected fun makeVoteOnLatestProposal(client: PostchainClient) {
+    protected fun makeVoteOnLatestProposal(providerPubkey: ByteArray, client: PostchainClient) {
 
         with(client) {
             val latestProposalId = getCommonProposalsRange(0, Long.MAX_VALUE, true).last().rowid
 
             transactionBuilder()
-                    .makeCommonVoteV65Operation(latestProposalId, true)
+                    .makeCommonVoteOperation(providerPubkey, latestProposalId, true)
                     .postTransactionUntilConfirmed("Voted in favour for proposal $latestProposalId")
         }
     }

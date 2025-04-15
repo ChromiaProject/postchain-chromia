@@ -278,15 +278,6 @@ blockchains:
           - network_id: 1337
             asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
             bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
-        # TODO: Remove when we have a cleaned up release
-        evm_supplies:
-          - network_id: 97
-            total_supply: 166933415837804
-            timestamp: 1742460231000
-          - network_id: 1337
-            total_supply: 586857996658440
-            timestamp: 1742360123000
-        evm_supply_admin: x"0319852651DB3ACA5D5DFDF71D8600566345FE1713BCBC7F2C1B6434B7A8C88C6F"
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6
