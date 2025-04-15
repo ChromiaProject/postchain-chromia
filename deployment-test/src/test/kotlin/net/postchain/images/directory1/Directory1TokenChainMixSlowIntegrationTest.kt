@@ -400,7 +400,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                         listOf(accountCreationChainBrid.data))
                 .postTransactionUntilConfirmed("Propose new token")
 
-        makeVoteOnLatestProposal(node1.providerPubkey, node1.client(tcBrid, listOf(bobKeyPair)))
+        makeVoteOnLatestProposal(bobKeyPair.pubKey.data, node1.client(tcBrid, listOf(bobKeyPair)))
 
         val tokens = node1.tc.getAssetsByName("Test Token", null, null).data
         assertThat(tokens).hasSize(1)
@@ -429,7 +429,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                         0
                 ))).postTransactionUntilConfirmed("Propose token bridge")
 
-        makeVoteOnLatestProposal(node1.providerPubkey, node1.client(tcBrid, listOf(bobKeyPair)))
+        makeVoteOnLatestProposal(bobKeyPair.pubKey.data, node1.client(tcBrid, listOf(bobKeyPair)))
 
         val bridgeContracts = node1.tc.getBridgeContracts(evmContainerNetworkId)
         assertThat(bridgeContracts).hasSize(1)
