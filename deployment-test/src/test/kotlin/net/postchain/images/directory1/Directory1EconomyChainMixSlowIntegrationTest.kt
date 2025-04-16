@@ -660,7 +660,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER2)
         assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
 
-        val newContainerName = containerName + "_new" // TODO: Improve new name
+        val newContainerName = containerName + "_new"
         assertThat(leaseData.containerName).isEqualTo(newContainerName)
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
