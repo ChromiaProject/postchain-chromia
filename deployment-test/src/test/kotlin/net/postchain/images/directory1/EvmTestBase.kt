@@ -63,6 +63,9 @@ abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
     val validatorBinary = getBinaryFromArtifactResource("/artifacts/contracts/Validator.sol/Validator.json")
     val tokenBridgeBinary = getBinaryFromArtifactResource("/artifacts/contracts/TokenBridge.sol/TokenBridge.json")
     val testTokenBinary = getBinaryFromArtifactResource("/artifacts/contracts/token/TestToken.sol/TestToken.json")
+    val chromiaTokenBridgeBinary = getBinaryFromArtifactResource("/artifacts/contracts/ChromiaTokenBridge.sol/ChromiaTokenBridge.json")
+    val chromiaTestTokenBinary = getBinaryFromArtifactResource("/artifacts/contracts/token/ChromiaTestToken.sol/ChromiaTestToken.json")
+    val tokenMinterBinary = getBinaryFromArtifactResource("/artifacts/contracts/test/TokenMinterTest.sol/TokenMinterTest.json")
 
     // Users
     val aliceEvmAddressStr = "e105ba42b66d08ac7ca7fc48c583599044a6dab3"
