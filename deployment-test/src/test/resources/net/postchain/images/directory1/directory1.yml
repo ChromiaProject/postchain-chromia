@@ -151,7 +151,7 @@ blockchains:
               - G_last_anchored_heights
           global:
             topics:
-              - G_create_cluster
+              - G_create_cluster_v2
               - G_create_container
               - G_upgrade_container
               - G_stop_container
@@ -235,6 +235,8 @@ blockchains:
             - topic: L_evm_block_events
               bc-rid: EIF_EC_EVENT_RECEIVER_BRID_PLACEHOLDER
     moduleArgs:
+      lib.hbridge:
+        version: 2 # Not true on mainnet but deploying the old contract here is probably too much hassle since it's on a separate branch
       lib.ft4.core.admin:
         admin_pubkey: 0317AC5B309A05B81A68F1A64321A3C6E6799E037C12892838682EBB9A620316A6
       lib.ft4.core.accounts:
@@ -272,10 +274,7 @@ blockchains:
         fee_account: x"A97CEAF65C5D7BE1B1307B0CD11AC9B3DB7065D24B8C1D36B135C68A846A4426" # pool account
       economy_chain:
         evm_bridges:
-          - network_id: 97
-            asset_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-            bridge_address: "B2ee8499B5e73795F28287A0603d66db6843a0f0"
-          - network_id: 1337
+          - network_id: 11155111
             asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
             bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
         asset_name: "tCHR"

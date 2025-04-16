@@ -14,7 +14,6 @@ import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
-import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.core.accounts.strategies.transfer.open.rasTransferOpenOperation
@@ -262,12 +261,6 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
         // Register Alice account
         aliceAuthenticator = createAccount(node1, accountCreatorKeyPair, ecBrid, aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
-
-        // Claim initial supply
-        aliceAuthenticator.verifyOperationAuthFlags("faucet")
-        aliceAuthenticator.transactionBuilder()
-                .faucetOperation()
-                .postTransactionUntilConfirmed("Claiming initial supply")
 
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         testLogger.info("Alice account balance is: $aliceBalance")

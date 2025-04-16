@@ -48,13 +48,13 @@ import net.postchain.chain0.economy_chain.transferToPoolOperation
 import net.postchain.chain0.economy_chain.upgradeContainerOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.getEconomyChainRid
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
-import net.postchain.chain0.economy_chain_test_claim_tchr.faucetOperation
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.external.accounts.Ft4GetAccountMainAuthDescriptorResult
 import net.postchain.chain0.lib.ft4.external.accounts.getAccountMainAuthDescriptor
 import net.postchain.chain0.lib.ft4.external.accounts.updateMainAuthDescriptorOperation
+import net.postchain.chain0.lib.hbridge.bridgeFtAssetToEvmOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerState
 import net.postchain.chain0.model.ProviderInfo
@@ -81,10 +81,13 @@ import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
-import net.postchain.eif.contracts.TestToken
-import net.postchain.eif.contracts.TokenBridge
+import net.postchain.eif.EventMerkleProof
+import net.postchain.eif.contracts.ChromiaTestToken
+import net.postchain.eif.contracts.ChromiaTokenBridge
+import net.postchain.eif.contracts.TokenMinterTest
 import net.postchain.eif.contracts.Validator
 import net.postchain.eif.hbridge.getEoaAddressesForAccount
+import net.postchain.eif.hbridge.getErc20WithdrawalByTx
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
 import net.postchain.eif.lib.ft4.external.accounts.UPDATE_MAIN_AUTH_DESCRIPTOR
@@ -97,8 +100,11 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
+import org.awaitility.Awaitility.await
+import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -111,10 +117,14 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.DynamicArray
+import org.web3j.abi.datatypes.DynamicBytes
+import org.web3j.abi.datatypes.Uint
+import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Keys
 import org.web3j.crypto.Sign
+import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.tx.Contract
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
@@ -159,9 +169,10 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
     // EIF
     private lateinit var validator: Validator
-    private lateinit var bridge: TokenBridge
+    private lateinit var bridge: ChromiaTokenBridge
     private lateinit var bridgeAddress: String
-    private lateinit var testToken: TestToken
+    private lateinit var chromiaTestToken: ChromiaTestToken
+    private lateinit var minter: TokenMinterTest
     private lateinit var testTokenAddress: String
     private lateinit var eventReceiverBrid: BlockchainRid
 
@@ -258,28 +269,32 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         testLogger.info { "Deploying contracts on EVM" }
 
         // Deploy validator contract
-        val encodedConstructor = FunctionEncoder.encodeConstructor(listOf(DynamicArray(Address::class.java, node0EvmAddress)))
+        val encodedConstructor = FunctionEncoder.encodeConstructor(listOf(DynamicArray(Address::class.java, node0EvmAddress, node1EvmAddress)))
         validator = Contract.deployRemoteCall(Validator::class.java, web3j, transactionManager, gasProvider, validatorBinary, encodedConstructor).send()
 
         // Deploy token bridge contract
-        bridge = Contract.deployRemoteCall(TokenBridge::class.java, web3j, transactionManager, gasProvider, tokenBridgeBinary, "").send().apply {
+        bridge = Contract.deployRemoteCall(ChromiaTokenBridge::class.java, web3j, transactionManager, gasProvider, chromiaTokenBridgeBinary, "").send().apply {
             initialize(Address(validator.contractAddress), Uint256(2)).send()
         }
         bridgeAddress = bridge.contractAddress
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
-        testToken = Contract.deployRemoteCall(TestToken::class.java, web3j, transactionManager, gasProvider, testTokenBinary, "").send().apply {
-            mint(Address(transactionManager.fromAddress), Uint256(INITIAL_SUPPLY)).send()
-            approve(Address(bridge.contractAddress), Uint256(INITIAL_SUPPLY)).send()
-        }
-        testTokenAddress = testToken.contractAddress
+        chromiaTestToken = Contract.deployRemoteCall(ChromiaTestToken::class.java, web3j, transactionManager, gasProvider, chromiaTestTokenBinary, "").send()
+        testTokenAddress = chromiaTestToken.contractAddress
+        chromiaTestToken.approve(Address(bridge.contractAddress), Uint256(INITIAL_SUPPLY)).send() // Bridge can spend the entire initial supply
 
         // Allow token
-        bridge.allowToken(Address(testToken.contractAddress)).send()
+        bridge.allowToken(Address(chromiaTestToken.contractAddress)).send()
 
-        // Assert initial balance
-        val balance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
-        assertEquals(INITIAL_SUPPLY, balance.value)
+        // Deploy minter contract
+        minter = Contract.deployRemoteCall(TokenMinterTest::class.java, web3j, transactionManager, gasProvider, tokenMinterBinary,
+                FunctionEncoder.encodeConstructor(listOf(Uint(INITIAL_SUPPLY), Address(chromiaTestToken.contractAddress), Address(bridge.contractAddress), Address(aliceEvmAddressStr)))
+        ).send()
+        bridge.setTokenMinter(Address(minter.contractAddress)).send()
+        chromiaTestToken.setTokenMinter(Address(minter.contractAddress)).send()
+
+        val balance = chromiaTestToken.balanceOf(Address(aliceEvmAddressStr)).send()
+        assertEquals(BigInteger.ZERO, balance.value)
     }
 
     @Test
@@ -336,6 +351,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         val ecRid = node1.c0.getBlockchains(true).firstOrNull { it.name == EC_CHAIN_NAME }?.rid
         assertThat(ecRid).isNotNull()
         ecBrid = BlockchainRid(ecRid!!)
+        bridge.setBlockchainRid(Bytes32(ecBrid.data)).send()
 
         testLogger.info { "$EC_CHAIN_NAME deployed: $ecBrid" }
 
@@ -359,12 +375,6 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         aliceAuthenticator = createAccount(node1, accountCreatorKeyPair, ecBrid, aliceKeyPair, "Alice")
         linkAccount(aliceAuthenticator, aliceEvmCredentials, ecBrid)
 
-        // Claim initial supply
-        aliceAuthenticator.verifyOperationAuthFlags("faucet")
-        aliceAuthenticator.transactionBuilder()
-                .faucetOperation()
-                .postTransactionUntilConfirmed("Claiming initial supply")
-
         val aliceBalance = node1.client(ecBrid, listOf(aliceKeyPair)).getBalance(aliceAuthenticator.accountId)
         testLogger.info("Alice account balance is: $aliceBalance")
         assertThat(aliceBalance).isEqualTo(INITIAL_SUPPLY)
@@ -372,26 +382,72 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
     @Test
     @Order(6)
-    fun `Deposit token on EVM`() {
-        testLogger.info { "Deposit token on EVM" }
+    fun `Withdraw token to EVM`() {
+        testLogger.info("Withdraw token to EVM")
 
-        // deposit on EVM
-        repeat(DEPOSIT_NUMBER) {
-            bridge.deposit(Address(testToken.contractAddress), Uint256(depositAmount)).send()
+        val tx = aliceAuthenticator.transactionBuilder()
+                .bridgeFtAssetToEvmOperation(
+                        assetId,
+                        totalDepositedAmount,
+                        evmContainerNetworkId,
+                        aliceEvmAddress,
+                        bridgeAddress.substring(2).hexStringToByteArray()
+                ).postTransactionUntilConfirmed("Withdraw token to EVM")
+
+        val withdraw = node1.ec.getErc20WithdrawalByTx(tx.txRid.rid.hexStringToByteArray(), 1)!!
+
+        val eventProof = node1.ec.query("get_event_merkle_proof",
+                gtv("eventHash" to gtv(withdraw.eventHash.toHex()))
+        ).toObject<EventMerkleProof>()
+
+        val receipt = bridge.withdrawRequest(
+                eventProof.web3EventData(),
+                eventProof.chromiaWeb3EventProof(),
+                eventProof.web3BlockHeader(),
+                eventProof.web3Signatures(),
+                eventProof.web3Signers(),
+                eventProof.chromiaWeb3ExtraProofData()
+        ).send()
+
+        await().atMost(Duration.TEN_SECONDS).until {
+            val block = web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(receipt.blockNumber.add(BigInteger.TWO)), false).send()
+            block.block != null
         }
+
+        bridge.withdraw(Bytes32(withdraw.eventHash.data), Address(aliceEvmAddressStr)).send()
         // check the balance on EVM
-        val aliceBalance = testToken.balanceOf(Address(aliceEvmAddressStr)).send()
-        assertEquals(aliceBalance.value, INITIAL_SUPPLY - totalDepositedAmount)
+        val aliceBalance = chromiaTestToken.balanceOf(Address(aliceEvmAddressStr)).send()
+        assertEquals(aliceBalance.value, totalDepositedAmount)
 
         // check the asset balance on Chromia
         awaitQueryResult {
             val balance = node1.client(ecBrid).getAssetBalance(aliceAuthenticator.accountId, assetId)
-            assertThat(balance?.amount).isEqualTo(INITIAL_SUPPLY + totalDepositedAmount)
+            assertThat(balance?.amount).isEqualTo(INITIAL_SUPPLY - totalDepositedAmount)
         }
     }
 
     @Test
     @Order(7)
+    fun `Deposit token on EVM`() {
+        testLogger.info { "Deposit token on EVM" }
+
+        // deposit on EVM
+        repeat(DEPOSIT_NUMBER) {
+            bridge.deposit(Address(chromiaTestToken.contractAddress), Uint256(depositAmount)).send()
+        }
+        // check the balance on EVM
+        val aliceBalance = chromiaTestToken.balanceOf(Address(aliceEvmAddressStr)).send()
+        assertEquals(aliceBalance.value, BigInteger.ZERO)
+
+        // check the asset balance on Chromia
+        awaitQueryResult {
+            val balance = node1.client(ecBrid).getAssetBalance(aliceAuthenticator.accountId, assetId)
+            assertThat(balance?.amount).isEqualTo(INITIAL_SUPPLY)
+        }
+    }
+
+    @Test
+    @Order(8)
     fun `Test pool account`() {
         testLogger.info("Test pool account")
         val poolBalance = node1.ec.getPoolBalance()
@@ -410,7 +466,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `Add new tag`() {
         testLogger.info("Adding tag")
         with(node1.ec) {
@@ -426,7 +482,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     fun `Add clusters`() {
         testLogger.info("Adding clusters")
 
@@ -465,7 +521,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `Create container`() {
         testLogger.info("Create container")
         aliceAuthenticator.verifyOperationAuthFlags("create_container")
@@ -502,7 +558,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(11)
+    @Order(12)
     fun `Deploy dapp`() {
         testLogger.info("Deploying dapp to c1")
         deployDapp("test_crosschain_transfer", containerName, assertSigners = arrayOf(node1))
@@ -510,7 +566,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(12)
+    @Order(13)
     fun `Perform cross-chain transfers between EC and dapp`() {
         testLogger.info("Initializing cross chain transfer dApp")
         val chromiaClientProvider = ChromiaClientProvider(
@@ -552,7 +608,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(13)
+    @Order(14)
     fun `Register new dapp provider`() {
         val newDappProvider = cryptoSystem.generateKeyPair()
 
@@ -571,7 +627,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(14)
+    @Order(15)
     fun `Upgrade container`() {
         testLogger.info("Upgrade container")
 
@@ -604,7 +660,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER2)
         assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
 
-        val newContainerName = containerName + "_new" // TODO: Improve new name
+        val newContainerName = containerName + "_new"
         assertThat(leaseData.containerName).isEqualTo(newContainerName)
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
@@ -645,7 +701,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     }
 
     @Test
-    @Order(15)
+    @Order(16)
     fun `Link provider account to evm EOA account and update auth description signer with evm address`() {
         val metamaskPrivateKey = "8AA1F227F18B049D72C53B4565F2FC9D3D9A60DAAB938977CEFC3C9393D560D8"
         val evmKeyPair = ECKeyPair.create(BigInteger(metamaskPrivateKey, 16))
@@ -860,3 +916,31 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         return signature
     }
 }
+
+/**
+ * Helpers copied from postchain-eif
+ */
+
+fun EventMerkleProof.web3EventData() = DynamicBytes(eventData)
+
+fun EventMerkleProof.chromiaWeb3EventProof() = ChromiaTokenBridge.Proof(
+        Bytes32(this.eventProof!!.leaf),
+        // Don't delete !! to help the compiler with a smart cast, otherwise you will get
+        // `Smart cast to '...' is impossible, because '...' is a public API property declared in different module
+        Uint256(this.eventProof!!.position),
+        DynamicArray(Bytes32::class.java, this.eventProof!!.merkleProofs.map { Bytes32(it) })
+)
+
+fun EventMerkleProof.web3BlockHeader() = DynamicBytes(blockHeader)
+
+fun EventMerkleProof.web3Signatures() = DynamicArray(DynamicBytes::class.java, blockWitness!!.map { DynamicBytes(it.sig) })
+
+fun EventMerkleProof.web3Signers() = DynamicArray(Address::class.java, blockWitness!!.map { Address(it.pubkey.toHex()) })
+
+fun EventMerkleProof.chromiaWeb3ExtraProofData() = ChromiaTokenBridge.ExtraProofData(
+        DynamicBytes(extraMerkleProof!!.leaf),
+        Bytes32(extraMerkleProof!!.hashedLeaf),
+        Uint256(extraMerkleProof!!.position),
+        Bytes32(extraMerkleProof!!.extraRoot),
+        DynamicArray(Bytes32::class.java, extraMerkleProof!!.extraMerkleProofs.map { Bytes32(it) })
+)
