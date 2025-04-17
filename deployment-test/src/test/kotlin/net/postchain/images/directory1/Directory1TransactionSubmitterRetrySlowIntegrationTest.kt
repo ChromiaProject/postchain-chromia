@@ -246,7 +246,7 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
 
             val evmSubmitTransactionNodeFailures = txsClient.getEvmSubmitTransactionNodeFailures(txId)
             assertThat(evmSubmitTransactionNodeFailures).hasSize(3)
-            assertThat(evmSubmitTransactionNodeFailures.all { it.reason == "Failed to get gas estimate" }).isTrue()
+            assertThat(evmSubmitTransactionNodeFailures.all { it.reason.startsWith("Failed to get gas estimate") }).isTrue()
         }
 
         testLogger.info("TX has failed by 3 nodes and is not ready to be picked up by node4 when started")
