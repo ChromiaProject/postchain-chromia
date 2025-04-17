@@ -83,13 +83,13 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
         ))
         assertThat(query(chainIid.toLong()).fetchComputeResult("timeout")).isNull()
 
-        // Make next node primary
+        // Make the next node primary
         buildBlock(chainIid.toLong())
 
         // Wait until cluster compute times out
         Thread.sleep(6 * 1000)
 
-        // Creates failed operation
+        // Creates a failed operation
         buildBlock(chainIid.toLong())
 
         val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()

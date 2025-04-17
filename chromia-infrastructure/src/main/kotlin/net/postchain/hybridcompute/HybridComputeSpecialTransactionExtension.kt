@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
@@ -62,7 +63,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     private val computer: ExecutorService by lazy {
         ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
-                ArrayBlockingQueue<Runnable?>(config.concurrency.toInt()),
+                ArrayBlockingQueue(config.concurrency.toInt()),
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-%d").build()
         )
     }
@@ -84,7 +85,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
     }
 
     fun load() {
-        var timeoutFuture: ScheduledFuture<*>? = null
+        val timeoutFuture = AtomicReference<ScheduledFuture<*>?>()
         loader = thread(name = "hybridcompute-load") {
             logger.info("Loading engine...")
             try {
@@ -100,13 +101,13 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
             } catch (e: Exception) {
                 logger.warn("Loading engine failed unexpectedly: $e", e)
             } finally {
-                timeoutFuture?.cancel(false)
+                timeoutFuture.get()?.cancel(false)
             }
         }
-        timeoutFuture = timeouter.schedule({
+        timeoutFuture.set(timeouter.schedule({
             logger.warn("Loading timed out after ${config.loadTimeoutSeconds} seconds, interrupting it")
             loader.interrupt()
-        }, config.loadTimeoutSeconds, TimeUnit.SECONDS)
+        }, config.loadTimeoutSeconds, TimeUnit.SECONDS))
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
@@ -147,7 +148,7 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                 if (engine.name == request.type) {
                     if (takenRequests < config.concurrency && (computations.putIfAbsent(request.id, StartedComputation(request.type)) == null)) {
                         try {
-                            var timeoutFuture: ScheduledFuture<*>? = null
+                            val timeoutFuture = AtomicReference<ScheduledFuture<*>?>()
                             val future = computer.submit {
                                 logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
                                 try {
@@ -170,14 +171,14 @@ class HybridComputeSpecialTransactionExtension : GTXSpecialTxExtension, Shutdown
                                     logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
                                     computations.replace(request.id, FailedComputation(request.type, "Unknown error"))
                                 } finally {
-                                    timeoutFuture?.cancel(false)
+                                    timeoutFuture.get()?.cancel(false)
                                 }
                             }
-                            timeoutFuture = timeouter.schedule({
+                            timeoutFuture.set(timeouter.schedule({
                                 logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
                                 computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                 future.cancel(true) // interrupt the compute thread
-                            }, config.computeTimeoutSeconds, TimeUnit.SECONDS)
+                            }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
                             val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
                             add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
                             takenRequests++

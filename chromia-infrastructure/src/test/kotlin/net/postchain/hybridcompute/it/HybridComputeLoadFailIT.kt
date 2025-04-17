@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
 
-// Needs to be in separate class to get log capturing working
+// Needs to be in a separate class to get log capturing working
 class HybridComputeLoadFailIT : IntegrationTestSetup() {
 
     val chainIid = 1

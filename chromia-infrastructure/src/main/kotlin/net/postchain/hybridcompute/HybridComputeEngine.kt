@@ -18,7 +18,7 @@ interface HybridComputeEngine : Shutdownable {
     /**
      * Will be invoked directly after instantiation, before any other method is invoked.
      *
-     * This method should only do basic parsing and validation of configuration, and should finish quickly.
+     * This method should only do basic parsing and validation of configuration and should finish quickly.
      * Any heavy or time-consuming initialization should be performed in the `load` method.
      */
     fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid)
