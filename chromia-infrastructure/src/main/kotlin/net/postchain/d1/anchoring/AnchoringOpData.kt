@@ -8,6 +8,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.data.OpData
+import javax.swing.Spring.height
 
 /**
  * This data class hides the ordering of the [OpData] arguments to the outside world
@@ -48,7 +49,7 @@ data class AnchoringOpData(
 
         fun validateAndDecodeBatchOpData(op: OpData): List<AnchoringOpData>? {
             if (AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER != op.opName) {
-                logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
+                logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER} got ${op.opName}.")
                 return null
             }
 
@@ -88,4 +89,8 @@ data class AnchoringOpData(
         val newBlockHeight = headerData.getHeight()
         return MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight)
     }
+}
+
+fun MinimalBlockHeaderInfo.toStr(): String {
+    return "MinimalBlockHeaderInfo(blockRid:${this.headerBlockRid.toHex()}, headerPrevBlockRid:${this.headerPrevBlockRid?.toHex()}, headerHeight:${headerHeight})"
 }

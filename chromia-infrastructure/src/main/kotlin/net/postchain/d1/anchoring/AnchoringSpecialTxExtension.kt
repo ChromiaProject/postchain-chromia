@@ -37,6 +37,8 @@ import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.log
 
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
@@ -83,6 +85,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
     }
 
     fun createReceiver(anchoringBlockchainRid: BlockchainRid) {
+        logger.info { "Creating anchoring receiver for $anchoringBlockchainRid" }
         anchoringReceiver = anchoringReceiverFactory.create(clusterManagement, anchoringBlockchainRid)
     }
 
@@ -94,6 +97,9 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         SpecialTransactionPosition.Begin -> ::anchoringReceiver.isInitialized
         SpecialTransactionPosition.End -> false
     }
+
+    val createCounter = AtomicInteger(0)
+    val validateCounter = AtomicInteger(0)
 
     /**
      * For Anchor chain we simply pull all the messages from all the cluster anchoring pipes and create operations.
@@ -107,6 +113,15 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = anchoringReceiver.getRelevantPipes()
+
+        createCounter.incrementAndGet()
+        logger.info { "CREATE $createCounter" }
+        pipes.forEach {
+            when (it) {
+                is AnchoringLocalPipe -> logger.info { "PIPE-LOCAL ${it.chainID}, ${it.blockchainRid}" }
+                is AnchoringSubnodePipe -> logger.info { "PUPE-SUB ${it.chainID}, ${it.blockchainRid}" }
+            }
+        }
 
         // Extract all packages from all pipes
         val specialTxBuilder = if (anchoringConfig.batchMode) BatchAnchoringSpecialTxBuilder() else MultiOpAnchoringSpecialTxBuilder()
@@ -136,7 +151,11 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                 }
             }
         }
-        return specialTxBuilder.build()
+        return specialTxBuilder.build().also {
+            logger.info { "specialTxBuilder size: ${it.size}" }
+            it.forEach { op -> logger.info { op.toString() } }
+            logger.info { "CREATE DONE $createCounter" }
+        }
     }
 
     open fun numberOfBlocksToAnchor(): Long = if (!::anchoringReceiver.isInitialized) 0 else
@@ -153,10 +172,17 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             bctx: BlockEContext,
             ops: List<OpData>
     ): Boolean {
+        validateCounter.incrementAndGet()
+        logger.info { "VALIDATE $validateCounter" }
+        logger.info { "ops: ${ops.size}" }
+        ops.forEach { logger.info { it.toString() } }
+
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
         val relevantChains = anchoringReceiver.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
         pruneCachedPeers(relevantChains)
+        logger.info { "relevantChains: $relevantChains" }
 
+        logger.info { "anchoringConfig.batchMode: ${anchoringConfig.batchMode}" }
         val validatedAnchoringOps = if (anchoringConfig.batchMode) {
             if (ops.size != 1) {
                 logger.warn("Only one operation allowed when batching")
@@ -172,10 +198,19 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             }
             validatedOps
         }
-
+        logger.info { "validatedAnchoringOps: ${validatedAnchoringOps.size}" }
+        logger.info { "FOR" }
         val signatureVerificationJobs = mutableListOf<Pair<Collection<PubKey>, AnchoringOpData>>()
         for (anchorOpData in validatedAnchoringOps) {
+            logger.info { "anchorOpData:" }
+            logger.info { "blockRid: " + anchorOpData.blockRid.toHex() }
+
             val headerData = anchorOpData.headerData
+            logger.info { "headerData.brid: ${headerData.getBlockchainRid()}" }
+            logger.info { "headerData.height: ${headerData.getHeight()}" }
+            logger.info { "headerData.prev-block-rid: ${headerData.getPreviousBlockRid().toHex()}" }
+            logger.info { "headerData.gtv: ${headerData.toGtv()}" }
+
             val bcRid = BlockchainRid(headerData.getBlockchainRid())
             if (isSigner() && bcRid !in relevantChains) {
                 logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
@@ -190,11 +225,16 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             }
 
             val peers = getCachedPeers(peerCache, headerData, blockchainConfigProvider) ?: return false
+            logger.info { "cached peers: ${peers.toTypedArray()}" }
             signatureVerificationJobs.add(peers to anchorOpData)
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
+            logger.info { "newInfo: ${newInfo.toStr()}" }
 
             val headers = chainHeadersMap.computeIfAbsent(bcRid) { mutableSetOf() }
+            logger.info("headers(${headers.size}):")
+            headers.forEach { logger.info { it.toStr() } }
+
             if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
                 headers.add(newInfo)
             } else {
@@ -202,6 +242,10 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                 return false
             }
         }
+
+        logger.info { "VALIDATE DONE $validateCounter" }
+
+
 
         val allSignaturesValid = runBlocking {
             coroutineScope {

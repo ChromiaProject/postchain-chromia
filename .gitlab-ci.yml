@@ -70,6 +70,25 @@ deploy-snapshot:
       -Djib.to.tags=latest-snapshot
       clean source:jar deploy
 
+deploy-pos1737:
+  extends: .setup
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "pos1737"
+  script:
+    - git fetch --unshallow
+    - git fetch --tags
+    - CURRENT_VERSION=$(git describe --tags --abbrev=0)
+    - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+    - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT-POS-1737
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,slow-it,docker-push,distro
+      -Drevision=$SNAPSHOT_VERSION
+      -Djib.to.tags=latest-snapshot
+      clean source:jar deploy
+
+
 # Triggered by that a semver tag was pushed
 deploy:
   extends: .setup
