@@ -116,6 +116,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
 
         createCounter.incrementAndGet()
         logger.info { "CREATE $createCounter" }
+        logger.info { "pipes(${pipes.size}):" }
         pipes.forEach {
             when (it) {
                 is AnchoringLocalPipe -> logger.info { "PIPE-LOCAL ${it.chainID}, ${it.blockchainRid}" }
@@ -125,16 +126,21 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
 
         // Extract all packages from all pipes
         val specialTxBuilder = if (anchoringConfig.batchMode) BatchAnchoringSpecialTxBuilder() else MultiOpAnchoringSpecialTxBuilder()
+        logger.info { "anchoringConfig.batchMode: ${anchoringConfig.batchMode}" }
         var currentSize = specialTxBuilder.getTxOverheadSize()
         pipeIt@ for (pipe in pipes) {
+            logger.info { "pipe: ${pipe.chainID}, ${pipe.blockchainRid}" }
             var opsCount = 0
             var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
+            logger.info { "getLastAnchoredHeight -> currentHeight: $currentHeight" }
             pipePacketsIt@ while (pipe.mightHaveNewPackets()) {
                 val anchorPackets = pipe.fetchNextRange(currentHeight + 1)
+                logger.info { "anchorPackets(${anchorPackets.size}):" }
                 if (anchorPackets.isEmpty()) {
                     break // Nothing more to find
                 } else {
                     for (anchorPacket in anchorPackets) {
+                        logger.info { "${anchorPacket.height}, ${anchorPacket.blockRid.toHex()}" }
                         val size = specialTxBuilder.calculateRequiredSize(anchorPacket)
                         if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
                             break@pipeIt
@@ -143,6 +149,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                         opsCount++
                         currentHeight++
                         currentSize += size
+                        logger.info { "opsCount: ${opsCount}, currentHeight: ${currentHeight}, currentSize: $currentSize" }
 
                         if (anchoringConfig.maxBlocksPerChain > 0 && opsCount + 1 > anchoringConfig.maxBlocksPerChain) {
                             break@pipePacketsIt
