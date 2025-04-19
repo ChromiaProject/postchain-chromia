@@ -206,7 +206,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             logger.info { "blockRid: " + anchorOpData.blockRid.toHex() }
 
             val headerData = anchorOpData.headerData
-            logger.info { "headerData.brid: ${headerData.getBlockchainRid()}" }
+            logger.info { "headerData.brid: ${headerData.getBlockchainRid().toHex()}" }
             logger.info { "headerData.height: ${headerData.getHeight()}" }
             logger.info { "headerData.prev-block-rid: ${headerData.getPreviousBlockRid().toHex()}" }
             logger.info { "headerData.gtv: ${headerData.toGtv()}" }
@@ -225,7 +225,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             }
 
             val peers = getCachedPeers(peerCache, headerData, blockchainConfigProvider) ?: return false
-            logger.info { "cached peers: ${peers.toTypedArray()}" }
+            logger.info { "cached peers: ${peers.toTypedArray().contentToString()}" }
             signatureVerificationJobs.add(peers to anchorOpData)
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
