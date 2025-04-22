@@ -9,10 +9,11 @@ import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap
 
 class ClusterAnchoringReceiver(
-        private val cluster: String,
+        override val cluster: String,
         private val systemAnchoringChain: BlockchainRid?,
         private val clusterManagement: ClusterManagement
 ) : AnchoringReceiver {
+
     override val localPipes = ConcurrentHashMap<Long, AnchoringPipe>()
 
     override fun getRelevantPipes(): List<AnchoringPipe> {

@@ -111,9 +111,7 @@ open class AnchoringProcessManagerExtension(
     override fun disconnectProcess(process: BlockchainProcess) {
         anchoringCheck.remove(process.blockchainEngine.getConfiguration().blockchainRid)
         anchoringCheck.runningChainsBlockClients.remove(process.blockchainEngine.blockchainRid)
-        localDispatcher.disconnectChain(
-                process.blockchainEngine.getConfiguration().chainID
-        )
+        localDispatcher.disconnectChain(process.blockchainEngine.getConfiguration().chainID)
     }
 
     @Synchronized

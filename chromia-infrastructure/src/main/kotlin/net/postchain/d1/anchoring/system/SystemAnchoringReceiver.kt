@@ -7,6 +7,8 @@ import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap
 
 class SystemAnchoringReceiver(private val clusterManagement: ClusterManagement) : AnchoringReceiver {
+
+    override val cluster = "system"
     override val localPipes = ConcurrentHashMap<Long, AnchoringPipe>()
 
     override fun getRelevantPipes(): List<AnchoringPipe> {
