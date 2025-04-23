@@ -2,19 +2,26 @@
 
 package net.postchain.d1.anchoring
 
-import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
-import net.postchain.concurrent.util.get
 import net.postchain.containers.infra.MasterSyncInfra
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueries
+import net.postchain.d1.cluster.ClusterManagement
 
 class AnchoringDispatcher(private val storage: Storage, private val blockchainInfrastructure: BlockchainInfrastructure) {
+
+    private lateinit var clusterManagement: ClusterManagement
     private val receivers = mutableMapOf<Long, AnchoringReceiver>()
     private val anchoringBlockQueries = mutableMapOf<String, BlockQueries>()
     private val localChains = mutableMapOf<Long, BlockchainRid>()
     private val subnodeChains = mutableMapOf<Long, BlockchainRid>()
+
+    fun initializeClusterManagementIfNotSet(clusterManagement: ClusterManagement) {
+        if (!::clusterManagement.isInitialized) {
+            this.clusterManagement = clusterManagement
+        }
+    }
 
     fun connectReceiver(chainID: Long, receiver: AnchoringReceiver, anchorBlockQueries: BlockQueries) {
         receivers[chainID] = receiver
@@ -41,10 +48,10 @@ class AnchoringDispatcher(private val storage: Storage, private val blockchainIn
             AnchoringLocalPipe(chainID, blockchainRid, storage)
 
     private fun buildSubnodePipe(chainID: Long, blockchainRid: BlockchainRid): AnchoringPipe {
-        val cm = ClusterManagementImpl { name, gtv -> anchoringBlockQueries.values.first().query(name, gtv).get() }
-        val cluster = cm.getClusterOfBlockchain(blockchainRid)
-        val anchoringBlockQueries = anchoringBlockQueries[cluster]!!
-        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterSyncInfra).masterConnectionManager) { anchoringBlockQueries }
+        val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
+        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterSyncInfra).masterConnectionManager) {
+            anchoringBlockQueries[cluster]
+        }
     }
 
     private fun connectChainInternal(chainID: Long, pipeSupplier: () -> AnchoringPipe) {

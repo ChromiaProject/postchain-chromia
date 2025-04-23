@@ -39,6 +39,7 @@ open class AnchoringProcessManagerExtension(
     private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage, blockchainInfrastructure)
     private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
     private val anchoringCheck = AnchoringCheck(postchainContext.nodeDiagnosticContext, postchainContext.blockQueriesProvider, postchainContext.appConfig)
+    private lateinit var clusterManagement: ClusterManagement
 
     /**
      * Connect process to cluster anchoring:
@@ -52,6 +53,10 @@ open class AnchoringProcessManagerExtension(
         anchoringCheck.runningChainsBlockClients[cfg.blockchainRid] = BlockQueriesAdapter(engine.getBlockQueries())
 
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
+            // The first chain to be connected is chain0.
+            // The clusterManagement instance using chain0's dataSource will be shared by all other chains.
+            localDispatcher.initializeClusterManagementIfNotSet(createClusterManagement(cfg))
+
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 it.isSigner = process::isSigner
