@@ -48,7 +48,7 @@ data class AnchoringOpData(
 
         fun validateAndDecodeBatchOpData(op: OpData): List<AnchoringOpData>? {
             if (AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER != op.opName) {
-                logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
+                logger.info("Invalid spcl operation: Expected op name ${AnchoringSpecialTxExtension.OP_BATCH_BLOCK_HEADER} got ${op.opName}.")
                 return null
             }
 

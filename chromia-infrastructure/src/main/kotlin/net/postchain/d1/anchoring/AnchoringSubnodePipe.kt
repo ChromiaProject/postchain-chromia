@@ -29,7 +29,7 @@ class AnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         connectionManager: MasterConnectionManager,
-        private val anchorBlockQueriesProvider: () -> BlockQueries
+        internal val anchorBlockQueriesProvider: () -> BlockQueries?
 ) : AnchoringPipe {
     private val highestFetched = AtomicLong(-1L)
     private val packets = ConcurrentSkipListMap<Long, AnchoringPacket>() // block height to packet
@@ -83,17 +83,17 @@ class AnchoringSubnodePipe(
     private fun fetchBlocks() {
         val highestFetchHeight = highestFetched.get()
         val lastHeight = if (highestFetchHeight < 0) {
-            fetchLastAnchoredHeight()
+            fetchLastAnchoredHeight() ?: return // anchorBlockQueries might not be ready yet
         } else {
             highestFetchHeight
         }
         fetchBlocksFromHeight(lastHeight + 1)
     }
 
-    private fun fetchLastAnchoredHeight(): Long =
-            anchorBlockQueriesProvider().query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(blockchainRid))))
-                    .toCompletableFuture().get()
-                    .let { v0 -> ((v0 as? GtvDictionary)?.dict?.get("block_height") as? GtvInteger)?.integer ?: -1 }
+    private fun fetchLastAnchoredHeight(): Long? = anchorBlockQueriesProvider()
+            ?.query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(blockchainRid))))
+            ?.toCompletableFuture()?.get()
+            ?.let { v0 -> ((v0 as? GtvDictionary)?.dict?.get("block_height") as? GtvInteger)?.integer ?: -1 }
 
     private fun fetchBlocksFromHeight(fromHeight: Long) {
         val fetchedPackets = try {
