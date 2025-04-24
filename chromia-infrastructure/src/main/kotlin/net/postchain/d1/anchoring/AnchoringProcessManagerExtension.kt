@@ -52,6 +52,10 @@ open class AnchoringProcessManagerExtension(
         anchoringCheck.runningChainsBlockClients[cfg.blockchainRid] = BlockQueriesAdapter(engine.getBlockQueries())
 
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
+            // The first chain to be connected is chain0.
+            // The clusterManagement instance using chain0's dataSource will be shared by all other chains.
+            localDispatcher.initializeClusterManagementIfNotSet(createClusterManagement(cfg))
+
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 it.isSigner = process::isSigner
@@ -132,7 +136,8 @@ open class AnchoringProcessManagerExtension(
     }
 
     @Synchronized
-    override fun shutdown() {}
+    override fun shutdown() {
+    }
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId
