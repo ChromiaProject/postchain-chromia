@@ -6,12 +6,11 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock.binaryEqualTo
+import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock.configureFor
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.ok
 import com.github.tomakehurst.wiremock.client.WireMock.okForContentType
-import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import net.postchain.chromia.anchoring_chain_common.AnchoringTxWithOpIndex
@@ -31,6 +30,7 @@ import net.postchain.d1.client.ConfirmationProofData
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -42,7 +42,7 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
-import net.postchain.gtx.GtxQuery
+import org.http4k.core.ContentType
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -114,15 +114,9 @@ class IccfProofTxMaterialBuilderTest {
         val anchoringTxRid = anchoringTx.calculateTxRid(hashCalculator)
         val anchoringChainResponse = AnchoringTxWithOpIndex(anchoringTxRid.wrap(), anchoringTx.encode().wrap(), 0)
 
-        stubFor(post("/query_gtv/${sourceClusterAnchoringChain.toHex()}")
-                .withRequestBody(binaryEqualTo(
-                        GtxQuery("get_anchoring_transaction_for_block_rid", gtv(
-                                "blockchain_rid" to gtv(sourceBlockchainRID),
-                                "block_rid" to gtv(dummyBlockRid)
-                        )).encode()
-                ))
-                .willReturn(ok().withBody(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(anchoringChainResponse))))
-        )
+        stubQuery(baseUrl = "", sourceClusterAnchoringChain, "get_anchoring_transaction_for_block_rid",
+                mapOf("blockchain_rid" to gtv(sourceBlockchainRID), "block_rid" to gtv(dummyBlockRid)),
+                GtvObjectMapper.toGtvDictionary(anchoringChainResponse))
 
         // Does not really matter what the content of the proof is
         val anchoringConfirmationProof = GtvEncoder.encodeGtv(gtv(
@@ -160,15 +154,9 @@ class IccfProofTxMaterialBuilderTest {
         val anchoringTxRid = anchoringTx.calculateTxRid(hashCalculator)
         val anchoringChainResponse = AnchoringTxWithOpIndex(anchoringTxRid.wrap(), anchoringTx.encode().wrap(), 0)
 
-        stubFor(post("/query_gtv/${sourceClusterAnchoringChain.toHex()}")
-                .withRequestBody(binaryEqualTo(
-                        GtxQuery("get_anchoring_transaction_for_block_rid", gtv(
-                                "blockchain_rid" to gtv(sourceBlockchainRID),
-                                "block_rid" to gtv(dummyBlockRid)
-                        )).encode()
-                ))
-                .willReturn(ok().withBody(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(anchoringChainResponse))))
-        )
+        stubQuery(baseUrl = "", sourceClusterAnchoringChain, "get_anchoring_transaction_for_block_rid",
+                mapOf("blockchain_rid" to gtv(sourceBlockchainRID), "block_rid" to gtv(dummyBlockRid)),
+                GtvObjectMapper.toGtvDictionary(anchoringChainResponse))
 
         // Does not really matter what the content of the proof is
         val anchoringConfirmationProof = GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(ConfirmationProofData(
@@ -258,6 +246,16 @@ class IccfProofTxMaterialBuilderTest {
             )
         }
     }
+
+    private fun stubQuery(baseUrl: String, brid: BlockchainRid, name: String, args: Map<String, Gtv>, response: Gtv) {
+        stubFor(
+                stubQueryBuilder(baseUrl, brid, name, args, response)
+        )
+    }
+
+    private fun stubQueryBuilder(baseUrl: String, brid: BlockchainRid, name: String, args: Map<String, Gtv>, response: Gtv): MappingBuilder =
+            get("$baseUrl/query_gtv/${brid}?type=${name}&%7Eargs=${GtvEncoder.encodeGtv(gtv(args)).toHex()}")
+                    .willReturn(ok(ContentType.OCTET_STREAM.value).withBody(GtvEncoder.encodeGtv(response)))
 
     private fun generateAndStubConfirmationProof(proofHashOverride: Hash? = null): ByteArray {
         // We are only concerned about the hash and block header fields

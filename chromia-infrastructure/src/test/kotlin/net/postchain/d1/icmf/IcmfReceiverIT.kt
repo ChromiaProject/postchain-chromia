@@ -18,6 +18,7 @@ import net.postchain.client.core.PostchainBlockClient
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.createLogCaptor
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
@@ -50,9 +51,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -80,24 +79,14 @@ class IcmfReceiverIT : IcmfBaseIT() {
     private val otherLocalSenderMessageBody = gtv("other")
     private val dbOperations = IcmfDatabaseOperationsImpl()
 
-    companion object {
-        @BeforeAll
-        @JvmStatic
-        fun start() {
-            MockPostchainRestApi.start()
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun stop() {
-            MockPostchainRestApi.close()
-        }
+    @BeforeEach
+    fun setup() {
+        MockPostchainRestApi.start()
     }
 
-    @BeforeEach
     @AfterEach
     fun shutdown() {
-        MockPostchainRestApi.clearMocks()
+        MockPostchainRestApi.close()
     }
 
     /**
@@ -130,8 +119,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
             )
         }
 
-        MockPostchainRestApi.addMockClient(clusterAnchoringChainRid, clusterAnchoringChainClientMock)
-        MockPostchainRestApi.addMockClient(remoteSenderChainRid, senderOneChainClientMock)
+        MockPostchainRestApi.addMockClient(clusterAnchoringChainRid, 1, clusterAnchoringChainClientMock)
+        MockPostchainRestApi.addMockClient(remoteSenderChainRid, 100,senderOneChainClientMock)
     }
 
     private fun setupNonAnchoredClientMocks(senderChainRid: BlockchainRid = remoteSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic") {
@@ -153,7 +142,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 ))
         )
 
-        MockPostchainRestApi.addMockClient(senderChainRid, senderChainClientMock)
+        MockPostchainRestApi.addMockClient(senderChainRid, 100,senderChainClientMock)
     }
 
     private fun setupQueriesMocks(localSenderQueryResponse: Gtv = this.localSenderQueryResponse, topic: String = "my-topic") {
@@ -1184,8 +1173,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
                 gtv(ByteArray(32) { messageHeight.toByte() }),
-                gtv(ByteArray(32)),
-                gtv(messageHeight), // Set it equal to height for more interesting assertions
+                gtv("46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()),
+                gtv(messageHeight), // Set it equal to the height for more interesting assertions
                 gtv(messageHeight),
                 GtvNull,
                 gtv(
@@ -1227,12 +1216,14 @@ class IcmfReceiverIT : IcmfBaseIT() {
             gtv(blockRid)
         }
 
+        val blockHeight = prevHeight + 1
+        val blockTimestamp = prevHeight + 1  // Set it equal to the height for more interesting assertions
         val blockHeader = BlockHeaderData(
                 gtv(clusterAnchoringChainRid.data),
                 gtv(clusterAnchoringChainRid.data),
-                gtv(ByteArray(32)),
-                gtv(prevHeight + 1), // Set it equal to height for more interesting assertions
-                gtv(prevHeight + 1),
+                gtv("46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()),
+                gtv(blockTimestamp),
+                gtv(blockHeight),
                 GtvNull,
                 gtv(
                         mapOf(
@@ -1253,10 +1244,10 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 blockRid.wrap(),
                 clusterAnchoringChainRid.data.wrap(),
                 GtvEncoder.encodeGtv(blockHeader).wrap(),
-                0L,
+                blockHeight,
                 listOf(),
                 rawWitness.wrap(),
-                0L
+                blockTimestamp
         )
     }
 
