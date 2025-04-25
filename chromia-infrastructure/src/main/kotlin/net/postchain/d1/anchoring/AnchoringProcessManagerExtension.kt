@@ -77,12 +77,6 @@ open class AnchoringProcessManagerExtension(
                 it.createReceiver(cfg.blockchainRid)
                 localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver, anchorBlockQueries)
 
-                @Suppress("DEPRECATION") // TODO eventually remove this
-                (engine.getBlockBuildingStrategy() as? AnchoringBlockBuildingStrategy)?.apply {
-                    txExtension = it
-                    anchoringConfig = it.anchoringConfig
-                }
-
                 anchoringCheck.maybeCreateAnchoringCheckCronJob(it, cfg.blockchainRid, anchorBlockQueries, cfg.module.getQueries())
             }
 
