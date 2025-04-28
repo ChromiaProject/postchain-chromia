@@ -12,7 +12,8 @@ import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
-import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
+import net.postchain.chain0.direct_container.createContainerWithResourceLimitsOperation
+import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
@@ -198,9 +199,9 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
         // Add dapp container
         with(node1.c0) {
             transactionBuilder()
-                    .createContainerWithUnitsOperation(
+                    .createContainerWithResourceLimitsOperation(
                             node1.providerPubkey, fooContainer, systemCluster, 1,
-                            listOf(node1.provider.pubKey.data), 1
+                            listOf(node1.provider.pubKey.data), mapOf(ContainerResourceLimitType.container_units to 1)
                     )
                     .postTransactionUntilConfirmed("$fooContainer container created")
             awaitUntilAsserted {

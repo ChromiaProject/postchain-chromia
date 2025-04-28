@@ -13,9 +13,12 @@ class HybridComputeGTXModule : SimpleGTXModule<Unit>(
         mapOf(),
         mapOf()
 ), PostchainContextAware {
-    private val specialTransactionExtension = HybridComputeSpecialTransactionExtension()
+    private val dbOperations = HybridComputeDatabaseOperationsImpl()
+    private val specialTransactionExtension = HybridComputeSpecialTransactionExtension(dbOperations)
 
-    override fun initializeDB(ctx: EContext) {}
+    override fun initializeDB(ctx: EContext) {
+        dbOperations.initialize(ctx)
+    }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf(specialTransactionExtension)
 

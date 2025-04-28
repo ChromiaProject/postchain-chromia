@@ -12,8 +12,8 @@ import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
-import net.postchain.chain0.common.addProviderKeyOperation
-import net.postchain.chain0.common.getProviderKeys
+import net.postchain.chain0.common.operations.addProviderKeyOperation
+import net.postchain.chain0.common.queries.getProviderKeys
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -26,8 +26,8 @@ import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.common.revokeProviderKeyOperation
-import net.postchain.chain0.common.setProviderKeyThresholdOperation
+import net.postchain.chain0.common.operations.revokeProviderKeyOperation
+import net.postchain.chain0.common.operations.setProviderKeyThresholdOperation
 import net.postchain.chain0.economy_chain.ClusterCreationStatus
 import net.postchain.chain0.economy_chain.TagData
 import net.postchain.chain0.economy_chain.TicketState

@@ -14,11 +14,11 @@ import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_cluster.createClusterOperation
-import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
+import net.postchain.chain0.direct_container.createContainerWithResourceLimitsOperation
+import net.postchain.chain0.model.ContainerResourceLimitType
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
-import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
@@ -186,9 +186,9 @@ class Directory1ManualLatencySlowIntegrationTest {
         testLogger.info("Adding container")
         with(node1.c0) {
             transactionBuilder()
-                    .createContainerWithUnitsOperation(
+                    .createContainerWithResourceLimitsOperation(
                             node1.providerPubkey, TEST_CONTAINER, TEST_CLUSTER, 1,
-                            listOf(node1.provider.pubKey.data), 4
+                            listOf(node1.provider.pubKey.data), mapOf(ContainerResourceLimitType.container_units to 4)
                     )
                     .postTransactionUntilConfirmed("$TEST_CONTAINER container created")
 
