@@ -29,8 +29,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun isComputeClusterTimeout() {
-        val extension = HybridComputeSpecialTransactionExtension()
-
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         val computeClusterTimeoutSeconds = 10L
         extension.config = hybridComputeConfig
         val now = Instant.now().toEpochMilli()
@@ -40,7 +39,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `FailureOp Taken request not found by id`() {
-        val extension = HybridComputeSpecialTransactionExtension()
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
         extension.engine = TestHybridComputeEngine()
         val bctx = mock<BlockEContext>()
@@ -55,7 +54,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `FailureOp Invalid signature`() {
-        val extension = HybridComputeSpecialTransactionExtension()
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
         extension.engine = TestHybridComputeEngine()
         val bctx = mock<BlockEContext>()
@@ -76,7 +75,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `RequestTakenOp Invalid signature`() {
-        val extension = HybridComputeSpecialTransactionExtension()
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
         extension.engine = TestHybridComputeEngine()
         val bctx = mock<BlockEContext>()
@@ -93,7 +92,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `ResponseOp Invalid signature`() {
-        val extension = HybridComputeSpecialTransactionExtension()
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
         extension.engine = StubHybridComputeEngine()
         extension.load()
@@ -113,4 +112,3 @@ class HybridComputeSpecialTransactionExtensionTest {
         assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(ResponseOp("success", "test", gtv("success"), node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
     }
 }
-

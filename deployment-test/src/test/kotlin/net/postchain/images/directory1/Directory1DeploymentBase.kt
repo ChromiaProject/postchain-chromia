@@ -16,7 +16,7 @@ import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainers
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
-import net.postchain.chain0.direct_container.createContainerWithUnitsOperation
+import net.postchain.chain0.direct_container.createContainerWithResourceLimitsOperation
 import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ContainerResourceLimitType.container_units
 import net.postchain.chain0.model.ContainerResourceLimitType.max_blockchains
@@ -123,13 +123,13 @@ abstract class Directory1DeploymentBase {
             }
 
             transactionBuilder()
-                    .createContainerWithUnitsOperation(
+                    .createContainerWithResourceLimitsOperation(
                             node1.providerPubkey, fooContainer, systemCluster, 1,
-                            listOf(node1.provider.pubKey.data), 1
+                            listOf(node1.provider.pubKey.data), mapOf(container_units to 1)
                     )
-                    .createContainerWithUnitsOperation(
+                    .createContainerWithResourceLimitsOperation(
                             node1.providerPubkey, barContainer, systemCluster, 1,
-                            listOf(node1.provider.pubKey.data), 1
+                            listOf(node1.provider.pubKey.data), mapOf(container_units to 1)
                     )
                     .postTransactionUntilConfirmed("$fooContainer and $barContainer containers created")
 
@@ -272,8 +272,8 @@ abstract class Directory1DeploymentBase {
                 val res = dockerClient.inspectContainerCmd(it.id).exec()
                 assertThat(res.hostConfig?.memory).isEqualTo(fooResourceLimits.ramBytes())
                 assertThat(res.hostConfig?.cpuQuota).isEqualTo(fooResourceLimits.cpuQuota())
-                assertThat(res.hostConfig?.blkioDeviceReadBps?.get(0)?.rate?.toLong()).isEqualTo(fooResourceLimits.ioReadBytes())
-                assertThat(res.hostConfig?.blkioDeviceWriteBps?.get(0)?.rate?.toLong()).isEqualTo(fooResourceLimits.ioWriteBytes())
+                assertThat(res.hostConfig?.blkioDeviceReadBps?.get(0)?.rate).isEqualTo(fooResourceLimits.ioReadBytes())
+                assertThat(res.hostConfig?.blkioDeviceWriteBps?.get(0)?.rate).isEqualTo(fooResourceLimits.ioWriteBytes())
             }
         }
     }

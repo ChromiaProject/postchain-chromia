@@ -134,6 +134,15 @@
         </dependency>
 
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-spi</artifactId>
+            <version>${postchain.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+        </dependency>
+
+        <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
             <scope>test</scope>
