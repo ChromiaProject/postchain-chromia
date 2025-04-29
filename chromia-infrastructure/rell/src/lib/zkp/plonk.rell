@@ -19,3 +19,24 @@ function check_plonk_proof(
         };
     require(matching_proof_op, "No matching PLONK proof in transaction");
 }
+
+/**
+ * Checks whether or not the current transaction contains a valid PLONK proof operation before current operation.
+ *
+ * @param verification_key_id ID of the verification key that the proof must have been validated with
+ * @return The public signals of the preceding proof operation
+ */
+function extract_signals_from_preceeding_proof_op(verification_key_id: text): list<big_integer> {
+    var current_op_index = op_context.op_index;
+    var matching_proof_op: gtx_operation? = null;
+    while (current_op_index > 0) {
+        current_op_index--;
+        val current_op = op_context.get_all_operations()[current_op_index];
+        if (current_op.name == plonk_verify_op_name and text.from_gtv(current_op.args[0]) == verification_key_id) {
+            matching_proof_op = current_op;
+        }
+    }
+    require(matching_proof_op, "No matching PLONK proof in transaction");
+
+    return list<big_integer>.from_gtv(matching_proof_op.args[2]);
+}

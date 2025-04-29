@@ -31,3 +31,16 @@ function test_no_proof_for_public_signals() {
             verify_plonk_proof("test_vk", [2L])
         ).run_must_fail("No matching PLONK proof in transaction");
 }
+
+function test_extraction_of_public_signals_from_proof_op() {
+    rell.test.tx().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof_with_public_signal_one("test_vk")
+        ).run();
+}
+
+function test_no_preceeding_proof_op() {
+    rell.test.tx().op(
+            verify_plonk_proof_with_public_signal_one("test_vk")
+        ).run_must_fail("No matching PLONK proof in transaction");
+}

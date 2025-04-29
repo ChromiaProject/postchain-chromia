@@ -76,10 +76,10 @@ There is a small Rell library that you can install to help you check proofs:
 zkp:
   registry: https://gitlab.com/chromaway/postchain-chromia.git
   path: chromia-infrastructure/rell/src/lib/zkp
-  rid: x"E8F3150512408DE7778BF33B4852E7D492B5F32F713E6DE482B3806FBDBEC94B"
+  rid: x"8934250CED0D8C7FB46C458CDB303236AA70F3666DA67376E75E89D16F125FF9"
 ```
 
-It exposes the following function that you can use to verify that a proof is present in current tx:
+It exposes the following functions that you can use to verify that a proof is present in current tx:
 
 ```rell
 /**
@@ -91,9 +91,15 @@ It exposes the following function that you can use to verify that a proof is pre
 function check_plonk_proof(
     verification_key_id: text,
     public_signals: list<big_integer>
-) {
-    // Implementation...
-}
+)
+
+/**
+ * Checks whether or not the current transaction contains a valid PLONK proof operation before current operation.
+ *
+ * @param verification_key_id ID of the verification key that the proof must have been validated with
+ * @return The public signals of the preceding proof operation
+ */
+function extract_signals_from_preceeding_proof_op(verification_key_id: text): list<big_integer>
 ```
 
 ## Submitting a proof from a client
