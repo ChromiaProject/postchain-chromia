@@ -12,22 +12,22 @@ import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
-import net.postchain.chain0.common.operations.addProviderKeyOperation
-import net.postchain.chain0.common.queries.getProviderKeys
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
+import net.postchain.chain0.common.operations.addProviderKeyOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
+import net.postchain.chain0.common.operations.revokeProviderKeyOperation
+import net.postchain.chain0.common.operations.setProviderKeyThresholdOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.updateProviderOperation
 import net.postchain.chain0.common.queries.getBlockchainInfo
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainerData
 import net.postchain.chain0.common.queries.getNodeData
+import net.postchain.chain0.common.queries.getProviderKeys
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.common.queries.getVoterSetMembers
 import net.postchain.chain0.common.queries.getVoterSets
-import net.postchain.chain0.common.operations.revokeProviderKeyOperation
-import net.postchain.chain0.common.operations.setProviderKeyThresholdOperation
 import net.postchain.chain0.economy_chain.ClusterCreationStatus
 import net.postchain.chain0.economy_chain.TagData
 import net.postchain.chain0.economy_chain.TicketState
@@ -471,7 +471,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         testLogger.info("Adding tag")
         with(node1.ec) {
             transactionBuilder()
-                    .createTagOperation(node1.providerPubkey,APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .createTagOperation(node1.providerPubkey, APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
 
             makeVoteOnLatestProposal(node2)
@@ -870,13 +870,16 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
 
     fun verifyProviderAuth(signerListToVerify: List<List<KeyPair>>, expectedTxStatus: TransactionStatus) {
         signerListToVerify.forEach {
-            val response = node1.client(chain0Brid, it).transactionBuilder()
+            val transactionBuilder = node1.client(chain0Brid, it).transactionBuilder()
                     .addNop()
                     .updateProviderOperation(node1.provider.pubKey.data, "new-name", "new-url")
-                    .postTransactionUntilConfirmed("Testing updating provider info signed by $it and expecting tx status $expectedTxStatus")
+            val response = if (expectedTxStatus == TransactionStatus.REJECTED)
+                transactionBuilder.post()
+            else
+                transactionBuilder.postTransactionUntilConfirmed("Testing updating provider info signed by $it and expecting tx status $expectedTxStatus")
             assertThat(response.status).isEqualTo(expectedTxStatus)
             if (expectedTxStatus == TransactionStatus.REJECTED) {
-                assertThat(response.rejectReason).isNotNull().contains("Operation must be signed by provider key(s)")
+                assertThat(response.rejectReason).isNotNull().contains("Transaction is invalid")
             }
         }
     }
