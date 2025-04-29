@@ -27,7 +27,6 @@ import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.chromia.nm_api.nmGetBlockchainConfigurationInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.KeyPair
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
@@ -161,7 +160,9 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
         assertThat(testConfig.configHash).isNotEqualTo(config0.configHash)
 
         // Add row to entity (to make the default attribute fail on next config update)
-        node1.tx(chain0Brid, "add_postchain_chromia_test", gtv("t1"))
+        node1.c0.transactionBuilder(listOf(node1.provider))
+                .addOperation("add_postchain_chromia_test", gtv(node1.providerPubkey), gtv("t1"))
+                .postTransactionUntilConfirmed("add_postchain_chromia_test")
 
         val compileDappUpdate = compileDapp("manager", faulty = true, bugSupplier = ::addEntityWithoutDefaultNewAttribute)
 
@@ -420,7 +421,7 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
                 "entity postchain_chromia_test {\n" +
                         "    value1: text;\n" +
                         "}\n" +
-                        "operation add_postchain_chromia_test(value: text) {\n" +
+                        "operation add_postchain_chromia_test(provider_pubkey: pubkey, value: text) {\n" +
                         "    create postchain_chromia_test(value);\n" +
                         "}"
         )
