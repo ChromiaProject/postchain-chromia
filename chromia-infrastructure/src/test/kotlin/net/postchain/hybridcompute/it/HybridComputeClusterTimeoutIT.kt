@@ -46,7 +46,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup(){
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `compute cluster timeout`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test_cluster_timeout.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test_cluster_timeout.xml")
 
         val input1 = CompleteComputation(6).encode()
 

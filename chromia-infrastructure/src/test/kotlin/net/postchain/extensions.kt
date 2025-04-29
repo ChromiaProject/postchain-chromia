@@ -14,12 +14,13 @@ fun IntegrationTestSetup.enqueueTx(
         chainId: Long,
         merkleHashCalculator: GtvMerkleHashCalculatorBase,
         body: (TransactionBuilder) -> Unit
-) {
+): ByteArray {
     val blockchainRid = getChainNodes(chainId).first().getBlockchainRid(chainId)!!
     val builder = TransactionBuilder(mock(), blockchainRid, emptyList(), merkleHashCalculator, cryptoSystem = cryptoSystem)
     body(builder)
-    val txData = builder
+    val gtx = builder
             .addNop()
-            .finish().buildGtx().encode()
-    enqueueTx(chainId, txData)
+            .finish().buildGtx()
+    enqueueTx(chainId, gtx.encode())
+    return gtx.calculateTxRid(merkleHashCalculator)
 }

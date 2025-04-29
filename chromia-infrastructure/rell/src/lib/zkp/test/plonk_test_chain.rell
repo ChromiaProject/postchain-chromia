@@ -1,0 +1,7 @@
+module;
+
+import ^^.plonk.*;
+
+operation verify_plonk_proof(public_signals: list<big_integer>) {
+    check_plonk_proof("test_vk", public_signals, true);
+}

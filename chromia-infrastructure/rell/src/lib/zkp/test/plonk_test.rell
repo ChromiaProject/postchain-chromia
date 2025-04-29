@@ -1,0 +1,51 @@
+@test module;
+
+import ^^.*;
+import ^.helpers.*;
+
+val dummy_proof = [""].to_gtv(); // We never care about the actual proof on Rell side
+
+function test_verify_proof() {
+    rell.test.tx().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [1L])
+        ).run();
+}
+
+function test_no_proof() {
+    rell.test.tx().op(
+            verify_plonk_proof("test_vk", [1L])
+        ).run_must_fail("No matching PLONK proof in transaction");
+}
+
+function test_no_proof_for_vkey() {
+    rell.test.tx().op(
+            zkp_plonk_verify("test_vk2", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [1L])
+        ).run_must_fail("No matching PLONK proof in transaction");
+}
+
+function test_no_proof_for_public_signals() {
+    rell.test.tx().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [2L])
+        ).run_must_fail("No matching PLONK proof in transaction");
+}
+
+function test_rejecting_already_used_proof() {
+    rell.test.tx().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [1L])
+        ).run();
+
+    rell.test.tx().nop().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [1L])
+        ).run_must_fail("PLONK proof has already been used");
+
+    // Ok if we don't require uniqueness
+    rell.test.tx().nop().op(
+            zkp_plonk_verify("test_vk", dummy_proof, [1L]),
+            verify_plonk_proof("test_vk", [1L], false),
+        ).run();
+}

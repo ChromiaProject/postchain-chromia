@@ -48,7 +48,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `successful computation`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
 
         val input = CompleteComputation(1).encode()
 
@@ -113,7 +113,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `failed computation`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
 
         val input = FailComputation(1).encode()
 
@@ -179,7 +179,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `unexpectedly failed computation`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
 
         val input = ErrorComputation(1).encode()
 
@@ -245,7 +245,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `timed out computation`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
 
         val input = CompleteComputation(8).encode()
 
@@ -311,7 +311,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `invalid computation`() {
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
 
         val input = InvalidComputation(1).encode()
 
