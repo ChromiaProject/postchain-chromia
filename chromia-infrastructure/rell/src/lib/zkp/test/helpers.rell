@@ -4,10 +4,9 @@ import ^^.*;
 
 operation verify_plonk_proof(
     verification_key: text,
-    public_signals: list<big_integer>,
-    require_unique: boolean = true
+    public_signals: list<big_integer>
 ) {
-    check_plonk_proof(verification_key, public_signals, require_unique);
+    check_plonk_proof(verification_key, public_signals);
 }
 
 operation zkp_plonk_verify(verification_key: text, proof: gtv, public_signals: list<big_integer>) {}
