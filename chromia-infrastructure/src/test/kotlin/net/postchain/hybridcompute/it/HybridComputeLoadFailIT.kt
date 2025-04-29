@@ -34,7 +34,7 @@ class HybridComputeLoadFailIT : IntegrationTestSetup() {
     fun `failed loading`() {
         val appender = createLogCaptor(HybridComputeSpecialTransactionExtension::class.java, "LoadFailure")
 
-        doSystemSetup(nodeCount = 4, "/hybridcompute/hybridcompute_test_load_fail.xml")
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test_load_fail.xml")
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertThat(appender.events.map { it.message.toString() })

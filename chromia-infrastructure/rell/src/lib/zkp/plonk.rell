@@ -1,0 +1,34 @@
+module;
+
+val plonk_verify_op_name = "zkp_plonk_verify";
+
+/**
+ * Checks whether or not the current transaction contains a valid PLONK proof.
+ *
+ * @param verification_key_id ID of the verification key that the proof must have been validated with
+ * @param public_signals The public signals that the proof must have been validated with
+ * @param require_unique Requires that this proof has not been used on this chain previously
+ */
+function check_plonk_proof(
+    verification_key_id: text,
+    public_signals: list<big_integer>,
+    require_unique: boolean = true
+) {
+    val matching_proof_op = op_context.get_all_operations() @? {
+            .name == plonk_verify_op_name,
+            text.from_gtv(.args[0]) == verification_key_id,
+            list<big_integer>.from_gtv(.args[2]) == public_signals
+        };
+    require(matching_proof_op, "No matching PLONK proof in transaction");
+
+    if (require_unique) {
+        val proof_op_hash = matching_proof_op.args.hash();
+        require(empty(zkp_plonk_verified_proof @? { proof_op_hash }), "PLONK proof has already been used");
+        create zkp_plonk_verified_proof ( proof_op_hash );
+    }
+}
+
+@log
+entity zkp_plonk_verified_proof {
+    key hash: byte_array;
+}
