@@ -56,26 +56,6 @@ class PlonkVerifierIT : IntegrationTestSetup() {
         val txIsConfirmed = blockQueries.isTransactionConfirmed(txRid).get()
 
         assertThat(txIsConfirmed).isTrue()
-
-        val txRidDuplicate = enqueueTx(DEFAULT_CHAIN_IID, hashCalculator) {
-            it.apply {
-                addOperation(
-                        PlonkVerifyGTXOperation.OP_NAME,
-                        gtv("test_vk"),
-                        validProofBn128,
-                        gtv(validPublicSignalsBn128.map { gtv(it) })
-                )
-                verifyPlonkProofOperation(validPublicSignalsBn128)
-            }
-        }
-        buildBlock(DEFAULT_CHAIN_IID)
-
-        val txQueue = nodes.first().getBlockchainInstance().blockchainEngine.getTransactionQueue()
-
-        val txStatus = txQueue.getTransactionStatus(txRidDuplicate)
-        assertThat(txStatus).isEqualTo(TransactionStatus.REJECTED)
-        val rejectReason = txQueue.getRejectionReason(txRidDuplicate.wrap())!!.first.message!!
-        assertThat(rejectReason).contains("PLONK proof has already been used")
     }
 
     @Test
