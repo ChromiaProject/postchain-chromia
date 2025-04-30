@@ -1,5 +1,6 @@
 package net.postchain.zkp.plonk
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.zkp.curve.G1Point
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -23,26 +24,33 @@ data class PlonkProof(
         val evalZw: BigInteger,
 ) {
     companion object {
-        fun fromGtvArray(gtv: GtvArray) = PlonkProof(
-                decodeGtvPoint(gtv[0]),
-                decodeGtvPoint(gtv[1]),
-                decodeGtvPoint(gtv[2]),
-                decodeGtvPoint(gtv[3]),
-                decodeGtvPoint(gtv[4]),
-                decodeGtvPoint(gtv[5]),
-                decodeGtvPoint(gtv[6]),
-                decodeGtvPoint(gtv[7]),
-                decodeGtvPoint(gtv[8]),
-                gtv[9].asBigInteger(),
-                gtv[10].asBigInteger(),
-                gtv[11].asBigInteger(),
-                gtv[12].asBigInteger(),
-                gtv[13].asBigInteger(),
-                gtv[14].asBigInteger(),
-        )
+        fun fromGtvArray(gtv: GtvArray): PlonkProof {
+            if (gtv.getSize() != 15) throw UserMistake("Invalid array size for PLONK proof expected 15, got ${gtv.getSize()}")
 
-        private fun decodeGtvPoint(gtv: Gtv) = gtv.asArray().let {
-            G1Point(gtv[0].asBigInteger(), gtv[1].asBigInteger())
+            return PlonkProof(
+                    decodeGtvPoint(gtv[0]),
+                    decodeGtvPoint(gtv[1]),
+                    decodeGtvPoint(gtv[2]),
+                    decodeGtvPoint(gtv[3]),
+                    decodeGtvPoint(gtv[4]),
+                    decodeGtvPoint(gtv[5]),
+                    decodeGtvPoint(gtv[6]),
+                    decodeGtvPoint(gtv[7]),
+                    decodeGtvPoint(gtv[8]),
+                    gtv[9].asBigInteger(),
+                    gtv[10].asBigInteger(),
+                    gtv[11].asBigInteger(),
+                    gtv[12].asBigInteger(),
+                    gtv[13].asBigInteger(),
+                    gtv[14].asBigInteger()
+            )
+        }
+
+        private fun decodeGtvPoint(gtv: Gtv): G1Point {
+            val array = gtv.asArray()
+            if (array.size != 2) throw UserMistake("Invalid array size for point in PLONK proof expected 2, got ${array.size}")
+
+            return G1Point(array[0].asBigInteger(), array[1].asBigInteger())
         }
     }
 }
