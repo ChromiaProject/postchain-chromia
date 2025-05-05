@@ -56,6 +56,21 @@ class IccfGTXOperation(
         if (data.operations.all { nonCustomOps.contains(it.opName) }) {
             throw GTXOpMistake("Tx must contain other operations than $nonCustomOps", data)
         }
+
+        if (!isSyncing) {
+            if (data.operations
+                    .filter { it.opName == ICCF_OP_NAME }
+                    .groupingBy { op ->
+                        val sourceBlockchainRid = decodeSafely(op.args, 0) { it.asByteArray() }
+                        val sourceTxHash = decodeSafely(op.args, 1) { it.asByteArray() }
+                        (sourceBlockchainRid + sourceTxHash).contentHashCode()
+                    }
+                    .eachCount()
+                    .any { it.value > 1 }) {
+                throw GTXOpMistake("Duplicate $ICCF_OP_NAME operation detected", data)
+            }
+        }
+
         when (args.size) {
             3 -> verifyIntraClusterIccf(args)
             6 -> verifyIntraNetworkIccf(args, isSyncing)

@@ -31,6 +31,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.data.OpData
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -777,6 +778,47 @@ class IccfValidationTest {
             iccfGTXOperation.checkCorrectness()
         }
 
+        assertDoesNotThrow {
+            iccfGTXOperation.checkCorrectnessWhileSyncing()
+        }
+    }
+
+    @Test
+    fun rejectDuplicateProofs() {
+        val clusterManagement: ClusterManagement = mock {
+            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+            on { getBlockchainPeers(clusterAnchoringChainRid, 0) } doReturn clusterAnchoringChainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
+        }
+
+        val iccfGtxOp = GtxOp(
+                ICCF_OP_NAME,
+                gtv(sourceBlockchainRid),
+                gtv(txToProveHash),
+                gtv(GtvEncoder.encodeGtv(confirmationProof)),
+                gtv(clusterAnchoringTx.encode()),
+                gtv(0),
+                gtv(GtvEncoder.encodeGtv(clusterAnchoringConfirmationProof)))
+        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp, iccfGtxOp), listOf())
+        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray() + dummyOp)
+        val iccfContext = IccfGTXModuleContext().apply {
+            this.cryptoSystem = this@IccfValidationTest.cryptoSystem
+            this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
+            this.queryProvider = mock {}
+            this.nodeIsReplica = false
+        }
+        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
+
+        // Reject duplicate while building
+        val gtxOpMistake = assertThrows<GTXOpMistake> {
+            iccfGTXOperation.checkCorrectness()
+        }
+        assertThat(gtxOpMistake.message).contains("Duplicate iccf_proof operation")
+
+        // Ignore duplicate while syncing
         assertDoesNotThrow {
             iccfGTXOperation.checkCorrectnessWhileSyncing()
         }
