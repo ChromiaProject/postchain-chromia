@@ -79,16 +79,17 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
         }
 
         override fun apply(ctx: TxEContext): Boolean {
-            try {
-                if (!delegate.apply(ctx)) {
-                    logger.warn("Delegate ${MessageOp.OP_NAME} operation failed, blocking topic ${parsedOp.topic} for this block")
-                    specialTxExtension.blockPipe(parsedOp.topic)
-                    throw UserMistake("Delegate ${MessageOp.OP_NAME} operation failed")
-                }
+            val success = try {
+                delegate.apply(ctx)
             } catch (e: UserMistake) {
                 logger.warn("Delegate ${MessageOp.OP_NAME} operation failed, blocking topic ${parsedOp.topic} for this block")
                 specialTxExtension.blockPipe(parsedOp.topic)
                 throw UserMistake("Delegate ${MessageOp.OP_NAME} operation failed: ${e.message}", e)
+            }
+            if (!success) {
+                logger.warn("Delegate ${MessageOp.OP_NAME} operation failed, blocking topic ${parsedOp.topic} for this block")
+                specialTxExtension.blockPipe(parsedOp.topic)
+                throw UserMistake("Delegate ${MessageOp.OP_NAME} operation failed")
             }
             return true
         }
