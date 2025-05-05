@@ -77,7 +77,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         createNonAnchoredOperations(bctx, allOps, nonAnchoredReceivers.flatMap { it.getRelevantPipes() }, BASE_SPECIAL_TX_OVERHEAD, messageLimit).let { size ->
             createAnchoredOperations(bctx, allOps, anchoredReceivers.flatMap { it.getRelevantPipes() }, size, messageLimit)
         }
-        blockedPipes.clear()
+        bctx.addAfterCommitHook {
+            blockedPipes.clear()
+        }
         return allOps
     }
 
