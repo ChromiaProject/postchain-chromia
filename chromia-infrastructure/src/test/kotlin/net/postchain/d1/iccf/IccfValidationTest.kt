@@ -7,8 +7,14 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.chromia.model.BlockchainState
 import net.postchain.client.core.PostchainBlockClient
 import net.postchain.common.BlockchainRid
+import net.postchain.common.BlockchainRid.Companion.ZERO_RID
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.EContext
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BATCH_BLOCK_HEADER
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK_HEADER
 import net.postchain.d1.cluster.ClusterManagement
@@ -26,9 +32,12 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
+import net.postchain.gtx.GTXTransaction
+import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
+import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.data.OpData
 import org.assertj.core.api.Assertions.assertThat
@@ -683,22 +692,48 @@ class IccfValidationTest {
 
     @Test
     fun noOtherOperationsInTx() {
+        val clusterManagement: ClusterManagement = mock {
+            on { getBlockchainPeers(sourceBlockchainRid, 0) } doReturn sourceBlockchainSigners.map { it.pubKey }
+        }
+        val nodeManagement: NodeManagement = mock {
+            on { getBlockchainState(sourceBlockchainRid) } doReturn BlockchainState.REMOVED
+        }
+        val clusterAnchoringClient: PostchainBlockClient = mock {
+            on {
+                query("is_block_anchored", gtv(mapOf(
+                        "blockchain_rid" to gtv(sourceBlockchainRid), "block_rid" to gtv(sourceBlockRid))
+                ))
+            } doReturn gtv(true)
+        }
+        val chromiaQueryProvider: ChromiaQueryProvider = mock {
+            on { getClusterAnchoringQuery() } doReturn clusterAnchoringClient
+        }
         val iccfContext = IccfGTXModuleContext().apply {
             this.cryptoSystem = this@IccfValidationTest.cryptoSystem
-            this.clusterManagement = mock {}
-            this.nodeManagement = mock {}
-            this.queryProvider = mock {}
+            this.clusterManagement = clusterManagement
+            this.nodeManagement = nodeManagement
+            this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
-
-        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
-        val gtxBody = GtxBody(targetBlockchainRid, listOf(iccfGtxOp), listOf())
-        val iccfExtOpData = ExtOpData.build(iccfGtxOp.asOpData(), 0, gtxBody, gtxBody.operations.map { it.asOpData() }.toTypedArray())
-        val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
-
-        assertThrows<GTXOpMistake> {
-            iccfGTXOperation.checkCorrectness()
+        val gtxModule = object: SimpleGTXModule<IccfGTXModuleContext>(
+                iccfContext,
+                mapOf(ICCF_OP_NAME to ::IccfGTXOperation),
+                mapOf()
+        ) {
+            override fun initializeDB(ctx: EContext) {}
         }
+        val iccfGtxOp = GtxOp(ICCF_OP_NAME, gtv(sourceBlockchainRid), gtv(txToProveHash), gtv(GtvEncoder.encodeGtv(confirmationProof)))
+        val gtxBody = GtxBody(ZERO_RID, listOf(iccfGtxOp), listOf(pubKey(0)))
+        val signature = iccfContext.cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val factory = GTXTransactionFactory(ZERO_RID, gtxModule, iccfContext.cryptoSystem, hashCalculator)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature)).encode()
+        val tx = factory.decodeTransaction(gtxData) as GTXTransaction
+        val exception = assertThrows<TransactionIncorrect> {
+            tx.checkCorrectness()
+        }
+        assertThat(exception.message).contains("contains no normal operation")
     }
 
     @Test
