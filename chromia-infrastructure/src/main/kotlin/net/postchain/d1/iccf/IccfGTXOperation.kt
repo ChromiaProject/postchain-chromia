@@ -26,8 +26,6 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXOpMistake
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.Gtx
-import net.postchain.gtx.GtxNop
-import net.postchain.gtx.GtxTimeB
 import net.postchain.gtx.data.ExtOpData
 
 class IccfGTXOperation(
@@ -40,9 +38,10 @@ class IccfGTXOperation(
     private val queryProvider = iccfContext.queryProvider
     private val nodeIsReplica = iccfContext.nodeIsReplica
     private val myCluster = clusterManagement.getClusterOfBlockchain(opData.blockchainRID)
-    private val nonCustomOps = setOf(ICCF_OP_NAME, GtxNop.OP_NAME, GtxTimeB.OP_NAME)
 
     override fun apply(ctx: TxEContext) = true
+
+    override fun isCompound() = true
 
     override fun checkCorrectnessWhileSyncing() {
         verifyIccf(data.args, true)
@@ -53,10 +52,6 @@ class IccfGTXOperation(
     }
 
     private fun verifyIccf(args: Array<out Gtv>, isSyncing: Boolean) {
-        if (data.operations.all { nonCustomOps.contains(it.opName) }) {
-            throw GTXOpMistake("Tx must contain other operations than $nonCustomOps", data)
-        }
-
         if (!isSyncing) {
             if (data.operations
                     .filter { it.opName == ICCF_OP_NAME }
