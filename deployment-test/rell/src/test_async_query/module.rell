@@ -1,0 +1,9 @@
+module;
+
+entity city { key name; }
+
+operation add_data(name) {
+    create city (name);
+}
+
+query get_data() { return city @* {} ( .name ); }

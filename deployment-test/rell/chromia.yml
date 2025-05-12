@@ -165,6 +165,16 @@ blockchains:
       lib.hbridge:
         version: 2
 
+  test_async_query:
+    module: test_async_query
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        maxblocktime: 1000
+        maxblocktransactions: 500
+      async_query_queue_capacity: 10
+
 libs:
   ft4:
     registry: https://gitlab.com/chromaway/ft4-lib.git

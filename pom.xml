@@ -30,8 +30,8 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.34.1</postchain.version>
-        <postchain.client.version>3.29.2</postchain.client.version>
+        <postchain.version>3.35.1</postchain.version>
+        <postchain.client.version>3.30.0</postchain.client.version>
         <directory.chain.version>1.91.0</directory.chain.version>
         <rell.version>0.14.10</rell.version>
         <rell.maven.plugin.version>0.14.1</rell.maven.plugin.version>
