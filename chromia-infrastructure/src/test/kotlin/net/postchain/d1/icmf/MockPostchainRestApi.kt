@@ -15,6 +15,8 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
@@ -69,6 +71,14 @@ object MockPostchainRestApi : Closeable {
             }
 
             override fun query(query: GtxQuery): Gtv = client.query(query.name, query.args)
+
+            override fun enqueueQuery(query: GtxQuery) {
+                TODO("Not yet implemented")
+            }
+
+            override fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse {
+                TODO("Not yet implemented")
+            }
 
             override fun postTransaction(tx: ByteArray) {
                 TODO("Not yet implemented")
@@ -127,6 +137,10 @@ object MockPostchainRestApi : Closeable {
             }
 
             override fun getRejectedTransactions(): List<ApiRejectedTransaction> {
+                TODO("Not yet implemented")
+            }
+
+            override fun checkQueryCorrectness(query: GtxQuery) {
                 TODO("Not yet implemented")
             }
 
