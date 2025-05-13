@@ -18,6 +18,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.images.common.ManagedModeBase
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider1KeyPair
+import org.awaitility.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
@@ -117,10 +119,10 @@ class AsyncQueryIT {
     @Order(5)
     fun `Query dapp`() {
         with(node1.client(dapps["test_async_query"]!!)) {
-            transactionBuilder().addOperation("add_data", gtv("Heraklion"))
+            transactionBuilder().addOperation("add_data", gtv("Heraklion"), gtv(12345L))
                     .postTransactionUntilConfirmed("add_data")
 
-            assertThat(query("get_data", gtv(mapOf())))
+            assertThat(query("quick_query", gtv(mapOf())))
                     .isEqualTo(gtv(listOf(gtv("Heraklion"))))
         }
     }
@@ -129,12 +131,28 @@ class AsyncQueryIT {
     @Order(6)
     fun `Async query dapp`() {
         with(node1.client(dapps["test_async_query"]!!)) {
-            val (endpoint, queryRid) = asyncQuery("get_data", gtv(mapOf()))
+            val (endpoint, queryRid) = asyncQuery("quick_query", gtv(mapOf()))
             assertThat(endpoint.url).isEqualTo(config.endpointPool.first().url)
             awaitUntilAsserted {
                 val response = fetchAsyncQueryResponse(endpoint, queryRid)
                 assertThat(response.status).isEqualTo(AsyncQueryResponseStatus.COMPLETED)
                 assertThat(response.queryResponse).isEqualTo(gtv(listOf(gtv("Heraklion"))))
+            }
+        }
+    }
+
+    @Test
+    @Order(7)
+    fun `Async query timeout`() {
+        with(node1.client(dapps["test_async_query"]!!)) {
+            transactionBuilder().addOperation("add_bulk_data", gtv(50))
+                    .postTransactionUntilConfirmed("add_bulk_data")
+
+            val (endpoint, queryRid) = asyncQuery("slow_query", gtv(mapOf()))
+            assertThat(endpoint.url).isEqualTo(config.endpointPool.first().url)
+            awaitUntilAsserted(Duration(7, TimeUnit.SECONDS)) {
+                val response = fetchAsyncQueryResponse(endpoint, queryRid)
+                assertThat(response.status).isEqualTo(AsyncQueryResponseStatus.FAILED)
             }
         }
     }
