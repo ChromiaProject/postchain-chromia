@@ -1,9 +1,20 @@
 module;
 
-entity city { key name; }
-
-operation add_data(name) {
-    create city (name);
+entity city {
+    key name;
+    population: integer;
 }
 
-query get_data() { return city @* {} ( .name ); }
+operation add_data(name, population: integer) {
+    create city ( name, population );
+}
+
+operation add_bulk_data(n: integer) {
+    for (i in range(n)) {
+        create city ( "City"+i, i*1234 );
+    }
+}
+
+query quick_query() = city @* { } ( .name );
+
+query slow_query() = (a: city, b: city, c: city, d: city, e: city) @* { } ( @sum a.population + b.population + c.population + d.population + e.population );
