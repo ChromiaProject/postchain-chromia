@@ -49,6 +49,42 @@ file_env() {
 	unset "$fileVar"
 }
 
+configure_allow_all_hosts() {
+  # check password first so we can output the warning before postgres
+  # messes it up
+  file_env 'POSTGRES_PASSWORD'
+  if [ "$POSTGRES_PASSWORD" ]; then
+    pass="PASSWORD '$POSTGRES_PASSWORD'"
+    authMethod=md5
+  else
+    # The - option suppresses leading tabs but *not* spaces. :)
+    cat >&2 <<-'EOWARN'
+      ****************************************************
+      WARNING: No password has been set for the database.
+               This will allow anyone with access to the
+               Postgres port to access your database. In
+               Docker's default configuration, this is
+               effectively any other container on the same
+               system.
+               Use "-e POSTGRES_PASSWORD=password" to set
+               it in "docker run".
+      ****************************************************
+EOWARN
+
+    pass=
+    authMethod=trust
+  fi
+  pg_hba_rule="host all all all $authMethod"
+
+  if ! egrep -q "^$pg_hba_rule" $PGDATA/pg_hba.conf; then
+    echo "Adding rule to pg_hba.conf: $pg_hba_rule"
+    {
+      echo
+      echo "$pg_hba_rule"
+    } >> "$PGDATA/pg_hba.conf"
+  fi
+}
+
 configure_resource_limits() {
   # Parse cgroup info to find memory limit
   if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
@@ -118,36 +154,7 @@ if [ "$1" = 'postgres' ]; then
 		fi
 		eval "$PG_BIN/initdb --username=postgres $POSTGRES_INITDB_ARGS"
 
-		# check password first so we can output the warning before postgres
-		# messes it up
-		file_env 'POSTGRES_PASSWORD'
-		if [ "$POSTGRES_PASSWORD" ]; then
-			pass="PASSWORD '$POSTGRES_PASSWORD'"
-			authMethod=md5
-		else
-			# The - option suppresses leading tabs but *not* spaces. :)
-			cat >&2 <<-'EOWARN'
-				****************************************************
-				WARNING: No password has been set for the database.
-				         This will allow anyone with access to the
-				         Postgres port to access your database. In
-				         Docker's default configuration, this is
-				         effectively any other container on the same
-				         system.
-				         Use "-e POSTGRES_PASSWORD=password" to set
-				         it in "docker run".
-				****************************************************
-			EOWARN
-
-			pass=
-			authMethod=trust
-		fi
-
-		{
-			echo
-			echo "host all all all $authMethod"
-		} >> "$PGDATA/pg_hba.conf"
-
+    configure_allow_all_hosts
 		configure_resource_limits
 
 		# starting the database server
@@ -194,35 +201,36 @@ if [ "$1" = 'postgres' ]; then
 		echo
 		echo 'PostgreSQL init process complete; ready for start up.'
 		echo
-        else
-                # Container limits may have changed
-                configure_resource_limits
+  else
+    # Ensure desired configuration is up to date
+    configure_allow_all_hosts
+    configure_resource_limits
 
-                # starting the database server
-                PGUSER="${PGUSER:-postgres}" \
-                "$PG_BIN/pg_ctl" -D "$PGDATA" -w start
+    # starting the database server
+    PGUSER="${PGUSER:-postgres}" \
+    "$PG_BIN/pg_ctl" -D "$PGDATA" -w start
 
-                file_env 'POSTGRES_USER' 'postgres'
-                file_env 'POSTGRES_DB' "$POSTGRES_USER"
+    file_env 'POSTGRES_USER' 'postgres'
+    file_env 'POSTGRES_DB' "$POSTGRES_USER"
 
-                psql=( "$PG_BIN/psql" -v ON_ERROR_STOP=1 )
-                psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
+    psql=( "$PG_BIN/psql" -v ON_ERROR_STOP=1 )
+    psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
 
-                echo
-                for f in /docker-entrypoint-initdb.d/*; do
-                        case "$f" in
-                                *.sh)     echo "$0: running $f"; . "$f" ;;
-                                *.sql)    echo "$0: running $f"; "${psql[@]}" -f "$f"; echo ;;
-                                *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${psql[@]}"; echo ;;
-                                *)        echo "$0: ignoring $f" ;;
-                        esac
-                        echo
-                done
+    echo
+    for f in /docker-entrypoint-initdb.d/*; do
+            case "$f" in
+                    *.sh)     echo "$0: running $f"; . "$f" ;;
+                    *.sql)    echo "$0: running $f"; "${psql[@]}" -f "$f"; echo ;;
+                    *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${psql[@]}"; echo ;;
+                    *)        echo "$0: ignoring $f" ;;
+            esac
+            echo
+    done
 
-                echo
-                echo 'PostgreSQL REinit process complete; ready for start up.'
-                echo
-	fi
+    echo
+    echo 'PostgreSQL REinit process complete; ready for start up.'
+    echo
+  fi
 fi
 
 if [ -f /circleconfig/postgres/customizations ] && [ -s /circleconfig/postgres/customizations ]
