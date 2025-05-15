@@ -102,35 +102,42 @@ gitlab-release:
   extends: .gitlab-release-with-notes
   script:
     - |
-      git fetch --tags --force &> /dev/null
-      PREV_CI_COMMIT_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | grep $CI_COMMIT_TAG -A1 | tail -n 1)
-      echo "Previous tag: $PREV_CI_COMMIT_TAG"
+      if [ -z "$SKIP_SUB_CHANGELOG" ]; then
+  
+        echo "Appending sub changelogs..."
       
-      function get_pom_diff_version {
-        echo "$1" | grep "^${2}[ ]*<${3}>[0-9.]*</${3}>$" | egrep -o '[0-9]{1,}[.][0-9]{1,}[.][0-9]{1,}' || echo ""
-      }
-      
-      function include_dependency_changelog {
-      	tag_from="$1"
-      	tag_to="$2"
-      	name="$3"
-      	pom_variable="$4"
-      	gl_project_id="$5"
-      
-      	pom_diff="$(git --no-pager diff ${tag_from}..${tag_to} -- pom.xml)"
-      	dependency_from_version="$(get_pom_diff_version "$pom_diff" "-" "$pom_variable")"
-      	dependency_to_version="$(get_pom_diff_version "$pom_diff" "+" "$pom_variable")"
-      
-      	if [ -n "$dependency_from_version" ] && [ "$dependency_from_version" != "$dependency_to_version" ]; then
-      
-      		echo "Fetching dependency $name changelog from $dependency_from_version to $dependency_to_version"
-      		wget --header="PRIVATE-TOKEN: $CI_API_TOKEN" -O- "$CI_API_V4_URL/projects/$gl_project_id/repository/changelog?version=9999.9999.9999&from=${dependency_from_version}&to=${dependency_to_version}" | grep -o "\"notes\":\"[^\"]*\"" | sed "s/\"notes\":\"//;s/\"$//;" | sed "s/\\\\n/\n/g" | sed "s/##.*/#### Includes updated $name ($dependency_from_version - $dependency_to_version)/g" >> release_notes.md
-      	fi
-      }
-      include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "Postchain" "postchain.version" 32294340
-      include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "EIF" "eif.version" 36768178
-      
-      cat release_notes.md
+        git fetch --tags --force &> /dev/null
+        PREV_CI_COMMIT_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | grep $CI_COMMIT_TAG -A1 | tail -n 1)
+        echo "Previous tag: $PREV_CI_COMMIT_TAG"
+        
+        function get_pom_diff_version {
+          echo "$1" | grep "^${2}[ ]*<${3}>[0-9.]*</${3}>$" | egrep -o '[0-9]{1,}[.][0-9]{1,}[.][0-9]{1,}' || echo ""
+        }
+        
+        function include_dependency_changelog {
+          tag_from="$1"
+          tag_to="$2"
+          name="$3"
+          pom_variable="$4"
+          gl_project_id="$5"
+        
+          pom_diff="$(git --no-pager diff ${tag_from}..${tag_to} -- pom.xml)"
+          dependency_from_version="$(get_pom_diff_version "$pom_diff" "-" "$pom_variable")"
+          dependency_to_version="$(get_pom_diff_version "$pom_diff" "+" "$pom_variable")"
+        
+          if [ -n "$dependency_from_version" ] && [ "$dependency_from_version" != "$dependency_to_version" ]; then
+        
+              echo "Fetching dependency $name changelog from $dependency_from_version to $dependency_to_version"
+              wget --header="PRIVATE-TOKEN: $CI_API_TOKEN" -O- "$CI_API_V4_URL/projects/$gl_project_id/repository/changelog?version=9999.9999.9999&from=${dependency_from_version}&to=${dependency_to_version}" | grep -o "\"notes\":\"[^\"]*\"" | sed "s/\"notes\":\"//;s/\"$//;" | sed "s/\\\\n/\n/g" | sed "s/##.*/#### Includes updated $name ($dependency_from_version - $dependency_to_version)/g" >> release_notes.md
+          fi
+        }
+        include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "Postchain" "postchain.version" 32294340
+        include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "EIF" "eif.version" 36768178
+        
+        cat release_notes.md
+      else
+        echo "Skipping sub changelogs"
+      fi
   release:
     name: 'Postchain Chromia $CI_COMMIT_TAG'
     description: release_notes.md
