@@ -314,5 +314,16 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         }
     }
 
+    override fun getAllTopics(ctx: EContext): List<String> {
+        return DatabaseAccess.of(ctx).run {
+            createJooq(ctx).selectDistinct(COLUMN_TOPIC)
+                    .from(tableSentIcmfMessage(ctx))
+                    .orderBy(COLUMN_TOPIC)
+                    .fetch()
+        }.map {
+            it[COLUMN_TOPIC]
+        }
+    }
+
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
 }

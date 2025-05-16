@@ -770,4 +770,8 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
     override fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic> {
         TODO("Not yet implemented")
     }
+
+    override fun getAllTopics(ctx: EContext): List<String> {
+        TODO("Not yet implemented")
+    }
 }
