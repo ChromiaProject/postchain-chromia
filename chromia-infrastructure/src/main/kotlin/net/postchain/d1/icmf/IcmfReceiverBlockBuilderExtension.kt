@@ -6,6 +6,7 @@ import net.postchain.base.TxEventSink
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
@@ -21,7 +22,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
 
     private lateinit var blockEContext: BlockEContext
     private lateinit var cryptoSystem: CryptoSystem
-    private var eventListener: ((List<IcmfReceiverEventMessage>) -> Unit)? = null
+    private var eventListener: ((List<IcmfReceiverEventMessage>, EContext) -> Unit)? = null
     private var queuedUpdates: MutableList<IcmfReceiverEventMessage> = mutableListOf()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
@@ -59,13 +60,13 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
 
         blockEContext.addAfterCommitHook {
             if (queuedUpdates.isNotEmpty()) {
-                eventListener?.invoke(queuedUpdates)
+                eventListener?.invoke(queuedUpdates, blockEContext)
                 queuedUpdates.clear()
             }
         }
     }
 
-    fun addEventListener(function: (List<IcmfReceiverEventMessage>) -> Unit) {
+    fun addEventListener(function: (List<IcmfReceiverEventMessage>, ctx: EContext) -> Unit) {
         eventListener = function
     }
 

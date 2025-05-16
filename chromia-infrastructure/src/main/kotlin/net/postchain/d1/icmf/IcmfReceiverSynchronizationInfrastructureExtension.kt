@@ -7,7 +7,6 @@ import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.base.withWriteConnection
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.impl.TryNextOnErrorRequestStrategyFactory
@@ -19,6 +18,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.ChromiaQueryProviderFactory
@@ -75,21 +75,18 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
-                    blockBuilder.addEventListener { update ->
+                    blockBuilder.addEventListener { update, ctx: EContext ->
 
                         val dappProvidedTopics: MutableList<IcmfReceiverEventTopic> = mutableListOf()
-                        withWriteConnection(engine.blockBuilderStorage, configuration.chainID) { ctx ->
-                            update.forEach {
-                                if (it.replace) {
-                                    dbOperations.deleteDappProvidedReceiverTopics(ctx)
-                                }
-                                if (!it.topics.isNullOrEmpty()) {
-                                    dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
-                                }
+                        update.forEach {
+                            if (it.replace) {
+                                dbOperations.deleteDappProvidedReceiverTopics(ctx)
                             }
-                            dappProvidedTopics.addAll(dbOperations.loadDappProvidedReceiverTopics(ctx))
-                            true
+                            if (!it.topics.isNullOrEmpty()) {
+                                dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
+                            }
                         }
+                        dappProvidedTopics.addAll(dbOperations.loadDappProvidedReceiverTopics(ctx))
 
                         removeReceivers(configuration.chainID, txExt)
                         addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, dappProvidedTopics)
