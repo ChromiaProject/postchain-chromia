@@ -15,6 +15,7 @@ import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
@@ -120,16 +121,37 @@ class IcmfSenderIT : IcmfBaseIT() {
             buildBlock(dappChain, i.toLong(), *blockTxs.toTypedArray())
         }
 
-        val messages = nodes[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
+        val blockQueries = nodes[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
+
+        val messages = blockQueries
                 .query(QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT, gtv(mapOf("topic" to gtv(topic), "height" to gtv(-1))))
                 .get()
                 .asArray()
-
         // Ensure limit is not cutting off in the middle of a height
         assertThat(messages).hasSize(4)
         assertThat(messages.filter { it["height"]!!.asInteger() == 0L }).hasSize(2)
         assertThat(messages.filter { it["height"]!!.asInteger() == 1L }).hasSize(2)
         assertThat(messages.filter { it["height"]!!.asInteger() == 2L }).hasSize(0)
+
+        val messagesWithIds = blockQueries
+                .query(QUERY_ICMF_GET_MESSAGES_AFTER_ID, gtv(mapOf("topic" to gtv(topic), "id" to GtvNull)))
+                .get()
+                .asArray()
+        // Limit should cut off in the middle of a height here
+        assertThat(messagesWithIds).hasSize(3)
+        assertThat(messagesWithIds.filter { it["height"]!!.asInteger() == 0L }).hasSize(2)
+        assertThat(messagesWithIds.filter { it["height"]!!.asInteger() == 1L }).hasSize(1)
+        assertThat(messagesWithIds.filter { it["height"]!!.asInteger() == 2L }).hasSize(0)
+
+        val messagesWithIdsReversed = blockQueries
+                .query(QUERY_ICMF_GET_MESSAGES_BEFORE_ID, gtv(mapOf("topic" to gtv(topic), "id" to GtvNull)))
+                .get()
+                .asArray()
+        // Limit should cut off in the middle of a height here
+        assertThat(messagesWithIdsReversed).hasSize(3)
+        assertThat(messagesWithIdsReversed.filter { it["height"]!!.asInteger() == 0L }).hasSize(0)
+        assertThat(messagesWithIdsReversed.filter { it["height"]!!.asInteger() == 1L }).hasSize(1)
+        assertThat(messagesWithIdsReversed.filter { it["height"]!!.asInteger() == 2L }).hasSize(2)
     }
 
     private fun verifyMessages(dappChain: Long,
@@ -165,6 +187,18 @@ class IcmfSenderIT : IcmfBaseIT() {
                 assertThat(messages.size).isEqualTo(expectedMessages.size)
                 expectedMessages.forEachIndexed { index, expectedMessage ->
                     assertThat(messages[index].asString()).isEqualTo(expectedMessage)
+                }
+
+                val allMessagesWithId = dbOps.getSentMessagesAfterId(it, topic, -1, DEFAULT_MESSAGE_QUERY_LIMIT)
+                assertThat(allMessagesWithId.size).isEqualTo(expectedAllMessages.size)
+                expectedAllMessages.forEachIndexed { index, expectedMessage ->
+                    assertThat(allMessagesWithId[index].body.asString()).isEqualTo(expectedMessage)
+                }
+
+                val allMessagesWithIdReversed = dbOps.getSentMessagesBeforeId(it, topic, Long.MAX_VALUE, DEFAULT_MESSAGE_QUERY_LIMIT)
+                assertThat(allMessagesWithIdReversed.size).isEqualTo(expectedAllMessages.size)
+                expectedAllMessages.reversed().forEachIndexed { index, expectedMessage ->
+                    assertThat(allMessagesWithIdReversed[index].body.asString()).isEqualTo(expectedMessage)
                 }
 
                 assertThat(blockQueries.query(QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
