@@ -879,7 +879,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
                 transactionBuilder.postTransactionUntilConfirmed("Testing updating provider info signed by $it and expecting tx status $expectedTxStatus")
             assertThat(response.status).isEqualTo(expectedTxStatus)
             if (expectedTxStatus == TransactionStatus.REJECTED) {
-                assertThat(response.rejectReason).isNotNull().contains("Transaction is invalid")
+                assertThat(response.rejectReason).isNotNull().contains("Operation must be signed by provider key(s)")
             }
         }
     }
