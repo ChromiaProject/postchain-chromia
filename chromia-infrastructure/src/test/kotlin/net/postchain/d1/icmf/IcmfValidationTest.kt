@@ -774,4 +774,12 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
     override fun getAllTopics(ctx: EContext): List<String> {
         TODO("Not yet implemented")
     }
+
+    override fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> {
+        TODO("Not yet implemented")
+    }
 }

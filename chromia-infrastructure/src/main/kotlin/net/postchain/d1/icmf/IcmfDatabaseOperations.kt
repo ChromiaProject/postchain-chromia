@@ -24,6 +24,8 @@ interface IcmfDatabaseOperations {
     fun saveDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>)
     fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic>
     fun getAllTopics(ctx: EContext): List<String>
+    fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
+    fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
 }
 
 data class AnchorHeight(
@@ -47,6 +49,12 @@ data class SpilledMessage(
 )
 
 data class IcmfMessageAtHeight(
+        val height: Long,
+        val body: Gtv
+)
+
+data class IcmfMessageAtHeightWithId(
+        val id: Long,
         val height: Long,
         val body: Gtv
 )

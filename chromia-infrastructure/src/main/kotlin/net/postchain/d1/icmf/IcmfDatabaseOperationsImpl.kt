@@ -325,5 +325,29 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         }
     }
 
+    override fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_ID, COLUMN_HEIGHT, COLUMN_BODY)
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_TOPIC.eq(topic))
+                .and(COLUMN_ID.gt(id))
+                .orderBy(COLUMN_ID)
+                .limit(limit)
+                .fetch()
+    }.map<IcmfMessageAtHeightWithId> {
+        IcmfMessageAtHeightWithId(id = it[COLUMN_ID], height = it[COLUMN_HEIGHT], body = GtvDecoder.decodeGtv(it[COLUMN_BODY]))
+    }
+
+    override fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_ID, COLUMN_HEIGHT, COLUMN_BODY)
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_TOPIC.eq(topic))
+                .and(COLUMN_ID.lt(id))
+                .orderBy(COLUMN_ID.desc())
+                .limit(limit)
+                .fetch()
+    }.map<IcmfMessageAtHeightWithId> {
+        IcmfMessageAtHeightWithId(id = it[COLUMN_ID], height = it[COLUMN_HEIGHT], body = GtvDecoder.decodeGtv(it[COLUMN_BODY]))
+    }
+
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
 }
