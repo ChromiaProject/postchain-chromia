@@ -2,7 +2,9 @@ package net.postchain.d1.icmf
 
 import assertk.assertThat
 import assertk.assertions.any
+import assertk.assertions.contains
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -164,6 +166,16 @@ class IcmfSenderIT : IcmfBaseIT() {
                 expectedMessages.forEachIndexed { index, expectedMessage ->
                     assertThat(messages[index].asString()).isEqualTo(expectedMessage)
                 }
+
+                assertThat(blockQueries.query(QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                        gtv(mapOf("topic" to gtv(topic), "height" to gtv(height))))
+                        .get()
+                        .asArray()).hasSize(expectedMessages.size)
+
+                assertThat(blockQueries.query(QUERY_ICMF_GET_ALL_TOPICS,
+                        gtv(mapOf()))
+                        .get()
+                        .asArray()).contains(gtv(topic))
             }
         }
     }
@@ -175,6 +187,11 @@ class IcmfSenderIT : IcmfBaseIT() {
                 val blockHeader = blockQueries.getBlockAtHeight(height).get()!!.header
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
                 assertThat(decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]).isNull()
+
+                assertThat(blockQueries.query(QUERY_ICMF_GET_ALL_TOPICS,
+                        gtv(mapOf()))
+                        .get()
+                        .asArray()).isEmpty()
             }
         }
     }

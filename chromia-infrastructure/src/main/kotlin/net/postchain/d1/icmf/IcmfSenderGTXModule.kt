@@ -20,8 +20,25 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.network.common.ConnectionManager
 
+/**
+ * query icmf_get_messages_at_height(topic: text, height: integer): list<gtv>
+ */
 const val QUERY_ICMF_GET_MESSAGES_AT_HEIGHT = "icmf_get_messages_at_height"
+
+/**
+ * struct message_at_height {
+ *     height: integer;
+ *     body: gtv;
+ * }
+ *
+ * query icmf_get_messages_after_height(topic: text, height: integer): list<message_at_height>
+ */
 const val QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT = "icmf_get_messages_after_height"
+
+/**
+ * query icmf_get_all_topics(): list<text>
+ */
+const val QUERY_ICMF_GET_ALL_TOPICS = "icmf_get_all_topics"
 
 open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
         IcmfSenderGTXModuleContext(),
@@ -40,6 +57,10 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                     val height = dict["height"]?.asInteger() ?: throw UserMistake("No height property supplied")
                     val messages = conf.dbOperations.getSentMessagesAfterHeight(ctxt, topic, height, conf.messageQueryLimit)
                     gtv(messages.map { gtv(mapOf("body" to it.body, "height" to gtv(it.height))) })
+                },
+                QUERY_ICMF_GET_ALL_TOPICS to { conf, ctxt, args ->
+                    val topics = conf.dbOperations.getAllTopics(ctxt)
+                    gtv(topics.map { gtv(it) })
                 }
         )
 ), PostchainContextAware {

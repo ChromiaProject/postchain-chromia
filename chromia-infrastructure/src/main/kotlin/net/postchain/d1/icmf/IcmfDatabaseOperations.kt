@@ -23,6 +23,7 @@ interface IcmfDatabaseOperations {
     fun deleteDappProvidedReceiverTopics(ctx: EContext)
     fun saveDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>)
     fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic>
+    fun getAllTopics(ctx: EContext): List<String>
 }
 
 data class AnchorHeight(
