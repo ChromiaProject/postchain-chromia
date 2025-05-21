@@ -3,7 +3,7 @@
 package net.postchain.d1.anchoring
 
 import net.postchain.common.BlockchainRid
-import net.postchain.containers.infra.MasterSyncInfra
+import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueries
@@ -49,7 +49,7 @@ class AnchoringDispatcher(private val storage: Storage, private val blockchainIn
 
     private fun buildSubnodePipe(chainID: Long, blockchainRid: BlockchainRid): AnchoringPipe {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
-        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterSyncInfra).masterConnectionManager) {
+        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterBlockchainInfra).masterConnectionManager) {
             anchoringBlockQueries[cluster]
         }
     }

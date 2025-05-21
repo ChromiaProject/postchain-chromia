@@ -9,7 +9,7 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
-import net.postchain.containers.infra.MasterSyncInfra
+import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.RemoteBlockchainProcess
@@ -138,7 +138,7 @@ open class AnchoringProcessManagerExtension(
         localDispatcher.connectSubnodeChain(process.chainId, process.blockchainRid)
 
         // Should always be true
-        if (blockchainInfrastructure is MasterSyncInfra) {
+        if (blockchainInfrastructure is MasterBlockchainInfra) {
             anchoringCheck.runningChainsBlockClients[process.blockchainRid] = MasterClient(
                     blockchainInfrastructure.masterConnectionManager.masterSubQueryManager,
                     process.blockchainRid
