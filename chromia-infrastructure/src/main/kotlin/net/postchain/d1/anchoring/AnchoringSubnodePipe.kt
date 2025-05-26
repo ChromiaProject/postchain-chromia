@@ -29,13 +29,15 @@ class AnchoringSubnodePipe(
         override val chainID: Long,
         override val blockchainRid: BlockchainRid,
         connectionManager: MasterConnectionManager,
-        internal val anchorBlockQueriesProvider: () -> BlockQueries?
+        internal val anchorBlockQueriesProvider: () -> BlockQueries?,
+        private val blockFetchLimit: Int = DEFAULT_BLOCK_FETCH_LIMIT,
 ) : AnchoringPipe {
     private val highestFetched = AtomicLong(-1L)
     private val packets = ConcurrentSkipListMap<Long, AnchoringPacket>() // block height to packet
 
     companion object : KLogging() {
         val pollInterval = 60.seconds
+        const val DEFAULT_BLOCK_FETCH_LIMIT = 200
     }
 
     private val client: MasterClient = MasterClient(connectionManager.masterSubQueryManager, blockchainRid)
@@ -67,9 +69,13 @@ class AnchoringSubnodePipe(
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         )) {
             try {
-                logger.debug { "Fetching blocks" }
-                fetchBlocks()
-                logger.debug { "Fetched blocks" }
+                if (packets.size < blockFetchLimit) {
+                    logger.debug { "Fetching blocks" }
+                    fetchBlocks()
+                    logger.debug { "Fetched blocks" }
+                } else {
+                    logger.debug { "Reached the limit of $blockFetchLimit unprocessed fetched blocks, skipping fetch" }
+                }
             } catch (e: UserMistake) {
                 logger.warn(e.message)
             } catch (e: Exception) {

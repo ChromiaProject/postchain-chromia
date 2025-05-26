@@ -1,7 +1,11 @@
 package net.postchain.d1.anchoring
 
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
+import net.postchain.common.createLogCaptor
 import net.postchain.core.block.BlockQueries
 import net.postchain.d1.anchoring.AnchoringPipe.Companion.MAX_PACKETS_PER_REQUEST
 import net.postchain.gtv.GtvFactory.gtv
@@ -77,7 +81,7 @@ class AnchoringSubnodePipeTest {
             )
         }
 
-        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager) { blockQueries }
+        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, { blockQueries })
 
         // afterCommit handler
         executor.scheduleAtFixedRate({
@@ -94,5 +98,43 @@ class AnchoringSubnodePipeTest {
         await().atMost(Duration.ONE_MINUTE).until {
             anchoredHeight.get() >= 100
         }
+    }
+
+    @Test
+    fun `pipe stops fetching blocks when fetch limit is reached`() {
+        val appender = createLogCaptor(AnchoringSubnodePipe::class.java, "List")
+
+        val queryManager: MasterSubQueryManager = mock {
+            on { blocksFromHeight(any(), any(), anyLong()) } doAnswer { invocation ->
+                val fromHeight = invocation.getArgument<Long>(1)
+                CompletableFuture.completedFuture(
+                        blocks.tailMap(fromHeight, true).values.take(MAX_PACKETS_PER_REQUEST.toInt()).toList()
+                )
+            }
+        }
+
+        val connectionManager: MasterConnectionManager = mock {
+            on { masterSubQueryManager } doReturn queryManager
+        }
+
+        val blockQueries: BlockQueries = mock {
+            on { query(eq("get_last_anchored_block"), any()) } doReturn CompletableFuture.completedFuture(
+                    gtv(mapOf("block_height" to gtv(-1L)))
+            )
+        }
+
+        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, { blockQueries }, 20)
+
+        executor.scheduleAtFixedRate({
+            sut.newBlockAvailable(height.get())
+        }, 0, maxBlockTime, TimeUnit.MILLISECONDS)
+
+        // Wait for 30 blocks
+        Thread.sleep(maxBlockTime * 30)
+
+        // Assert that we did not fetch more than 20 blocks
+        assertThat(sut.fetchNextRange(0).size).isEqualTo(20)
+        // Assert that we have the skip log
+        assertThat(appender.events.map { it.message.toString() }).contains("Reached the limit of 20 unprocessed fetched blocks, skipping fetch")
     }
 }

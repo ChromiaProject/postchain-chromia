@@ -49,9 +49,9 @@ class AnchoringDispatcher(private val storage: Storage, private val blockchainIn
 
     private fun buildSubnodePipe(chainID: Long, blockchainRid: BlockchainRid): AnchoringPipe {
         val cluster = clusterManagement.getClusterOfBlockchain(blockchainRid)
-        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterBlockchainInfra).masterConnectionManager) {
+        return AnchoringSubnodePipe(chainID, blockchainRid, (blockchainInfrastructure as MasterBlockchainInfra).masterConnectionManager, {
             anchoringBlockQueries[cluster]
-        }
+        })
     }
 
     private fun connectChainInternal(chainID: Long, pipeSupplier: () -> AnchoringPipe) {
