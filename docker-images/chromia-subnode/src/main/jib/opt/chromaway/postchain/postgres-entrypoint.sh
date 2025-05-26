@@ -85,6 +85,17 @@ EOWARN
   fi
 }
 
+update_file_if_changed() {
+  file="$1"
+  content="$2"
+  if ! diff -q "$file" <(echo "$content") > /dev/null; then
+    echo
+    echo "Updating $file:"
+    diff "$file" <(echo "$content")  | grep -E "^[<>+-][^+-]"
+    echo "$content" > "$file"
+  fi
+}
+
 configure_resource_limits() {
   # Parse cgroup info to find memory limit
   if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
@@ -106,27 +117,28 @@ configure_resource_limits() {
     # Formula: 25%
     SHARED_BUFFERS_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4))
     echo "shared_buffers = $SHARED_BUFFERS_LIMIT"
-    sed -i -E "/^shared_buffers =/ s/= .*/= ${SHARED_BUFFERS_LIMIT}MB/" $PGDATA/postgresql.conf
 
     DB_CONNECTIONS=$((POSTCHAIN_DB_READ_CONCURRENCY + POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY + POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY))
     MAX_DB_CONNECTIONS=$((DB_CONNECTIONS > 100 ? DB_CONNECTIONS : 100))
     echo "max_connections = $MAX_DB_CONNECTIONS"
-    sed -i -E "/^#?max_connections =/ s/.*/max_connections = ${MAX_DB_CONNECTIONS}/" $PGDATA/postgresql.conf
 
     # Formula: 25% / max_connections, where max_connections is POSTCHAIN_DB_READ_CONCURRENCY + POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY + POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY
     WORK_MEM_LIMIT=$((PSQL_MEMORY_SHARE_MB / 4 / DB_CONNECTIONS))
     WORK_MEM_LIMIT=$((WORK_MEM_LIMIT > 0 ? WORK_MEM_LIMIT : 1)) # Min 1MB
     echo "work_mem = $WORK_MEM_LIMIT"
-    sed -i -E "/^#?work_mem =/ s/.*/work_mem = ${WORK_MEM_LIMIT}MB/" $PGDATA/postgresql.conf
 
     # Formula: 50%
     EFFECTIVE_CACHE_SIZE_LIMIT=$((PSQL_MEMORY_SHARE_MB / 2))
     echo "effective_cache_size = $EFFECTIVE_CACHE_SIZE_LIMIT"
-    sed -i -E "/^#?effective_cache_size =/ s/.*/effective_cache_size = ${EFFECTIVE_CACHE_SIZE_LIMIT}MB/" $PGDATA/postgresql.conf
 
     MAX_LOCKS_PER_TRANSACTION=${POSTGRES_MAX_LOCKS_PER_TRANSACTION:-1024}
     echo "max_locks_per_transaction = $MAX_LOCKS_PER_TRANSACTION"
-    sed -i -E "/^#?max_locks_per_transaction =/ s/.*/max_locks_per_transaction = ${MAX_LOCKS_PER_TRANSACTION}/" $PGDATA/postgresql.conf
+
+    update_file_if_changed "$PGDATA/postgresql.conf" "$(sed -E "/^shared_buffers =/ s/= .*/= ${SHARED_BUFFERS_LIMIT}MB/" $PGDATA/postgresql.conf)"
+    update_file_if_changed "$PGDATA/postgresql.conf" "$(sed -E "/^#?max_connections =/ s/.*/max_connections = ${MAX_DB_CONNECTIONS}/" $PGDATA/postgresql.conf)"
+    update_file_if_changed "$PGDATA/postgresql.conf" "$(sed -E "/^#?work_mem =/ s/.*/work_mem = ${WORK_MEM_LIMIT}MB/" $PGDATA/postgresql.conf)"
+    update_file_if_changed "$PGDATA/postgresql.conf" "$(sed -E "/^#?effective_cache_size =/ s/.*/effective_cache_size = ${EFFECTIVE_CACHE_SIZE_LIMIT}MB/" $PGDATA/postgresql.conf)"
+    update_file_if_changed "$PGDATA/postgresql.conf" "$(sed -E "/^#?max_locks_per_transaction =/ s/.*/max_locks_per_transaction = ${MAX_LOCKS_PER_TRANSACTION}/" $PGDATA/postgresql.conf)"
   fi
 }
 
