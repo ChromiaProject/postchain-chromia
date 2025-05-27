@@ -89,6 +89,9 @@ update_file_if_changed() {
   file="$1"
   content="$2"
   if [ "$content" != "$(cat "$file")" ]; then
+    echo
+    echo "Updating $file:"
+    diff "$file" <(echo "$content")  | grep -E "^[<>+-][^+-]"
     echo "$content" > "$file"
   fi
 }
