@@ -88,7 +88,7 @@ EOWARN
 update_file_if_changed() {
   file="$1"
   content="$2"
-  if ! diff -q "$file" <(echo "$content") > /dev/null; then
+  if [ "$content" != "$(cat "$file")" ]; then
     echo
     echo "Updating $file:"
     diff "$file" <(echo "$content")  | grep -E "^[<>+-][^+-]"
