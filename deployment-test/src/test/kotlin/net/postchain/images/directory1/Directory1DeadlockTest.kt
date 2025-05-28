@@ -156,7 +156,7 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                 .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
                 .postTransactionUntilConfirmed("System provider2 and node2")
 
-        // Asserting that node1, node2, node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        // Asserting that node1 and node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
