@@ -103,7 +103,7 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                 .withEifEnv()
         node2 = postchainServer("node2", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                 provider2KeyPair,
-                "config-all-subnodes")
+                "config-no-subnodes")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
                 .withCreateContainerCmdModifier { it.withEntrypoint("java") }
                 .withCommand("-XX:+UnlockDiagnosticVMOptions",
