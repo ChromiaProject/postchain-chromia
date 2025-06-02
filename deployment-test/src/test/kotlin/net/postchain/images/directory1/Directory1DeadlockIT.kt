@@ -52,9 +52,11 @@ import kotlin.io.path.pathString
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
+class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
     private val node1Logger = KotlinLogging.logger("Deadlock_Node1Logger")
+    private val node2Logger = KotlinLogging.logger("Deadlock_Node2Logger")
+    private val node3Logger = KotlinLogging.logger("Deadlock_Node3Logger")
 
     private lateinit var evmChainConfig: Gtv
     private lateinit var txsChainConfig: Gtv
@@ -91,7 +93,7 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
 
         node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                 provider1KeyPair,
-                "config-no-subnodes")
+                "config-mix")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
                 .withCreateContainerCmdModifier { it.withEntrypoint("java") }
                 .withCommand("-XX:+UnlockDiagnosticVMOptions",
@@ -101,9 +103,9 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "net.postchain.server.AppKt",
                         "run-server")
                 .withEifEnv()
-        node2 = postchainServer("node2", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                 provider2KeyPair,
-                "config-no-subnodes")
+                "config-mix")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
                 .withCreateContainerCmdModifier { it.withEntrypoint("java") }
                 .withCommand("-XX:+UnlockDiagnosticVMOptions",
@@ -115,6 +117,30 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                 .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
                 .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
                 .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEifEnv()
+        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+                provider3KeyPair,
+                "config-mix")
+                .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
+                .withCreateContainerCmdModifier { it.withEntrypoint("java") }
+                .withCommand("-XX:+UnlockDiagnosticVMOptions",
+                        "-XX:AbortVMOnException=java.lang.OutOfMemoryError",
+                        "-cp",
+                        "/opt/chromaway/postchain/libs/*:/opt/chromaway/postchain/classpath/*",
+                        "net.postchain.server.AppKt",
+                        "run-server")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
+                .withMasterDockerConfig()
+                .withClasspathResourceMapping(
+                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
+                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
+                )
+                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
+                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
                 .withEifEnv()
 
         removeSubnodeContainers()
@@ -146,17 +172,19 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
             clusterAnchoringChainBrid = BlockchainRid(blockchains.find { it.name == "cluster_anchoring_system" }?.rid!!)
         }
 
-        testLogger.info("Adding system provider provider2 and its node")
+        testLogger.info("Adding system providers provider2 and provider3 and their nodes")
         val newProviders = listOf(
                 ProviderInfo(node2.provider.pubKey.wData, "provider2", "http://provider2.com"),
+                ProviderInfo(node3.provider.pubKey.wData, "provider3", "http://provider3.com"),
         )
 
-        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider, node3.provider)).transactionBuilder().addNop()
                 .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
                 .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
-                .postTransactionUntilConfirmed("System provider2 and node2")
+                .registerNodeWithUnitsOperation(node3.providerPubkey, node3.pubkey.data, node3.nodeHost, node3.nodePort.toLong(), node3.nodeApiPath(), listOf(systemCluster), 2)
+                .postTransactionUntilConfirmed("System provider2, provider3 and node2, node3")
 
-        // Asserting that node1 and node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        // Asserting that node1, node2 and node3 are signers of chain0 / cluster anchoring chain / system anchoring chain
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
@@ -261,7 +289,7 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         .proposeConfigurationOperation(provider1KeyPair.pubKey.data, bcRid, GtvEncoder.encodeGtv(config), "", null)
                         .postTransactionUntilConfirmed("Updated chain config", retries = 10)
 
-                voteOnAllProposals(listOf(provider2KeyPair))
+                voteOnAllProposals(listOf(provider2KeyPair, provider3KeyPair))
 
                 awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
                     testLogger.info("Checking if config is applied...")

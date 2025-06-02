@@ -144,6 +144,16 @@ Configuration:
         append: false
         PatternLayout:
           pattern: "%msg%n"
+      - name: Deadlock_Node2Appender
+        fileName: "logs/deadlock/node2.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Deadlock_Node3Appender
+        fileName: "logs/deadlock/node3.log"
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
       - name: XCME_EvmContainerAppender
         fileName: "logs/crosschain_massexit/evm_container.log"
         append: false
@@ -338,6 +348,16 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: Deadlock_Node1Appender
+      - name: Deadlock_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deadlock_Node2Appender
+      - name: Deadlock_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: Deadlock_Node3Appender
 
       # Cross-chain Mass Exit
       - name: XCME_EvmContainerLogger
