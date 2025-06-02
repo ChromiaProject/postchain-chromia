@@ -9,15 +9,19 @@ import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
+import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.evm_event_receiver.initEvmEventReceiverChainOperation
 import net.postchain.chain0.evm_transaction_submitter.getEvmTransactionSubmitterChainRid
 import net.postchain.chain0.evm_transaction_submitter.initEvmTransactionSubmitterChainOperation
+import net.postchain.chain0.model.ProviderInfo
+import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmFindNextConfigurationHeight
 import net.postchain.chain0.nm_api.nmGetBlockchainConfiguration
 import net.postchain.chain0.proposal_blockchain.proposeConfigurationOperation
+import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.ExclusiveTableLockTestGTXModule
@@ -97,6 +101,21 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "net.postchain.server.AppKt",
                         "run-server")
                 .withEifEnv()
+        node2 = postchainServer("node2", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+                provider2KeyPair,
+                "config-no-subnodes")
+                .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
+                .withCreateContainerCmdModifier { it.withEntrypoint("java") }
+                .withCommand("-XX:+UnlockDiagnosticVMOptions",
+                        "-XX:AbortVMOnException=java.lang.OutOfMemoryError",
+                        "-cp",
+                        "/opt/chromaway/postchain/libs/*:/opt/chromaway/postchain/classpath/*",
+                        "net.postchain.server.AppKt",
+                        "run-server")
+                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withEifEnv()
 
         removeSubnodeContainers()
         startNodesAndChain0()
@@ -126,6 +145,21 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
             systemAnchoringChainBrid = BlockchainRid(blockchains.find { it.name == "system_anchoring" }?.rid!!)
             clusterAnchoringChainBrid = BlockchainRid(blockchains.find { it.name == "cluster_anchoring_system" }?.rid!!)
         }
+
+        testLogger.info("Adding system provider provider2 and its node")
+        val newProviders = listOf(
+                ProviderInfo(node2.provider.pubKey.wData, "provider2", "http://provider2.com"),
+        )
+
+        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
+                .proposeProvidersOperation(node1.providerPubkey, newProviders, ProviderTier.NODE_PROVIDER, system = true, active = true, description = "")
+                .registerNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, node2.nodeHost, node2.nodePort.toLong(), node2.nodeApiPath(), listOf(systemCluster), 2)
+                .postTransactionUntilConfirmed("System provider2 and node2")
+
+        // Asserting that node1 and node2 are signers of chain0 / cluster anchoring chain / system anchoring chain
+        assertChainSigners(chain0Brid, *nodes())
+        assertChainSigners(clusterAnchoringBrid, *nodes())
+        assertChainSigners(systemAnchoringBrid, *nodes())
     }
 
     @Test
@@ -226,6 +260,8 @@ class Directory1DeadlockTest : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                 transactionBuilder()
                         .proposeConfigurationOperation(provider1KeyPair.pubKey.data, bcRid, GtvEncoder.encodeGtv(config), "", null)
                         .postTransactionUntilConfirmed("Updated chain config", retries = 10)
+
+                voteOnAllProposals(listOf(provider2KeyPair))
 
                 awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
                     testLogger.info("Checking if config is applied...")
