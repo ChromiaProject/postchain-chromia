@@ -18,6 +18,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
@@ -347,6 +348,9 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
 
         val numberOfBlocksToAnchor: Long = try {
             numberOfBlocksToAnchor()
+        } catch (e: PmEngineIsAlreadyClosed) {
+            logger.debug { "Could not fetch number of blocks to anchor due to a restart on chain ${e.chainId}" }
+            return false
         } catch (e: Exception) {
             logger.error("Could not fetch number of blocks to anchor", e)
             return false
