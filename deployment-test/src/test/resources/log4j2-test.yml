@@ -1,176 +1,241 @@
 Configuration:
   name: Default
 
+  Properties:
+    Property:
+      - name: log.fork.id
+        value: "${sys:forkId:-0}"
+
   Appenders:
     Console:
       - name: ConsoleAppender
         target: SYSTEM_OUT
         PatternLayout:
-          pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
+          pattern: "[${log.fork.id}] %d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
 
     File:
       - name: FileAppender
-        fileName: "logs/test.log"
+        fileName: "logs/test-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} +++ %msg +++%n"
       - name: Deployment_Node1Appender
-        fileName: "logs/deployment/node1.log"
+        fileName: "logs/deployment/node1-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           Pattern: "%msg%n"
       - name: Deployment_Node2Appender
-        fileName: "logs/deployment/node2.log"
+        fileName: "logs/deployment/node2-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Deployment_Node3Appender
-        fileName: "logs/deployment/node3.log"
+        fileName: "logs/deployment/node3-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Deployment_Node4Appender
-        fileName: "logs/deployment/node4.log"
+        fileName: "logs/deployment/node4-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Deployment_Node5Appender
-        fileName: "logs/deployment/node5.log"
+        fileName: "logs/deployment/node5-${log.fork.id}.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Reconfig_Node1Appender
         fileName: "logs/reconfig/node1.log"
+        createOnDemand: true
         PatternLayout:
           Pattern: "%msg%n"
       - name: Reconfig_Node2Appender
         fileName: "logs/reconfig/node2.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Reconfig_Node3Appender
         fileName: "logs/reconfig/node3.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Moving_Node1Appender
         fileName: "logs/moving/node1.log"
+        createOnDemand: true
         PatternLayout:
           Pattern: "%msg%n"
       - name: Moving_Node2Appender
         fileName: "logs/moving/node2.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Moving_Node3Appender
         fileName: "logs/moving/node3.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Archiving_Node1Appender
         fileName: "logs/archiving/node1.log"
+        createOnDemand: true
         PatternLayout:
           Pattern: "%msg%n"
       - name: Archiving_Node2Appender
         fileName: "logs/archiving/node2.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: Archiving_Node3Appender
         fileName: "logs/archiving/node3.log"
+        createOnDemand: true
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_EvmContainerAppender
         fileName: "logs/ec/evm_container.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node1Appender
         fileName: "logs/ec/node1.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node2Appender
         fileName: "logs/ec/node2.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: EC_Node3Appender
         fileName: "logs/ec/node3.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
-      - name: EvmTxs_EvmContainerAppender
-        fileName: "logs/evm_tx_submitter/evm_container.log"
+      - name: TxsRetry_EvmContainerAppender
+        fileName: "logs/txs_retry/evm_container.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
-      - name: EvmTxs_Node1Appender
-        fileName: "logs/evm_tx_submitter/node1.log"
+      - name: TxsRetry_Node1Appender
+        fileName: "logs/txs_retry/node1.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
-      - name: EvmTxs_Node2Appender
-        fileName: "logs/evm_tx_submitter/node2.log"
+      - name: TxsRetry_Node2Appender
+        fileName: "logs/txs_retry/node2.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
-      - name: EvmTxs_Node3Appender
-        fileName: "logs/evm_tx_submitter/node3.log"
+      - name: TxsRetry_Node3Appender
+        fileName: "logs/txs_retry/node3.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
-      - name: EvmTxs_Node4Appender
-        fileName: "logs/evm_tx_submitter/node4.log"
+      - name: TxsRetry_Node4Appender
+        fileName: "logs/txs_retry/node4.log"
+        createOnDemand: true
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Txs_EvmContainerAppender
+        fileName: "logs/txs/evm_container.log"
+        createOnDemand: true
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Txs_Node1Appender
+        fileName: "logs/txs/node1.log"
+        createOnDemand: true
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Txs_Node2Appender
+        fileName: "logs/txs/node2.log"
+        createOnDemand: true
+        append: false
+        PatternLayout:
+          pattern: "%msg%n"
+      - name: Txs_Node3Appender
+        fileName: "logs/txs/node3.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_EvmContainerAppender
         fileName: "logs/tc/evm_container.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node1Appender
         fileName: "logs/tc/node1.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node2Appender
         fileName: "logs/tc/node2.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: TC_Node3Appender
         fileName: "logs/tc/node3.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: Deadlock_EvmContainerAppender
         fileName: "logs/deadlock/evm_container.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: Deadlock_Node1Appender
         fileName: "logs/deadlock/node1.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: Deadlock_Node2Appender
         fileName: "logs/deadlock/node2.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: Deadlock_Node3Appender
         fileName: "logs/deadlock/node3.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: XCME_EvmContainerAppender
         fileName: "logs/crosschain_massexit/evm_container.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: XCME_Node1Appender
         fileName: "logs/crosschain_massexit/node1.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: XCME_Node2Appender
         fileName: "logs/crosschain_massexit/node2.log"
+        createOnDemand: true
         append: false
         PatternLayout:
           pattern: "%msg%n"
       - name: XCME_Node3Appender
         fileName: "logs/crosschain_massexit/node3.log"
+        createOnDemand: true
   Loggers:
 
     Root:
@@ -288,32 +353,53 @@ Configuration:
           - ref: EC_Node3Appender
 
       # EVM transaction submitter tests
-      - name: EvmTxs_EvmContainerLogger
+      - name: Txs_EvmContainerLogger
         level: info
         additivity: false
         AppenderRef:
-          - ref: EvmTxs_EvmContainerAppender
-      - name: EvmTxs_Node1Logger
+          - ref: Txs_EvmContainerAppender
+      - name: Txs_Node1Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: EvmTxs_Node1Appender
-      - name: EvmTxs_Node2Logger
+          - ref: Txs_Node1Appender
+      - name: Txs_Node2Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: EvmTxs_Node2Appender
-      - name: EvmTxs_Node3Logger
+          - ref: Txs_Node2Appender
+      - name: Txs_Node3Logger
         level: info
         additivity: false
         AppenderRef:
-          - ref: EvmTxs_Node3Appender
-      - name: EvmTxs_Node4Logger
-        level: info
-        additivity: false
-        AppenderRef:
-          - ref: EvmTxs_Node4Appender
+          - ref: Txs_Node3Appender
 
+      # TXS retry
+      - name: TxsRetry_EvmContainerLogger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TxsRetry_EvmContainerAppender
+      - name: TxsRetry_Node1Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TxsRetry_Node1Appender
+      - name: TxsRetry_Node2Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TxsRetry_Node2Appender
+      - name: TxsRetry_Node3Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TxsRetry_Node3Appender
+      - name: TxsRetry_Node4Logger
+        level: info
+        additivity: false
+        AppenderRef:
+          - ref: TxsRetry_Node4Appender
 
       # TC tests
       - name: TC_EvmContainerLogger

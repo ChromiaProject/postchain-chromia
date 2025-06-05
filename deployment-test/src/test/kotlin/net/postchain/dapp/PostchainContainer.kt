@@ -18,10 +18,7 @@ import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
-import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.containers.InternetProtocol
-import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import org.testcontainers.lifecycle.Startable
 import org.testcontainers.utility.DockerImageName
@@ -51,36 +48,13 @@ class PostchainContainer(
 
     companion object {
         const val POSTCHAIN_PATH = "/opt/chromaway/postchain"
-
-        // Path that is OK to use on your local machine, so host machine can mount subnode config
-        val MOUNT_DIR = System.getenv("TEST_MOUNT_DIRECTORY")
-                ?: "/tmp/chromaway/postchain"
-
-        // Install location of docker socket
-        private val DOCKER_SOCKET = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
     }
 
     init {
-        withExposedPorts(apiPort)
-        withFixedExposedPort(nodePort, nodePort)
+        withExposedPorts(apiPort, nodePort)
         waitStrategy = LogMessageWaitStrategy()
                 .withRegEx(".*$startupMsg.*\\s")
                 .withTimes(1).withStartupTimeout(Duration.ofMinutes(2))
-    }
-
-    fun withFixedExposedPort(hostPort: Int, containerPort: Int): PostchainContainer {
-        super.addFixedExposedPort(hostPort, containerPort, InternetProtocol.TCP)
-        return self()
-    }
-
-    fun withMasterDockerConfig(): PostchainContainer {
-        if (System.getenv("DOCKER_HOST") == null) {
-            // Mount host machines docker socket into master container
-            super.addFileSystemBind(DOCKER_SOCKET, DOCKER_SOCKET, BindMode.READ_ONLY, SelinuxContext.SHARED)
-        }
-        // Mounting a volume that can be used as a "bridge" between the containers
-        super.addFileSystemBind(MOUNT_DIR, MOUNT_DIR, BindMode.READ_WRITE, SelinuxContext.SHARED)
-        return self()
     }
 
     fun txAsAdmin(chainId: Long, opName: String, vararg args: Gtv) =
@@ -110,7 +84,7 @@ class PostchainContainer(
     }
 
     fun nodeApiPath() = "http://$nodeHost:$apiPort"
-    fun apiPath() = "http://$host:${getMappedPort(apiPort)}"
+    fun apiPath() = "http://${this.host}:${getMappedPort(apiPort)}"
 
     fun client(chainId: Long, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 2) = client(getBlockchainRid(chainId), signers, merkleHashVersion)
     fun client(brid: BlockchainRid, signers: List<KeyPair> = listOf(provider), merkleHashVersion: Int = 2) =

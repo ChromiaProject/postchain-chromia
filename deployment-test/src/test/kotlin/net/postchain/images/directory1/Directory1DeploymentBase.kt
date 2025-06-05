@@ -253,7 +253,8 @@ abstract class Directory1DeploymentBase {
     fun `Subnode containers have been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
-            val runningSubnodes = dockerClient.listSubContainersCmd()
+            val runningSubnodes = dockerClient.listSubContainersCmd(network)
+                    .withNetworkFilter(listOf(network.id))
                     .withStatusFilter(listOf("running"))
                     .exec()
             assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
@@ -266,7 +267,9 @@ abstract class Directory1DeploymentBase {
     fun `fooContainer has resource limits`() {
         testLogger.info("Asserting $fooContainer resource limits")
 
-        val all = dockerClient.listContainersCmd().withShowAll(true).exec()
+        val all = dockerClient.listContainersCmd()
+                .withNetworkFilter(listOf(network.id))
+                .withShowAll(true).exec()
         all.forEach {
             if (it.names?.get(0)?.contains(fooContainer) == true) {
                 val res = dockerClient.inspectContainerCmd(it.id).exec()
@@ -459,7 +462,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+            val fooDockerContainer = dockerClient.listContainersCmd()
+                    .withNetworkFilter(listOf(network.id))
+                    .withShowAll(true).exec().firstOrNull {
                 it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
@@ -490,7 +495,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+            val fooDockerContainer = dockerClient.listContainersCmd()
+                    .withNetworkFilter(listOf(network.id))
+                    .withShowAll(true).exec().firstOrNull {
                 it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
@@ -515,7 +522,9 @@ abstract class Directory1DeploymentBase {
                     .postTransactionUntilConfirmed("Removing test_dapp5")
 
             awaitUntilAsserted {
-                val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                val fooDockerContainer = dockerClient.listContainersCmd()
+                        .withNetworkFilter(listOf(network.id))
+                        .withShowAll(true).exec().firstOrNull {
                     it.names.any { name -> name.contains(fooContainer) }
                 }
                 assertThat(fooDockerContainer?.state).isEqualTo("exited")

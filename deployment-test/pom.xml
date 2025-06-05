@@ -417,17 +417,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.0.2</version>
                 <executions>
@@ -443,7 +432,7 @@
 
     <profiles>
         <profile>
-            <id>ci</id>
+            <id>slow-it</id>
             <build>
                 <plugins>
                     <plugin>
@@ -465,6 +454,28 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <forkCount>3</forkCount>
+                            <reuseForks>false</reuseForks>
+                            <systemPropertyVariables>
+                                <log4j2.configurationFile>log4j2-test.yml</log4j2.configurationFile>
+                                <forkId>fork-${surefire.forkNumber}</forkId>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/*SlowIntegrationTest.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>ci</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
                             <environmentVariables>
                                 <!-- Set our subnode to use the daemon user and group. This will be accepted by initdb

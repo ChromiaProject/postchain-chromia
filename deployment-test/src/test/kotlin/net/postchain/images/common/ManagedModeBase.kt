@@ -55,6 +55,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
+import net.postchain.images.directory1.DiskHelper
 import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getMasterContainerUserAndGroups
@@ -70,8 +71,9 @@ import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
+import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.output.Slf4jLogConsumer
-import java.io.File
+import kotlin.io.path.pathString
 
 // Base class for managed mode tests
 open class ManagedModeBase {
@@ -112,6 +114,9 @@ open class ManagedModeBase {
     protected val PostchainContainer.tc get() = client(tcBrid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
 
+    // Install location of docker socket
+    private val dockerSocket = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
+
     fun nodes() = buildList {
         if (::node1.isInitialized && node1.isRunning) add(node1)
         if (::node2.isInitialized && node2.isRunning) add(node2)
@@ -121,7 +126,7 @@ open class ManagedModeBase {
     }.toTypedArray()
 
     fun breakdown() {
-        saveSubnodeLogs(dockerClient, logsSubdir)
+        saveSubnodeLogs(dockerClient, network, logsSubdir)
         stopNodes()
         removeSubnodeContainers()
 
@@ -141,23 +146,89 @@ open class ManagedModeBase {
                     .waitFor()
         }
 
-        if (!File(PostchainContainer.MOUNT_DIR).deleteRecursively()) {
-            testLogger.error("Unable to clear mount directory")
-        }
+        DiskHelper.cleanup()
     }
 
     fun removeSubnodeContainers() {
-        dockerClient.listSubContainersCmd().withStatusFilter(listOf("running")).exec().forEach {
+        dockerClient.listSubContainersCmd(network)
+                .withStatusFilter(listOf("running"))
+                .exec().forEach {
             dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
         }
-        dockerClient.listSubContainersCmd().exec().forEach {
+        dockerClient.listSubContainersCmd(network)
+                .exec().forEach {
             dockerClient.removeContainerCmd(it.id).exec()
         }
     }
 
-    fun postchainServer(hostName: String, logConsumer: Slf4jLogConsumer?, provider: KeyPair, configDir: String): PostchainContainer {
-        val appConfig = setupMasterNodeConfig(this::class.java.getResource("$configDir/$hostName/node-config.properties")!!)
+    fun postchainServer(
+            hostName: String,
+            logConsumer: Slf4jLogConsumer?,
+            provider: KeyPair,
+            configDir: String,
+            generateKeys: Boolean = false,
+    ): PostchainContainer {
+        val tmpNodeConfigDir = DiskHelper.tmpDirBasedOnResources(configDir, hostName)
+        val tmpNodeConfigFile = tmpNodeConfigDir.resolve("node-config.properties")
 
+        // TODO remove
+        testLogger.info { "Node config: ${tmpNodeConfigFile.pathString} - is a file: ${tmpNodeConfigFile.toFile().isFile}" }
+
+        val appConfig = setupMasterNodeConfig(
+                hostName,
+                tmpNodeConfigFile.toFile(),
+                null,
+                generateKeys)
+
+        return postchainServerInternal(hostName, logConsumer, provider, appConfig)
+                .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
+    }
+
+    fun postchainMasterChildServer(
+            hostName: String,
+            logConsumer: Slf4jLogConsumer?,
+            provider: KeyPair,
+            configDir: String,
+            generateKeys: Boolean = false,
+            isGenesisNode: Boolean = false,
+    ): PostchainContainer {
+        val tmpNodeConfigDir = DiskHelper.tmpDirBasedOnResources(configDir, hostName)
+        val tmpNodeConfigFile = tmpNodeConfigDir.resolve("node-config.properties")
+        val appConfig = setupMasterNodeConfig(
+                hostName,
+                tmpNodeConfigFile.toFile(),
+                tmpNodeConfigDir,
+                generateKeys)
+
+        return postchainServerInternal(hostName, logConsumer, provider, appConfig)
+                .withEnv("POSTCHAIN_SUBNODE_NETWORK", network.id)
+                .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
+                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .apply {
+
+                    if (!isGenesisNode) {
+                        withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
+                        withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
+                        withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    }
+
+                    if (System.getenv("DOCKER_HOST") == null) {
+                        // Mount host machines docker socket into master container
+                        addFileSystemBind(dockerSocket, dockerSocket, BindMode.READ_ONLY, SelinuxContext.SHARED)
+                    }
+
+                    // Mounting a volume that can be used as a "bridge" between the containers
+                    addFileSystemBind(tmpNodeConfigDir.pathString, tmpNodeConfigDir.pathString, BindMode.READ_WRITE, SelinuxContext.SHARED)
+                }
+    }
+
+    private fun postchainServerInternal(
+            hostName: String,
+            logConsumer: Slf4jLogConsumer?,
+            provider: KeyPair,
+            appConfig: AppConfig,
+    ): PostchainContainer {
         return PostchainContainer(
                 DockerImages.chromiaServerImage(),
                 appConfig,
@@ -168,7 +239,6 @@ open class ManagedModeBase {
                 .withNetworkAliases(hostName)
                 .withNetwork(this@ManagedModeBase.network)
                 .withExposedPorts(*exposedPorts(appConfig))
-                .withClasspathResourceMapping("${this::class.java.getResource(configDir)!!.path.substringAfter("test-classes/")}/${hostName}", "/config", BindMode.READ_ONLY)
                 .withClasspathResourceMapping(this::class.java.getResource("/log")!!.path.substringAfter("test-classes/"), "/opt/chromaway/postchain", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_DEBUG", "true")
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
@@ -227,7 +297,9 @@ open class ManagedModeBase {
             if (::node5.isInitialized) add(node5)
         }.toTypedArray())
 
-        // node1
+        // node1 - replace signer pubkey in case node1 is using generated keys
+        chain0Config = chain0Config.replace("0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57",
+                node1.pubkey.hex())
         chain0Brid = startBlockchain(node1.channel, chain0Config)
                 .let { BlockchainRid.buildFromHex(it) }
         testLogger.info("Chain0 bc-rid: ${chain0Brid.toHex()}")

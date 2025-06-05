@@ -53,8 +53,8 @@ definitions:
             min_wallet_balance: 100000000000
             gas_limit: 9000000
             gas_limit_margin: 0.1
-            node_tx_verification_evm_blocks: 10
-            tx_verification_time: 20000
+            node_tx_verification_evm_blocks: 2
+            tx_verification_time: 10000
       sync_ext:
         - "net.postchain.eif.transaction.TransactionSubmitterSynchronizationInfrastructureExtension"
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"

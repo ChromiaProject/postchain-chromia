@@ -55,8 +55,8 @@ private const val JsonContentType = "application/json"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class IccfProofTxMaterialBuilderTest {
-    private val server = WireMockServer(wireMockConfig().port(7740))
-    private val mockServerUrl = "http://localhost:7740"
+    private val server = WireMockServer(wireMockConfig().port(0))
+    private lateinit var mockServerUrl: String
 
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
@@ -68,14 +68,8 @@ class IccfProofTxMaterialBuilderTest {
     private val clusterA = "clusterA"
     private val clusterB = "clusterB"
 
-    private val clusterManagement: ClusterManagement = mock {
-        on { getBlockchainApiUrls(any()) } doReturn listOf(mockServerUrl)
-        on { getClusterOfBlockchain(sourceBlockchainRID) } doReturn clusterA
-        on { getClusterOfBlockchain(clusterATargetBlockchainRID) } doReturn clusterA
-        on { getClusterOfBlockchain(clusterBTargetBlockchainRID) } doReturn clusterB
-        on { getClusterInfo(clusterA) } doReturn D1ClusterInfo(clusterA, sourceClusterAnchoringChain, listOf())
-    }
-    val chromiaClientProvider = ChromiaClientProvider(clusterManagement)
+    private lateinit var clusterManagement: ClusterManagement
+    lateinit var chromiaClientProvider: ChromiaClientProvider
 
     private val clientTxSigners = listOf(
             cryptoSystem.generateKeyPair(),
@@ -95,7 +89,16 @@ class IccfProofTxMaterialBuilderTest {
     @BeforeEach
     fun setup() {
         server.start()
+        mockServerUrl = "http://localhost:${server.port()}"
         configureFor("localhost", server.port())
+        clusterManagement = mock {
+            on { getBlockchainApiUrls(any()) } doReturn listOf(mockServerUrl)
+            on { getClusterOfBlockchain(sourceBlockchainRID) } doReturn clusterA
+            on { getClusterOfBlockchain(clusterATargetBlockchainRID) } doReturn clusterA
+            on { getClusterOfBlockchain(clusterBTargetBlockchainRID) } doReturn clusterB
+            on { getClusterInfo(clusterA) } doReturn D1ClusterInfo(clusterA, sourceClusterAnchoringChain, listOf())
+        }
+        chromiaClientProvider = ChromiaClientProvider(clusterManagement)
     }
 
     @Test

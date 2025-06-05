@@ -63,13 +63,13 @@ import net.postchain.eif.transaction_submitter.getTransaction as getEvmTransacti
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmTxs_EvmContainerLogger") {
+class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("TxsRetry_EvmContainerLogger") {
 
-    private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-    private val node4Logger = KotlinLogging.logger("EvmTxs_Node4Logger")
-    override val logsSubdir = "evm_tx_submitter"
+    private val node1Logger = KotlinLogging.logger("TxsRetry_Node1Logger")
+    private val node2Logger = KotlinLogging.logger("TxsRetry_Node2Logger")
+    private val node3Logger = KotlinLogging.logger("TxsRetry_Node3Logger")
+    private val node4Logger = KotlinLogging.logger("TxsRetry_Node4Logger")
+    override val logsSubdir = "txs_retry"
 
     private lateinit var directoryChainValidator: DirectoryChainValidator
     private lateinit var validator: ManagedValidator

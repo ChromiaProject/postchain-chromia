@@ -40,7 +40,6 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
@@ -64,7 +63,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
@@ -132,22 +130,10 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
                 .withEifEnv()
 
-        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                 provider3KeyPair,
-                "config-mix"
-        )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping(
-                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                )
-                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                "config-mix",
+                true)
                 .withEifEnv()
 
         removeSubnodeContainers()
@@ -504,7 +490,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 .postTransactionUntilConfirmed("Registering account via ICCF proof")
 
         assertThat(node1.tc.getAccountById(gtv(newUser.pubKey.data).merkleHash(hashCalculator))).isNotNull()
-        assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
+            assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
                 .isEqualTo(initialBalance.amount.subtract(BigInteger("10000000")))
     }
 }
