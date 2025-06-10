@@ -8,12 +8,13 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.gtx.PostchainContextAware
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
 
 @Suppress("unused")
-class HybridComputeSynchronizationInfrastructureExtension(postchainContext: PostchainContext) :
+class HybridComputeSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
         SynchronizationInfrastructureExtension {
     companion object : KLogging()
 
@@ -39,6 +40,9 @@ class HybridComputeSynchronizationInfrastructureExtension(postchainContext: Post
                     }
                 }
                 val engine = newInstanceOf<HybridComputeEngine>(config.engine)
+                if (engine is PostchainContextAware) {
+                    engine.initializeContext(configuration, postchainContext)
+                }
                 engine.init(configuration.rawConfig, configuration.blockchainRid)
                 txExt.config = config
                 txExt.engine = engine
