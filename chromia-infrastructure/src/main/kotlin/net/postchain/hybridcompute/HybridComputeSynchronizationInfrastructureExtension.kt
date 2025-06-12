@@ -24,8 +24,6 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
             configuration.module.getSpecialTxExtensions().filterIsInstance<HybridComputeSpecialTransactionExtension>().firstOrNull()?.let { txExt ->
                 val config = configuration.rawConfig.asDict()["hybridcompute"]?.toObject<HybridComputeConfig>()
                         ?: throw UserMistake("hybridcompute configuration not found")
-                require(config.loadTimeoutSeconds > 0) { "load_timeout_seconds must be greater than 0" }
-                require(config.computeTimeoutSeconds > 0) { "compute_timeout_seconds must be greater than 0" }
                 require(config.concurrency > 0) { "concurrency must be greater than 0" }
                 if (configuration is ManagedDataSourceAware) {
                     val dataSource = configuration.dataSource

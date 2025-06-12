@@ -111,10 +111,12 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 timeoutFuture.get()?.cancel(false)
             }
         }
-        timeoutFuture.set(timeouter.schedule({
-            logger.warn("Loading timed out after ${config.loadTimeoutSeconds} seconds, interrupting it")
-            loader.interrupt()
-        }, config.loadTimeoutSeconds, TimeUnit.SECONDS))
+        if (config.loadTimeoutSeconds > 0) {
+            timeoutFuture.set(timeouter.schedule({
+                logger.warn("Loading timed out after ${config.loadTimeoutSeconds} seconds, interrupting it")
+                loader.interrupt()
+            }, config.loadTimeoutSeconds, TimeUnit.SECONDS))
+        }
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
@@ -200,11 +202,13 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                             timeoutFuture.get()?.cancel(false)
                         }
                     }
-                    timeoutFuture.set(timeouter.schedule({
-                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
-                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
-                        future.cancel(true) // interrupt the compute thread
-                    }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
+                    if (config.computeTimeoutSeconds > 0) {
+                        timeoutFuture.set(timeouter.schedule({
+                            logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
+                            computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                            future.cancel(true) // interrupt the compute thread
+                        }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
+                    }
                     val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
                     add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
                     takenRequests++
