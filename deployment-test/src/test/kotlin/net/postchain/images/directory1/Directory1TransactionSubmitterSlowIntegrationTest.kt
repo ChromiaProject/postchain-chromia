@@ -27,7 +27,6 @@ import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -304,9 +303,8 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 )
                 .postTransactionUntilConfirmed("$dappContainer container created")
 
-        voteOnAllProposals(listOf(node2.provider, node3.provider))
-
         awaitUntilAsserted {
+            voteOnAllProposals(listOf(node2.provider, node3.provider))
             assertThat(node1.c0.getContainers().map { it.name }).contains(dappContainer)
         }
 
