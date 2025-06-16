@@ -41,7 +41,6 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 if (engine is PostchainContextAware) {
                     engine.initializeContext(configuration, postchainContext)
                 }
-                engine.init(configuration.rawConfig, configuration.blockchainRid)
                 txExt.config = config
                 txExt.engine = engine
                 txExt.hasDistributedTimeout = GET_TAKEN_REQUESTS in configuration.module.getQueries() && config.computeClusterTimeoutSeconds > 0

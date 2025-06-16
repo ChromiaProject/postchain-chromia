@@ -8,7 +8,6 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
-import net.postchain.hybridcompute.it.TestHybridComputeEngine
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUEST
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -41,7 +40,7 @@ class HybridComputeSpecialTransactionExtensionTest {
     fun `FailureOp Taken request not found by id`() {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
-        extension.engine = TestHybridComputeEngine()
+        extension.engine = StubHybridComputeEngine()
         val bctx = mock<BlockEContext>()
         val module = mock<GTXModule>()
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
@@ -56,7 +55,7 @@ class HybridComputeSpecialTransactionExtensionTest {
     fun `FailureOp Invalid signature`() {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
-        extension.engine = TestHybridComputeEngine()
+        extension.engine = StubHybridComputeEngine()
         val bctx = mock<BlockEContext>()
         val module = mock<GTXModule>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
@@ -77,7 +76,7 @@ class HybridComputeSpecialTransactionExtensionTest {
     fun `RequestTakenOp Invalid signature`() {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         extension.config = hybridComputeConfig
-        extension.engine = TestHybridComputeEngine()
+        extension.engine = StubHybridComputeEngine()
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
