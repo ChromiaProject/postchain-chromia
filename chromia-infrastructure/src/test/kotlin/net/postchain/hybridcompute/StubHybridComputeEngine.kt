@@ -1,11 +1,13 @@
 package net.postchain.hybridcompute
 
 import mu.KLogging
-import net.postchain.common.BlockchainRid
+import net.postchain.PostchainContext
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.PostchainContextAware
 
-class StubHybridComputeEngine : HybridComputeEngine {
+class StubHybridComputeEngine : HybridComputeEngine, PostchainContextAware {
     companion object : KLogging()
 
     override val name: String = "test"
@@ -13,7 +15,7 @@ class StubHybridComputeEngine : HybridComputeEngine {
     private var initialized = false
     private var loaded = false
 
-    override fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
         initialized = true
     }
 
@@ -21,16 +23,13 @@ class StubHybridComputeEngine : HybridComputeEngine {
         loaded = true
     }
 
-    override fun compute(input: Gtv): Gtv {
-        return gtv("test")
+    override fun estimatePoints(input: Gtv): Long = 10L
+
+    override fun compute(input: Gtv): Pair<Gtv, Long> {
+        return gtv("test") to 10L
     }
 
     override fun validate(output: Gtv) {
 
     }
-
-    override fun shutdown() {
-
-    }
 }
-

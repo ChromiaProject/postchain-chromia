@@ -1,30 +1,28 @@
 package net.postchain.hybridcompute
 
-import net.postchain.common.BlockchainRid
-import net.postchain.core.Shutdownable
 import net.postchain.gtv.Gtv
 
 /**
  * Hybrid compute engine.
  *
  * Methods might be invoked on different threads.
+ *
+ * If the implementation also implements `net.postchain.gtx.PostchainContextAware`,
+ * its `initializeContext` method will be invoked directly after instantiation, before any other method is invoked.
+ * That method should only do basic parsing and validation of configuration and should finish quickly.
+ * Any heavy or time-consuming initialization should be performed in the `load` method.
+ *
+ * If the implementation also implements `net.postchain.core.Shutdownable`,
+ * its `shutdown` method will be invoked before the instance is released.
  */
-interface HybridComputeEngine : Shutdownable {
+interface HybridComputeEngine {
     /**
      * Name of this engine.
      */
     val name: String
 
     /**
-     * Will be invoked directly after instantiation, before any other method is invoked.
-     *
-     * This method should only do basic parsing and validation of configuration and should finish quickly.
-     * Any heavy or time-consuming initialization should be performed in the `load` method.
-     */
-    fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid)
-
-    /**
-     * Will be invoked at some point after `init`, before any other method is invoked.
+     * Will be invoked at some point after `initializeContext`, before any other method is invoked.
      *
      * Any heavy or time-consuming initialization should be performed in this method,
      * and it should block until the initialization is finished.
@@ -32,15 +30,27 @@ interface HybridComputeEngine : Shutdownable {
     fun load()
 
     /**
+     * Estimates the number of rate limit points required for the given computation input.
+     *
+     * This method will be invoked before `compute` if rate limiting is enabled.
+     * This method should finish quickly and not fail.
+     *
+     * @param input  input to the computation
+     * @return the estimated number of rate limit points
+     */
+    fun estimatePoints(input: Gtv): Long
+
+    /**
      * Performs a computation.
      *
      * This method should block until the computation is finished.
      *
      * @param input  input to the computation
-     * @return result of the computation, including enough information to validate it later (possibly the full input).
+     * @return result of the computation, including enough information to validate it later (possibly the full input),
+     *         and the actual number of rate limit points consumed by the computation
      * @throws net.postchain.common.exception.UserMistake if computation failed
      */
-    fun compute(input: Gtv): Gtv
+    fun compute(input: Gtv): Pair<Gtv, Long>
 
     /**
      * Validates a previously performed computation.

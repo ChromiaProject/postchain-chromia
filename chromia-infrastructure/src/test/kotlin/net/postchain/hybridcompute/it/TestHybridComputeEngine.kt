@@ -1,10 +1,13 @@
 package net.postchain.hybridcompute.it
 
 import mu.KLogging
-import net.postchain.common.BlockchainRid
+import net.postchain.PostchainContext
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.Shutdownable
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.PostchainContextAware
 import net.postchain.hybridcompute.HybridComputeEngine
 
 sealed interface TestEngineBehavior {
@@ -84,7 +87,7 @@ class InvalidComputation(val delaySeconds: Int) : TestEngineBehavior {
 }
 
 @Suppress("unused")
-class TestHybridComputeEngine : HybridComputeEngine {
+class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shutdownable {
     companion object : KLogging()
 
     override val name: String = "test"
@@ -95,12 +98,12 @@ class TestHybridComputeEngine : HybridComputeEngine {
     private var loadFail = false
     private var loadTimeout = false
 
-    override fun init(blockchainConfig: Gtv, blockchainRID: BlockchainRid) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
         logger.info("init")
-        if (blockchainConfig["hybridcompute"]!!.asDict()["load_fail"]?.asBoolean() == true) {
+        if (configuration.rawConfig["hybridcompute"]!!.asDict()["load_fail"]?.asBoolean() == true) {
             loadFail = true
         }
-        if (blockchainConfig["hybridcompute"]!!.asDict()["load_timeout"]?.asBoolean() == true) {
+        if (configuration.rawConfig["hybridcompute"]!!.asDict()["load_timeout"]?.asBoolean() == true) {
             loadTimeout = true
         }
         initialized = true
@@ -120,14 +123,16 @@ class TestHybridComputeEngine : HybridComputeEngine {
         loaded = true
     }
 
-    override fun compute(input: Gtv): Gtv {
+    override fun estimatePoints(input: Gtv): Long = 10L
+
+    override fun compute(input: Gtv): Pair<Gtv, Long> {
         require(initialized) { "Not initialized" }
         require(loaded) { "Not loaded" }
         logger.info("Compute starting")
         val behavior = TestEngineBehavior.decode(input)
         val output = behavior.compute(input)
         logger.info("Compute finished")
-        return output
+        return output to 10
     }
 
     override fun validate(output: Gtv) {

@@ -20,11 +20,11 @@ class HybridComputeDatabaseOperationsImpl : HybridComputeDatabaseOperations {
 
         const val PREFIX: String = "sys.x.hc" // This name should not clash with Rell
 
-        val TABLE_REQUESTS = table(tableName("${PREFIX}.requests")) // global table, not per blockchain
+        val TABLE_POINTS = table(tableName("${PREFIX}.points")) // global table, not per blockchain
         val COLUMN_CONTAINER: Field<String> = field("container", SQLDataType.CLOB.nullable(false))
         val COLUMN_TYPE: Field<String> = field("type", SQLDataType.CLOB.nullable(false))
         val COLUMN_PERIOD_START: Field<Timestamp> = field("period_start", SQLDataType.TIMESTAMP.nullable(false))
-        val COLUMN_REQUESTS: Field<Long> = field("requests", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_POINTS: Field<Long> = field("points", SQLDataType.BIGINT.nullable(false))
 
         fun tableName(name: String) = "\"$name\""
     }
@@ -33,21 +33,21 @@ class HybridComputeDatabaseOperationsImpl : HybridComputeDatabaseOperations {
         DatabaseAccess.of(ctx).apply {
             val jooq = dslContext(ctx)
 
-            jooq.createTableIfNotExists(TABLE_REQUESTS)
+            jooq.createTableIfNotExists(TABLE_POINTS)
                     .column(COLUMN_CONTAINER)
                     .column(COLUMN_TYPE)
                     .column(COLUMN_PERIOD_START)
-                    .column(COLUMN_REQUESTS)
-                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${TABLE_REQUESTS}")
+                    .column(COLUMN_POINTS)
+                    .constraint(constraint("${PRIMARY_KEY_PREFIX}${TABLE_POINTS}")
                             .primaryKey(COLUMN_CONTAINER, COLUMN_TYPE, COLUMN_PERIOD_START))
                     .execute()
         }
     }
 
-    override fun fetchRequests(ctx: EContext, container: String, type: String, now: Instant, periodLength: Duration): Long =
+    override fun fetchPoints(ctx: EContext, container: String, type: String, now: Instant, periodLength: Duration): Long =
             DatabaseAccess.of(ctx).run {
-                dslContext(ctx).select(COLUMN_REQUESTS)
-                        .from(TABLE_REQUESTS)
+                dslContext(ctx).select(COLUMN_POINTS)
+                        .from(TABLE_POINTS)
                         .where(COLUMN_CONTAINER.eq(container))
                         .and(COLUMN_TYPE.eq(type))
                         .and(COLUMN_PERIOD_START.gt(Timestamp(now.toEpochMilli() - periodLength.inWholeMilliseconds)))
@@ -56,11 +56,11 @@ class HybridComputeDatabaseOperationsImpl : HybridComputeDatabaseOperations {
                         .fetchOne()?.value1() ?: 0
             }
 
-    override fun incrementRequests(ctx: EContext, container: String, type: String,
-                                   containerCreationTime: Instant?, now: Instant, periodLength: Duration) {
+    override fun incrementPoints(ctx: EContext, container: String, type: String, containerCreationTime: Instant?,
+                                 now: Instant, periodLength: Duration, pointsConsumed: Long) {
         DatabaseAccess.of(ctx).run {
-            val existing = dslContext(ctx).select(COLUMN_PERIOD_START, COLUMN_REQUESTS)
-                    .from(TABLE_REQUESTS)
+            val existing = dslContext(ctx).select(COLUMN_PERIOD_START, COLUMN_POINTS)
+                    .from(TABLE_POINTS)
                     .where(COLUMN_CONTAINER.eq(container))
                     .and(COLUMN_TYPE.eq(type))
                     .orderBy(COLUMN_PERIOD_START.desc())
@@ -68,30 +68,30 @@ class HybridComputeDatabaseOperationsImpl : HybridComputeDatabaseOperations {
                     .fetchOne()
             if (existing != null) {
                 val periodStart = existing[COLUMN_PERIOD_START]
-                val requests = existing[COLUMN_REQUESTS]
+                val points = existing[COLUMN_POINTS]
                 if (periodStart.time > now.toEpochMilli() - periodLength.inWholeMilliseconds) {
-                    dslContext(ctx).update(TABLE_REQUESTS)
-                            .set(COLUMN_REQUESTS, requests + 1)
+                    dslContext(ctx).update(TABLE_POINTS)
+                            .set(COLUMN_POINTS, points + pointsConsumed)
                             .where(COLUMN_CONTAINER.eq(container))
                             .and(COLUMN_TYPE.eq(type))
                             .and(COLUMN_PERIOD_START.eq(periodStart))
                             .execute()
                 } else {
-                    dslContext(ctx).insertInto(TABLE_REQUESTS)
+                    dslContext(ctx).insertInto(TABLE_POINTS)
                             .set(COLUMN_CONTAINER, container)
                             .set(COLUMN_TYPE, type)
                             .set(COLUMN_PERIOD_START, Timestamp(
                                     ((now.toEpochMilli() - periodStart.time) / periodLength.inWholeMilliseconds) * periodLength.inWholeMilliseconds + periodStart.time
                             ))
-                            .set(COLUMN_REQUESTS, 1)
+                            .set(COLUMN_POINTS, pointsConsumed)
                             .execute()
                 }
             } else {
-                dslContext(ctx).insertInto(TABLE_REQUESTS)
+                dslContext(ctx).insertInto(TABLE_POINTS)
                         .set(COLUMN_CONTAINER, container)
                         .set(COLUMN_TYPE, type)
                         .set(COLUMN_PERIOD_START, Timestamp((containerCreationTime ?: now).toEpochMilli()))
-                        .set(COLUMN_REQUESTS, 1)
+                        .set(COLUMN_POINTS, pointsConsumed)
                         .execute()
             }
         }

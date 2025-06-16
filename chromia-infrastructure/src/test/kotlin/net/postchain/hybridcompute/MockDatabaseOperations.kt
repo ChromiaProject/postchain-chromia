@@ -6,8 +6,9 @@ import kotlin.time.Duration
 
 class MockDatabaseOperations : HybridComputeDatabaseOperations {
     override fun initialize(ctx: EContext) {}
-    override fun fetchRequests(ctx: EContext, container: String, type: String, now: Instant, periodLength: Duration): Long = 0L
+    override fun fetchPoints(ctx: EContext, container: String, type: String, now: Instant, periodLength: Duration): Long = 0L
 
-    override fun incrementRequests(ctx: EContext, container: String, type: String,
-                                   containerCreationTime: Instant?, now: Instant, periodLength: Duration) {}
+    override fun incrementPoints(ctx: EContext, container: String, type: String, containerCreationTime: Instant?,
+                                 now: Instant, periodLength: Duration, pointsConsumed: Long) {
+    }
 }

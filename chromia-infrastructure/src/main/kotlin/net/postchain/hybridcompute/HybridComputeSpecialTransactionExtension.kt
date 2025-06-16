@@ -163,9 +163,10 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 val periodLength = containerRateLimits[request.type]?.periodLength ?: DEFAULT_PERIOD_LENGTH
                 val rateLimit = containerRateLimits[request.type]?.rateLimit ?: Long.MAX_VALUE
                 if (container != null) {
-                    val currentRequests = dbOperations.fetchRequests(
+                    val currentPoints = dbOperations.fetchPoints(
                             bctx, container = container!!, type = request.type, now = now, periodLength = periodLength)
-                    if (currentRequests >= rateLimit) {
+                    val estimatedPoints = engine.estimatePoints(request.input)
+                    if (currentPoints + estimatedPoints > rateLimit) {
                         logger.warn("Rate limit for container [$container] and type [${request.type}] exceeded, skipping request id [${request.id}]")
                         continue
                     }
@@ -180,13 +181,20 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                     val future = computer.submit {
                         logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
                         try {
-                            val (output, duration) = measureTimedValue { engine.compute(request.input) }
+                            val (outputPointsConsumed, duration) = measureTimedValue { engine.compute(request.input) }
+                            val (output, pointsConsumed) = outputPointsConsumed
                             if (!Thread.currentThread().isInterrupted) {
                                 logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
                                 computations.replace(request.id, FinishedComputation(request.type, output))
                             } else {
                                 logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
                                 computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                            }
+                            container?.let {
+                                dbOperations.incrementPoints(bctx, container = it, type = request.type,
+                                        containerCreationTime = containerCreationTime, now = now,
+                                        periodLength = periodLength,
+                                        pointsConsumed = pointsConsumed)
                             }
                         } catch (_: InterruptedException) {
                             logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
@@ -212,11 +220,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                     val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
                     add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
                     takenRequests++
-                    container?.let {
-                        dbOperations.incrementRequests(bctx, container = it, type = request.type,
-                                containerCreationTime = containerCreationTime, now = now,
-                                periodLength = periodLength)
-                    }
                 } catch (_: RejectedExecutionException) {
                     computations.remove(request.id)
                 }
@@ -341,11 +344,13 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
             loader.interrupt()
             loader.join(1000)
         }
-        logger.info("Shutting down engine...")
-        val duration = measureTime {
-            engine.shutdown()
+        if (engine is Shutdownable) {
+            logger.info("Shutting down engine...")
+            val duration = measureTime {
+                (engine as Shutdownable).shutdown()
+            }
+            logger.info("Engine shutdown in $duration")
         }
-        logger.info("Engine shutdown in $duration")
         logger.info("Shutting down executors")
         computer.shutdownNow()
         if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
