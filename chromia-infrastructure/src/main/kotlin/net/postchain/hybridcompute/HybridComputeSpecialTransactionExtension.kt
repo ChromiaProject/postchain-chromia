@@ -165,7 +165,15 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 if (container != null) {
                     val currentPoints = dbOperations.fetchPoints(
                             bctx, container = container!!, type = request.type, now = now, periodLength = periodLength)
-                    val estimatedPoints = engine.estimatePoints(request.input)
+                    val estimatedPoints = try {
+                        engine.estimatePoints(request.input)
+                    } catch (e: UserMistake) {
+                        logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed, skipping it: ${e.message}")
+                        continue
+                    } catch (e: Exception) {
+                        logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed unexpectedly, skipping it: $e", e)
+                        continue
+                    }
                     if (currentPoints + estimatedPoints > rateLimit) {
                         logger.warn("Rate limit for container [$container] and type [${request.type}] exceeded, skipping request id [${request.id}]")
                         continue
