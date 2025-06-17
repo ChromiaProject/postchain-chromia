@@ -33,7 +33,8 @@ interface HybridComputeEngine {
      * Estimates the number of rate limit points required for the given computation input.
      *
      * This method will be invoked before `compute` if rate limiting is enabled.
-     * This method should finish quickly and not fail.
+     * This method should finish quickly. If this method throws [net.postchain.common.exception.UserMistake],
+     * the computation will not be performed.
      *
      * @param input  input to the computation
      * @return the estimated number of rate limit points
