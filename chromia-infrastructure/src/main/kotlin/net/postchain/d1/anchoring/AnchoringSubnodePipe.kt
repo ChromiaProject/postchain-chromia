@@ -125,7 +125,7 @@ class AnchoringSubnodePipe(
     }
 
     override fun fetchNextRange(fromHeight: Long): List<AnchoringPacket> =
-            packets.tailMap(fromHeight, true).values.toList()
+            ArrayList(packets.tailMap(fromHeight, true).values)
 
     override fun markTaken(lastCommittedHeight: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
