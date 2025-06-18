@@ -148,7 +148,7 @@ class GlobalTopicIcmfReceiver(
                 }
             }
         }
-        return pipes.values.toList()
+        return ArrayList(pipes.values)
     }
 
     override fun shutdown() {
