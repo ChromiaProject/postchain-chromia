@@ -125,15 +125,14 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 provider2KeyPair,
                 "config-mix"
         )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEifEnv()
 
-        node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                 provider3KeyPair,
                 "config-mix",
                 true)
+                .withGenesisNode(node1)
                 .withEifEnv()
 
         removeSubnodeContainers()

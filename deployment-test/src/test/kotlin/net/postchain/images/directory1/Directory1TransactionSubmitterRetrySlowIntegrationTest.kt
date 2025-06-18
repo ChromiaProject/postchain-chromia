@@ -92,16 +92,12 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("TxsR
         node2 = createTxsPostchainContainer("node2", node2Logger.underlyingLogger, provider2KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
         node3 = createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
         removeSubnodeContainers()
         startNodesAndChain0()
@@ -266,17 +262,13 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("TxsR
             createTxsPostchainContainer("node2", node2Logger.underlyingLogger,
                     provider2KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
         }
 
         node3 = restartNode(node3) {
             createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
         }
     }
 
@@ -296,9 +288,7 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("TxsR
         node4 = createTxsPostchainContainer("node4", node4Logger.underlyingLogger, provider4KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
         node4.start()
         startBlockchain(node4.channel, chain0Config)

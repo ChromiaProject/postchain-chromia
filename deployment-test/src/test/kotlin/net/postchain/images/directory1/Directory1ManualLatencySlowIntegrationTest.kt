@@ -101,21 +101,15 @@ class Directory1ManualLatencySlowIntegrationTest {
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     provider2KeyPair,
                     "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
             node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     provider3KeyPair,
                     "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
             node4 = postchainServer("node4", Slf4jLogConsumer(node4Logger.underlyingLogger, true),
                     provider4KeyPair,
                     "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
 
             removeSubnodeContainers()
             startNodesAndChain0()

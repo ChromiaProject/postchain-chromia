@@ -1,5 +1,6 @@
 package net.postchain.images.directory1
 
+import mu.KLogger
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -7,37 +8,36 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.pathString
 
-class DiskHelper {
-    companion object {
+object DiskHelper {
 
-        private val tmpFiles = mutableListOf<Path>()
+    private val tmpFiles = mutableListOf<Path>()
 
-        fun tmpDockerHostDir(): Path {
+    fun mkTmpDockerHostDir(): Path {
 
-            val testMountDirectory = System.getenv("TEST_MOUNT_DIRECTORY")
+        val testMountDirectory = System.getenv("TEST_MOUNT_DIRECTORY")
+        val dockerHostDir = if (testMountDirectory == null)
+            Files.createTempDirectory("postchain-chromia-it-")
+        else
+            Files.createTempDirectory(Path.of(testMountDirectory), "postchain-chromia-it-")
 
-            val dir = if (testMountDirectory == null)
-                Files.createTempDirectory("postchain-chromia-it-")
-            else Files.createTempDirectory(Path.of(testMountDirectory), "postchain-chromia-it-")
-            dir.toFile().deleteOnExit()
-            tmpFiles.add(dir)
-            return dir
-        }
+        dockerHostDir.toFile().deleteOnExit()
+        tmpFiles.add(dockerHostDir)
+        return dockerHostDir
+    }
 
-        fun tmpDirBasedOnResources(configDir: String, node: String): Path {
-            val dir = tmpDockerHostDir()
-            File(this::class.java.getResource("${configDir}/${node}")!!.toURI()).copyRecursively(dir.toFile(), false)
-            return dir
-        }
+    fun mkTmpDockerHostDirBasedOnResources(configDir: String, node: String): Path {
+        val dir = mkTmpDockerHostDir()
+        File(this::class.java.getResource("${configDir}/${node}")!!.toURI()).copyRecursively(dir.toFile(), false)
+        return dir
+    }
 
-        @OptIn(ExperimentalPathApi::class)
-        fun cleanup() {
-            tmpFiles.forEach {
-                try {
-                    it.deleteRecursively()
-                } catch (e: Exception) {
-                    println("Failed to delete ${it.pathString}: ${e.message}")
-                }
+    @OptIn(ExperimentalPathApi::class)
+    fun cleanup(testLogger: KLogger) {
+        tmpFiles.forEach {
+            try {
+                it.deleteRecursively()
+            } catch (e: Exception) {
+                testLogger.warn("Failed to delete ${it.pathString}: ${e.message}")
             }
         }
     }

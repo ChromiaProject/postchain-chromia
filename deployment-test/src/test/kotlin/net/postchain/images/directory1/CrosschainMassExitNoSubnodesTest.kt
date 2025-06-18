@@ -143,18 +143,14 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
                 provider2KeyPair,
                 "config-no-subnodes"
         )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEifEnv()
 
         node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                 provider3KeyPair,
                 "config-no-subnodes"
         )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEifEnv()
 
         removeSubnodeContainers()

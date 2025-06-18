@@ -9,19 +9,20 @@ class Directory1DeploymentAllSubnodesSlowIntegrationTest : Directory1DeploymentB
 
     companion object {
         init {
-            node1 = postchainMasterChildServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+            node1 = postchainServerWithSubnodes("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
                     provider1KeyPair,
                     "config-all-subnodes",
-                    true,
                     true)
-            node2 = postchainMasterChildServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+            node2 = postchainServerWithSubnodes("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     provider2KeyPair,
                     "config-all-subnodes",
                     true)
-            node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+                    .withGenesisNode(node1)
+            node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     provider3KeyPair,
                     "config-all-subnodes",
                     true)
+                    .withGenesisNode(node1)
 
             removeSubnodeContainers()
             startNodesAndChain0()

@@ -61,13 +61,12 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
             node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                     provider2KeyPair,
                     "config-mix")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+                    .withGenesisNode(node1)
+            node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                     provider3KeyPair,
                     "config-mix",
                     true)
+                    .withGenesisNode(node1)
 
             removeSubnodeContainers()
             startNodesAndChain0()

@@ -114,11 +114,9 @@ class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "/opt/chromaway/postchain/libs/*:/opt/chromaway/postchain/classpath/*",
                         "net.postchain.server.AppKt",
                         "run-server")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEifEnv()
-        node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                 provider3KeyPair,
                 "config-mix",
                 true)
@@ -130,6 +128,7 @@ class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "/opt/chromaway/postchain/libs/*:/opt/chromaway/postchain/classpath/*",
                         "net.postchain.server.AppKt",
                         "run-server")
+                .withGenesisNode(node1)
                 .withEifEnv()
 
 

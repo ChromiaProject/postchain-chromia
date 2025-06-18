@@ -104,6 +104,13 @@ class PostchainContainer(
         }
     }
 
+    fun withGenesisNode(node: PostchainContainer): PostchainContainer {
+        withEnv("POSTCHAIN_GENESIS_PUBKEY", node.pubkey.hex())
+        withEnv("POSTCHAIN_GENESIS_HOST", node.nodeHost)
+        withEnv("POSTCHAIN_GENESIS_PORT", node.nodePort.toString())
+        return this
+    }
+
     override fun stop() {
         if (::channel.isInitialized) {
             channel.shutdownNow()

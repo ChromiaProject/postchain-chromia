@@ -7,6 +7,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Capability
+import com.github.dockerjava.api.model.RestartPolicy
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
 import mu.KotlinLogging
@@ -146,7 +147,7 @@ open class ManagedModeBase {
                     .waitFor()
         }
 
-        DiskHelper.cleanup()
+        DiskHelper.cleanup(testLogger)
     }
 
     fun removeSubnodeContainers() {
@@ -161,6 +162,8 @@ open class ManagedModeBase {
         }
     }
 
+    // Create a Postchain server for concurrent testing. Use `postchainServerWithSubnodes` if you want to setup a
+    // server with sub node containers.
     fun postchainServer(
             hostName: String,
             logConsumer: Slf4jLogConsumer?,
@@ -168,11 +171,8 @@ open class ManagedModeBase {
             configDir: String,
             generateKeys: Boolean = false,
     ): PostchainContainer {
-        val tmpNodeConfigDir = DiskHelper.tmpDirBasedOnResources(configDir, hostName)
+        val tmpNodeConfigDir = DiskHelper.mkTmpDockerHostDirBasedOnResources(configDir, hostName)
         val tmpNodeConfigFile = tmpNodeConfigDir.resolve("node-config.properties")
-
-        // TODO remove
-        testLogger.info { "Node config: ${tmpNodeConfigFile.pathString} - is a file: ${tmpNodeConfigFile.toFile().isFile}" }
 
         val appConfig = setupMasterNodeConfig(
                 hostName,
@@ -184,15 +184,18 @@ open class ManagedModeBase {
                 .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
     }
 
-    fun postchainMasterChildServer(
+    /**
+     * Create a Postchain server and configure it to run as a master with sub nodes, e.g. with isolated
+     * sub container directories (host mounted points), same network etc.
+     */
+    fun postchainServerWithSubnodes(
             hostName: String,
             logConsumer: Slf4jLogConsumer?,
             provider: KeyPair,
             configDir: String,
             generateKeys: Boolean = false,
-            isGenesisNode: Boolean = false,
     ): PostchainContainer {
-        val tmpNodeConfigDir = DiskHelper.tmpDirBasedOnResources(configDir, hostName)
+        val tmpNodeConfigDir = DiskHelper.mkTmpDockerHostDirBasedOnResources(configDir, hostName)
         val tmpNodeConfigFile = tmpNodeConfigDir.resolve("node-config.properties")
         val appConfig = setupMasterNodeConfig(
                 hostName,
@@ -206,13 +209,6 @@ open class ManagedModeBase {
                 .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
                 .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
                 .apply {
-
-                    if (!isGenesisNode) {
-                        withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                        withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                        withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    }
-
                     if (System.getenv("DOCKER_HOST") == null) {
                         // Mount host machines docker socket into master container
                         addFileSystemBind(dockerSocket, dockerSocket, BindMode.READ_ONLY, SelinuxContext.SHARED)
@@ -257,6 +253,7 @@ open class ManagedModeBase {
                                     withGroupAdd(groups)
                                 }
                             }
+                            .withRestartPolicy(RestartPolicy.onFailureRestart(2))
                 }
     }
 

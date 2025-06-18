@@ -99,9 +99,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmCo
         node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
                 provider2KeyPair,
                 "config-mix")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
                 .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
@@ -110,10 +108,11 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmCo
                 .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        node3 = postchainMasterChildServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
                 provider3KeyPair,
                 "config-mix",
                 true)
+                .withGenesisNode(node1)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
                 .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
