@@ -14,6 +14,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.Gtx
+import net.postchain.images.directory1.testLogger
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -96,7 +97,15 @@ class PostchainContainer(
     fun peerInfo(): D1PeerInfo = D1PeerInfo(apiPath(), pubkey)
 
     override fun start() {
-        super.start()
+
+        for (i in 1..4) {
+            try {
+                super.start()
+                break
+            } catch (e: Exception) {
+                testLogger.error(e) { "Failed to start container: ${e.message}" }
+            }
+        }
 
         if (this.containerInfo.networkSettings.ports.bindings.containsKey(ExposedPort(50051))) {
             channel = ManagedChannelBuilder.forTarget("${this.host}:${this.getMappedPort(50051)}")

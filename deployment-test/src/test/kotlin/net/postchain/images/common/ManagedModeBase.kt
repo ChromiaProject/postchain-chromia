@@ -249,7 +249,6 @@ open class ManagedModeBase(val logDir: String) {
                                     withGroupAdd(groups)
                                 }
                             }
-                            .withRestartPolicy(RestartPolicy.onFailureRestart(2))
                 }
     }
 

@@ -155,10 +155,11 @@ test-coverage-report:
 slow-integration-tests:
   extends: .setup
   stage: slow-integration-tests
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-      when: manual
-      allow_failure: true
+# TODO revert
+#  rules:
+#    - if: $CI_PIPELINE_SOURCE == "push"
+#      when: manual
+#      allow_failure: true
   script:
     - mvn
       $MAVEN_CLI_OPTS
