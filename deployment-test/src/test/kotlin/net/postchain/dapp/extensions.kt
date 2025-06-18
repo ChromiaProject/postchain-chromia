@@ -3,6 +3,7 @@ package net.postchain.dapp
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.transaction.Postable
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.images.directory1.testLogger
 import java.lang.Thread.sleep
 import java.time.Duration
 
@@ -26,10 +27,10 @@ fun Postable.postTransactionUntilConfirmed(
         if (txRes.status == TransactionStatus.REJECTED && isRetryableStatus(txRes.httpStatusCode) ||
             txRes.status == TransactionStatus.UNKNOWN
         ) {
-            println("  Tx $transactionName result (attempt ${attempt}) was: ${txRes.status}, code: ${txRes.httpStatusCode}")
+            testLogger.info { "  Tx $transactionName result (attempt ${attempt}) was: ${txRes.status}, code: ${txRes.httpStatusCode}" }
             sleep(timeOut.toMillis())
         } else {
-            println("  TX $transactionName result was: ${txRes.status}, code: ${txRes.httpStatusCode} ${txRes.rejectReason?.let { ", reason: $it" } ?: ""}")
+            testLogger.info { "  TX $transactionName result was: ${txRes.status}, code: ${txRes.httpStatusCode} ${txRes.rejectReason?.let { ", reason: $it" } ?: ""}" }
             return txRes
         }
     }
