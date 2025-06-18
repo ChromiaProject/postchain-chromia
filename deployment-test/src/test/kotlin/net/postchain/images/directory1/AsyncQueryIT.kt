@@ -3,7 +3,6 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getContainers
@@ -25,34 +24,27 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class AsyncQueryIT {
+class AsyncQueryIT : ManagedModeBase("async_query") {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        override val logsSubdir = "async_query"
+    private val dappContainer = "dappContainer"
 
-        private const val dappContainer = "dappContainer"
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-no-subnodes")
 
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-no-subnodes")
+        startNodesAndChain0()
+    }
 
-            startNodesAndChain0()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     @Test

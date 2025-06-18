@@ -2,7 +2,6 @@ package net.postchain.images.directory1
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
@@ -40,43 +39,34 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
+class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest : ManagedModeBase("deployment-updating-signers") {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
-        override val logsSubdir = "deployment"
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-mix")
+        node2 = postchainServer("node2",
+                provider2KeyPair,
+                "config-mix")
+                .withGenesisNode(node1)
+        node3 = postchainServerWithSubnodes("node3",
+                provider3KeyPair,
+                "config-mix",
+                true)
+                .withGenesisNode(node1)
 
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-mix")
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    provider2KeyPair,
-                    "config-mix")
-                    .withGenesisNode(node1)
-            node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    provider3KeyPair,
-                    "config-mix",
-                    true)
-                    .withGenesisNode(node1)
+        removeSubnodeContainers()
+        startNodesAndChain0()
+    }
 
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     @Test

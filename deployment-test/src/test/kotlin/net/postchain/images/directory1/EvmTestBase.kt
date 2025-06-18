@@ -2,7 +2,6 @@ package net.postchain.images.directory1
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
-import mu.KotlinLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -19,6 +18,7 @@ import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
+import net.postchain.images.common.LoggingConfig
 import org.junit.jupiter.api.AfterAll
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.web3j.abi.datatypes.Address
@@ -35,16 +35,16 @@ import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 
 // Test base to get common evm container test resources
-abstract class EvmTestBase(evmLoggerName: String) : Directory1TestBase() {
+abstract class EvmTestBase(logDir: String) : Directory1TestBase(logDir) {
 
     companion object {
         const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
     }
 
-    val evmContainerLogger = KotlinLogging.logger(evmLoggerName)
+    val evmContainerLogger = LoggingConfig.createLogger(logDir, "evm-container")
     val evmContainerCredentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
-    val evmContainer: GethContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger.underlyingLogger, true))
+    val evmContainer: GethContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger, true))
             .withNetwork(network)
             .apply {
                 start()

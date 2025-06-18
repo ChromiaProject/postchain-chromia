@@ -7,7 +7,6 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
@@ -40,7 +39,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
 import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -52,11 +50,7 @@ import kotlin.io.path.pathString
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
-
-    private val node1Logger = KotlinLogging.logger("Deadlock_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("Deadlock_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("Deadlock_Node3Logger")
+class Directory1DeadlockIT : EvmTestBase("deadlock") {
 
     private lateinit var evmChainConfig: Gtv
     private lateinit var txsChainConfig: Gtv
@@ -91,7 +85,7 @@ class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
             testJarFile = testJarFileOnHost.absolutePath
         }
 
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-mix")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
@@ -103,7 +97,7 @@ class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "net.postchain.server.AppKt",
                         "run-server")
                 .withEifEnv()
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
@@ -116,7 +110,7 @@ class Directory1DeadlockIT : EvmTestBase("EvmDeadlock_EvmContainerLogger") {
                         "run-server")
                 .withGenesisNode(node1)
                 .withEifEnv()
-        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
                 "config-mix",
                 true)

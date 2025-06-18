@@ -10,7 +10,6 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
@@ -110,7 +109,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -130,7 +128,7 @@ import java.nio.charset.StandardCharsets
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContainerLogger") {
+class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
 
     companion object {
 
@@ -154,11 +152,6 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
         const val PROVIDER2_VS = "provider2_vs"
         private const val DEPOSIT_NUMBER = 5
     }
-
-    private val node1Logger = KotlinLogging.logger("EC_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("EC_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("EC_Node3Logger")
-    override val logsSubdir = "ec"
 
     lateinit var containerName: String
     lateinit var dappBrid: BlockchainRid
@@ -188,19 +181,19 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("EC_EvmContaine
     init {
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-mix"
         ).withEifEnv()
 
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix"
         )
                 .withGenesisNode(node1)
                 .withEifEnv()
 
-        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
                 "config-mix",
                 true)

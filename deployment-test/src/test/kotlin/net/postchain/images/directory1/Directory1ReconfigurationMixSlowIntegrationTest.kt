@@ -6,7 +6,6 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
@@ -41,44 +40,34 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ReconfigurationMixSlowIntegrationTest {
+class Directory1ReconfigurationMixSlowIntegrationTest : ManagedModeBase("reconfig") {
 
-    companion object : ManagedModeBase() {
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-mix")
+        node2 = postchainServer("node2",
+                provider2KeyPair,
+                "config-mix")
+                .withGenesisNode(node1)
+        node3 = postchainServerWithSubnodes("node3",
+                provider3KeyPair,
+                "config-mix",
+                true)
+                .withGenesisNode(node1)
 
-        val node1Logger = KotlinLogging.logger("Reconfig_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Reconfig_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Reconfig_Node3Logger")
-        override val logsSubdir = "reconfig"
+        removeSubnodeContainers()
+        startNodesAndChain0()
+    }
 
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-mix")
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    provider2KeyPair,
-                    "config-mix")
-                    .withGenesisNode(node1)
-            node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    provider3KeyPair,
-                    "config-mix",
-                    true)
-                    .withGenesisNode(node1)
-
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     @Test
@@ -391,7 +380,7 @@ class Directory1ReconfigurationMixSlowIntegrationTest {
     private fun chain0Config(faulty: Boolean = false) = GtvEncoder.encodeGtv(
             compileDapp("manager", faulty = faulty, bugSupplier = ::addBrokenBlockStrategyClass)
     ).also {
-        node1Logger.error { it }
+        testLogger.error { it }
     }
 
     private fun addBrokenBlockStrategyClass(config: String) = findAndReplaceBugSupplier(

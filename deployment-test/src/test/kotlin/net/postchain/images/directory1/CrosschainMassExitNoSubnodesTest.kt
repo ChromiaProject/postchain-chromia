@@ -4,7 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.common.init.initOperation
@@ -66,7 +65,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -81,12 +79,7 @@ import java.math.BigInteger
 @Testcontainers
 @DisableIfTestFails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") {
-
-    private val node1Logger = KotlinLogging.logger("XCME_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("XCME_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("XCME_Node3Logger")
-    override val logsSubdir = "crosschain_massexit"
+class CrosschainMassExitNoSubnodesTest : EvmTestBase("crosschain_massexit") {
 
     private val adminKeyPair = KeyPair.of(
             "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070",
@@ -134,19 +127,19 @@ class CrosschainMassExitNoSubnodesTest : EvmTestBase("XCME_EvmContainerLogger") 
     init {
         chain0Config = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
 
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-no-subnodes"
         ).withEifEnv()
 
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-no-subnodes"
         )
                 .withGenesisNode(node1)
                 .withEifEnv()
 
-        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServer("node3",
                 provider3KeyPair,
                 "config-no-subnodes"
         )

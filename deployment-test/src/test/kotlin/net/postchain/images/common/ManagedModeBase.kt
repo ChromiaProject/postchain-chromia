@@ -70,19 +70,19 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.SelinuxContext
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import kotlin.io.path.pathString
 
-// Base class for managed mode tests
-open class ManagedModeBase {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+open class ManagedModeBase(val logDir: String) {
 
     protected val cryptoSystem = Secp256K1CryptoSystem()
 
     val testLogger = KotlinLogging.logger("TestLogger")
-    open val logsSubdir = ""
 
     val network: Network = Network.newNetwork()
 
@@ -127,7 +127,7 @@ open class ManagedModeBase {
     }.toTypedArray()
 
     fun breakdown() {
-        saveSubnodeLogs(dockerClient, network, logsSubdir)
+        saveSubnodeLogs(dockerClient, network, logDir)
         stopNodes()
         removeSubnodeContainers()
 
@@ -166,7 +166,6 @@ open class ManagedModeBase {
     // server with sub node containers.
     fun postchainServer(
             hostName: String,
-            logConsumer: Slf4jLogConsumer?,
             provider: KeyPair,
             configDir: String,
             generateKeys: Boolean = false,
@@ -180,7 +179,7 @@ open class ManagedModeBase {
                 null,
                 generateKeys)
 
-        return postchainServerInternal(hostName, logConsumer, provider, appConfig)
+        return postchainServerInternal(hostName, provider, appConfig)
                 .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
     }
 
@@ -190,7 +189,6 @@ open class ManagedModeBase {
      */
     fun postchainServerWithSubnodes(
             hostName: String,
-            logConsumer: Slf4jLogConsumer?,
             provider: KeyPair,
             configDir: String,
             generateKeys: Boolean = false,
@@ -203,7 +201,7 @@ open class ManagedModeBase {
                 tmpNodeConfigDir,
                 generateKeys)
 
-        return postchainServerInternal(hostName, logConsumer, provider, appConfig)
+        return postchainServerInternal(hostName, provider, appConfig)
                 .withEnv("POSTCHAIN_SUBNODE_NETWORK", network.id)
                 .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
@@ -221,7 +219,6 @@ open class ManagedModeBase {
 
     private fun postchainServerInternal(
             hostName: String,
-            logConsumer: Slf4jLogConsumer?,
             provider: KeyPair,
             appConfig: AppConfig,
     ): PostchainContainer {
@@ -240,7 +237,6 @@ open class ManagedModeBase {
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", 30_000.toString())
-                .withLogConsumer(logConsumer)
                 .withCommand("run-server")
                 .withCreateContainerCmdModifier { cmd ->
                     cmd.hostConfig!!
@@ -271,6 +267,7 @@ open class ManagedModeBase {
     fun restartNode(node: PostchainContainer, containerProvider: (() -> PostchainContainer)? = null): PostchainContainer {
         stopContainers(node)
         val startNode = containerProvider?.invoke() ?: node
+        appendLoggers(arrayOf(startNode))
         startContainers(startNode)
 
         PostchainServiceGrpc.newBlockingStub(startNode.channel)
@@ -286,13 +283,15 @@ open class ManagedModeBase {
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
         postgres.start()
-        startContainers(*buildList {
+        val nodesToStart = buildList {
             if (::node1.isInitialized) add(node1)
             if (::node2.isInitialized) add(node2)
             if (::node3.isInitialized) add(node3)
             if (::node4.isInitialized) add(node4)
             if (::node5.isInitialized) add(node5)
-        }.toTypedArray())
+        }.toTypedArray()
+        appendLoggers(nodesToStart)
+        startContainers(*nodesToStart)
 
         // node1 - replace signer pubkey in case node1 is using generated keys
         chain0Config = chain0Config.replace("0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57",
@@ -304,6 +303,12 @@ open class ManagedModeBase {
         // Other nodes if started
         nodes().filter { it != node1 }.forEach {
             startBlockchain(it.channel, chain0Config)
+        }
+    }
+
+    private fun appendLoggers(nodesToStart: Array<PostchainContainer>) {
+        nodesToStart.forEach {
+            it.withLogConsumer(Slf4jLogConsumer(LoggingConfig.createLogger(logDir, it.nodeHost), true))
         }
     }
 

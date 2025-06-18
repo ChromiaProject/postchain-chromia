@@ -7,7 +7,6 @@ import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
@@ -49,7 +48,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -60,12 +58,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmContainerLogger") {
-
-    private val node1Logger = KotlinLogging.logger("Txs_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("Txs_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("Txs_Node3Logger")
-    override val logsSubdir = "txs"
+class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("txs") {
 
     private val dappContainer = "dappContainer"
     private val dappContainerVoterSet = "dappContainer_vs"
@@ -85,7 +78,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmCo
     init {
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-mix")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
@@ -96,7 +89,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmCo
                 .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix")
                 .withGenesisNode(node1)
@@ -108,7 +101,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("Txs_EvmCo
                 .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        node3 = postchainServerWithSubnodes("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
                 "config-mix",
                 true)

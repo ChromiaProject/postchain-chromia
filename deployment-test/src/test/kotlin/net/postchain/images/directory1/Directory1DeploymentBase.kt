@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -59,30 +58,22 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-abstract class Directory1DeploymentBase {
+abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir) {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
-        override val logsSubdir = "deployment"
+    private val fooContainer = "fooContainer"
+    private val barContainer = "barContainer"
+    private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
+    private val fooResourceLimits = ContainerResourceLimits(
+            Cpu(resourceLimitsValues["cpu"] ?: -1),
+            Ram(resourceLimitsValues["ram"] ?: -1),
+            Storage(resourceLimitsValues["storage"] ?: 32768),
+            IoRead(resourceLimitsValues["io_read"] ?: -1),
+            IoWrite(resourceLimitsValues["io_write"] ?: -1)
+    )
 
-        private const val fooContainer = "fooContainer"
-        private const val barContainer = "barContainer"
-        private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
-        private val fooResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues["cpu"] ?: -1),
-                Ram(resourceLimitsValues["ram"] ?: -1),
-                Storage(resourceLimitsValues["storage"] ?: 32768),
-                IoRead(resourceLimitsValues["io_read"] ?: -1),
-                IoWrite(resourceLimitsValues["io_write"] ?: -1)
-        )
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     abstract val numberOfMasterNodes: Int
