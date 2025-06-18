@@ -133,7 +133,7 @@ class Directory1ReplaceGenesisNodeSlowIntegrationTest {
                 provider1KeyPair,
                 "config-no-subnodes"
         )
-                .withGenesisNode(node1)
+                .withGenesisNode(node2)
 
         node5.start()
         val chain0Brid5 = startBlockchain(node5.channel, chain0Config).let { BlockchainRid.buildFromHex(it) }
