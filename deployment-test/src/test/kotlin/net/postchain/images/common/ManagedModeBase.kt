@@ -289,8 +289,7 @@ open class ManagedModeBase(val logDir: String) {
             if (::node5.isInitialized) add(node5)
         }.toTypedArray()
         appendLoggers(nodesToStart)
-//            startContainers(*nodesToStart)
-        nodesToStart.forEach { it.start() }
+        startContainers(*nodesToStart)
 
         // node1 - replace signer pubkey in case node1 is using generated keys
         chain0Config = chain0Config.replace("0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57",

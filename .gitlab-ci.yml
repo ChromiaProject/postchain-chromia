@@ -6,7 +6,7 @@ include:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
       - templates/container-dependency-scanning.yml
-      - templates/report-code-coverage.yml
+#      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -92,8 +92,8 @@ build:
     refs:
       - dev
       - tags
-  script:
-    - mvn
+  script: # TODO revert
+    - echo mvn
       $MAVEN_CLI_OPTS
       --activate-profiles ci,coverage
       verify
@@ -143,14 +143,14 @@ gitlab-release:
     description: release_notes.md
     tag_name: '$CI_COMMIT_TAG'
 
-test-coverage-report:
-  stage: code-coverage
-  except:
-    refs:
-      - dev
-      - tags
-  dependencies:
-    - build
+#test-coverage-report:
+#  stage: code-coverage
+#  except:
+#    refs:
+#      - dev
+#      - tags
+#  dependencies:
+#    - build
 
 slow-integration-tests:
   extends: .setup

@@ -51,7 +51,6 @@ class PostchainContainer(
     }
 
     init {
-        startupAttempts = 3
         withExposedPorts(apiPort, nodePort)
         waitStrategy = LogMessageWaitStrategy()
                 .withRegEx(".*$startupMsg.*\\s")

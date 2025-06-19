@@ -11,6 +11,10 @@
 
     <artifactId>deployment-test</artifactId>
 
+    <properties>
+        <slow.it.forks>3</slow.it.forks>
+    </properties>
+
     <dependencies>
         <dependency> <!-- Ensure build order -->
             <groupId>net.postchain.images</groupId>
@@ -455,12 +459,15 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <forkCount>4</forkCount>
+                            <forkCount>${slow.it.forks}</forkCount>
                             <reuseForks>false</reuseForks>
                             <systemPropertyVariables>
                                 <log4j2.configurationFile>log4j2-test.yml</log4j2.configurationFile>
                                 <forkId>fork-${surefire.forkNumber}</forkId>
                             </systemPropertyVariables>
+                            <environmentVariables>
+                                <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
+                            </environmentVariables>
                             <includes>
                                 <include>**/*SlowIntegrationTest.java</include>
                             </includes>

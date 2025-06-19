@@ -3,10 +3,13 @@ package net.postchain.images.directory1
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider1KeyPair
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider2KeyPair
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider3KeyPair
+import org.junit.jupiter.api.BeforeAll
 
 class Directory1DeploymentAllSubnodesSlowIntegrationTest : Directory1DeploymentBase("deployment-subnodes") {
 
-    init {
+    // TODO keep or revert?
+    @BeforeAll
+    fun init() {
         node1 = postchainServerWithSubnodes("node1",
                 provider1KeyPair,
                 "config-all-subnodes",
