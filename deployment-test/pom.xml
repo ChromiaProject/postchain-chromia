@@ -455,7 +455,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <forkCount>3</forkCount>
+                            <forkCount>4</forkCount>
                             <reuseForks>false</reuseForks>
                             <systemPropertyVariables>
                                 <log4j2.configurationFile>log4j2-test.yml</log4j2.configurationFile>

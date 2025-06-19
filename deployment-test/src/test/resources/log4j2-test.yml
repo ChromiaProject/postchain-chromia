@@ -34,3 +34,10 @@ Configuration:
         AppenderRef:
           - ref: ConsoleAppender
           - ref: FileAppender
+
+      - name: org.testcontainers
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: ConsoleAppender
+          - ref: FileAppender

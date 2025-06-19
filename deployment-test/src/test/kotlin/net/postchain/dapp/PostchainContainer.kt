@@ -14,7 +14,6 @@ import net.postchain.crypto.KeyPair
 import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.Gtx
-import net.postchain.images.directory1.testLogger
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
@@ -52,6 +51,7 @@ class PostchainContainer(
     }
 
     init {
+        startupAttempts = 3
         withExposedPorts(apiPort, nodePort)
         waitStrategy = LogMessageWaitStrategy()
                 .withRegEx(".*$startupMsg.*\\s")
@@ -98,14 +98,7 @@ class PostchainContainer(
 
     override fun start() {
 
-        for (i in 1..4) {
-            try {
-                super.start()
-                break
-            } catch (e: Exception) {
-                testLogger.error(e) { "Failed to start container: ${e.message}" }
-            }
-        }
+        super.start()
 
         if (this.containerInfo.networkSettings.ports.bindings.containsKey(ExposedPort(50051))) {
             channel = ManagedChannelBuilder.forTarget("${this.host}:${this.getMappedPort(50051)}")
