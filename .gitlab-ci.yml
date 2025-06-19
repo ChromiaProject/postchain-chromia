@@ -85,7 +85,7 @@ deploy:
 build:
   extends:
     - .setup
-    - .visualise-test-coverage
+#    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
