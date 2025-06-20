@@ -459,6 +459,7 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <skip>false</skip>
                             <forkCount>${slow.it.forks}</forkCount>
                             <reuseForks>false</reuseForks>
                             <systemPropertyVariables>

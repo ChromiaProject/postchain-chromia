@@ -163,7 +163,7 @@ slow-integration-tests:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,no-unit-tests,slow-it
+      --activate-profiles ci,no-unit-tests,no-it,slow-it
       clean verify
 
 dependency-check:
