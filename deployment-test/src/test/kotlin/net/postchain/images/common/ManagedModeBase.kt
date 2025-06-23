@@ -77,7 +77,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import kotlin.io.path.pathString
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-open class ManagedModeBase(val logDir: String) {
+open class ManagedModeBase(private val logDir: String) {
 
     protected val cryptoSystem = Secp256K1CryptoSystem()
 
@@ -280,7 +280,7 @@ open class ManagedModeBase(val logDir: String) {
 
     fun startNodesAndChain0() {
         testLogger.info { "Starting nodes..." }
-        postgres.start()
+        startContainers(postgres)
         val nodesToStart = buildList {
             if (::node1.isInitialized) add(node1)
             if (::node2.isInitialized) add(node2)

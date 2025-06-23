@@ -9,6 +9,7 @@ import net.postchain.common.wrap
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
+import net.postchain.dapp.startContainers
 import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
 import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
@@ -42,12 +43,12 @@ abstract class EvmTestBase(logDir: String) : Directory1TestBase(logDir) {
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
     }
 
-    val evmContainerLogger = LoggingConfig.createLogger(logDir, "evm-container")
-    val evmContainerCredentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
+    private val evmContainerLogger = LoggingConfig.createLogger(logDir, "evm-container")
+    private val evmContainerCredentials: Credentials = Credentials.create("0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
     val evmContainer: GethContainer = GethContainer(logger = Slf4jLogConsumer(evmContainerLogger, true))
             .withNetwork(network)
             .apply {
-                start()
+                startContainers(this)
             }
     val evmContainerNetworkId = 1337L
 
