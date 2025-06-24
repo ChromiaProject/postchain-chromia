@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -59,30 +58,22 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-abstract class Directory1DeploymentBase {
+abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir) {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
-        override val logsSubdir = "deployment"
+    private val fooContainer = "fooContainer"
+    private val barContainer = "barContainer"
+    private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
+    private val fooResourceLimits = ContainerResourceLimits(
+            Cpu(resourceLimitsValues["cpu"] ?: -1),
+            Ram(resourceLimitsValues["ram"] ?: -1),
+            Storage(resourceLimitsValues["storage"] ?: 32768),
+            IoRead(resourceLimitsValues["io_read"] ?: -1),
+            IoWrite(resourceLimitsValues["io_write"] ?: -1)
+    )
 
-        private const val fooContainer = "fooContainer"
-        private const val barContainer = "barContainer"
-        private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
-        private val fooResourceLimits = ContainerResourceLimits(
-                Cpu(resourceLimitsValues["cpu"] ?: -1),
-                Ram(resourceLimitsValues["ram"] ?: -1),
-                Storage(resourceLimitsValues["storage"] ?: 32768),
-                IoRead(resourceLimitsValues["io_read"] ?: -1),
-                IoWrite(resourceLimitsValues["io_write"] ?: -1)
-        )
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     abstract val numberOfMasterNodes: Int
@@ -253,7 +244,8 @@ abstract class Directory1DeploymentBase {
     fun `Subnode containers have been launched`() {
         testLogger.info("Asserting that subnode container(s) launched")
         awaitUntilAsserted {
-            val runningSubnodes = dockerClient.listSubContainersCmd()
+            val runningSubnodes = dockerClient.listSubContainersCmd(network)
+                    .withNetworkFilter(listOf(network.id))
                     .withStatusFilter(listOf("running"))
                     .exec()
             assertThat(runningSubnodes.size).isEqualTo(2 * numberOfMasterNodes)
@@ -266,7 +258,9 @@ abstract class Directory1DeploymentBase {
     fun `fooContainer has resource limits`() {
         testLogger.info("Asserting $fooContainer resource limits")
 
-        val all = dockerClient.listContainersCmd().withShowAll(true).exec()
+        val all = dockerClient.listContainersCmd()
+                .withNetworkFilter(listOf(network.id))
+                .withShowAll(true).exec()
         all.forEach {
             if (it.names?.get(0)?.contains(fooContainer) == true) {
                 val res = dockerClient.inspectContainerCmd(it.id).exec()
@@ -459,7 +453,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+            val fooDockerContainer = dockerClient.listContainersCmd()
+                    .withNetworkFilter(listOf(network.id))
+                    .withShowAll(true).exec().firstOrNull {
                 it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
@@ -490,7 +486,9 @@ abstract class Directory1DeploymentBase {
 
         // Verify that removed chain is deleted from subnode DBs
         if (numberOfMasterNodes > 0) {
-            val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+            val fooDockerContainer = dockerClient.listContainersCmd()
+                    .withNetworkFilter(listOf(network.id))
+                    .withShowAll(true).exec().firstOrNull {
                 it.names.any { name -> name.contains(fooContainer) }
             }
             assertThat(fooDockerContainer).isNotNull()
@@ -515,7 +513,9 @@ abstract class Directory1DeploymentBase {
                     .postTransactionUntilConfirmed("Removing test_dapp5")
 
             awaitUntilAsserted {
-                val fooDockerContainer = dockerClient.listContainersCmd().withShowAll(true).exec().firstOrNull {
+                val fooDockerContainer = dockerClient.listContainersCmd()
+                        .withNetworkFilter(listOf(network.id))
+                        .withShowAll(true).exec().firstOrNull {
                     it.names.any { name -> name.contains(fooContainer) }
                 }
                 assertThat(fooDockerContainer?.state).isEqualTo("exited")

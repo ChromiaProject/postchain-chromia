@@ -6,11 +6,8 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.images.common.ManagedModeBase
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.TestInstance
 
-// Directory1 test base with common constants, cleanup and with per class lifecycle to avoid the static usage of ManagedModeBase
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-open class Directory1TestBase : ManagedModeBase() {
+open class Directory1TestBase(logDir: String) : ManagedModeBase(logDir) {
 
     companion object {
 

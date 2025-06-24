@@ -36,7 +36,7 @@ fun awaitConfirmedTx(
 ): TransactionResult {
     repeat(retries) { attempt ->
         val txStatus = client.checkTxStatus(txRid)
-        println("  Tx $transactionName result (attempt ${attempt}) was: ${txStatus.status}, code: ${txStatus.httpStatusCode}")
+        testLogger.info("  Tx $transactionName result (attempt ${attempt}) was: ${txStatus.status}, code: ${txStatus.httpStatusCode}")
         if (txStatus.status == TransactionStatus.CONFIRMED) {
             return txStatus
         } else if (txStatus.status == TransactionStatus.REJECTED) {

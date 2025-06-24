@@ -15,9 +15,9 @@ internal class PostchainContainerIT {
 
     private val network: Network = Network.newNetwork()
 
-    @Container
     private val postgres = ChromaWayPostgresContainer()
             .withNetwork(network)
+            .apply { startContainers(this) }
 
     @Container
     private val postchain = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/simple-dapp/node-config.properties")!!))

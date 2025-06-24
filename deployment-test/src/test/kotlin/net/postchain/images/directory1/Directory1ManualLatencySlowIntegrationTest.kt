@@ -5,7 +5,6 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import eu.rekawek.toxiproxy.model.ToxicDirection
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -37,7 +36,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.testcontainers.containers.ToxiproxyContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 
 /**
@@ -69,70 +67,53 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @Disabled
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ManualLatencySlowIntegrationTest {
+class Directory1ManualLatencySlowIntegrationTest : ManagedModeBase("latency") {
 
-    companion object : ManagedModeBase() {
-        const val TEST_CLUSTER = "test_cluster"
-        const val TEST_CONTAINER = "test_container"
+    val TEST_CLUSTER = "test_cluster"
+    val TEST_CONTAINER = "test_container"
+    val TOXI_PROXY_HOST = "toxi"
 
-        const val TOXI_PROXY_HOST = "toxi"
+    private val toxiProxyContainer = ToxiproxyContainer("ghcr.io/shopify/toxiproxy:2.5.0")
+            .withNetworkAliases(TOXI_PROXY_HOST)
+            .withNetwork(network)
 
-        val node1Logger = KotlinLogging.logger("Latency_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Latency_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Latency_Node3Logger")
-        val node4Logger = KotlinLogging.logger("Latency_Node4Logger")
+    private val node1Proxy: ToxiproxyContainer.ContainerProxy
+    private val node2Proxy: ToxiproxyContainer.ContainerProxy
+    private val node3Proxy: ToxiproxyContainer.ContainerProxy
+    private val node4Proxy: ToxiproxyContainer.ContainerProxy
+    private val allProxies: List<ToxiproxyContainer.ContainerProxy>
 
-        override val logsSubdir = "latency"
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-no-subnodes")
+        node2 = postchainServer("node2",
+                provider2KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
+        node3 = postchainServer("node3",
+                provider3KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
+        node4 = postchainServer("node4",
+                provider4KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
 
-        private val toxiProxyContainer = ToxiproxyContainer("ghcr.io/shopify/toxiproxy:2.5.0")
-                .withNetworkAliases(TOXI_PROXY_HOST)
-                .withNetwork(network)
+        removeSubnodeContainers()
+        startNodesAndChain0()
+        toxiProxyContainer.start()
+        node1Proxy = toxiProxyContainer.getProxy(node1, node1.nodePort)
+        node2Proxy = toxiProxyContainer.getProxy(node2, node2.nodePort)
+        node3Proxy = toxiProxyContainer.getProxy(node3, node3.nodePort)
+        node4Proxy = toxiProxyContainer.getProxy(node4, node4.nodePort)
+        allProxies = listOf(node1Proxy, node2Proxy, node3Proxy, node4Proxy)
+    }
 
-        private val node1Proxy: ToxiproxyContainer.ContainerProxy
-        private val node2Proxy: ToxiproxyContainer.ContainerProxy
-        private val node3Proxy: ToxiproxyContainer.ContainerProxy
-        private val node4Proxy: ToxiproxyContainer.ContainerProxy
-        private val allProxies: List<ToxiproxyContainer.ContainerProxy>
-
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-no-subnodes")
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    provider2KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    provider3KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node4 = postchainServer("node4", Slf4jLogConsumer(node4Logger.underlyingLogger, true),
-                    provider4KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-
-            removeSubnodeContainers()
-            startNodesAndChain0()
-            toxiProxyContainer.start()
-            node1Proxy = toxiProxyContainer.getProxy(node1, node1.nodePort)
-            node2Proxy = toxiProxyContainer.getProxy(node2, node2.nodePort)
-            node3Proxy = toxiProxyContainer.getProxy(node3, node3.nodePort)
-            node4Proxy = toxiProxyContainer.getProxy(node4, node4.nodePort)
-            allProxies = listOf(node1Proxy, node2Proxy, node3Proxy, node4Proxy)
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            toxiProxyContainer.stop()
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        toxiProxyContainer.stop()
+        super.breakdown()
     }
 
     @Test

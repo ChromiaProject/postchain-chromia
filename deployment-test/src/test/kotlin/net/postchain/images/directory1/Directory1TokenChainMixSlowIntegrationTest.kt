@@ -5,7 +5,6 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
@@ -40,7 +39,6 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
@@ -64,8 +62,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -78,7 +74,7 @@ import java.math.BigInteger
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerLogger") {
+class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("tc") {
 
     companion object {
 
@@ -88,11 +84,6 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
 
         const val ASSET_NAME = "tCHR"
     }
-
-    private val node1Logger = KotlinLogging.logger("TC_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("TC_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("TC_Node3Logger")
-    override val logsSubdir = "tc"
 
     // EIF
     private lateinit var validator: Validator
@@ -118,36 +109,23 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
     init {
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-mix"
         ).withEifEnv()
 
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix"
         )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEifEnv()
 
-        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix"
-        )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping(
-                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                )
-                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                "config-mix",
+                true)
+                .withGenesisNode(node1)
                 .withEifEnv()
 
         removeSubnodeContainers()
@@ -504,7 +482,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("TC_EvmContainerL
                 .postTransactionUntilConfirmed("Registering account via ICCF proof")
 
         assertThat(node1.tc.getAccountById(gtv(newUser.pubKey.data).merkleHash(hashCalculator))).isNotNull()
-        assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
+            assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
                 .isEqualTo(initialBalance.amount.subtract(BigInteger("10000000")))
     }
 }

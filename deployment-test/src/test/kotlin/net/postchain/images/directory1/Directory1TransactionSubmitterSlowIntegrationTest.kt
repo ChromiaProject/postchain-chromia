@@ -7,7 +7,6 @@ import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
@@ -28,7 +27,6 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.crypto.PubKey
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.compressKey
 import net.postchain.eif.contracts.Anchoring
@@ -50,8 +48,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -62,12 +58,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_EvmContainerLogger") {
-
-    private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-    override val logsSubdir = "evm_tx_submitter"
+class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("txs") {
 
     private val dappContainer = "dappContainer"
     private val dappContainerVoterSet = "dappContainer_vs"
@@ -87,7 +78,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
     init {
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
-        node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
+        node1 = postchainServer("node1",
                 provider1KeyPair,
                 "config-mix")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
@@ -98,12 +89,10 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
+        node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")
                 .withEnv("ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS", "1000")
@@ -112,21 +101,11 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("EvmTxs_Ev
                 .withEnv("ANCHORING_CHECK_ANCHORING_CONTRACT_ADDRESS", "0x679170cc953b01d270349a344c4ed5634344ca04")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
 
-        node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
+        node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                .withMasterDockerConfig()
-                .withClasspathResourceMapping(
-                        "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                        PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                )
-                .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+                "config-mix",
+                true)
+                .withGenesisNode(node1)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
                 .withEnv("ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS", "1000")

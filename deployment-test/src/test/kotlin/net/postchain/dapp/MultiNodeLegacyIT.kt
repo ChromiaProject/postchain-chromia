@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 
@@ -25,9 +24,11 @@ internal class MultiNodeLegacyIT {
         const val resourceFolder = "multi-node-config-dapp"
         private val network: Network = Network.newNetwork()
 
-        @Container
         private val postgres = ChromaWayPostgresContainer()
                 .withNetwork(network)
+                .apply {
+                    startContainers(this)
+                }
     }
 
     private val node1 = PostchainContainer(appConfig = parseConfig(this::class.java.getResource("/$resourceFolder/node1/node-config.properties")!!))

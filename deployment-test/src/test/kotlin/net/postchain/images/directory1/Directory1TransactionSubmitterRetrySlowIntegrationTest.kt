@@ -5,7 +5,6 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.operations.updateNodeWithUnitsOperation
@@ -40,7 +39,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Address
@@ -63,13 +61,7 @@ import net.postchain.eif.transaction_submitter.getTransaction as getEvmTransacti
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmTxs_EvmContainerLogger") {
-
-    private val node1Logger = KotlinLogging.logger("EvmTxs_Node1Logger")
-    private val node2Logger = KotlinLogging.logger("EvmTxs_Node2Logger")
-    private val node3Logger = KotlinLogging.logger("EvmTxs_Node3Logger")
-    private val node4Logger = KotlinLogging.logger("EvmTxs_Node4Logger")
-    override val logsSubdir = "evm_tx_submitter"
+class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("txs_retry") {
 
     private lateinit var directoryChainValidator: DirectoryChainValidator
     private lateinit var validator: ManagedValidator
@@ -85,30 +77,26 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
         // Nodes
         chain0Config = this::class.java.getResource("/directory1deployment/mainnet.xml")!!.readText()
 
-        node1 = createTxsPostchainContainer("node1", node1Logger.underlyingLogger, provider1KeyPair)
+        node1 = createTxsPostchainContainer("node1", provider1KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
 
-        node2 = createTxsPostchainContainer("node2", node2Logger.underlyingLogger, provider2KeyPair)
+        node2 = createTxsPostchainContainer("node2", provider2KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
-        node3 = createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
+        node3 = createTxsPostchainContainer("node3", provider3KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", "http://localhost:1")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
         removeSubnodeContainers()
         startNodesAndChain0()
     }
 
-    private fun createTxsPostchainContainer(hostname: String, logger: org.slf4j.Logger, keyPair: KeyPair): PostchainContainer {
-        return postchainServer(hostname, Slf4jLogConsumer(logger, true),
+    private fun createTxsPostchainContainer(hostname: String, keyPair: KeyPair): PostchainContainer {
+        return postchainServer(hostname,
                 keyPair,
                 "config-no-subnodes")
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")
@@ -263,20 +251,15 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
         testLogger.info("Restart node2-3 with valid rpc endpoints")
 
         node2 = restartNode(node2) {
-            createTxsPostchainContainer("node2", node2Logger.underlyingLogger,
-                    provider2KeyPair)
+            createTxsPostchainContainer("node2", provider2KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
         }
 
         node3 = restartNode(node3) {
-            createTxsPostchainContainer("node3", node3Logger.underlyingLogger, provider3KeyPair)
+            createTxsPostchainContainer("node3", provider3KeyPair)
                     .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                    .withGenesisNode(node1)
         }
     }
 
@@ -293,12 +276,10 @@ class Directory1TransactionSubmitterRetrySlowIntegrationTest : EvmTestBase("EvmT
 
         testLogger.info("Starting the 4th node with valid rpc url")
 
-        node4 = createTxsPostchainContainer("node4", node4Logger.underlyingLogger, provider4KeyPair)
+        node4 = createTxsPostchainContainer("node4", provider4KeyPair)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_EVM_HEALTHCHECK_INTERVAL", "-1")
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
+                .withGenesisNode(node1)
 
         node4.start()
         startBlockchain(node4.channel, chain0Config)

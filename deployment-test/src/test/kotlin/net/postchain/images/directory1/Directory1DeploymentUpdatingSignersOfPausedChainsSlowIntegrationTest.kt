@@ -2,7 +2,6 @@ package net.postchain.images.directory1
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import mu.KotlinLogging
 import net.postchain.chain0.cm_api.cmGetPeerInfo
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.addNodeToClusterOperation
@@ -23,7 +22,6 @@ import net.postchain.chain0.proposal_blockchain.proposeForcedConfigurationOperat
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.crypto.PubKey
-import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.stopContainers
 import net.postchain.gtv.GtvEncoder
@@ -41,56 +39,34 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
+class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest : ManagedModeBase("deployment-updating-signers") {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
-        override val logsSubdir = "deployment"
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-mix")
+        node2 = postchainServer("node2",
+                provider2KeyPair,
+                "config-mix")
+                .withGenesisNode(node1)
+        node3 = postchainServerWithSubnodes("node3",
+                provider3KeyPair,
+                "config-mix",
+                true)
+                .withGenesisNode(node1)
 
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-mix")
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    provider2KeyPair,
-                    "config-mix")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    provider3KeyPair,
-                    "config-mix")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-                    .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
-                    .withFixedExposedPort(9874, 9874) // Exposing port for subnode to connect to containerChains.masterPort
-                    .withMasterDockerConfig()
-                    .withClasspathResourceMapping(
-                            "${this::class.java.getResource("config-mix")!!.path.substringAfter("test-classes/")}/node3",
-                            PostchainContainer.MOUNT_DIR, BindMode.READ_ONLY
-                    )
-                    .withEnv("POSTCHAIN_CONFIG", "${PostchainContainer.MOUNT_DIR}/node-config.properties")
-                    .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
+        removeSubnodeContainers()
+        startNodesAndChain0()
+    }
 
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     @Test
@@ -212,6 +188,4 @@ class Directory1DeploymentUpdatingSignersOfPausedChainsSlowIntegrationTest {
         testLogger.info("Verify bc is running")
         assertThatDappProcessesTx(dappBrid, "add_city", "Heraklion2", "get_cities", node1, arrayOf(node1))
     }
-
-
 }

@@ -14,12 +14,15 @@ import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_H
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_HOST
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_USER
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
-import net.postchain.dapp.PostchainContainer
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.parseConfig
+import org.testcontainers.containers.Network
+import java.io.File
 import java.net.InetAddress
 import java.net.URI
-import java.net.URL
+import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.pathString
 
 val testLogger = KotlinLogging.logger("TestLogger")
 
@@ -33,19 +36,28 @@ internal fun getResolvedDockerHost(): URI? {
     }
 }
 
-internal fun setupMasterNodeConfig(resource: URL): AppConfig {
+internal fun setupMasterNodeConfig(hostName: String, nodeConfig: File, hostMountDir: Path?, generateKeys: Boolean): AppConfig {
     val dockerHost = getResolvedDockerHost()
     val configOverrides = mutableMapOf<String, String>(
-            fullKey(KEY_MASTER_HOST) to (dockerHost?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")),
+            fullKey(KEY_MASTER_HOST) to hostName,
             fullKey(KEY_SUBNODE_HOST) to (dockerHost?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")),
-            fullKey(KEY_HOST_MOUNT_DIR) to PostchainContainer.MOUNT_DIR,
     )
+
+    if (hostMountDir != null) {
+        configOverrides[fullKey(KEY_HOST_MOUNT_DIR)] = hostMountDir.pathString
+    }
+
+    if (generateKeys) {
+        val keyPair = Secp256K1CryptoSystem().generateKeyPair()
+        configOverrides["messaging.pubkey"] = keyPair.pubKey.hex()
+        configOverrides["messaging.privkey"] = keyPair.privKey.hex()
+    }
     getSubnodeUser()?.apply {
         testLogger.debug { "Postchain subnode user set to: $this" }
         configOverrides[fullKey(KEY_SUBNODE_USER)] = this
     }
     testLogger.debug { "Config overrides: $configOverrides" }
-    return parseConfig(resource, configOverrides)
+    return parseConfig(nodeConfig.toURI().toURL(), configOverrides)
 }
 
 internal fun getMasterContainerUserAndGroups(): Pair<String, List<String>>? = if (System.getProperty("SET_DOCKER_MASTER_USER", "true").toBoolean())
@@ -74,8 +86,8 @@ fun getSubnodeUser(): String? {
     }
 }
 
-internal fun saveSubnodeLogs(dockerClient: DockerClient, subdir: String = "") {
-    dockerClient.listSubContainersCmd().exec().forEach {
+internal fun saveSubnodeLogs(dockerClient: DockerClient, network: Network, subdir: String = "") {
+    dockerClient.listSubContainersCmd(network).exec().forEach {
         Paths.get("logs", subdir, it.names!!.first().replace("/", "") + ".log")
                 .toFile()
                 .appendText(getContainerLogs(dockerClient, it))
@@ -98,8 +110,9 @@ internal fun getContainerLogs(dockerClient: DockerClient, container: Container):
     return logEntries.joinToString()
 }
 
-fun DockerClient.listSubContainersCmd(): ListContainersCmd {
+fun DockerClient.listSubContainersCmd(network: Network): ListContainersCmd {
     return listContainersCmd()
+            .withNetworkFilter(listOf(network.id))
             .withShowAll(true)
             .withLabelFilter(listOf(POSTCHAIN_MASTER_PUBKEY))
 }

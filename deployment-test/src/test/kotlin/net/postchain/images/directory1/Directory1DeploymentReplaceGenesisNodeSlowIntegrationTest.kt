@@ -3,7 +3,6 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
-import mu.KotlinLogging
 import net.postchain.chain0.common.init.initOperation
 import net.postchain.chain0.common.operations.disableNodeOperation
 import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
@@ -32,53 +31,36 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junitpioneer.jupiter.DisableIfTestFails
-import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ReplaceGenesisNodeSlowIntegrationTest {
+class Directory1ReplaceGenesisNodeSlowIntegrationTest : ManagedModeBase("replace-genesis") {
 
-    companion object : ManagedModeBase() {
-        val node1Logger = KotlinLogging.logger("Deployment_Node1Logger")
-        val node2Logger = KotlinLogging.logger("Deployment_Node2Logger")
-        val node3Logger = KotlinLogging.logger("Deployment_Node3Logger")
-        val node4Logger = KotlinLogging.logger("Deployment_Node4Logger")
-        val node5Logger = KotlinLogging.logger("Deployment_Node5Logger")
-        override val logsSubdir = "replace-genesis"
+    init {
+        node1 = postchainServer("node1",
+                provider1KeyPair,
+                "config-no-subnodes")
+        node2 = postchainServer("node2",
+                provider2KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
+        node3 = postchainServer("node3",
+                provider3KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
+        node4 = postchainServer("node4",
+                provider4KeyPair,
+                "config-no-subnodes")
+                .withGenesisNode(node1)
+        removeSubnodeContainers()
+        startNodesAndChain0()
+    }
 
-        init {
-            node1 = postchainServer("node1", Slf4jLogConsumer(node1Logger.underlyingLogger, true),
-                    provider1KeyPair,
-                    "config-no-subnodes")
-            node2 = postchainServer("node2", Slf4jLogConsumer(node2Logger.underlyingLogger, true),
-                    provider2KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node3 = postchainServer("node3", Slf4jLogConsumer(node3Logger.underlyingLogger, true),
-                    provider3KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            node4 = postchainServer("node4", Slf4jLogConsumer(node4Logger.underlyingLogger, true),
-                    provider4KeyPair,
-                    "config-no-subnodes")
-                    .withEnv("POSTCHAIN_GENESIS_PUBKEY", node1.pubkey.hex())
-                    .withEnv("POSTCHAIN_GENESIS_HOST", node1.nodeHost)
-                    .withEnv("POSTCHAIN_GENESIS_PORT", node1.nodePort.toString())
-            removeSubnodeContainers()
-            startNodesAndChain0()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            super.breakdown()
-        }
+    @AfterAll
+    fun tearDown() {
+        super.breakdown()
     }
 
     @Test
@@ -135,13 +117,11 @@ class Directory1ReplaceGenesisNodeSlowIntegrationTest {
     @Test
     @Order(3)
     fun `Add a new system node with non-genesis node as initial peer`() {
-        node5 = postchainServer("node5", Slf4jLogConsumer(node5Logger.underlyingLogger, true),
+        node5 = postchainServer("node5",
                 provider1KeyPair,
                 "config-no-subnodes"
         )
-                .withEnv("POSTCHAIN_GENESIS_PUBKEY", node2.pubkey.hex())
-                .withEnv("POSTCHAIN_GENESIS_HOST", node2.nodeHost)
-                .withEnv("POSTCHAIN_GENESIS_PORT", node2.nodePort.toString())
+                .withGenesisNode(node2)
 
         node5.start()
         val chain0Brid5 = startBlockchain(node5.channel, chain0Config).let { BlockchainRid.buildFromHex(it) }
