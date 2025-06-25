@@ -36,7 +36,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class Directory1ReplaceGenesisNodeSlowIntegrationTest : ManagedModeBase("replace-genesis") {
+class Directory1DeploymentReplaceGenesisNodeSlowIntegrationTest : ManagedModeBase("replace-genesis") {
 
     init {
         node1 = postchainServer("node1",

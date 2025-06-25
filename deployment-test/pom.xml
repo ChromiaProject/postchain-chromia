@@ -436,7 +436,7 @@
 
     <profiles>
         <profile>
-            <id>slow-it</id>
+            <id>all-it</id>
             <build>
                 <plugins>
                     <plugin>
@@ -470,7 +470,8 @@
                                 <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
                             </environmentVariables>
                             <includes>
-                                <include>**/*SlowIntegrationTest.java</include>
+                                <include>**/*IT</include>
+                                <include>**/*SlowIntegrationTest</include>
                             </includes>
                         </configuration>
                     </plugin>
