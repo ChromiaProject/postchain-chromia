@@ -622,7 +622,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         aliceAuthenticator.verifyOperationAuthFlags("upgrade_container")
         val tcRid = aliceAuthenticator.transactionBuilder()
                 .upgradeContainerOperation(
-                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2, 1)
+                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2, 1, 0)
                 .postTransactionUntilConfirmed("Upgrade Container")
                 .txRid
 
@@ -638,7 +638,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER2)
         assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
 
-        val newContainerName = containerName + "_new"
+        val newContainerName = containerName + "_m1"
         assertThat(leaseData.containerName).isEqualTo(newContainerName)
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
