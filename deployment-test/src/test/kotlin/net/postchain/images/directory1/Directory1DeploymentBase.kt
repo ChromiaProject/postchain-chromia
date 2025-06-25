@@ -60,8 +60,8 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir) {
 
-    private val fooContainer = "fooContainer"
-    private val barContainer = "barContainer"
+    protected val fooContainer = "fooContainer"
+    protected val barContainer = "barContainer"
     private val resourceLimitsValues = mapOf("cpu" to 100L, "ram" to 4096L, "io_read" to 50L, "io_write" to 40L)
     private val fooResourceLimits = ContainerResourceLimits(
             Cpu(resourceLimitsValues["cpu"] ?: -1),
