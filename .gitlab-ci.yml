@@ -64,7 +64,7 @@ deploy-snapshot:
     - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,slow-it,docker-push,distro
+      --activate-profiles ci,all-it,docker-push,distro
       -Drevision=$SNAPSHOT_VERSION
       -Djib.to.tags=latest-snapshot
       clean source:jar deploy
@@ -78,7 +78,7 @@ deploy:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,slow-it,docker-push,distro
+      --activate-profiles ci,all-it,docker-push,distro
       -Drevision=$CI_COMMIT_TAG
       clean source:jar deploy
 
@@ -162,7 +162,7 @@ slow-integration-tests:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,no-unit-tests,no-it,slow-it
+      --activate-profiles ci,no-unit-tests,all-it
       clean verify
 
 dependency-check:
