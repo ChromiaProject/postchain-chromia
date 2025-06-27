@@ -110,18 +110,6 @@
             <version>4.9.3</version>
         </dependency>
 
-        <!-- Zero knowledge proof validation -->
-        <dependency>
-            <groupId>org.hyperledger.besu</groupId>
-            <artifactId>gnark</artifactId>
-            <version>1.3.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hyperledger.besu</groupId>
-            <artifactId>besu-native-common</artifactId>
-            <version>1.3.0</version>
-        </dependency>
-
         <!-- We want access to integration test setup classes -->
         <dependency>
             <groupId>net.postchain</groupId>
@@ -251,21 +239,6 @@
                             <packageName>net.postchain.hybridcompute.rell</packageName>
                             <mainModules>
                                 <mainModule>lib.hybridcompute.test</mainModule>
-                            </mainModules>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>rell-client-gen-zkp</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>rell-generate-client</goal>
-                        </goals>
-                        <configuration>
-                            <source>${project.basedir}/rell/src</source>
-                            <target>${project.build.directory}/generated-sources/rell-client-zkp</target>
-                            <packageName>net.postchain.zkp.rell</packageName>
-                            <mainModules>
-                                <mainModule>lib.zkp.test.plonk_test_chain</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
