@@ -103,8 +103,7 @@ class Directory1TransactionSubmitterSlowIntegrationTest : EvmTestBase("txs") {
 
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix",
-                true)
+                "config-mix")
                 .withGenesisNode(node1)
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_URLS", evmContainer.getNetworkGethUrl())
                 .withEnv("POSTCHAIN_TRANSACTION_SUBMITTER_ETHEREUM_PRIVATE_KEY", "0x53914554952e5473a54b211a31303078abde83b8128995785901eed28df3f610")

@@ -68,6 +68,7 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.BindMode
@@ -125,6 +126,7 @@ open class ManagedModeBase(private val logDir: String) {
         if (::node5.isInitialized && node5.isRunning) add(node5)
     }.toTypedArray()
 
+    @AfterAll
     fun breakdown() {
         saveSubnodeLogs(dockerClient, network, logDir)
         stopNodes()
@@ -190,7 +192,7 @@ open class ManagedModeBase(private val logDir: String) {
             hostName: String,
             provider: KeyPair,
             configDir: String,
-            generateKeys: Boolean = false,
+            generateKeys: Boolean = true,
     ): PostchainContainer {
         val tmpNodeConfigDir = DiskHelper.mkTmpDockerHostDirBasedOnResources(configDir, hostName)
         val tmpNodeConfigFile = tmpNodeConfigDir.resolve("node-config.properties")

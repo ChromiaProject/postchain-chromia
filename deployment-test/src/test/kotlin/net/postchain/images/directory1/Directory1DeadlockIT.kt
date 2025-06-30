@@ -112,8 +112,7 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
                 .withEifEnv()
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix",
-                true)
+                "config-mix")
                 .withFileSystemBind(testJarFile, "/opt/chromaway/postchain/classpath/chromia-devtools.jar", BindMode.READ_ONLY)
                 .withCreateContainerCmdModifier { it.withEntrypoint("java") }
                 .withCommand("-XX:+UnlockDiagnosticVMOptions",
