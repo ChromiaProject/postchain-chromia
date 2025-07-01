@@ -16,8 +16,7 @@ class Directory1DeploymentMixIT : Directory1DeploymentBase("deployment-mix") {
                 .withGenesisNode(node1)
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix",
-                true)
+                "config-mix")
                 .withGenesisNode(node1)
 
         removeSubnodeContainers()

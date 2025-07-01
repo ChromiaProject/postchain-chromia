@@ -18,17 +18,14 @@ class Directory1DeploymentAllSubnodesSlowIntegrationTest : Directory1DeploymentB
     init {
         node1 = postchainServerWithSubnodes("node1",
                 provider1KeyPair,
-                "config-all-subnodes",
-                true)
+                "config-all-subnodes")
         node2 = postchainServerWithSubnodes("node2",
                 provider2KeyPair,
-                "config-all-subnodes",
-                true)
+                "config-all-subnodes")
                 .withGenesisNode(node1)
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-all-subnodes",
-                true)
+                "config-all-subnodes")
                 .withGenesisNode(node1)
 
         removeSubnodeContainers()

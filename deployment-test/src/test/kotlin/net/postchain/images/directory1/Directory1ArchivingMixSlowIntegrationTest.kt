@@ -58,8 +58,7 @@ class Directory1ArchivingMixSlowIntegrationTest : ManagedModeBase("archiving") {
                 .withGenesisNode(node1)
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix",
-                true)
+                "config-mix")
                 .withGenesisNode(node1)
 
         removeSubnodeContainers()
