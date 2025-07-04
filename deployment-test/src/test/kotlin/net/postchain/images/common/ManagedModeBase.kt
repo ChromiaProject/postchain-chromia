@@ -126,6 +126,14 @@ open class ManagedModeBase(private val logDir: String) {
         if (::node5.isInitialized && node5.isRunning) add(node5)
     }.toTypedArray()
 
+    init {
+        // One additional hook to cover a few more cases when the jvm is stopped but junit won't clean up. Mostly
+        // to clean up containers.
+        Runtime.getRuntime().addShutdownHook(Thread {
+            breakdown()
+        })
+    }
+
     @AfterAll
     fun breakdown() {
         saveSubnodeLogs(dockerClient, network, logDir)
@@ -148,7 +156,7 @@ open class ManagedModeBase(private val logDir: String) {
                     .waitFor()
         }
 
-        DiskHelper.cleanup(testLogger)
+        DiskHelper.cleanup()
     }
 
     fun removeSubnodeContainers() {
