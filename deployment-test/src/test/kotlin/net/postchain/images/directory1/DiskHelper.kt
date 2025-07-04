@@ -1,6 +1,5 @@
 package net.postchain.images.directory1
 
-import mu.KLogger
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +31,7 @@ object DiskHelper {
     }
 
     @OptIn(ExperimentalPathApi::class)
-    fun cleanup(testLogger: KLogger) {
+    fun cleanup() {
         tmpFiles.forEach {
             try {
                 it.deleteRecursively()
