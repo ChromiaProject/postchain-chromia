@@ -166,15 +166,17 @@
                 </executions>
             </plugin>
 
-            <!-- Collect rell code to compile -->
+            <!-- Collect test dapps rell code to compile -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
                             <resources>
                                 <!-- Source code of test dapps -->
                                 <resource>
@@ -189,15 +191,13 @@
                                     </includes>
                                 </resource>
                             </resources>
+                            <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
                         </configuration>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- Install rell deps, compile D1 and test dapps, generate client code -->
+            <!-- Install rell libs, compile D1 and test dapps, generate client code -->
             <plugin>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-maven-plugin</artifactId>

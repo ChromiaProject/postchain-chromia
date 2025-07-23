@@ -337,9 +337,10 @@ blockchains:
         asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
         economy_chain_blockchain_rid: x"00"
         proposal_revoke_timeout_days: 1
-      lib.hbridge:
+      lib.hbridge.core:
         evm_read_offsets:
           "1337": 0
+      lib.hbridge:
         version: 2 # multiple bridges
       lib.ft4.core.auth:
         evm_signatures_authorized_operations:

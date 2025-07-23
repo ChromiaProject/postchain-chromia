@@ -186,20 +186,20 @@ libs:
   eif:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif
-    tagOrBranch: 0.14.0
-    rid: x"3AB8C191B460E9DF4D7D6D423C428C78818D1A0C1BE0DC5B8E31C4FD8F0F4B75"
+    tagOrBranch: 0.17.0
+    rid: x"A1FA72B3D116C3D9FBB67512AE8E8114097A8F2422BAA020B3A9C3CDBCE6E499"
     insecure: false
   eif_event_receiver:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif_event_receiver
-    tagOrBranch: 0.14.0
+    tagOrBranch: 0.17.0
     rid: x"B20700DA8FE4FC7E5880BCCCB6FBE0B6A22CD6FAB61CDF9CE20E06B62D4902F4"
     insecure: false
   hbridge:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/hbridge
-    tagOrBranch: 0.14.0
-    rid: x"10067F07FE41ED5952CBF4598B1FD7FF3D2D37626E7C4E4F04F16728495D4A47"
+    tagOrBranch: 0.17.0
+    rid: x"7923A428EF308531844474FCB271F91D632CBC4FD4FE7B0535BB653B999DE5F9"
     insecure: false
 
 compile:

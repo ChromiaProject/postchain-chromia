@@ -37,8 +37,8 @@ import net.postchain.eif.contracts.Validator
 import net.postchain.eif.encodeBlockHeaderDataForEVM
 import net.postchain.eif.encodeSignatureWithV
 import net.postchain.eif.getEthereumAddress
-import net.postchain.eif.hbridge.getRecoveryContract
-import net.postchain.eif.hbridge.getStateSlotIdsForAddress
+import net.postchain.eif.hbridge.core.getRecoveryContract
+import net.postchain.eif.hbridge.core.getStateSlotIdsForAddress
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.assets.transferOperation
@@ -54,7 +54,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.testdapps.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.testdapps.lib.ft4.core.accounts.AuthType
 import net.postchain.testdapps.lib.ft4.external.admin.registerAccountOperation
-import net.postchain.testdapps.lib.hbridge.REGISTER_RECOVERY_CONTRACT
+import net.postchain.testdapps.lib.hbridge.core.REGISTER_RECOVERY_CONTRACT
 import net.postchain.testdapps.test_crosschain_massexit.bridge.initOperation
 import net.postchain.testdapps.test_crosschain_massexit.dapp.initOperation
 import net.postchain.testdapps.test_crosschain_massexit.dapp.registerRecoveryContractOperation

@@ -5,6 +5,7 @@ import lib.ft4.assets;
 import lib.ft4.crosschain;
 
 import lib.hbridge;
+import hbridge_erc20: lib.hbridge.erc20;
 
 object state {
     mutable initialized: boolean = false;
@@ -34,7 +35,7 @@ operation init(
         asset_issuing_blockchain_rid
     );
 
-    hbridge.register_bridge_and_erc20_asset(
+    hbridge_erc20.register_bridge_and_erc20_asset(
         network_id,
         token_address,
         asset_origin.asset,
