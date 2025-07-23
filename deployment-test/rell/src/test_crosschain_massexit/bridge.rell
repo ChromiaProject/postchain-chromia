@@ -7,6 +7,7 @@ import lib.ft4.crosschain;
 import lib.eif_event_receiver;
 import lib.eif_event_receiver.dynamic_config.*;
 import lib.hbridge;
+import hbridge_erc20: lib.hbridge.erc20;
 
 object state {
     mutable initialized: boolean = false;
@@ -39,7 +40,7 @@ operation init(
     create contract_config(network_id, bridge_address);
 
     // register bridge and ERC-20 asset contract on HBridge
-    hbridge.register_bridge_and_erc20_asset(
+    hbridge_erc20.register_bridge_and_erc20_asset(
         network_id,
         token_address,
         asset,

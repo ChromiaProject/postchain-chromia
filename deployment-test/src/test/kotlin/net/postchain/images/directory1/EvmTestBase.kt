@@ -10,8 +10,8 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
-import net.postchain.eif.hbridge.LINK_EVM_EOA_ACCOUNT
-import net.postchain.eif.hbridge.linkEvmEoaAccountOperation
+import net.postchain.eif.hbridge.core.LINK_EVM_EOA_ACCOUNT
+import net.postchain.eif.hbridge.core.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
