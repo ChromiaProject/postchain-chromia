@@ -97,6 +97,8 @@ build:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,coverage
       verify
+    - echo "------ Filtered chromia.yml ------"
+    - cat deployment-test/target/rell/chromia.yml || echo "chromia.yml not found"
 
 gitlab-release:
   extends: .gitlab-release-with-notes
