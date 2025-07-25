@@ -116,6 +116,16 @@
 
     <build>
 
+        <resources>
+            <resource>
+                <directory>${basedir}/rell</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>chromia.yml</include>
+                </includes>
+            </resource>
+        </resources>
+
         <testResources>
             <testResource>
                 <filtering>false</filtering>
@@ -129,13 +139,6 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>**/pom.properties</include>
-                </includes>
-            </testResource>
-            <testResource>
-                <directory>${basedir}/rell</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>chromia.yml</include>
                 </includes>
             </testResource>
         </testResources>
