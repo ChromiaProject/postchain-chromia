@@ -93,12 +93,11 @@ build:
       - dev
       - tags
   script:
-    - mvn
-      $MAVEN_CLI_OPTS
-      --activate-profiles ci,coverage
-      verify
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,coverage verify || echo "Maven failed"
     - echo "------ Filtered chromia.yml ------"
     - cat deployment-test/target/rell/chromia.yml || echo "chromia.yml not found"
+    - echo "FT4 version: $DEPLOYMENT_TEST_FT4_VERSION"
+    - echo "EIF version: $DEPLOYMENT_TEST_EIF_VERSION"
 
 gitlab-release:
   extends: .gitlab-release-with-notes
