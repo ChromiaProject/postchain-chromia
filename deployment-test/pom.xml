@@ -196,6 +196,46 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Copy test dapps config -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!-- Substitute environment variables in test dapps config -->
+                    <execution>
+                        <id>preprocess-yaml</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <environmentVariables>
+                                <DEPLOYMENT_TEST_FT4_VERSION>v1.1.0r</DEPLOYMENT_TEST_FT4_VERSION>
+                                <DEPLOYMENT_TEST_EIF_VERSION>0.17.1</DEPLOYMENT_TEST_EIF_VERSION>
+                            </environmentVariables>
+                            <executable>sh</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>
+                                    envsubst &lt; ${project.basedir}/rell/chromia.yml &gt; ${project.build.directory}/rell/chromia.yml
+                                </argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Copy events.yaml -->
+                    <execution>
+                        <id>copy-static-file</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>cp</executable>
+                            <arguments>
+                                <argument>${project.basedir}/rell/events.yml</argument>
+                                <argument>${project.build.directory}/rell/events.yml</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
             <!-- Install rell libs, compile D1 and test dapps, generate client code -->
             <plugin>
@@ -286,8 +326,7 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <rootFolder>${project.basedir}/..</rootFolder>
-                            <configFile>deployment-test/rell/chromia.yml</configFile>
+                            <configFile>${project.build.directory}/rell/chromia.yml</configFile>
                             <source>${project.build.directory}/rell/src</source>
                             <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
