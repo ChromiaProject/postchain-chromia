@@ -13,8 +13,6 @@
 
     <properties>
         <slow.it.forks>3</slow.it.forks>
-        <DEPLOYMENT_TEST_FT4_VERSION>v1.1.0r</DEPLOYMENT_TEST_FT4_VERSION>
-        <DEPLOYMENT_TEST_EIF_VERSION>${eif.version}</DEPLOYMENT_TEST_EIF_VERSION>
     </properties>
 
     <dependencies>
