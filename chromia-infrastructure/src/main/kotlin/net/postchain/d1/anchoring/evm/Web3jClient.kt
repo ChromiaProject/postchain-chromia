@@ -1,6 +1,6 @@
 package net.postchain.d1.anchoring.evm
 
-import net.postchain.client.impl.PostchainClientImpl.Companion.logger
+import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.eif.contracts.Anchoring
@@ -15,6 +15,8 @@ class Web3jClient(
         blockchainRid: BlockchainRid
 ) {
 
+    companion object : KLogging()
+
     private val web3jClients: List<Web3j> = buildServices(rpcUrls, 10_000, 10_000, 10_000, blockchainRid)
     private val anchoringMap = mutableMapOf<String, List<Anchoring>>()
 
@@ -24,7 +26,7 @@ class Web3jClient(
                 val functionCall = call(anchoring)
                 return functionCall.send()
             } catch (e: Exception) {
-                logger.warn { "Failed to call rpc endpoint for EVM network : ${e.message}" }
+                logger.warn { "Failed to call rpc endpoint for EVM network: ${e.message}" }
             }
         }
         throw ProgrammerMistake("Failed to call all rpc endpoints for EVM network")
