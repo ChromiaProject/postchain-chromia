@@ -210,7 +210,7 @@
                         <configuration>
                             <environmentVariables>
                                 <DEPLOYMENT_TEST_FT4_VERSION>v1.1.0r</DEPLOYMENT_TEST_FT4_VERSION>
-                                <DEPLOYMENT_TEST_EIF_VERSION>0.17.1</DEPLOYMENT_TEST_EIF_VERSION>
+                                <DEPLOYMENT_TEST_EIF_VERSION>${eif.version}</DEPLOYMENT_TEST_EIF_VERSION>
                             </environmentVariables>
                             <executable>sh</executable>
                             <arguments>
