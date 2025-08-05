@@ -13,6 +13,9 @@
 
     <properties>
         <slow.it.forks>3</slow.it.forks>
+        <!-- deployment tests vars -->
+        <DEPLOYMENT_TEST_FT4_VERSION>v1.1.0r</DEPLOYMENT_TEST_FT4_VERSION>
+        <DEPLOYMENT_TEST_EIF_VERSION>${eif.version}</DEPLOYMENT_TEST_EIF_VERSION>
     </properties>
 
     <dependencies>
@@ -114,6 +117,17 @@
 
     <build>
 
+        <resources>
+            <resource>
+                <directory>${basedir}/rell</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>chromia.yml</include>
+                    <include>events.yml</include>
+                </includes>
+            </resource>
+        </resources>
+
         <testResources>
             <testResource>
                 <filtering>false</filtering>
@@ -172,6 +186,7 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>test-dapps-copy-src</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>copy-resources</goal>
@@ -192,6 +207,26 @@
                                 </resource>
                             </resources>
                             <outputDirectory>${project.build.directory}/rell/src</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-dapps-copy-config</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/rell</directory>
+                                    <includes>
+                                        <include>chromia.yml</include>
+                                        <include>events.yml</include>
+                                    </includes>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${project.build.directory}/rell</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -286,8 +321,10 @@
                             <goal>rell-compile</goal>
                         </goals>
                         <configuration>
-                            <rootFolder>${project.basedir}/..</rootFolder>
-                            <configFile>deployment-test/rell/chromia.yml</configFile>
+                            <!-- rell-install -->
+                            <configPath>${project.build.directory}/rell/chromia.yml</configPath>
+                            <!-- rell-compile -->
+                            <configFile>${project.build.directory}/rell/chromia.yml</configFile>
                             <source>${project.build.directory}/rell/src</source>
                             <target>${project.build.directory}/test-classes/directory1deployment</target>
                         </configuration>
