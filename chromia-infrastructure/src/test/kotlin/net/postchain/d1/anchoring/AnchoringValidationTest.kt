@@ -383,12 +383,12 @@ class AnchoringValidationTest {
             bcConfigProvider: BlockchainConfigProvider? = null,
             config: AnchoringBlockchainConfigData = AnchoringBlockchainConfigData.fromGtv(gtv(mapOf()))
     ): AnchoringSpecialTxExtension {
-        val txExtension = AnchoringSpecialTxExtension { _, _ -> mock() }
+        val txExtension = AnchoringSpecialTxExtension { _, _, _ -> mock() }
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
         txExtension.blockchainConfigProvider = bcConfigProvider ?: blockchainConfigProvider
-        txExtension.anchoringReceiver = mock {
+        txExtension.anchoringPipeManager = AnchoringPipeManager(mock(), mock {
             on { getRelevantChains(any()) } doReturn setOf(blockchainRID)
-        }
+        })
         txExtension.isSigner = { isSigner }
         txExtension.anchoringConfig = config
         return txExtension

@@ -16,11 +16,11 @@ import net.postchain.concurrent.util.get
 import net.postchain.config.app.AppConfig
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockQueriesProvider
-import net.postchain.d1.anchoring.AnchoringReceiver
+import net.postchain.d1.anchoring.AnchoringPipeManager
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
-import net.postchain.d1.anchoring.cluster.ClusterAnchoringReceiver
+import net.postchain.d1.anchoring.cluster.ClusterAnchoringRelevantChainsProvider
 import net.postchain.d1.anchoring.evm.Web3jClient
-import net.postchain.d1.anchoring.system.SystemAnchoringReceiver
+import net.postchain.d1.anchoring.system.SystemAnchoringRelevantChainsProvider
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
@@ -34,7 +34,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
 
     val runningChainsBlockClients = ConcurrentHashMap<BlockchainRid, PostchainBlockClient>()
 
-    private val cacToAnchoringReceiver = ConcurrentHashMap<BlockchainRid, AnchoringReceiver>()
+    private val cacToAnchoringPipeManager = ConcurrentHashMap<BlockchainRid, AnchoringPipeManager>()
 
     private var systemAnchoringBrid: BlockchainRid? = null
     private var cacCheckJob: Job? = null
@@ -44,16 +44,16 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
     fun maybeCreateAnchoringCheckCronJob(anchoringSpecialTxExtension: AnchoringSpecialTxExtension, anchorChainRid: BlockchainRid, anchorBlockQueries: BlockQueries, queries: Set<String>) {
         if (queries.contains("get_anchor_block_by_transaction_block_height")) {
             val anchoringCheckConfig = AnchoringCheckConfig.fromAppConfig(appConfig)
-            val isClusterAnchoringReceiver = anchoringSpecialTxExtension.anchoringReceiver is ClusterAnchoringReceiver
-            if (isClusterAnchoringReceiver && anchoringCheckConfig.clusterAnchorCheckIntervalMs >= 0) {
-                cacToAnchoringReceiver[anchorChainRid] = anchoringSpecialTxExtension.anchoringReceiver
+            val isClusterAnchoringChain = anchoringSpecialTxExtension.anchoringPipeManager.relevantChainsProvider is ClusterAnchoringRelevantChainsProvider
+            if (isClusterAnchoringChain && anchoringCheckConfig.clusterAnchorCheckIntervalMs >= 0) {
+                cacToAnchoringPipeManager[anchorChainRid] = anchoringSpecialTxExtension.anchoringPipeManager
                 val currentJob = cacCheckJob
                 if (currentJob == null) {
                     cacCheckJob = checkHighestBlockHeightsAnchoredInCAC(anchoringCheckConfig.clusterAnchorCheckIntervalMs)
                 }
             }
-            val isSystemAnchoringReceiver = anchoringSpecialTxExtension.anchoringReceiver is SystemAnchoringReceiver
-            if (isSystemAnchoringReceiver) {
+            val isSystemAnchoringChain = anchoringSpecialTxExtension.anchoringPipeManager.relevantChainsProvider is SystemAnchoringRelevantChainsProvider
+            if (isSystemAnchoringChain) {
                 systemAnchoringBrid = anchorChainRid
                 if (anchoringCheckConfig.systemAnchorCheckIntervalMs >= 0) {
                     sacCheckJob = checkHighestBlockHeightsAnchoredInSAC(anchorBlockQueries, anchoringCheckConfig.systemAnchorCheckIntervalMs)
@@ -74,7 +74,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
                 while (isActive) {
                     try {
                         val cacChecks = mutableMapOf<BlockchainRid, AnchoringChainCheck>()
-                        for (clusterAnchorChainRid in cacToAnchoringReceiver.keys) {
+                        for (clusterAnchorChainRid in cacToAnchoringPipeManager.keys) {
                             val blockchains = getBlockchainRids(clusterAnchorChainRid)
                             val cacBlockQueries = blockQueriesProvider.getBlockQueries(clusterAnchorChainRid)
                             if (cacBlockQueries != null) {
@@ -133,7 +133,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
             }
 
     private fun getBlockchainRids(clusterAnchorChainRid: BlockchainRid): Set<BlockchainRid> {
-        return cacToAnchoringReceiver[clusterAnchorChainRid]?.getRelevantChains()
+        return cacToAnchoringPipeManager[clusterAnchorChainRid]?.relevantChainsProvider?.getRelevantChains()
                 ?.minus(clusterAnchorChainRid)
                 ?.toSet()
                 ?.intersect(runningChainsBlockClients.keys)
@@ -141,7 +141,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
     }
 
     private fun getBlockchainRids(): Set<BlockchainRid> {
-        return cacToAnchoringReceiver.values.flatMap { it.getRelevantChains() }.minus(cacToAnchoringReceiver.keys).toSet()
+        return cacToAnchoringPipeManager.values.flatMap { it.relevantChainsProvider.getRelevantChains() }.minus(cacToAnchoringPipeManager.keys).toSet()
     }
 
     private fun checkBlockHeightAnchoredInCAC(clusterAnchorBlockQueries: BlockQueries, blockchainRid: BlockchainRid, cacBlockHeight: Long): AnchoringChainCheck {
@@ -171,7 +171,7 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
 
     private fun checkBlockHeightsAnchoredInSAC(systemAnchorBlockQueries: BlockQueries, sacBlockHeight: Long): Map<BlockchainRid, AnchoringChainCheck> {
         val result = mutableMapOf<BlockchainRid, AnchoringChainCheck>()
-        for (clusterAnchorChainRid in cacToAnchoringReceiver.keys) {
+        for (clusterAnchorChainRid in cacToAnchoringPipeManager.keys) {
             val blockchains = getBlockchainRids(clusterAnchorChainRid)
             var error = ""
             try {
@@ -236,8 +236,8 @@ class AnchoringCheck(private val nodeDiagnosticContext: NodeDiagnosticContext, p
             sacCheckJob?.cancel()
             evmCheckJob?.cancel()
         } else {
-            cacToAnchoringReceiver.remove(blockchainRid)?.also {
-                if (cacToAnchoringReceiver.isEmpty()) {
+            cacToAnchoringPipeManager.remove(blockchainRid)?.also {
+                if (cacToAnchoringPipeManager.isEmpty()) {
                     cacCheckJob?.cancel()
                     cacCheckJob = null
                 }

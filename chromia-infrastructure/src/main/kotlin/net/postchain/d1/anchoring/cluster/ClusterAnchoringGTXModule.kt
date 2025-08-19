@@ -5,6 +5,7 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
+import net.postchain.d1.anchoring.AnchoringPipeManager
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
 import net.postchain.d1.anchoring.resourceusage.ResourceUsageStatisticsSpecialTxExtension
 import net.postchain.gtx.GTXOperation
@@ -29,10 +30,13 @@ class ClusterAnchoringGTXModule : SimpleGTXModule<Unit>(
 
     val resourceUsageStatisticsSpecialTxExtension = ResourceUsageStatisticsSpecialTxExtension()
     private val _specialTxExtensions = listOf(
-            AnchoringSpecialTxExtension { clusterManagement, anchoringBlockchainRid ->
+            AnchoringSpecialTxExtension { clusterManagement, anchoringBlockchainRid, anchoringPipeFactory ->
                 val blockchainCluster = clusterManagement.getClusterOfBlockchain(anchoringBlockchainRid)
                 val systemAnchoringChain = clusterManagement.getSystemAnchoringChain()
-                ClusterAnchoringReceiver(blockchainCluster, systemAnchoringChain, clusterManagement)
+                val relevantChainsProvider = ClusterAnchoringRelevantChainsProvider(
+                        blockchainCluster, clusterManagement, systemAnchoringChain, anchoringBlockchainRid
+                )
+                AnchoringPipeManager(anchoringPipeFactory, relevantChainsProvider)
             },
             resourceUsageStatisticsSpecialTxExtension)
 

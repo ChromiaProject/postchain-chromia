@@ -81,7 +81,7 @@ class AnchoringSubnodePipeTest {
             )
         }
 
-        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, { blockQueries })
+        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, blockQueries)
 
         // afterCommit handler
         executor.scheduleAtFixedRate({
@@ -123,7 +123,7 @@ class AnchoringSubnodePipeTest {
             )
         }
 
-        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, { blockQueries }, 20)
+        val sut = AnchoringSubnodePipe(0, BlockchainRid.ZERO_RID, connectionManager, blockQueries, 20)
 
         executor.scheduleAtFixedRate({
             sut.newBlockAvailable(height.get())
