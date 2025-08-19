@@ -34,7 +34,7 @@ class AnchoringSpecialTxExtensionTest {
         on { millis() } doAnswer currentMillis
     }
 
-    lateinit var anchoringReceiverFactory: AnchoringReceiverFactory
+    lateinit var anchoringPipeManagerFactory: AnchoringPipeManagerFactory
     lateinit var sut: AnchoringSpecialTxExtension
 
     // anchoring chain
@@ -66,21 +66,21 @@ class AnchoringSpecialTxExtensionTest {
             on { mightHaveNewPackets() } doReturn mightHaveNewPackets
         }
 
-        val anchoringReceiver: AnchoringReceiver = mock {
+        val anchoringPipeManager: AnchoringPipeManager = mock {
             on { getRelevantPipes() } doReturn listOf(pipe1, pipe2)
         }
 
-        anchoringReceiverFactory = mock {
-            on { create(any(), any()) } doReturn anchoringReceiver
+        anchoringPipeManagerFactory = mock {
+            on { create(any(), any(), any()) } doReturn anchoringPipeManager
         }
 
-        sut = AnchoringSpecialTxExtension(clock, anchoringReceiverFactory)
+        sut = AnchoringSpecialTxExtension(clock, anchoringPipeManagerFactory)
         sut.isSigner = { true }
         sut.clusterManagement = mock()
         sut.blockchainConfigProvider = mock()
         sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100, false)
 
-        sut.createReceiver(blockchainRid0)
+        sut.createPipeManager(blockchainRid0, mock())
 
         module0 = mock {
             on { query(any(), eq("get_last_anchored_block"), eq(gtv("blockchain_rid" to gtv(brid1)))) } doReturn gtv(

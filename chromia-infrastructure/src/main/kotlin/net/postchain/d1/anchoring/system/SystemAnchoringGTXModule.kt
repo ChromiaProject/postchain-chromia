@@ -2,6 +2,7 @@ package net.postchain.d1.anchoring.system
 
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
+import net.postchain.d1.anchoring.AnchoringPipeManager
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -17,7 +18,9 @@ open class SystemAnchoringGTXModule : SimpleGTXModule<Unit>(
         Unit, mapOf(), mapOf()
 ) {
     private val _specialTxExtensions = listOf(
-            AnchoringSpecialTxExtension { clusterManagement, _ -> SystemAnchoringReceiver(clusterManagement) },
+            AnchoringSpecialTxExtension { clusterManagement, _, anchoringPipeFactory ->
+                AnchoringPipeManager(anchoringPipeFactory, SystemAnchoringRelevantChainsProvider(clusterManagement))
+            },
             SelfReportFaultyConfigSpecialTxExtension()
     )
 

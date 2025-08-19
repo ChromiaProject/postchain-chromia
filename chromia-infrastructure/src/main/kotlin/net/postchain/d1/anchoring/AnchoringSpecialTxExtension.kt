@@ -43,7 +43,7 @@ import java.time.Duration
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
 open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUTC(),
-                                       private val anchoringReceiverFactory: AnchoringReceiverFactory)
+                                       private val anchoringPipeManagerFactory: AnchoringPipeManagerFactory)
     : GTXBlockBuildingAffectingSpecialTxExtension {
 
     companion object : KLogging() {
@@ -57,7 +57,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
     private val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
 
     lateinit var isSigner: () -> Boolean
-    lateinit var anchoringReceiver: AnchoringReceiver
+    lateinit var anchoringPipeManager: AnchoringPipeManager
     lateinit var clusterManagement: ClusterManagement
     lateinit var blockchainConfigProvider: BlockchainConfigProvider
     lateinit var anchoringConfig: AnchoringBlockchainConfigData
@@ -83,8 +83,9 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         cryptoSystem = cs
     }
 
-    fun createReceiver(anchoringBlockchainRid: BlockchainRid) {
-        anchoringReceiver = anchoringReceiverFactory.create(clusterManagement, anchoringBlockchainRid)
+    fun createPipeManager(anchoringBlockchainRid: BlockchainRid, anchoringPipeFactory: AnchoringPipeFactory): AnchoringPipeManager {
+        anchoringPipeManager = anchoringPipeManagerFactory.create(clusterManagement, anchoringBlockchainRid, anchoringPipeFactory)
+        return anchoringPipeManager
     }
 
     /**
@@ -92,7 +93,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
      * so we only add them here (if we have any).
      */
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean = when (position) {
-        SpecialTransactionPosition.Begin -> ::anchoringReceiver.isInitialized
+        SpecialTransactionPosition.Begin -> ::anchoringPipeManager.isInitialized
         SpecialTransactionPosition.End -> false
     }
 
@@ -107,7 +108,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val pipes = anchoringReceiver.getRelevantPipes()
+        val pipes = anchoringPipeManager.getRelevantPipes()
 
         // Extract all packages from all pipes
         val specialTxBuilder = if (anchoringConfig.batchMode) BatchAnchoringSpecialTxBuilder() else MultiOpAnchoringSpecialTxBuilder()
@@ -140,8 +141,8 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         return specialTxBuilder.build()
     }
 
-    open fun numberOfBlocksToAnchor(): Long = if (!::anchoringReceiver.isInitialized) 0 else
-        anchoringReceiver.getRelevantPipes().sumOf { if (it.numberOfNewPackets() > 0) it.numberOfNewPackets() else 0 }
+    open fun numberOfBlocksToAnchor(): Long = if (!::anchoringPipeManager.isInitialized) 0 else
+        anchoringPipeManager.getRelevantPipes().sumOf { if (it.numberOfNewPackets() > 0) it.numberOfNewPackets() else 0 }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
@@ -155,7 +156,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             ops: List<OpData>
     ): Boolean {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
-        val relevantChains = anchoringReceiver.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
+        val relevantChains = anchoringPipeManager.relevantChainsProvider.getRelevantChains(bctx.timestamp - REMOVED_BLOCKCHAIN_GRACE_PERIOD.toMillis())
         pruneCachedPeers(relevantChains)
 
         val validatedAnchoringOps = if (anchoringConfig.batchMode) {
@@ -225,7 +226,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         }
         if (!allSignaturesValid) return false
 
-        val relevantPipes = anchoringReceiver.getRelevantPipes()
+        val relevantPipes = anchoringPipeManager.getRelevantPipes()
         // Go through it chain by chain
         for ((bcRid, minimalHeaders) in chainHeadersMap) {
             // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc.

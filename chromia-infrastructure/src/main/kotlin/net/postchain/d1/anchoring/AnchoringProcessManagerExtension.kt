@@ -7,7 +7,6 @@ import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockchainInfrastructure
@@ -27,36 +26,41 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.GtxConfigurationData
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 
 open class AnchoringProcessManagerExtension(
-        postchainContext: PostchainContext,
+        private val postchainContext: PostchainContext,
         private val blockchainInfrastructure: BlockchainInfrastructure
 ) : ContainerBlockchainProcessManagerExtension, RemoteBlockchainProcessConnectable {
 
     companion object : KLogging()
 
-    private val localDispatcher = AnchoringDispatcher(postchainContext.blockBuilderStorage, blockchainInfrastructure)
-    private val remoteProcessChainIds = mutableMapOf<BlockchainRid, Long>()
+    private val anchoringPipeManagers = mutableMapOf<Long, AnchoringPipeManager>()
+    private val localProcessChainIds = ConcurrentHashMap<BlockchainRid, Long>()
+    private val remoteProcessChainIds = ConcurrentHashMap<BlockchainRid, Long>()
     private val anchoringCheck = AnchoringCheck(postchainContext.nodeDiagnosticContext, postchainContext.blockQueriesProvider, postchainContext.appConfig)
 
+    private lateinit var clusterManagement: ClusterManagement
+
     /**
-     * Connect process to cluster anchoring:
-     * 1. register receiver chain if necessary
-     * 2. connect process to local dispatcher
+     * Connect process to anchoring
      */
     @Synchronized
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
+        localProcessChainIds[cfg.blockchainRid] = cfg.chainID
         anchoringCheck.runningChainsBlockClients[cfg.blockchainRid] = BlockQueriesAdapter(engine.getBlockQueries())
 
         if (cfg is GTXModuleAware && cfg is ManagedDataSourceAware) {
             // The first chain to be connected is chain0.
             // The clusterManagement instance using chain0's dataSource will be shared by all other chains.
-            localDispatcher.initializeClusterManagementIfNotSet(createClusterManagement(cfg))
+            if (!::clusterManagement.isInitialized) {
+                clusterManagement = createClusterManagement(cfg)
+            }
 
-            // create receiver when blockchain has anchoring STE
+            // create pipe manager when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg.module)?.let {
                 it.isSigner = process::isSigner
                 it.clusterManagement = createClusterManagement(cfg)
@@ -74,15 +78,20 @@ open class AnchoringProcessManagerExtension(
 
                 val anchorBlockQueries = engine.getBlockQueries()
 
-                it.createReceiver(cfg.blockchainRid)
-                localDispatcher.connectReceiver(cfg.chainID, it.anchoringReceiver, anchorBlockQueries)
+                anchoringPipeManagers[cfg.chainID] = it.createPipeManager(cfg.blockchainRid) { blockchainRid ->
+                    val remoteChainId = remoteProcessChainIds[blockchainRid]
+                    val localChainId = localProcessChainIds[blockchainRid]
+                    if (remoteChainId != null) {
+                        AnchoringSubnodePipe(remoteChainId, blockchainRid, (blockchainInfrastructure as MasterBlockchainInfra).masterConnectionManager, anchorBlockQueries)
+                    } else if (localChainId != null) {
+                        AnchoringLocalPipe(localChainId, blockchainRid, postchainContext.blockBuilderStorage)
+                    } else null // We are not running this chain currently
+                }
 
                 anchoringCheck.maybeCreateAnchoringCheckCronJob(it, cfg.blockchainRid, anchorBlockQueries, cfg.module.getQueries())
             }
-
-            // connect process to local dispatcher
-            localDispatcher.connectChain(cfg.chainID, engine.blockchainRid)
         }
+        anchoringPipeManagers.filterKeys { it != cfg.chainID }.values.forEach { it.onChainConnect(cfg.blockchainRid) }
     }
 
     /**
@@ -107,26 +116,22 @@ open class AnchoringProcessManagerExtension(
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
-        anchoringCheck.remove(process.blockchainEngine.getConfiguration().blockchainRid)
-        anchoringCheck.runningChainsBlockClients.remove(process.blockchainEngine.blockchainRid)
-        localDispatcher.disconnectChain(
-                process.blockchainEngine.getConfiguration().chainID
-        )
+        val blockchainRid = process.blockchainEngine.blockchainRid
+        localProcessChainIds.remove(blockchainRid)
+        anchoringCheck.remove(blockchainRid)
+        anchoringCheck.runningChainsBlockClients.remove(blockchainRid)
+        anchoringPipeManagers.remove(process.blockchainEngine.chainID)?.shutdown() // In case this is an anchoring chain
+        anchoringPipeManagers.values.forEach { it.onChainDisconnect(blockchainRid) }
     }
 
     @Synchronized
     override fun afterCommit(process: BlockchainProcess, height: Long) {
-        localDispatcher.afterCommit(
-                process.blockchainEngine.getConfiguration().chainID,
-                height
-        )
+        anchoringPipeManagers.values.forEach { it.afterCommit(process.blockchainEngine.blockchainRid, height) }
     }
 
     @Synchronized
     override fun afterCommitInSubnode(blockchainRid: BlockchainRid, blockHeight: Long) {
-        val chainId = remoteProcessChainIds[blockchainRid]
-                ?: throw ProgrammerMistake("Received commit from blockchain with rid ${blockchainRid.toHex()} that has no mapped chain id")
-        localDispatcher.afterCommit(chainId, blockHeight)
+        anchoringPipeManagers.values.forEach { it.afterCommit(blockchainRid, blockHeight) }
     }
 
     @Synchronized
@@ -135,7 +140,6 @@ open class AnchoringProcessManagerExtension(
 
     override fun connectRemoteProcess(process: RemoteBlockchainProcess) {
         remoteProcessChainIds[process.blockchainRid] = process.chainId
-        localDispatcher.connectSubnodeChain(process.chainId, process.blockchainRid)
 
         // Should always be true
         if (blockchainInfrastructure is MasterBlockchainInfra) {
@@ -144,11 +148,12 @@ open class AnchoringProcessManagerExtension(
                     process.blockchainRid
             )
         }
+        anchoringPipeManagers.values.forEach { it.onChainConnect(process.blockchainRid) }
     }
 
     override fun disconnectRemoteProcess(process: RemoteBlockchainProcess) {
-        localDispatcher.disconnectSubnodeChain(process.chainId)
         remoteProcessChainIds.remove(process.blockchainRid)
         anchoringCheck.runningChainsBlockClients.remove(process.blockchainRid)
+        anchoringPipeManagers.values.forEach { it.onChainDisconnect(process.blockchainRid) }
     }
 }
