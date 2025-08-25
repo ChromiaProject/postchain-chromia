@@ -8,7 +8,9 @@ import net.postchain.core.TxEContext
 import net.postchain.d1.anchoring.AnchoringPipeManager
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
 import net.postchain.d1.anchoring.resourceusage.ResourceUsageStatisticsSpecialTxExtension
+import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.PostchainContextAware
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
@@ -25,8 +27,15 @@ class ClusterAnchoringGTXModule : SimpleGTXModule<Unit>(
         Unit,
         mapOf(ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp.OP_NAME to { conf, opData: ExtOpData -> ResourceUsageStatisticsValidateNodeSignatureDummyOp(conf, opData) }),
         mapOf()
-), PostchainContextAware {
+), PostchainContextAware, MetadataProvider {
 
+    override fun getMetadata() =
+            GTXModuleMetadata(
+                    operations = mapOf(
+                            ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp.OP_NAME to
+                                    ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp.metadata
+                    ),
+                    queries = mapOf())
 
     val resourceUsageStatisticsSpecialTxExtension = ResourceUsageStatisticsSpecialTxExtension()
     private val _specialTxExtensions = listOf(

@@ -19,12 +19,15 @@ import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
+import net.postchain.gtx.OperationMetadata
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import java.util.Collections
@@ -602,6 +605,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             // operation __icmf_anchor_header(cluster: text, block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__icmf_anchor_header"
 
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "cluster", gtvTypes = setOf(GtvType.STRING)),
+                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+            ))
+
             fun fromOpData(opData: OpData): AnchorHeaderOp? {
                 if (opData.opName != OP_NAME) return null
                 if (opData.args.size != 3) {
@@ -634,6 +643,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             // operation __anchored_icmf_header(block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__anchored_icmf_header"
 
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+            ))
+
             fun fromOpData(opData: OpData): AnchoredHeaderOp? {
                 if (opData.opName != OP_NAME) return null
                 if (opData.args.size != 2) {
@@ -660,6 +674,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         companion object {
             // operation __non_anchored_icmf_header(block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__non_anchored_icmf_header"
+
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+            ))
 
             fun fromOpData(opData: OpData): NonAnchoredHeaderOp? {
                 if (opData.opName != OP_NAME) return null
@@ -689,6 +708,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
             // operation __anchored_icmf_message_hash(sender: byte_array, topic: text, hash: byte_array)
             const val OP_NAME = "__anchored_icmf_message_hash"
 
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                    ArgumentMetadata(name = "hash", gtvTypes = setOf(GtvType.BYTEARRAY)),
+            ))
+
             fun fromOpData(opData: OpData): MessageHashOp? {
                 if (opData.opName != OP_NAME) return null
                 if (opData.args.size != 3) {
@@ -716,6 +741,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOpera
         companion object {
             // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
             const val OP_NAME = "__icmf_message"
+
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                    ArgumentMetadata(name = "body", gtvTypes = setOf(
+                            GtvType.NULL, GtvType.BYTEARRAY, GtvType.STRING, GtvType.INTEGER, GtvType.DICT, GtvType.ARRAY, GtvType.BIGINTEGER
+                    )),
+            ))
 
             fun fromOpData(opData: OpData): MessageOp? = fromOpNameAndArgs(opData.opName, opData.args)
 

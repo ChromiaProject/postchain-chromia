@@ -12,9 +12,12 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.OperationMetadata
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.metrics.SUB_CONTAINER_CONTAINER_NAME_TAG
@@ -168,7 +171,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
             }
         }
         if (::signers.isInitialized) {
-            if (signers.none{ it.contentEquals(subjectID) }) {
+            if (signers.none { it.contentEquals(subjectID) }) {
                 logger.warn("Signature pubkey: $subjectID does not correspond to any known signers: $signers ")
                 return false
             }
@@ -185,6 +188,11 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
         companion object {
             // operation __resource_usage_statistics_validate_node_signature(subject_id: byte_array, data: byte_array)
             const val OP_NAME = "__resource_usage_statistics_validate_node_signature"
+
+            val metadata = OperationMetadata(args = listOf(
+                    ArgumentMetadata(name = "subject_id", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ArgumentMetadata(name = "data", gtvTypes = setOf(GtvType.BYTEARRAY))
+            ))
 
             fun fromOpData(opData: OpData): ValidateNodeSignatureOp? {
                 if (opData.opName != OP_NAME) return null

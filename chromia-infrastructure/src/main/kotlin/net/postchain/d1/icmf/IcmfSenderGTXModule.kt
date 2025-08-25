@@ -15,7 +15,13 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvType
+import net.postchain.gtx.ArgumentMetadata
+import net.postchain.gtx.GTXModuleMetadata
+import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.PostchainContextAware
+import net.postchain.gtx.QueryMetadata
+import net.postchain.gtx.ReturnMetadata
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.network.common.ConnectionManager
@@ -87,19 +93,45 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                 QUERY_ICMF_GET_MESSAGES_AFTER_ID to { conf, ctxt, args ->
                     val dict = args as GtvDictionary
                     val topic = dict["topic"]?.asString() ?: throw UserMistake("No topic property supplied")
-                    val id = dict["id"]?.let { if (it.isNull()) -1 else it.asInteger() } ?: throw UserMistake("No id property supplied")
+                    val id = dict["id"]?.let { if (it.isNull()) -1 else it.asInteger() }
+                            ?: throw UserMistake("No id property supplied")
                     val messages = conf.dbOperations.getSentMessagesAfterId(ctxt, topic, id, conf.messageQueryLimit)
                     gtv(messages.map { gtv(mapOf("id" to gtv(it.id), "height" to gtv(it.height), "body" to it.body, "height" to gtv(it.height))) })
                 },
                 QUERY_ICMF_GET_MESSAGES_BEFORE_ID to { conf, ctxt, args ->
                     val dict = args as GtvDictionary
                     val topic = dict["topic"]?.asString() ?: throw UserMistake("No topic property supplied")
-                    val id = dict["id"]?.let { if (it.isNull()) Long.MAX_VALUE else it.asInteger() } ?: throw UserMistake("No id property supplied")
+                    val id = dict["id"]?.let { if (it.isNull()) Long.MAX_VALUE else it.asInteger() }
+                            ?: throw UserMistake("No id property supplied")
                     val messages = conf.dbOperations.getSentMessagesBeforeId(ctxt, topic, id, conf.messageQueryLimit)
                     gtv(messages.map { gtv(mapOf("id" to gtv(it.id), "height" to gtv(it.height), "body" to it.body, "height" to gtv(it.height))) })
                 },
         )
-), PostchainContextAware {
+), PostchainContextAware, MetadataProvider {
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(),
+            queries = mapOf(
+                    QUERY_ICMF_GET_MESSAGES_AT_HEIGHT to QueryMetadata(args = listOf(
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "height", gtvTypes = setOf(GtvType.INTEGER)),
+                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
+                    QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT to QueryMetadata(args = listOf(
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "height", gtvTypes = setOf(GtvType.INTEGER)),
+                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
+                    QUERY_ICMF_GET_ALL_TOPICS to QueryMetadata(args = listOf(),
+                            returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
+                    QUERY_ICMF_GET_MESSAGES_AFTER_ID to QueryMetadata(args = listOf(
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "id", gtvTypes = setOf(GtvType.INTEGER, GtvType.NULL)),
+                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
+                    QUERY_ICMF_GET_MESSAGES_BEFORE_ID to QueryMetadata(args = listOf(
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "id", gtvTypes = setOf(GtvType.INTEGER, GtvType.NULL)),
+                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
+            )
+    )
 
     override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
         val clusterManagement = createClusterManagement(configuration, postchainContext.connectionManager)

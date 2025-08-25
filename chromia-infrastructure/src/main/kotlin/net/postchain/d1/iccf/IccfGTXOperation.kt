@@ -18,20 +18,35 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXOpMistake
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.OperationMetadata
 import net.postchain.gtx.data.ExtOpData
 
 class IccfGTXOperation(
         iccfContext: IccfGTXModuleContext,
         opData: ExtOpData
 ) : GTXOperation(opData) {
+
+    companion object {
+        val metadata = OperationMetadata(args = listOf(
+                ArgumentMetadata("blockchain_rid", setOf(GtvType.BYTEARRAY)),
+                ArgumentMetadata("tx_hash", setOf(GtvType.BYTEARRAY)),
+                ArgumentMetadata("tx_proof", setOf(GtvType.BYTEARRAY)),
+                ArgumentMetadata("raw_cluster_anchoring_tx", setOf(GtvType.BYTEARRAY), required = false),
+                ArgumentMetadata("cluster_anchoring_tx_op_index", setOf(GtvType.INTEGER), required = false),
+                ArgumentMetadata("cluster_anchoring_tx_proof", setOf(GtvType.BYTEARRAY), required = false),
+        ))
+    }
+
     private val cryptoSystem = iccfContext.cryptoSystem
     private val clusterManagement = iccfContext.clusterManagement
     private val nodeManagement = iccfContext.nodeManagement
@@ -54,14 +69,14 @@ class IccfGTXOperation(
     private fun verifyIccf(args: Array<out Gtv>, isSyncing: Boolean) {
         if (!isSyncing) {
             if (data.operations
-                    .filter { it.opName == ICCF_OP_NAME }
-                    .groupingBy { op ->
-                        val sourceBlockchainRid = decodeSafely(op.args, 0) { it.asByteArray() }
-                        val sourceTxHash = decodeSafely(op.args, 1) { it.asByteArray() }
-                        (sourceBlockchainRid + sourceTxHash).contentHashCode()
-                    }
-                    .eachCount()
-                    .any { it.value > 1 }) {
+                            .filter { it.opName == ICCF_OP_NAME }
+                            .groupingBy { op ->
+                                val sourceBlockchainRid = decodeSafely(op.args, 0) { it.asByteArray() }
+                                val sourceTxHash = decodeSafely(op.args, 1) { it.asByteArray() }
+                                (sourceBlockchainRid + sourceTxHash).contentHashCode()
+                            }
+                            .eachCount()
+                            .any { it.value > 1 }) {
                 throw GTXOpMistake("Duplicate $ICCF_OP_NAME operation detected", data)
             }
         }
