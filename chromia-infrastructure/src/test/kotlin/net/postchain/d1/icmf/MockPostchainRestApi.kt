@@ -8,6 +8,7 @@ import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.Version
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -177,6 +178,10 @@ object MockPostchainRestApi : Closeable {
             }
 
             override fun getInfrastructureVersion(): InfraVersion {
+                TODO("Not yet implemented")
+            }
+
+            override fun getMetadata(): ApiMetadata {
                 TODO("Not yet implemented")
             }
         })

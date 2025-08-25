@@ -10,6 +10,8 @@ import net.postchain.d1.PostchainQueryFactory
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.nm_api.NodeManagement
 import net.postchain.d1.nm_api.NodeManagementImpl
+import net.postchain.gtx.GTXModuleMetadata
+import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.PostchainContextAware
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.network.common.ConnectionManager
@@ -18,7 +20,15 @@ open class IccfGTXModule : SimpleGTXModule<IccfGTXModuleContext>(
         IccfGTXModuleContext(),
         mapOf(IccfProofTxMaterialBuilder.ICCF_OP_NAME to ::IccfGTXOperation),
         mapOf()
-), PostchainContextAware {
+), PostchainContextAware, MetadataProvider {
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(
+                    IccfProofTxMaterialBuilder.ICCF_OP_NAME to IccfGTXOperation.metadata,
+            ),
+            queries = mapOf()
+    )
+
     override fun initializeDB(ctx: EContext) {}
 
     override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {

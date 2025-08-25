@@ -12,12 +12,14 @@ import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.OperationWrapper
 import net.postchain.gtx.TransactorMaker
 import net.postchain.gtx.data.ExtOpData
 
-class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
+class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider {
     companion object : KLogging()
 
     private val dbOperations = IcmfDatabaseOperationsImpl()
@@ -35,6 +37,17 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper {
                 val delegate = delegateTransactorMaker.makeTransactor(extOpData)
                 IcmfReceiveGTXOperation(extOpData, delegate)
             }
+    )
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(
+                    AnchorHeaderOp.OP_NAME to AnchorHeaderOp.metadata,
+                    AnchoredHeaderOp.OP_NAME to AnchoredHeaderOp.metadata,
+                    NonAnchoredHeaderOp.OP_NAME to NonAnchoredHeaderOp.metadata,
+                    MessageHashOp.OP_NAME to MessageHashOp.metadata,
+                    MessageOp.OP_NAME to MessageOp.metadata,
+            ),
+            queries = mapOf()
     )
 
     override fun makeTransactor(opData: ExtOpData) = operations[opData.opName]?.let { it(opData) }
