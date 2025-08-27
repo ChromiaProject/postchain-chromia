@@ -65,6 +65,7 @@ import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
+@Timeout(60, unit = TimeUnit.SECONDS)
 class IcmfReceiverIT : IcmfBaseIT() {
 
     private val remoteSenderMessageBody = gtv("remote")
@@ -232,7 +233,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun globalTopicReceiver() {
         setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse))
         setupQueriesMocks()
@@ -261,7 +261,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun interClusterSpecificChainReceiver() {
         setupClientMocks()
 
@@ -499,7 +498,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun spilledMessages() {
         val messageBody = gtv("m".repeat(90 * 1024))
         val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
@@ -600,7 +598,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun directoryChainReceiver() {
         startManagedSystem(3, 0)
 
@@ -633,7 +630,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun skipToHeight() {
         setupNonAnchoredQueriesMock()
 
@@ -673,7 +669,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun skipToHeightAfterReadingMessages() {
         setupNonAnchoredQueriesMock()
 
@@ -805,7 +800,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `dapp receiver config - add global topic and read messages`() {
 
         val topic = "G_my-topic"
@@ -846,7 +840,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `dapp receiver config - add global topic with brid and read messages`() {
 
         val topic = "G_my-topic"
@@ -894,7 +887,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
      * 2. Send a message on both topics but only receive the active one.
      */
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `dapp receiver config - remove 1 topic and stop receive messages on that topic`() {
         addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
         addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
@@ -990,7 +982,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
      * And then a final step to clear all dapp provided receivers.
      */
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `dapp receiver config - add, replace and add topics`() {
         addNonAnchoredQueriesMock(localSenderChainRid, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
         addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))

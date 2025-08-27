@@ -28,9 +28,12 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.util.concurrent.TimeUnit
 
+@Timeout(60, unit = TimeUnit.SECONDS)
 class IccfIT : ManagedModeTest() {
 
     private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
