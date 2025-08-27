@@ -25,10 +25,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
 
+@Timeout(60, unit = TimeUnit.SECONDS)
 class IcmfSenderIT : IcmfBaseIT() {
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
         val topic = "L_my-topic"
@@ -56,7 +56,6 @@ class IcmfSenderIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun icmfTooBigMessage() {
         startManagedSystem(3, 0)
         val topic = "L_my-topic"
@@ -74,7 +73,6 @@ class IcmfSenderIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header with not allowed topic`() {
         startManagedSystem(3, 0)
         val topic = "my-topic"
@@ -89,7 +87,6 @@ class IcmfSenderIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `icmf should not add message to header for normal chain with global topic`() {
         startManagedSystem(3, 0)
         val topic = "G_my-topic"
@@ -104,7 +101,6 @@ class IcmfSenderIT : IcmfBaseIT() {
     }
 
     @Test
-    @Timeout(60, unit = TimeUnit.SECONDS)
     fun `message query limit is respected`() {
         startManagedSystem(3, 0)
         val topic = "L_my-topic"

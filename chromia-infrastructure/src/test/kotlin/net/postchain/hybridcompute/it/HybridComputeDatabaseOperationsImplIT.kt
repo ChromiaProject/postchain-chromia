@@ -14,10 +14,13 @@ import net.postchain.hybridcompute.HybridComputeDatabaseOperationsImpl.Companion
 import net.postchain.hybridcompute.HybridComputeDatabaseOperationsImpl.Companion.COLUMN_TYPE
 import net.postchain.hybridcompute.HybridComputeDatabaseOperationsImpl.Companion.TABLE_POINTS
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
+@Timeout(60, unit = TimeUnit.SECONDS)
 class HybridComputeDatabaseOperationsImplIT {
 
     val appConfig: AppConfig = testDbConfig("hybrid_compute_db_it")
