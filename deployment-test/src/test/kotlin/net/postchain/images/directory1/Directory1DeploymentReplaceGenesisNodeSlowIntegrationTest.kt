@@ -85,9 +85,16 @@ class Directory1DeploymentReplaceGenesisNodeSlowIntegrationTest : ManagedModeBas
         assertAnchoringChainProperties()
 
         addSystemNode(node1, node2)
-        addSystemNode(node1, node3, listOf(node2.provider))
-        addSystemNode(node1, node4, listOf(node2.provider, node3.provider))
+        assertChainSigners(chain0Brid, node1, node2)
+        assertChainSigners(clusterAnchoringBrid, node1, node2)
+        assertChainSigners(systemAnchoringBrid, node1, node2)
 
+        addSystemNode(node1, node3, listOf(node2.provider))
+        assertChainSigners(chain0Brid, node1, node2, node3)
+        assertChainSigners(clusterAnchoringBrid, node1, node2, node3)
+        assertChainSigners(systemAnchoringBrid, node1, node2, node3)
+
+        addSystemNode(node1, node4, listOf(node2.provider, node3.provider))
         assertChainSigners(chain0Brid, *nodes())
         assertChainSigners(clusterAnchoringBrid, *nodes())
         assertChainSigners(systemAnchoringBrid, *nodes())
