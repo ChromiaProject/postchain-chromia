@@ -43,7 +43,7 @@ import kotlin.math.min
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
         SynchronizationInfrastructureExtension {
     private val receivers = mutableMapOf<Long, MutableList<Shutdownable>>()
-    private val dbOperations = IcmfDatabaseOperationsImpl()
+    private val dbOperations = IcmfReceiverDatabaseOperationsImpl()
     private val cryptoSystem = postchainContext.cryptoSystem
 
     companion object : KLogging()

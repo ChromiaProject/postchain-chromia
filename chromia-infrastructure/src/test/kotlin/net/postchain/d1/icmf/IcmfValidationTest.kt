@@ -45,7 +45,7 @@ class IcmfValidationTest {
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
-    private val dbMock: IcmfDatabaseOperations = mock {
+    private val dbMock: IcmfReceiverDatabaseOperations = mock {
         on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
         on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
         on { loadLastAnchoredHeight(mockContext, cluster, irrelevantTopic) } doReturn -1L
@@ -315,7 +315,7 @@ class IcmfValidationTest {
 
     @Test
     fun unexpectedSpilledMessage() {
-        val unexpectedDbMock: IcmfDatabaseOperations = mock {
+        val unexpectedDbMock: IcmfReceiverDatabaseOperations = mock {
             on { loadLastMessageHeight(mockContext, blockchainRID, topic) } doReturn -1L
             on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
             on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
@@ -462,7 +462,7 @@ class IcmfValidationTest {
 
     @Test
     fun `Can handle multiple identical anchor header ops in same tx`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(MockIcmfDatabaseOperations())
+        val icmfReceiverSpecialTxExtension = createTxExt(MockIcmfReceiverDatabaseOperations())
 
         val relevantMessageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(relevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, messageExtraDataOverride = mapOf(
@@ -617,7 +617,7 @@ class IcmfValidationTest {
     }
 
     private fun createTxExt(
-            databaseOperations: IcmfDatabaseOperations = dbMock,
+            databaseOperations: IcmfReceiverDatabaseOperations = dbMock,
             icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig,
             nodeIsSigner: Boolean = true,
     ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
@@ -703,7 +703,7 @@ class IcmfValidationTest {
 }
 
 // Used for tests where we need to verify previous heights that are written to DB
-class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
+class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
     private val lastAnchoredHeights = mutableMapOf<Pair<String, String>, Long>()
 
     override fun initialize(ctx: EContext) {}
@@ -743,22 +743,6 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
         TODO("Not yet implemented")
     }
 
-    override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv> {
-        TODO("Not yet implemented")
-    }
-
     override fun deleteDappProvidedReceiverTopics(ctx: EContext) {
         TODO("Not yet implemented")
     }
@@ -768,18 +752,6 @@ class MockIcmfDatabaseOperations : IcmfDatabaseOperations {
     }
 
     override fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAllTopics(ctx: EContext): List<String> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId> {
         TODO("Not yet implemented")
     }
 }

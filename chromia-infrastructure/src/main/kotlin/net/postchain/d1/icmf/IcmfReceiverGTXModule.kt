@@ -22,7 +22,7 @@ import net.postchain.gtx.data.ExtOpData
 class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider {
     companion object : KLogging()
 
-    private val dbOperations = IcmfDatabaseOperationsImpl()
+    private val dbOperations = IcmfReceiverDatabaseOperationsImpl()
     private val specialTxExtension = IcmfReceiverSpecialTxExtension(dbOperations)
     private val _specialTxExtensions = listOf(specialTxExtension)
     private lateinit var delegateTransactorMaker: TransactorMaker

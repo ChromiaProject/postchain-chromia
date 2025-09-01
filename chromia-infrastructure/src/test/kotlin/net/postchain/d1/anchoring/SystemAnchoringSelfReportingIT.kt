@@ -8,7 +8,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.d1.icmf.DEFAULT_MESSAGE_QUERY_LIMIT
-import net.postchain.d1.icmf.IcmfDatabaseOperationsImpl
+import net.postchain.d1.icmf.IcmfSenderDatabaseOperationsImpl
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
@@ -61,7 +61,7 @@ class SystemAnchoringSelfReportingIT : ManagedModeTest() {
         // Assert configuration failed ICMF message was sent
         for (node in getChainNodes(systemAnchoringChain)) {
             withReadConnection(node.postchainContext.blockBuilderStorage, systemAnchoringChain) {
-                val dbOps = IcmfDatabaseOperationsImpl()
+                val dbOps = IcmfSenderDatabaseOperationsImpl()
 
                 val configFailedMessages = dbOps.getSentMessagesAfterHeight(it, "G_configuration_failed", -1, DEFAULT_MESSAGE_QUERY_LIMIT)
                 assertThat(configFailedMessages).hasSize(1)
