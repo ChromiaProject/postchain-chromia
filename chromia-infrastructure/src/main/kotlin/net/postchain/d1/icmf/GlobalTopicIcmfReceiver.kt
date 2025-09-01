@@ -33,7 +33,7 @@ class GlobalTopicIcmfReceiver(
         private val clusterManagement: ClusterManagement,
         private val blockchainConfigProvider: BlockchainConfigProvider,
         private val clientProvider: ChromiaClientProvider,
-        private val dbOperations: IcmfDatabaseOperations
+        private val dbOperations: IcmfReceiverDatabaseOperations
 ) : IcmfReceiver<TopicRoute, Long, IcmfAnchorPacket, String>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes

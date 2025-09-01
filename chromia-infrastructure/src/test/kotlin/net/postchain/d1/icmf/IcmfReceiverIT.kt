@@ -78,7 +78,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
     private val localSenderQueryResponse = createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody))
 
     private val otherLocalSenderMessageBody = gtv("other")
-    private val dbOperations = IcmfDatabaseOperationsImpl()
+    private val dbOperations = IcmfReceiverDatabaseOperationsImpl()
 
     @BeforeEach
     fun setup() {

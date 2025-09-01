@@ -34,7 +34,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
+class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatabaseOperations) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         val BASE_SPECIAL_TX_OVERHEAD = Gtx(

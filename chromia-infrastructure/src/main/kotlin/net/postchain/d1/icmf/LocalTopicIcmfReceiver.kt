@@ -17,7 +17,7 @@ class LocalTopicIcmfReceiver(
         private val myChainId: Long,
         private val myBlockchainRid: BlockchainRid,
         private val storage: Storage,
-        private val dbOperations: IcmfDatabaseOperations
+        private val dbOperations: IcmfReceiverDatabaseOperations
 ) : IcmfReceiver<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
 
     private val pipes: List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = run {

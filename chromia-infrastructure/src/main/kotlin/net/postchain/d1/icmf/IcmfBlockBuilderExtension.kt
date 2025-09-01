@@ -17,7 +17,7 @@ import net.postchain.gtv.merkleHash
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val dbOperations: IcmfDatabaseOperations) : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val dbOperations: IcmfSenderDatabaseOperations) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem

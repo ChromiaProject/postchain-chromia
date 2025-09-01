@@ -171,7 +171,7 @@ class IcmfSenderIT : IcmfBaseIT() {
 
                 assertThat(topicHeader.previousBlockHeight).isEqualTo(expectedPreviousMessageBlockHeight)
 
-                val dbOps = IcmfDatabaseOperationsImpl()
+                val dbOps = IcmfSenderDatabaseOperationsImpl()
 
                 val allMessages = dbOps.getSentMessagesAfterHeight(it, topic, -1, DEFAULT_MESSAGE_QUERY_LIMIT)
                 assertThat(allMessages.size).isEqualTo(expectedAllMessages.size)
