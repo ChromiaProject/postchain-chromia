@@ -2,7 +2,6 @@ package net.postchain.d1.icmf
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
-import net.postchain.gtv.Gtv
 
 interface IcmfReceiverDatabaseOperations {
     fun initialize(ctx: EContext)
@@ -19,17 +18,6 @@ interface IcmfReceiverDatabaseOperations {
     fun deleteDappProvidedReceiverTopics(ctx: EContext)
     fun saveDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>)
     fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic>
-}
-
-interface IcmfSenderDatabaseOperations {
-    fun initialize(ctx: EContext)
-    fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray)
-    fun getPreviousSentMessageBlockHeight(ctx: EContext, topic: String, blockHeight: Long): Long
-    fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight>
-    fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv>
-    fun getAllTopics(ctx: EContext): List<String>
-    fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
-    fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
 }
 
 data class AnchorHeight(
@@ -50,15 +38,4 @@ data class SpilledMessage(
         val cluster: String,
         val anchorHeight: Long,
         val merkleHashVersion: Long
-)
-
-data class IcmfMessageAtHeight(
-        val height: Long,
-        val body: Gtv
-)
-
-data class IcmfMessageAtHeightWithId(
-        val id: Long,
-        val height: Long,
-        val body: Gtv
 )
