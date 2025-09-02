@@ -117,3 +117,15 @@ config:
     receiver:
       special-tx-margin-bytes: 102400 # Default 100 KiB
 ```
+
+### Limit number of messages per block
+
+Sometimes we may not be able to process more than X messages per block in a timely manner. In that case we can
+configure the maximum number of messages that should be processed per block.
+
+```
+config:
+  icmf:
+    receiver:
+      message-limit: 100 # Default 100 messages per block
+```
