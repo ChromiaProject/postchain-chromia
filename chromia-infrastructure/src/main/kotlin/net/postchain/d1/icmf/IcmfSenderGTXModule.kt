@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.chromia.cm_api.cmGetSystemChains
 import net.postchain.client.core.PostchainQuery
 import net.postchain.cm.cm_api.ClusterManagementImpl
@@ -23,6 +24,8 @@ import net.postchain.gtx.PostchainContextAware
 import net.postchain.gtx.QueryMetadata
 import net.postchain.gtx.ReturnMetadata
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.SnapshotAware
+import net.postchain.gtx.SnapshotContext
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.network.common.ConnectionManager
 
@@ -86,7 +89,9 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                     gtv(messages.map { gtv(mapOf("body" to it.body, "height" to gtv(it.height))) })
                 },
         )
-), PostchainContextAware, MetadataProvider {
+), PostchainContextAware, MetadataProvider, SnapshotAware {
+
+    private val repository = IcmfSenderRepository(conf)
 
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(),
@@ -123,7 +128,7 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> =
-            listOf(IcmfBlockBuilderExtension(conf.isSystemChain, conf.dbOperations))
+            listOf(IcmfBlockBuilderExtension(conf.isSystemChain, repository))
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf()
 
@@ -141,4 +146,16 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
     ): ChromiaQueryProvider = ChromiaQueryProviderFactory.create(
             configuration, postchainContext.blockQueriesProvider, postchainContext.connectionManager, clusterManagement
     )
+
+    override fun initializeSnapshotContext(context: SnapshotContext) {
+        conf.snapshotContext = context
+    }
+
+    override fun getPermanentDatumIdMax(ctx: EContext) = repository.getPermanentDatumIdMax(ctx)
+
+    override fun getPermanentDatum(ctx: EContext, datumId: Long) = repository.getPermanentDatum(ctx, datumId)
+
+    override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
+        repository.persistDatums(ctx, datumList)
+    }
 }

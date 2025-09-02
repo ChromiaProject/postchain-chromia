@@ -25,13 +25,14 @@ abstract class IcmfBaseIT : ManagedModeTest() {
 
     fun deployDappChain(
             signers: Set<Int> = setOf(0, 1, 2),
+            replicas: Set<Int> = setOf(),
             configFile: String = "/icmf/sender.xml"
     ): Long {
         val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource(configFile)!!.readText())
 
         return startNewBlockchain(
                 signers,
-                setOf(),
+                replicas,
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
                 blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
     }

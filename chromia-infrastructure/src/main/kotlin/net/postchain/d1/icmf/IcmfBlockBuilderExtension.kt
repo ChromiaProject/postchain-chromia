@@ -9,7 +9,6 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
@@ -17,7 +16,7 @@ import net.postchain.gtv.merkleHash
 const val ICMF_MESSAGE_TYPE = "icmf_message"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val dbOperations: IcmfSenderDatabaseOperations) : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val icmfSenderRepository: IcmfSenderRepository) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
@@ -40,8 +39,8 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
         } else {
             logger.info("ICMF message sent in topic ${message.topic}")
-            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, GtvEncoder.encodeGtv(message.body))
-            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
+            icmfSenderRepository.persistMessage(ctxt, message.topic, message.body)
+            val previousMessageBlockHeight = icmfSenderRepository.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
             ctxt.addAfterAppendHook {
                 queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
             }

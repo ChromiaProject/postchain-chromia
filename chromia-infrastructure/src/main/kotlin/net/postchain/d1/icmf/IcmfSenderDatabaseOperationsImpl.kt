@@ -4,11 +4,13 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import org.jooq.Field
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.constraint
 import org.jooq.impl.DSL.field
+import org.jooq.impl.DSL.max
 import org.jooq.impl.DSL.table
 import org.jooq.impl.DSL.using
 import org.jooq.impl.SQLDataType
@@ -57,14 +59,26 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
         }
     }
 
-    override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray) {
+    override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray): Long = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
+                .set(COLUMN_TRANSACTION, transactionIid)
+                .set(COLUMN_TOPIC, topic)
+                .set(COLUMN_HEIGHT, height)
+                .set(COLUMN_BODY, body)
+                .returning(COLUMN_ID)
+                .fetchOne()!![COLUMN_ID]
+    }
+
+    override fun saveSentMessagesWithId(ctx: EContext, messages: List<SentIcmfMessageData>) {
         DatabaseAccess.of(ctx).run {
-            createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
-                    .set(COLUMN_TRANSACTION, transactionIid)
-                    .set(COLUMN_TOPIC, topic)
-                    .set(COLUMN_HEIGHT, height)
-                    .set(COLUMN_BODY, body)
-                    .execute()
+            val batchInsert = createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
+                    .columns(COLUMN_ID, COLUMN_TRANSACTION, COLUMN_TOPIC, COLUMN_HEIGHT, COLUMN_BODY)
+
+            messages.forEach { message ->
+                batchInsert.values(message.id, message.transactionId, message.topic, message.height, GtvEncoder.encodeGtv(message.body))
+            }
+
+            batchInsert.execute()
         }
     }
 
@@ -156,6 +170,21 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
             )
         }
         return sentMessages.map { it.second }
+    }
+
+    override fun getSentMessageById(ctx: EContext, id: Long): SentIcmfMessageData? = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_ID, COLUMN_TRANSACTION, COLUMN_HEIGHT, COLUMN_TOPIC, COLUMN_BODY)
+                .from(tableSentIcmfMessage(ctx))
+                .where(COLUMN_ID.eq(id))
+                .fetchOne()
+    }?.let {
+        SentIcmfMessageData(id = it[COLUMN_ID], transactionId = it[COLUMN_TRANSACTION], height = it[COLUMN_HEIGHT], topic = it[COLUMN_TOPIC], body = GtvDecoder.decodeGtv(it[COLUMN_BODY]))
+    }
+
+    override fun getMaxMessageId(ctx: EContext): Long? = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(max(COLUMN_ID))
+                .from(tableSentIcmfMessage(ctx))
+                .fetchOne()?.value1()
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)

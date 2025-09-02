@@ -28,6 +28,18 @@ blockchains:
       gtx:
         modules:
           - "net.postchain.d1.icmf.IcmfSenderTestGTXModule"
+  sender_with_snapshot:
+    module: sender
+    config:
+      features:
+        merkle_hash_version: 2
+        snapshot_enabled: true
+      snapshot:
+        interval: 3
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfSenderTestGTXModule"
   receiver_with_metadata:
     module: receiver_with_metadata
     config:

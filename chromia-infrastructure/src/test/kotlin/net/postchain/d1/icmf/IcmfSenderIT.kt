@@ -6,18 +6,22 @@ import assertk.assertions.contains
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.withReadConnection
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.TopicHeaderData
+import net.postchain.devtools.PostchainTestNode
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxOp
+import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
@@ -139,14 +143,61 @@ class IcmfSenderIT : IcmfBaseIT() {
         assertThat(messagesBefore.filter { it["height"]!!.asInteger() == 2L }).hasSize(0)
     }
 
+    @Test
+    fun `Messages can be restored from snapshot`() {
+        startManagedSystem(3, 1)
+        val topic = "L_my-topic"
+        val dappChain = deployDappChain(configFile = "/icmf/sender_with_snapshot.xml", replicas = setOf(3))
+
+        // Messages in block 0
+        val block0Messages = listOf("test0", "test1")
+        val block0Txs = block0Messages.map {
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
+        }
+        buildBlock(dappChain, 0, *block0Txs.toTypedArray())
+        verifyMessages(dappChain, 0, topic, -1, block0Messages, block0Messages)
+
+        // No messages in block 1
+        buildBlock(dappChain, 1)
+
+        // Messages in block 2
+        val block2Messages = listOf("test2", "test3")
+        val block2Txs = block2Messages.map {
+            makeTransaction(getChainNodes(dappChain).first(), dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
+        }
+        buildBlock(dappChain, 2, *block2Txs.toTypedArray())
+        // Expecting previous height to be 0
+        verifyMessages(dappChain, 2, topic, 0, block2Messages, block0Messages + block2Messages)
+
+        // Ensure a snapshot was written
+        val block2 = nodes[0].getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries().getBlockAtHeight(2).get()
+        assertThat(BlockHeaderData.fromBinary(block2!!.header.rawData).getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]).isNotNull()
+
+        restartNodeClean(3, nodes[3].getBlockchainInstance(dappChain).blockchainEngine.blockchainRid)
+
+        val replicaNode = nodes[3]
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            val bc = replicaNode.retrieveBlockchain(dappChain)
+            assertThat(bc).isNotNull()
+
+            assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(2)
+            assertThat(nodes[3].blockQueries().getSnapshotContextMaxIds(2).get().values.filterNotNull())
+                    .isEqualTo(listOf(3L))
+        }
+
+        // Verify that messages are restored from snapshot
+        verifyMessages(dappChain, 2, topic, 0, block2Messages, block0Messages + block2Messages, listOf(replicaNode))
+    }
+
     private fun verifyMessages(dappChain: Long,
                                height: Long,
                                topic: String,
                                expectedPreviousMessageBlockHeight: Long,
                                expectedMessages: List<String>,
-                               expectedAllMessages: List<String>
+                               expectedAllMessages: List<String>,
+                               verifyOnNodes: List<PostchainTestNode> = getChainNodes(dappChain)
     ) {
-        for (node in getChainNodes(dappChain)) {
+        for (node in verifyOnNodes) {
             withReadConnection(node.postchainContext.blockBuilderStorage, dappChain) {
                 val blockQueries = node.getBlockchainInstance(dappChain).blockchainEngine.getBlockQueries()
                 val blockHeader = blockQueries.getBlockAtHeight(height).get()!!.header
