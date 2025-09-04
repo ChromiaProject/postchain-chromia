@@ -1,13 +1,13 @@
 package net.postchain.d1.icmf
 
 import net.postchain.base.snapshot.SnapshotDatum
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.mapper.Name
-import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.GtvFactory.gtv
 
 class IcmfSenderRepository(
         private val icmfSenderGTXModuleContext: IcmfSenderGTXModuleContext
@@ -20,16 +20,14 @@ class IcmfSenderRepository(
         icmfSenderGTXModuleContext.snapshotContext?.emitDatum(
                 ctxt,
                 messageIdToDatumId(id),
-                GtvObjectMapper.toGtvDictionary(
-                        IcmfSentMessageDatum(ctxt.txIID, ctxt.height, topic, body)
-                ),
+                IcmfSentMessageDatum(ctxt.txIID, ctxt.height, topic, body).toGtv(),
                 true
         )
     }
 
     fun persistDatums(ctx: EContext, datums: List<SnapshotDatum>) {
         val messages = datums.map {
-            val datum = it.data.toObject<IcmfSentMessageDatum>()
+            val datum = IcmfSentMessageDatum.fromGtv(it.data)
             SentIcmfMessageData(
                     id = datumIdToMessageId(it.id),
                     transactionId = datum.transactionId,
@@ -44,12 +42,12 @@ class IcmfSenderRepository(
 
     fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? = icmfSenderGTXModuleContext.dbOperations
             .getSentMessageById(ctx, datumIdToMessageId(datumId))?.let {
-                GtvObjectMapper.toGtvDictionary(IcmfSentMessageDatum(
+                IcmfSentMessageDatum(
                         transactionId = it.transactionId,
                         height = it.height,
                         topic = it.topic,
                         body = it.body
-                ))
+                ).toGtv()
             }
 
     fun getPermanentDatumIdMax(ctx: EContext): Long? = icmfSenderGTXModuleContext.dbOperations.getMaxMessageId(ctx)?.let { messageIdToDatumId(it) }
@@ -62,12 +60,29 @@ class IcmfSenderRepository(
 }
 
 data class IcmfSentMessageDatum(
-        @Name("transaction_id")
         val transactionId: Long,
-        @Name("height")
         val height: Long,
-        @Name("topic")
         val topic: String,
-        @Name("body")
         val body: Gtv
-)
+) {
+    companion object {
+        fun fromGtv(gtv: Gtv): IcmfSentMessageDatum {
+            val data = gtv as? GtvArray ?: throw ProgrammerMistake("Invalid data. Must be an array.")
+            if (data.getSize() != 4) throw ProgrammerMistake("Invalid data. Must contain 4 elements.")
+
+            return IcmfSentMessageDatum(
+                    data[0].asInteger(),
+                    data[1].asInteger(),
+                    data[2].asString(),
+                    data[3]
+            )
+        }
+    }
+
+    fun toGtv(): Gtv = gtv(listOf(
+            gtv(transactionId),
+            gtv(height),
+            gtv(topic),
+            body
+    ))
+}
