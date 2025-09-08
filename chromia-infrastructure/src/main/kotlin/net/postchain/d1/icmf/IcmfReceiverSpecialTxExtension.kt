@@ -34,7 +34,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatabaseOperations) : GTXSpecialTxExtension {
+class IcmfReceiverSpecialTxExtension(val receiverRepository: IcmfReceiverRepository) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         val BASE_SPECIAL_TX_OVERHEAD = Gtx(
@@ -99,7 +99,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             if (pipe.mightHaveNewPackets() && !isFull && pipe.route.topic !in blockedPipes) {
                 val blockchainRid = pipe.id
 
-                var currentMessageHeight: Long = dbOperations.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
+                var currentMessageHeight: Long = receiverRepository.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
 
                 // Clean up packets that are no longer relevant
                 pipe.markTaken(currentMessageHeight, bctx)
@@ -108,7 +108,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     val icmfPackets = pipe.fetchNext(currentMessageHeight)
                     if (icmfPackets != null) {
                         for (packet in icmfPackets.packets) {
-                            val spilledMessageCounts = dbOperations.loadSpilledMessageCounts(bctx, "", packet.height, pipe.route.topic)
+                            val spilledMessageCounts = receiverRepository.loadSpilledMessageCounts(bctx, "", packet.height, pipe.route.topic)
                             val spilledCount = spilledMessageCounts[packet.sender] ?: 0
                             val (newSize, filled) = processMessages(spilledCount, packet, currentSize, allOps, isFull, currentMessageHeight, messageLimit) { header, witness ->
                                 NonAnchoredHeaderOp(header, witness).toOpData()
@@ -134,7 +134,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             initialSize: Int,
             messageLimit: AtomicLong
     ): Int {
-        val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
+        val lastAnchoredHeights = receiverRepository.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 
         var currentSize = initialSize
         var isFull = false
@@ -153,7 +153,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                         for (anchorPacket in icmfPackets.packets) {
                             if (isFull) break
 
-                            val spilledMessageCounts = dbOperations.loadSpilledMessageCounts(bctx, clusterName, anchorPacket.height, pipe.route.topic)
+                            val spilledMessageCounts = receiverRepository.loadSpilledMessageCounts(bctx, clusterName, anchorPacket.height, pipe.route.topic)
                             if (spilledMessageCounts.isEmpty()) {
                                 val anchorHeaderOp = AnchorHeaderOp(clusterName, anchorPacket.rawAnchorHeader, anchorPacket.rawAnchorWitness).toOpData()
                                 allOps.add(anchorHeaderOp)
@@ -162,7 +162,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
 
                             for (packet in anchorPacket.packets) {
                                 val spilledCount = spilledMessageCounts[packet.sender] ?: 0
-                                val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
+                                val currentPrevMessageBlockHeight = receiverRepository.loadLastMessageHeight(bctx, packet.sender, packet.topic)
                                 val (newSize, filled) = processMessages(spilledCount, packet, currentSize, allOps, isFull, currentPrevMessageBlockHeight, messageLimit) { header, witness ->
                                     AnchoredHeaderOp(header, witness).toOpData()
                                 }
@@ -248,6 +248,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             bctx: BlockEContext,
             ops: List<OpData>
     ): Boolean {
+        receiverRepository.resetDatumState()
+
         var currentAnchorHeaderData: AnchorHeaderValidationInfo? = null
         val headerBlockRidsByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         var currentHeaderData: HeaderValidationInfo? = null
@@ -262,11 +264,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
 
                     if (!validateHeaders(headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys }, currentAnchorHeaderData, bctx)) return false
                     if (currentAnchorHeaderData != null) {
-                        for (topic in headerBlockRidsByTopic.keys) {
-                            if (bodyHashesByTopic.containsKey(topic)) {
-                                dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
-                            }
-                        }
+                        val updatedAnchoringHeights = headerBlockRidsByTopic.keys.filter { bodyHashesByTopic.containsKey(it) }
+                                .map { AnchorHeight(currentAnchorHeaderData.cluster, it, currentAnchorHeaderData.height) }
+                        receiverRepository.saveLastAnchoredHeights(bctx, updatedAnchoringHeights)
                     }
                     headerBlockRidsByTopic.clear()
 
@@ -360,7 +360,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     val messageOp = MessageOp.fromOpData(op) ?: return false
                     val latestReceivedHashForTopic = bodyHashesBySenderAndTopic[messageOp.sender to messageOp.topic]?.removeLastOrNull()
                     if (latestReceivedHashForTopic == null) {
-                        val spilledMessage = dbOperations.loadOldestSpilledMessage(bctx, messageOp.sender, messageOp.topic)
+                        val spilledMessage = receiverRepository.loadOldestSpilledMessage(bctx, messageOp.sender, messageOp.topic)
                         if (spilledMessage == null) {
                             logger.warn("Received unexpected message op for sender ${messageOp.sender} and topic ${messageOp.topic}")
                             return false
@@ -371,10 +371,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                             logger.warn("Hash of message body ${messageBodyHash.toHex()} does not match latest spilled message hash operation value ${spilledMessage.hash.toHex()} for topic ${messageOp.topic}")
                             return false
                         }
-                        dbOperations.imprecateSpilledMessage(bctx, spilledMessage.serial)
+                        receiverRepository.imprecateSpilledMessage(bctx, spilledMessage.serial)
 
-                        if (dbOperations.loadSpilledMessageCounts(bctx, spilledMessage.cluster, spilledMessage.anchorHeight, messageOp.topic).isEmpty()) {
-                            dbOperations.saveLastAnchoredHeight(bctx, spilledMessage.cluster, messageOp.topic, spilledMessage.anchorHeight)
+                        if (receiverRepository.loadSpilledMessageCounts(bctx, spilledMessage.cluster, spilledMessage.anchorHeight, messageOp.topic).isEmpty()) {
+                            receiverRepository.saveLastAnchoredHeight(bctx, spilledMessage.cluster, messageOp.topic, spilledMessage.anchorHeight)
                         }
                     } else { // no spill
                         if (currentHeaderData == null) {
@@ -404,28 +404,32 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         }
 
         if (currentAnchorHeaderData != null) {
-            for ((key, hashes) in bodyHashesBySenderAndTopic) {
+            val spilledMessages = bodyHashesBySenderAndTopic.flatMap { (key, hashes) ->
                 val (sender, topic) = key
-                hashes.forEach {
-                    dbOperations.saveSpilledMessage(bctx, currentAnchorHeaderData.cluster, currentAnchorHeaderData.height, sender, topic, it.hash, it.merkleHashVersion)
+                hashes.map {
+                    SpilledMessageWithSenderAndTopic(bctx.height, topic, sender, currentAnchorHeaderData.cluster, currentAnchorHeaderData.height, it.merkleHashVersion, it.hash)
                 }
             }
+            if (spilledMessages.isNotEmpty()) receiverRepository.saveSpilledMessages(bctx, spilledMessages)
 
-            for (topic in headerBlockRidsByTopic.keys) {
-                // If we actually received messages on the topic and there is no spill we can save as last anchor height
-                if (bodyHashesByTopic.containsKey(topic) && bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }) {
-                    dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
-                }
+            // If we actually received messages on the topic and there is no spill we can save as last anchor height
+            val updatedAnchoringHeights = headerBlockRidsByTopic.keys.filter { topic ->
+                bodyHashesByTopic.containsKey(topic) && bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }
+            }.map {
+                AnchorHeight(currentAnchorHeaderData.cluster, it, currentAnchorHeaderData.height)
             }
+            receiverRepository.saveLastAnchoredHeights(bctx, updatedAnchoringHeights)
         } else if (currentHeaderData != null) {
-            for ((key, hashes) in bodyHashesBySenderAndTopic) {
+            val spilledMessages = bodyHashesBySenderAndTopic.flatMap { (key, hashes) ->
                 val (sender, topic) = key
-                hashes.forEach {
-                    dbOperations.saveSpilledMessage(bctx, "", currentHeaderData.height, sender, topic, it.hash, it.merkleHashVersion)
+                hashes.map {
+                    SpilledMessageWithSenderAndTopic(bctx.height, topic, sender, "", currentHeaderData.height, it.merkleHashVersion, it.hash)
                 }
             }
+            if (spilledMessages.isNotEmpty()) receiverRepository.saveSpilledMessages(bctx, spilledMessages)
         }
 
+        receiverRepository.emitIcmfStateDatums(bctx)
         return true
     }
 
@@ -522,7 +526,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
     }
 
     private fun validatePreviousHeaderHeight(bctx: BlockEContext, cluster: String, topic: String, previousHeight: Long): Boolean {
-        val currentPrevHeaderHeight = dbOperations.loadLastAnchoredHeight(bctx, cluster, topic)
+        val currentPrevHeaderHeight = receiverRepository.loadLastAnchoredHeight(bctx, cluster, topic)
 
         if (previousHeight != currentPrevHeaderHeight) {
             logger.warn("$ICMF_ANCHOR_HEADERS_EXTRA header extra has incorrect previous message height $previousHeight, expected $currentPrevHeaderHeight for topic $topic")
@@ -541,14 +545,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
     ): Boolean {
         val skipToHeight = icmfReceiverBlockchainConfigData.local?.find { it.blockchainRid.contentEquals(sender) && it.topic == topic }
                 ?.skipToHeight ?: 0
-        val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
+        val currentPrevMessageBlockHeight = receiverRepository.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
         if ((skipToHeight == 0L || prevMessageBlockHeight >= skipToHeight) && prevMessageBlockHeight != currentPrevMessageBlockHeight) {
             logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $currentPrevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
             return false
         }
 
-        dbOperations.saveLastMessageHeight(bctx, BlockchainRid(sender), topic, height)
+        receiverRepository.saveLastMessageHeight(bctx, BlockchainRid(sender), topic, height)
 
         return true
     }

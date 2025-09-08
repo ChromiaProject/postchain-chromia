@@ -145,6 +145,8 @@ class IcmfSenderIT : IcmfBaseIT() {
 
     @Test
     fun `Messages can be restored from snapshot`() {
+        configOverrides.setProperty("snapshotsync.threshold", 0)
+
         startManagedSystem(3, 1)
         val topic = "L_my-topic"
         val dappChain = deployDappChain(configFile = "/icmf/sender_with_snapshot.xml", replicas = setOf(3))
@@ -181,7 +183,7 @@ class IcmfSenderIT : IcmfBaseIT() {
             assertThat(bc).isNotNull()
 
             assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(2)
-            assertThat(nodes[3].blockQueries().getSnapshotContextMaxIds(2).get().values.filterNotNull())
+            assertThat(bc.blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(2).get().values.filterNotNull())
                     .isEqualTo(listOf(3L))
         }
 

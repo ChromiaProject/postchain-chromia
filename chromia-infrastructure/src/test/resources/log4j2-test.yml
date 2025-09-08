@@ -63,6 +63,9 @@ Configuration:
       - name: net.postchain.ebft.syncmanager.common
         level: error
 
+      - name: net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
+        level: info
+
       - name: net.postchain.devtools.IntegrationTestSetup
         level: debug
         additivity: false

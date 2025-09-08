@@ -2,14 +2,19 @@ package net.postchain.d1.icmf
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.containsAll
+import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThan
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import assertk.assertions.isZero
+import assertk.isContentEqualTo
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.calculator
 import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
@@ -24,6 +29,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
+import net.postchain.d1.icmf.IcmfReceiverRepository.Companion.SPILLED_MESSAGES_DATUM_ID
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_BODY
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_HEIGHT
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.COLUMN_SENDER
@@ -1145,6 +1151,109 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 assertThat(result[1].asDict()["height"]!!.asInteger()).isEqualTo(0L)
                 assertThat(result[1].asDict()["timestamp"]!!.asInteger()).isEqualTo(0L)
             }
+        }
+    }
+
+    @Test
+    fun `Snapshot syncing of ICMF state`() {
+        configOverrides.setProperty("snapshotsync.threshold", 0)
+
+        setupNonAnchoredQueriesMock(messageHeight = 2, topic = "L_topic-defined-in-config")
+
+        startManagedSystem(3, 1)
+
+        val dappChain1 = deployDappChain(
+                configFile = "/icmf/receiver_with_snapshot.xml",
+                replicas = setOf(3)
+        )
+        buildBlock(dappChain1)
+
+        // Add two more topics
+        val tx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+                "receiver_icmf_update_topics_op",
+                gtv(gtv(
+                        gtv("L_topic-1"),
+                        gtv(localSenderChainRid2.data),
+                        gtv(0)
+                ), gtv(
+                        gtv("L_topic-2"),
+                        gtv(localSenderChainRid3.data),
+                        gtv(0)
+                )),
+                gtv(true)
+        ))
+
+        buildBlock(dappChain1, tx)
+        restartNodeClean(3, nodes[3].getBlockchainInstance(dappChain1).blockchainEngine.blockchainRid)
+
+        val replicaNode = nodes[3]
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            val bc = replicaNode.retrieveBlockchain(dappChain1)
+            assertThat(bc).isNotNull()
+            assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(1)
+
+            assertThat(bc.blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(1).get().values.filterNotNull())
+                    .isEqualTo(listOf(SPILLED_MESSAGES_DATUM_ID))
+        }
+
+        // IF we really want to verify that messages are synced we would need to make IcmfReceiverTestGTXModule
+        // snapshot aware but that is rather pointless. Better to verify that all state tables are accurately
+        // restored
+        withReadConnection(replicaNode.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+            val dappProvidedTopics = dbOperations.loadDappProvidedReceiverTopics(ctx)
+            assertThat(dappProvidedTopics.size).isEqualTo(2)
+            assertThat(dappProvidedTopics.map { it.topic }).containsAll("L_topic-1", "L_topic-2")
+
+            // Check message states
+            val lastMessagesHeights = dbOperations.loadAllLastMessageHeights(ctx)
+            assertThat(lastMessagesHeights.size).isEqualTo(1)
+            assertThat(lastMessagesHeights.map { it.topic }).containsExactly("L_topic-defined-in-config")
+        }
+    }
+
+    @Test
+    fun `Snapshot syncing with spill`() {
+        configOverrides.setProperty("snapshotsync.threshold", 0)
+
+        val messageBody = gtv("m".repeat(90 * 1024))
+        val secondMessageBody = gtv("n".repeat(90 * 1024))
+        val queryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(messageBody, secondMessageBody))
+
+        setupClientMocks(listOf(queryResponse), listOf(messageBody, secondMessageBody))
+
+        startManagedSystem(3, 1)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_snapshot_and_spill.xml")!!.readText())
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(3),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                assertThat(dbOperations.loadOldestSpilledMessage(ctx, remoteSenderChainRid, "my-topic")).isNotNull()
+            }
+        }
+        val spillHeight = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        restartNodeClean(3, nodes[3].getBlockchainInstance(dappChain).blockchainEngine.blockchainRid)
+
+        val replicaNode = nodes[3]
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            val bc = replicaNode.retrieveBlockchain(dappChain)
+            assertThat(bc).isNotNull()
+            assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(spillHeight)
+
+            assertThat(bc.blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(spillHeight).get().values.filterNotNull())
+                    .isEqualTo(listOf(SPILLED_MESSAGES_DATUM_ID))
+        }
+
+        withReadConnection(replicaNode.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+            val spilledMessage = dbOperations.loadOldestSpilledMessage(ctx, remoteSenderChainRid, "my-topic")
+            assertThat(spilledMessage).isNotNull()
+            assertThat(spilledMessage!!.hash).isContentEqualTo(secondMessageBody.merkleHash(calculator))
         }
     }
 

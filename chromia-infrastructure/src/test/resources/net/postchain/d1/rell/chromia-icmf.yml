@@ -99,3 +99,46 @@ blockchains:
         - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
       icmf:
         receiver: {}
+  receiver_with_snapshot:
+    module: dynamic_receiver
+    config:
+      features:
+        merkle_hash_version: 2
+        snapshot_enabled: true
+      snapshot:
+        interval: 2
+      <<: *common_config
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+          - "net.postchain.d1.icmf.IcmfReceiverTestGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          local:
+            - bc-rid: x"0303030303030303030303030303030303030303030303030303030303030303"
+              topic: "L_topic-defined-in-config"
+  receiver_with_snapshot_and_spill:
+    module: receiver_with_metadata
+    config:
+      features:
+        merkle_hash_version: 2
+        snapshot_enabled: true
+      snapshot:
+        interval: 1
+      <<: *common_config
+      blockstrategy:
+        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+        maxblocksize: 204800
+      gtx:
+        modules:
+          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+      sync_ext:
+        - "net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension"
+      icmf:
+        receiver:
+          global:
+            blockchains:
+              - bc-rid: x"0202020202020202020202020202020202020202020202020202020202020202"
+                topic: my-topic

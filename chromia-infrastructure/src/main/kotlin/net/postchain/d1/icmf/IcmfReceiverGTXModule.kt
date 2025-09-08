@@ -1,6 +1,7 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
+import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
@@ -16,17 +17,20 @@ import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.OperationWrapper
+import net.postchain.gtx.SnapshotAware
+import net.postchain.gtx.SnapshotContext
 import net.postchain.gtx.TransactorMaker
 import net.postchain.gtx.data.ExtOpData
 
-class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider {
+class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider, SnapshotAware {
     companion object : KLogging()
 
-    private val dbOperations = IcmfReceiverDatabaseOperationsImpl()
-    private val specialTxExtension = IcmfReceiverSpecialTxExtension(dbOperations)
+    private val dbOperations: IcmfReceiverDatabaseOperations = IcmfReceiverDatabaseOperationsImpl()
+    private val receiverRepository: IcmfReceiverRepository = IcmfReceiverRepository(dbOperations)
+    private val specialTxExtension = IcmfReceiverSpecialTxExtension(receiverRepository)
     private val _specialTxExtensions = listOf(specialTxExtension)
     private lateinit var delegateTransactorMaker: TransactorMaker
-    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension()
+    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension(receiverRepository)
 
     private val operations: Map<String, (ExtOpData) -> Transactor> = mapOf(
             AnchorHeaderOp.OP_NAME to ::DummyGTXOperation,
@@ -74,6 +78,18 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider {
 
     override fun injectDelegateTransactorMaker(transactorMaker: TransactorMaker) {
         this.delegateTransactorMaker = transactorMaker
+    }
+
+    override fun initializeSnapshotContext(context: SnapshotContext) {
+        receiverRepository.snapshotContext = context
+    }
+
+    // We don't have any permanent datums
+    override fun getPermanentDatumIdMax(ctx: EContext): Long? = null
+    override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? = null
+
+    override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
+        receiverRepository.persistDatums(ctx, datumList)
     }
 
     inner class IcmfReceiveGTXOperation(extOpData: ExtOpData, private val delegate: Transactor) : GTXOperation(extOpData) {

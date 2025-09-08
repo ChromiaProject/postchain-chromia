@@ -7,7 +7,11 @@ import org.jooq.Field
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL.constraint
 import org.jooq.impl.DSL.count
+import org.jooq.impl.DSL.excluded
 import org.jooq.impl.DSL.field
+import org.jooq.impl.DSL.partitionBy
+import org.jooq.impl.DSL.rowNumber
+import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.table
 import org.jooq.impl.DSL.using
 import org.jooq.impl.SQLDataType
@@ -30,6 +34,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
         val COLUMN_SKIP_TO_HEIGHT: Field<Long> = field("skip_to_height", SQLDataType.BIGINT.nullable(false))
         val COLUMN_SENDER_NULLABLE: Field<ByteArray> = field("sender", SQLDataType.BLOB.nullable(true))
         val COLUMN_MERKLE_HASH_VERSION: Field<Long> = field("merkle_hash_version", SQLDataType.BIGINT.defaultValue(1).nullable(false))
+        val COLUMN_SPILL_HEIGHT: Field<Long> = field("spill_height", SQLDataType.BIGINT.nullable(true))
     }
 
     private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
@@ -70,6 +75,10 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
 
             jooq.alterTable(spilledMessageTable)
                     .addColumnIfNotExists(COLUMN_MERKLE_HASH_VERSION)
+                    .execute()
+
+            jooq.alterTable(spilledMessageTable)
+                    .addColumnIfNotExists(COLUMN_SPILL_HEIGHT)
                     .execute()
 
             val dappProvidedReceiverTopicTable = table(tableDappProvidedReceiverTopic(ctx))
@@ -125,6 +134,27 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
         }
     }
 
+    override fun saveLastAnchoredHeights(ctx: EContext, anchorHeights: List<AnchorHeight>) {
+        if (anchorHeights.isEmpty()) return
+
+        DatabaseAccess.of(ctx).run {
+            val jooq = createJooq(ctx)
+            val table = table(tableAnchorHeight(ctx))
+
+            var insertStep = jooq.insertInto(table)
+                    .columns(COLUMN_CLUSTER, COLUMN_TOPIC, COLUMN_HEIGHT)
+
+            anchorHeights.forEach { anchorHeight ->
+                insertStep = insertStep.values(anchorHeight.cluster, anchorHeight.topic, anchorHeight.height)
+            }
+
+            insertStep.onConflict(COLUMN_CLUSTER, COLUMN_TOPIC)
+                    .doUpdate()
+                    .set(COLUMN_HEIGHT, excluded(COLUMN_HEIGHT))
+                    .execute()
+        }
+    }
+
     override fun loadAllLastMessageHeights(ctx: EContext): List<MessageHeightForSender> = DatabaseAccess.of(ctx).run {
         createJooq(ctx).select(COLUMN_SENDER, COLUMN_TOPIC, COLUMN_HEIGHT)
                 .from(tableMessageHeight(ctx))
@@ -152,6 +182,27 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
         }
     }
 
+    override fun saveLastMessageHeights(ctx: EContext, messageHeights: List<MessageHeightForSender>) {
+        if (messageHeights.isEmpty()) return
+
+        DatabaseAccess.of(ctx).run {
+            val jooq = createJooq(ctx)
+            val table = table(tableMessageHeight(ctx))
+
+            var insertStep = jooq.insertInto(table)
+                    .columns(COLUMN_SENDER, COLUMN_TOPIC, COLUMN_HEIGHT)
+
+            messageHeights.forEach { messageHeight ->
+                insertStep = insertStep.values(messageHeight.sender.data, messageHeight.topic, messageHeight.height)
+            }
+
+            insertStep.onConflict(COLUMN_SENDER, COLUMN_TOPIC)
+                    .doUpdate()
+                    .set(COLUMN_HEIGHT, excluded(COLUMN_HEIGHT))
+                    .execute()
+        }
+    }
+
     override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? =
             DatabaseAccess.of(ctx).run {
                 createJooq(ctx).select(COLUMN_MESSAGE_HASH, COLUMN_SERIAL, COLUMN_CLUSTER, COLUMN_ANCHOR_HEIGHT, COLUMN_MERKLE_HASH_VERSION)
@@ -174,17 +225,76 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
                         .fetch()
             }.map { BlockchainRid(it[COLUMN_SENDER]) to it[1] as Int }.toMap()
 
-    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long) {
+    override fun saveSpilledMessages(ctx: EContext, spilledMessages: List<SpilledMessageWithSenderAndTopic>) {
+        if (spilledMessages.isEmpty()) return
+
         DatabaseAccess.of(ctx).run {
-            createJooq(ctx).insertInto(table(tableSpilledMessage(ctx)))
-                    .set(COLUMN_SENDER, sender.data)
-                    .set(COLUMN_CLUSTER, cluster)
-                    .set(COLUMN_ANCHOR_HEIGHT, anchorHeight)
-                    .set(COLUMN_TOPIC, topic)
-                    .set(COLUMN_MESSAGE_HASH, hash)
-                    .set(COLUMN_MERKLE_HASH_VERSION, merkleHashVersion)
-                    .execute()
+            val jooq = createJooq(ctx)
+            val table = table(tableSpilledMessage(ctx))
+
+            var insertStep = jooq.insertInto(table)
+                    .columns(
+                            COLUMN_SPILL_HEIGHT,
+                            COLUMN_SENDER,
+                            COLUMN_CLUSTER,
+                            COLUMN_ANCHOR_HEIGHT,
+                            COLUMN_TOPIC,
+                            COLUMN_MESSAGE_HASH,
+                            COLUMN_MERKLE_HASH_VERSION
+                    )
+
+            spilledMessages.forEach { message ->
+                insertStep = insertStep.values(
+                        message.spillHeight,
+                        message.sender.data,
+                        message.cluster,
+                        message.anchorHeight,
+                        message.topic,
+                        message.hash,
+                        message.merkleHashVersion
+                )
+            }
+
+            insertStep.execute()
         }
+    }
+
+    override fun loadSpilledMessageStates(ctx: EContext): List<SpilledMessageState> = DatabaseAccess.of(ctx).run {
+        createJooq(ctx)
+                .select(
+                        COLUMN_SPILL_HEIGHT,
+                        COLUMN_TOPIC,
+                        COLUMN_SENDER,
+                        COLUMN_MESSAGE_HASH.`as`("oldest_message_hash")
+                )
+                .from(
+                        select(
+                                COLUMN_SPILL_HEIGHT,
+                                COLUMN_TOPIC,
+                                COLUMN_SENDER,
+                                COLUMN_MESSAGE_HASH,
+                                rowNumber().over(
+                                        partitionBy(COLUMN_TOPIC, COLUMN_SENDER)
+                                                .orderBy(COLUMN_SERIAL.asc())
+                                ).`as`("rn")
+                        )
+                                .from(tableSpilledMessage(ctx))
+                                // Just in case we have some legacy rows after postchain upgrade.
+                                // Snapshot won't be complete, but it should extremely rare and temporary until the old
+                                // spill has been processed.
+                                .where(COLUMN_SPILL_HEIGHT.isNotNull)
+                                .asTable("ranked")
+                )
+                .where(field("rn", Int::class.java).eq(1))
+                .fetch()
+                .map {
+                    SpilledMessageState(
+                            it[COLUMN_SPILL_HEIGHT],
+                            it[COLUMN_TOPIC],
+                            BlockchainRid(it[COLUMN_SENDER]),
+                            it[field("oldest_message_hash", ByteArray::class.java)]
+                    )
+                }
     }
 
     override fun imprecateSpilledMessage(ctx: EContext, serial: Long) {

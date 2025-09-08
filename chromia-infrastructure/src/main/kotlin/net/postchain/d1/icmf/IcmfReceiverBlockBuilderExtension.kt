@@ -6,7 +6,6 @@ import net.postchain.base.TxEventSink
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
-import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
@@ -17,18 +16,20 @@ const val ICMF_RECEIVER_TOPICS_EVENT_TYPE = "icmf_receiver_topics"
 /**
  * Installs the event processor for ICMF receiver topic configuration events.
  */
-class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
+class IcmfReceiverBlockBuilderExtension(private val icmfReceiverRepository: IcmfReceiverRepository) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var blockEContext: BlockEContext
     private lateinit var cryptoSystem: CryptoSystem
-    private var eventListener: ((List<IcmfReceiverEventMessage>, EContext) -> Unit)? = null
-    private var queuedUpdates: MutableList<IcmfReceiverEventMessage> = mutableListOf()
+    private var eventListener: ((IcmfReceiverEventMessage, BlockEContext, Boolean) -> Unit)? = null
+    private var firstUpdate = true
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         this.blockEContext = blockEContext
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_RECEIVER_TOPICS_EVENT_TYPE, this)
+        // Flush some initial empty states
+        if (blockEContext.height == 0L) icmfReceiverRepository.emitIcmfStateDatums(blockEContext)
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
@@ -50,23 +51,12 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
         }
 
         ctxt.addAfterAppendHook {
-            logger.debug { "Dapp requests ICMF receiver topics update: ${ctxt.height}: $topicUpdate" }
-
-            if (topicUpdate.replace) {
-                queuedUpdates.clear()
-            }
-            queuedUpdates.add(topicUpdate)
-        }
-
-        blockEContext.addAfterCommitHook {
-            if (queuedUpdates.isNotEmpty()) {
-                eventListener?.invoke(queuedUpdates, blockEContext)
-                queuedUpdates.clear()
-            }
+            eventListener?.invoke(topicUpdate, blockEContext, firstUpdate)
+            firstUpdate = false
         }
     }
 
-    fun addEventListener(function: (List<IcmfReceiverEventMessage>, ctx: EContext) -> Unit) {
+    fun addEventListener(function: (IcmfReceiverEventMessage, bctx: BlockEContext, firstUpdate: Boolean) -> Unit) {
         eventListener = function
     }
 

@@ -15,10 +15,10 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
-import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.ChromiaQueryProviderFactory
@@ -75,21 +75,18 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
-                    blockBuilder.addEventListener { update, ctx: EContext ->
+                    blockBuilder.addEventListener { update, bctx: BlockEContext, firstUpdate: Boolean ->
 
-                        val dappProvidedTopics: MutableList<IcmfReceiverEventTopic> = mutableListOf()
-                        update.forEach {
-                            if (it.replace) {
-                                dbOperations.deleteDappProvidedReceiverTopics(ctx)
-                            }
-                            if (!it.topics.isNullOrEmpty()) {
-                                dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
+                        txExt.receiverRepository.handleDappProviderTopicsUpdate(bctx, update)
+
+                        if (firstUpdate) {
+                            bctx.addAfterCommitHook {
+                                val dappProvidedTopics = dbOperations.loadDappProvidedReceiverTopics(bctx)
+
+                                removeReceivers(configuration.chainID, txExt)
+                                addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, dappProvidedTopics)
                             }
                         }
-                        dappProvidedTopics.addAll(dbOperations.loadDappProvidedReceiverTopics(ctx))
-
-                        removeReceivers(configuration.chainID, txExt)
-                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, dappProvidedTopics)
                     }
                 }
             }

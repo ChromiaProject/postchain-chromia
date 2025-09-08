@@ -320,7 +320,7 @@ class IcmfValidationTest {
             on { loadLastAnchoredHeight(mockContext, cluster, topic) } doReturn -1L
             on { loadSpilledMessageCounts(mockContext, cluster, 0, topic) } doReturn mapOf()
         }
-        val icmfReceiverSpecialTxExtension = createTxExt(unexpectedDbMock)
+        val icmfReceiverSpecialTxExtension = createTxExt(IcmfReceiverRepository(unexpectedDbMock))
 
         val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
 
@@ -462,7 +462,9 @@ class IcmfValidationTest {
 
     @Test
     fun `Can handle multiple identical anchor header ops in same tx`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(MockIcmfReceiverDatabaseOperations())
+        val icmfReceiverSpecialTxExtension = createTxExt(
+                IcmfReceiverRepository(MockIcmfReceiverDatabaseOperations())
+        )
 
         val relevantMessageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(relevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, messageExtraDataOverride = mapOf(
@@ -617,10 +619,10 @@ class IcmfValidationTest {
     }
 
     private fun createTxExt(
-            databaseOperations: IcmfReceiverDatabaseOperations = dbMock,
+            receiverRepository: IcmfReceiverRepository = IcmfReceiverRepository(dbMock),
             icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig,
             nodeIsSigner: Boolean = true,
-    ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
+    ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(receiverRepository).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         blockchainConfigProvider = BlockchainConfigProvider { _ -> listOf(IcmfTestClusterManagement.keyPair.pubKey) }
         icmfReceiverBlockchainConfigData = icmfConfig
@@ -719,6 +721,12 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
         lastAnchoredHeights[clusterName to topic] = anchorHeight
     }
 
+    override fun saveLastAnchoredHeights(ctx: EContext, anchorHeights: List<AnchorHeight>) {
+        anchorHeights.forEach {
+            lastAnchoredHeights[it.cluster to it.topic] = it.height
+        }
+    }
+
     override fun loadAllLastMessageHeights(ctx: EContext): List<MessageHeightForSender> {
         TODO("Not yet implemented")
     }
@@ -727,7 +735,11 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
 
     override fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long) {}
 
-    override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? {
+    override fun saveLastMessageHeights(ctx: EContext, messageHeights: List<MessageHeightForSender>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage {
         TODO("Not yet implemented")
     }
 
@@ -735,7 +747,11 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
         return mapOf()
     }
 
-    override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long) {
+    override fun saveSpilledMessages(ctx: EContext, spilledMessages: List<SpilledMessageWithSenderAndTopic>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun loadSpilledMessageStates(ctx: EContext): List<SpilledMessageState> {
         TODO("Not yet implemented")
     }
 
