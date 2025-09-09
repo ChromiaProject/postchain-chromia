@@ -19,7 +19,7 @@ import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BATCH
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension.Companion.OP_BLOCK_HEADER
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.D1ClusterInfo
-import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
+import net.postchain.d1.iccf.IccfGTXOperation.Companion.ICCF_OP_NAME
 import net.postchain.d1.nm_api.NodeManagement
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvDictionary

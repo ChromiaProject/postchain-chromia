@@ -8,7 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.d1.anchoring.D1TestInfrastructureFactory
-import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
+import net.postchain.d1.iccf.IccfGTXOperation.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.getAnchoringTransactionForBlockRid
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.mminfra.MockManagedNodeDataSource

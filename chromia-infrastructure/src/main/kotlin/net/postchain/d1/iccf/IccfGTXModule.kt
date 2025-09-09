@@ -8,6 +8,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.d1.ChromiaQueryProviderFactory
 import net.postchain.d1.PostchainQueryFactory
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.iccf.IccfGTXOperation.Companion.ICCF_OP_NAME
 import net.postchain.d1.nm_api.NodeManagement
 import net.postchain.d1.nm_api.NodeManagementImpl
 import net.postchain.gtx.GTXModuleMetadata
@@ -18,13 +19,13 @@ import net.postchain.network.common.ConnectionManager
 
 open class IccfGTXModule : SimpleGTXModule<IccfGTXModuleContext>(
         IccfGTXModuleContext(),
-        mapOf(IccfProofTxMaterialBuilder.ICCF_OP_NAME to ::IccfGTXOperation),
+        mapOf(ICCF_OP_NAME to ::IccfGTXOperation),
         mapOf()
 ), PostchainContextAware, MetadataProvider {
 
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(
-                    IccfProofTxMaterialBuilder.ICCF_OP_NAME to IccfGTXOperation.metadata,
+                    ICCF_OP_NAME to IccfGTXOperation.metadata,
             ),
             queries = mapOf()
     )

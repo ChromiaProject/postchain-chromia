@@ -12,7 +12,6 @@ import net.postchain.common.toHex
 import net.postchain.core.TxEContext
 import net.postchain.d1.Validation
 import net.postchain.d1.anchoring.AnchoringSpecialTxExtension
-import net.postchain.d1.iccf.IccfProofTxMaterialBuilder.Companion.ICCF_OP_NAME
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -37,6 +36,8 @@ class IccfGTXOperation(
 ) : GTXOperation(opData) {
 
     companion object {
+        const val ICCF_OP_NAME = "iccf_proof"
+
         val metadata = OperationMetadata(args = listOf(
                 ArgumentMetadata("blockchain_rid", setOf(GtvType.BYTEARRAY)),
                 ArgumentMetadata("tx_hash", setOf(GtvType.BYTEARRAY)),
