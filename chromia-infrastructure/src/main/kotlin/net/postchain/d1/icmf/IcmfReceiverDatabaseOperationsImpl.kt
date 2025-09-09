@@ -118,6 +118,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
     override fun loadLastAnchoredHeights(ctx: EContext): List<AnchorHeight> = DatabaseAccess.of(ctx).run {
         createJooq(ctx).select(COLUMN_CLUSTER, COLUMN_TOPIC, COLUMN_HEIGHT)
                 .from(tableAnchorHeight(ctx))
+                .orderBy(COLUMN_CLUSTER, COLUMN_TOPIC)
                 .fetch()
     }.map { AnchorHeight(it[COLUMN_CLUSTER], it[COLUMN_TOPIC], it[COLUMN_HEIGHT]) }
 
@@ -158,6 +159,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
     override fun loadAllLastMessageHeights(ctx: EContext): List<MessageHeightForSender> = DatabaseAccess.of(ctx).run {
         createJooq(ctx).select(COLUMN_SENDER, COLUMN_TOPIC, COLUMN_HEIGHT)
                 .from(tableMessageHeight(ctx))
+                .orderBy(COLUMN_SENDER, COLUMN_TOPIC)
                 .fetch()
     }.map { MessageHeightForSender(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_HEIGHT]) }
 
@@ -286,6 +288,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
                                 .asTable("ranked")
                 )
                 .where(field("rn", Int::class.java).eq(1))
+                .orderBy(COLUMN_TOPIC, COLUMN_SENDER)
                 .fetch()
                 .map {
                     SpilledMessageState(
@@ -330,6 +333,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
             val table = tableDappProvidedReceiverTopic(ctx)
             jooq.select(COLUMN_TOPIC, COLUMN_SENDER, COLUMN_SKIP_TO_HEIGHT)
                     .from(table)
+                    .orderBy(COLUMN_TOPIC, COLUMN_SENDER)
                     .fetch()
                     .map { IcmfReceiverEventTopic(it[COLUMN_TOPIC], it[COLUMN_SENDER], it[COLUMN_SKIP_TO_HEIGHT]) }
         }
