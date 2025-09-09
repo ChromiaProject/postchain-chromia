@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.postchain.images.directory1
 
 import net.postchain.chain0.economy_chain_test_claim_tchr.createAccountOperation
