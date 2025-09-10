@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.postchain.images.common
 
 import assertk.assertThat

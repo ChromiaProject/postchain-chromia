@@ -53,6 +53,7 @@ import org.mockito.kotlin.mock
 
 private const val JsonContentType = "application/json"
 
+@Suppress("DEPRECATION")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class IccfProofTxMaterialBuilderTest {
     private val server = WireMockServer(wireMockConfig().port(0))

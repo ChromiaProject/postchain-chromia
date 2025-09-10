@@ -25,10 +25,13 @@ import net.postchain.gtx.Gtx
 const val EXTRA_HEADER_FIELD_INDEX = 6
 const val EXTRA_HEADER_MERKLE_HASH_VERSION_NAME = "merkle_hash_version"
 
+@Deprecated("Use ChromiaClient.addIccfProof() in net.postchain.client:chromia-client instead")
 class IccfProofTxMaterialBuilder(private val chromiaClientProvider: ChromiaClientProvider) {
     private val cryptoSystem = chromiaClientProvider.cryptoSystem
     private val clusterManagement = chromiaClientProvider.clusterManagement
 
+    @Deprecated("Use ChromiaClient.addIccfProof() instead", replaceWith =
+            ReplaceWith("chromiaClient.addIccfProof(transactionBuilder, txToProveRID, txToProveHash, sourceBlockchainRid, forceIntraNetworkIccfOperation)"))
     fun build(
             txToProveRID: TxRid,
             txToProveHash: Hash,
