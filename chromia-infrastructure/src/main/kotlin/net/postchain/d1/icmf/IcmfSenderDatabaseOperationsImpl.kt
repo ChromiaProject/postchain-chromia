@@ -10,7 +10,6 @@ import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.constraint
 import org.jooq.impl.DSL.field
-import org.jooq.impl.DSL.max
 import org.jooq.impl.DSL.table
 import org.jooq.impl.DSL.using
 import org.jooq.impl.SQLDataType
@@ -24,7 +23,12 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
 
         const val PREFIX: String = "sys.x.icmf" // This name should not clash with Rell
 
+        const val TABLE_NAME_DATUM_ID = "${PREFIX}.sender_datum_id"
         const val TABLE_NAME_SENT_ICMF_MESSAGE = "${PREFIX}.sent_icmf_message"
+
+        const val FUNCTION_NEXT_DATUM_ID = "next_icmf_sender_datum_id"
+
+        val COLUMN_DATUM_ID = field("datum_id", SQLDataType.BIGINT.nullable(false))
 
         val COLUMN_ID: Field<Long> = field("id", SQLDataType.BIGINT.nullable(false).identity(true))
         val COLUMN_TRANSACTION: Field<Long> = field("transaction", SQLDataType.BIGINT.nullable(false))
@@ -33,6 +37,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
         val COLUMN_HEIGHT: Field<Long> = field("height", SQLDataType.BIGINT.nullable(false))
     }
 
+    private fun DatabaseAccess.tableSenderDatumId(ctx: EContext) = tableName(ctx, TABLE_NAME_DATUM_ID)
     private fun DatabaseAccess.tableSentIcmfMessage(ctx: EContext) = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE)
 
     override fun initialize(ctx: EContext) {
@@ -56,29 +61,100 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
             jooq.createIndexIfNotExists("${INDEX_PREFIX}${simTableName}_0")
                     .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
                     .execute()
+
+            jooq.createTableIfNotExists(table(tableSenderDatumId(ctx)))
+                    .column(COLUMN_DATUM_ID)
+                    .execute()
+
+            val hasDatumIdRow = jooq.selectCount()
+                    .from(table(tableSenderDatumId(ctx)))
+                    .fetchOne()!!.value1() > 0
+
+            if (!hasDatumIdRow) {
+                jooq.insertInto(table(tableSenderDatumId(ctx)))
+                        .set(COLUMN_DATUM_ID, -1L)
+                        .execute()
+
+                jooq.execute("""
+                    CREATE OR REPLACE FUNCTION "$FUNCTION_NEXT_DATUM_ID"() RETURNS BIGINT AS
+                    'UPDATE "${tableSenderDatumId(ctx).replace("\"", "")}" SET ${COLUMN_DATUM_ID.name} = ${COLUMN_DATUM_ID.name} + 1 RETURNING ${COLUMN_DATUM_ID.name}'
+                    LANGUAGE SQL;
+                """.trimIndent())
+            }
+
+            val columnAdded = jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+                    .addColumnIfNotExists(COLUMN_DATUM_ID)
+                    .execute()
+
+            if (columnAdded > 0) {
+                val numRows = jooq.execute("""
+                    UPDATE ${tableSentIcmfMessage(ctx)} 
+                    SET datum_id = subquery.datum_id_seq 
+                    FROM (
+                        SELECT id, (ROW_NUMBER() OVER (ORDER BY id) - 1) AS datum_id_seq 
+                        FROM ${tableSentIcmfMessage(ctx)}
+                    ) AS subquery 
+                    WHERE ${tableSentIcmfMessage(ctx)}.id = subquery.id
+                """)
+
+                jooq.update(table(tableSenderDatumId(ctx)))
+                        .set(COLUMN_DATUM_ID, numRows - 1L)
+                        .execute()
+            }
         }
     }
 
     override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray): Long = DatabaseAccess.of(ctx).run {
         createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
+                .set(COLUMN_DATUM_ID, DSL.function(FUNCTION_NEXT_DATUM_ID, Long::class.java))
                 .set(COLUMN_TRANSACTION, transactionIid)
                 .set(COLUMN_TOPIC, topic)
                 .set(COLUMN_HEIGHT, height)
                 .set(COLUMN_BODY, body)
-                .returning(COLUMN_ID)
-                .fetchOne()!![COLUMN_ID]
+                .returning(COLUMN_DATUM_ID)
+                .fetchOne()!![COLUMN_DATUM_ID]
     }
 
-    override fun saveSentMessagesWithId(ctx: EContext, messages: List<SentIcmfMessageData>) {
-        DatabaseAccess.of(ctx).run {
-            val batchInsert = createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
-                    .columns(COLUMN_ID, COLUMN_TRANSACTION, COLUMN_TOPIC, COLUMN_HEIGHT, COLUMN_BODY)
+    override fun saveSentMessagesWithDatumId(ctx: EContext, messages: List<SentIcmfMessageData>) {
+        if (messages.isEmpty()) return
 
-            messages.forEach { message ->
-                batchInsert.values(message.id, message.transactionId, message.topic, message.height, GtvEncoder.encodeGtv(message.body))
+        DatabaseAccess.of(ctx).run {
+            val jooq = createJooq(ctx)
+
+            val valuesRows = messages.map { message ->
+                DSL.row(
+                        message.datumId,
+                        DSL.value(message.transactionRid),
+                        message.topic,
+                        message.height,
+                        GtvEncoder.encodeGtv(message.body)
+                )
             }
 
-            batchInsert.execute()
+            val valuesTable = DSL.values(*valuesRows.toTypedArray())
+                    .`as`("message_data", "datum_id", "tx_rid", "topic", "height", "body")
+
+            // Insert with join to get tx_iid from tx_rid
+            jooq.insertInto(table(tableSentIcmfMessage(ctx)))
+                    .columns(COLUMN_DATUM_ID, COLUMN_TRANSACTION, COLUMN_TOPIC, COLUMN_HEIGHT, COLUMN_BODY)
+                    .select(
+                            DSL.select(
+                                    field("message_data.datum_id", SQLDataType.BIGINT),
+                                    field("tx_iid", SQLDataType.BIGINT),
+                                    field("message_data.topic", SQLDataType.CLOB),
+                                    field("message_data.height", SQLDataType.BIGINT),
+                                    field("message_data.body", SQLDataType.BLOB)
+                            )
+                                    .from(valuesTable)
+                                    .join(table(tableName(ctx, "transactions")).asTable("t"))
+                                    .on(field("t.tx_rid", SQLDataType.BLOB).eq(field("message_data.tx_rid", SQLDataType.BLOB)))
+                    )
+                    .execute()
+
+            // Update datum id
+            jooq.update(table(tableSenderDatumId(ctx)))
+                    .set(COLUMN_DATUM_ID, DSL.select(DSL.max(COLUMN_DATUM_ID)).from(table(tableSentIcmfMessage(ctx))))
+                    .execute()
         }
     }
 
@@ -172,19 +248,35 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
         return sentMessages.map { it.second }
     }
 
-    override fun getSentMessageById(ctx: EContext, id: Long): SentIcmfMessageData? = DatabaseAccess.of(ctx).run {
-        createJooq(ctx).select(COLUMN_ID, COLUMN_TRANSACTION, COLUMN_HEIGHT, COLUMN_TOPIC, COLUMN_BODY)
-                .from(tableSentIcmfMessage(ctx))
-                .where(COLUMN_ID.eq(id))
-                .fetchOne()
-    }?.let {
-        SentIcmfMessageData(id = it[COLUMN_ID], transactionId = it[COLUMN_TRANSACTION], height = it[COLUMN_HEIGHT], topic = it[COLUMN_TOPIC], body = GtvDecoder.decodeGtv(it[COLUMN_BODY]))
+    override fun getMaxDatumId(ctx: EContext): Long? = DatabaseAccess.of(ctx).run {
+        createJooq(ctx).select(COLUMN_DATUM_ID)
+                .from(tableSenderDatumId(ctx))
+                .fetchOne()?.value1()
     }
 
-    override fun getMaxMessageId(ctx: EContext): Long? = DatabaseAccess.of(ctx).run {
-        createJooq(ctx).select(max(COLUMN_ID))
-                .from(tableSentIcmfMessage(ctx))
-                .fetchOne()?.value1()
+    override fun streamSentMessagesFromDatumId(ctx: EContext, from: Long, rowHandler: (SentIcmfMessageData) -> Boolean) {
+        DatabaseAccess.of(ctx).run {
+            val jooq = createJooq(ctx)
+            val cursor = jooq.select(COLUMN_DATUM_ID, field("tx_rid", SQLDataType.BLOB), COLUMN_HEIGHT, COLUMN_TOPIC, COLUMN_BODY)
+                    .from(tableSentIcmfMessage(ctx))
+                    .join(tableName(ctx, "transactions"))
+                    .on(COLUMN_TRANSACTION.eq(DSL.field("tx_iid", Long::class.java)))
+                    .where(COLUMN_DATUM_ID.ge(from))
+                    .orderBy(COLUMN_DATUM_ID)
+                    .fetchLazy()
+            cursor.use { c ->
+                for (rec in c) {
+                    val row = SentIcmfMessageData(
+                            datumId = rec[COLUMN_DATUM_ID],
+                            transactionRid = rec[field("tx_rid", SQLDataType.BLOB)],
+                            height = rec[COLUMN_HEIGHT],
+                            topic = rec[COLUMN_TOPIC],
+                            body = GtvDecoder.decodeGtv(rec[COLUMN_BODY])
+                    )
+                    if (!rowHandler(row)) break
+                }
+            }
+        }
     }
 
     private fun createJooq(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)

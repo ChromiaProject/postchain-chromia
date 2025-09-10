@@ -153,7 +153,9 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
 
     override fun getPermanentDatumIdMax(ctx: EContext) = repository.getPermanentDatumIdMax(ctx)
 
-    override fun getPermanentDatum(ctx: EContext, datumId: Long) = repository.getPermanentDatum(ctx, datumId)
+    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {
+        repository.streamPermanentDatums(ctx, datumIdFrom, datumHandler)
+    }
 
     override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
         repository.persistDatums(ctx, datumList)
