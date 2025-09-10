@@ -10,17 +10,10 @@ interface IcmfSenderDatabaseOperations {
     fun getSentMessagesAfterHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight>
     fun getSentMessagesAtHeight(ctx: EContext, topic: String, blockHeight: Long): List<Gtv>
     fun getAllTopics(ctx: EContext): List<String>
-    fun getSentMessagesAfterId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
-    fun getSentMessagesBeforeId(ctx: EContext, topic: String, id: Long, limit: Int): List<IcmfMessageAtHeightWithId>
+    fun getSentMessagesBeforeHeight(ctx: EContext, topic: String, blockHeight: Long, limit: Int): List<IcmfMessageAtHeight>
 }
 
 data class IcmfMessageAtHeight(
-        val height: Long,
-        val body: Gtv
-)
-
-data class IcmfMessageAtHeightWithId(
-        val id: Long,
         val height: Long,
         val body: Gtv
 )

@@ -47,26 +47,14 @@ const val QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT = "icmf_get_messages_after_height
 const val QUERY_ICMF_GET_ALL_TOPICS = "icmf_get_all_topics"
 
 /**
- * struct message_at_height_with_id {
- *     id: integer;
+ * struct message_at_height {
  *     height: integer;
  *     body: gtv;
  * }
  *
- * query icmf_get_messages_after_id(topic: text, id: integer?) list<message_at_height_with_id>
+ * query icmf_get_messages_before_height(topic: text, height: integer): list<message_at_height>
  */
-const val QUERY_ICMF_GET_MESSAGES_AFTER_ID = "icmf_get_messages_after_id"
-
-/**
- * struct message_at_height_with_id {
- *     id: integer;
- *     height: integer;
- *     body: gtv;
- * }
- *
- * query icmf_get_messages_before_id(topic: text, id: integer?) list<message_at_height_with_id>
- */
-const val QUERY_ICMF_GET_MESSAGES_BEFORE_ID = "icmf_get_messages_before_id"
+const val QUERY_ICMF_GET_MESSAGES_BEFORE_HEIGHT = "icmf_get_messages_before_height"
 
 open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
         IcmfSenderGTXModuleContext(),
@@ -90,21 +78,12 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                     val topics = conf.dbOperations.getAllTopics(ctxt)
                     gtv(topics.map { gtv(it) })
                 },
-                QUERY_ICMF_GET_MESSAGES_AFTER_ID to { conf, ctxt, args ->
+                QUERY_ICMF_GET_MESSAGES_BEFORE_HEIGHT to { conf, ctxt, args ->
                     val dict = args as GtvDictionary
                     val topic = dict["topic"]?.asString() ?: throw UserMistake("No topic property supplied")
-                    val id = dict["id"]?.let { if (it.isNull()) -1 else it.asInteger() }
-                            ?: throw UserMistake("No id property supplied")
-                    val messages = conf.dbOperations.getSentMessagesAfterId(ctxt, topic, id, conf.messageQueryLimit)
-                    gtv(messages.map { gtv(mapOf("id" to gtv(it.id), "height" to gtv(it.height), "body" to it.body, "height" to gtv(it.height))) })
-                },
-                QUERY_ICMF_GET_MESSAGES_BEFORE_ID to { conf, ctxt, args ->
-                    val dict = args as GtvDictionary
-                    val topic = dict["topic"]?.asString() ?: throw UserMistake("No topic property supplied")
-                    val id = dict["id"]?.let { if (it.isNull()) Long.MAX_VALUE else it.asInteger() }
-                            ?: throw UserMistake("No id property supplied")
-                    val messages = conf.dbOperations.getSentMessagesBeforeId(ctxt, topic, id, conf.messageQueryLimit)
-                    gtv(messages.map { gtv(mapOf("id" to gtv(it.id), "height" to gtv(it.height), "body" to it.body, "height" to gtv(it.height))) })
+                    val height = dict["height"]?.asInteger() ?: throw UserMistake("No height property supplied")
+                    val messages = conf.dbOperations.getSentMessagesBeforeHeight(ctxt, topic, height, conf.messageQueryLimit)
+                    gtv(messages.map { gtv(mapOf("body" to it.body, "height" to gtv(it.height))) })
                 },
         )
 ), PostchainContextAware, MetadataProvider {
@@ -122,13 +101,9 @@ open class IcmfSenderGTXModule : SimpleGTXModule<IcmfSenderGTXModuleContext>(
                     ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
                     QUERY_ICMF_GET_ALL_TOPICS to QueryMetadata(args = listOf(),
                             returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
-                    QUERY_ICMF_GET_MESSAGES_AFTER_ID to QueryMetadata(args = listOf(
+                    QUERY_ICMF_GET_MESSAGES_BEFORE_HEIGHT to QueryMetadata(args = listOf(
                             ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
-                            ArgumentMetadata(name = "id", gtvTypes = setOf(GtvType.INTEGER, GtvType.NULL)),
-                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
-                    QUERY_ICMF_GET_MESSAGES_BEFORE_ID to QueryMetadata(args = listOf(
-                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
-                            ArgumentMetadata(name = "id", gtvTypes = setOf(GtvType.INTEGER, GtvType.NULL)),
+                            ArgumentMetadata(name = "height", gtvTypes = setOf(GtvType.INTEGER)),
                     ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.ARRAY))),
             )
     )
