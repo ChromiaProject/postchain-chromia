@@ -1,6 +1,5 @@
 package net.postchain.d1.icmf
 
-import net.postchain.base.BaseTxEContext
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
@@ -18,11 +17,10 @@ class IcmfSenderRepository(
         val datumId = icmfSenderGTXModuleContext.dbOperations
                 .saveSentMessage(ctxt, ctxt.txIID, topic, ctxt.height, GtvEncoder.encodeGtv(body))
 
-        val txRid = (ctxt as BaseTxEContext).tx.getRID() // TODO CAN WE PUT THIS IN INTERFACE?
         icmfSenderGTXModuleContext.snapshotContext?.emitDatum(
                 ctxt,
                 datumId,
-                IcmfSentMessageDatum(txRid, ctxt.height, topic, body).toGtv(),
+                IcmfSentMessageDatum(ctxt.tx.getRID(), ctxt.height, topic, body).toGtv(),
                 true
         )
     }
