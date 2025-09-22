@@ -467,8 +467,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
 
         with(node1.ec) {
             transactionBuilder()
-                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4)
-                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4)
+                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4, Long.MAX_VALUE)
+                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4, Long.MAX_VALUE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
 
             // Approve both APP_CLUSTER1 and APP_CLUSTER2

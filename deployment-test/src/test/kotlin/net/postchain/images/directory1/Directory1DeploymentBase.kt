@@ -23,6 +23,8 @@ import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal_blockchain.BlockchainAction
 import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
+import net.postchain.chain0.proposal_container.proposal_container_configuration.ContainerConfigurationData
+import net.postchain.chain0.proposal_container.proposal_container_configuration.proposeContainerConfigurationOperation
 import net.postchain.chain0.proposal_container.proposal_container_limits.proposeContainerLimitsOperation
 import net.postchain.chain0.proposal_provider.proposeProviderIsSystemOperation
 import net.postchain.client.config.PostchainClientConfig
@@ -70,6 +72,7 @@ abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir
             IoRead(resourceLimitsValues["io_read"] ?: -1),
             IoWrite(resourceLimitsValues["io_write"] ?: -1)
     )
+    private val fooSlowDBStatementLogMs = 500L
 
     @AfterAll
     fun tearDown() {
@@ -159,6 +162,14 @@ abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir
         // Asserting resource limits changed
         val newActualLimits = ContainerResourceLimits(*queryContainerResourceLimits())
         assertThat(newActualLimits).isEqualTo(fooResourceLimits)
+
+        // Changing container configuration
+        node1.c0.transactionBuilder().proposeContainerConfigurationOperation(
+                node1.providerPubkey,
+                fooContainer,
+                ContainerConfigurationData(fooSlowDBStatementLogMs),
+                ""
+        ).postTransactionUntilConfirmed("$fooContainer container configuration proposed")
     }
 
     @Test
@@ -255,7 +266,7 @@ abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir
 
     @Test
     @Order(9)
-    fun `fooContainer has resource limits`() {
+    fun `fooContainer has resource limits and custom configuration`() {
         testLogger.info("Asserting $fooContainer resource limits")
 
         val all = dockerClient.listContainersCmd()
@@ -268,6 +279,16 @@ abstract class Directory1DeploymentBase(logDir: String) : ManagedModeBase(logDir
                 assertThat(res.hostConfig?.cpuQuota).isEqualTo(fooResourceLimits.cpuQuota())
                 assertThat(res.hostConfig?.blkioDeviceReadBps?.get(0)?.rate).isEqualTo(fooResourceLimits.ioReadBytes())
                 assertThat(res.hostConfig?.blkioDeviceWriteBps?.get(0)?.rate).isEqualTo(fooResourceLimits.ioWriteBytes())
+            }
+        }
+
+        Awaitility.await().pollInterval(Duration.FIVE_SECONDS).atMost(Duration.TWO_MINUTES).untilAsserted {
+            val all = dockerClient.listContainersCmd()
+                    .withNetworkFilter(listOf(network.id))
+                    .withShowAll(true).exec()
+            all.filter { it.names?.get(0)?.contains(fooContainer) == true }.forEach {
+                val logs = getContainerLogs(dockerClient, it)
+                assertThat(logs).contains("log_min_duration_statement = $fooSlowDBStatementLogMs")
             }
         }
     }

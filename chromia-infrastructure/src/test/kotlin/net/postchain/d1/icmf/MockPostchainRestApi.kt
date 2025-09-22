@@ -27,6 +27,7 @@ import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.SigMaker
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.ebft.rest.contract.StateNodeStatus
@@ -72,6 +73,8 @@ object MockPostchainRestApi : Closeable {
             }
 
             override fun query(query: GtxQuery): Gtv = client.query(query.name, query.args)
+
+            override fun queryWithHeight(query: GtxQuery): Pair<Gtv, Long> = client.query(query.name, query.args) to 0
 
             override fun enqueueQuery(query: GtxQuery) {
                 TODO("Not yet implemented")
@@ -182,6 +185,10 @@ object MockPostchainRestApi : Closeable {
             }
 
             override fun getMetadata(): ApiMetadata {
+                TODO("Not yet implemented")
+            }
+
+            override fun getBlockSigMaker(): SigMaker {
                 TODO("Not yet implemented")
             }
         })
