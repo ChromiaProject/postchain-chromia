@@ -17,6 +17,7 @@ import org.web3j.crypto.Sign
 class CheckSigERC191PersonalTest {
 
     val message = "räksmörgås" // message with non-ASCII characters
+    val anotherMessage = "AnotherMessage"
     val keyPair: ECKeyPair = Keys.createEcKeyPair()
     val address = Keys.getAddress(keyPair).hexStringToByteArray()
     val anotherKeyPair: ECKeyPair = Keys.createEcKeyPair()
@@ -36,14 +37,34 @@ class CheckSigERC191PersonalTest {
     @Test
     fun `should throw UserMistake when signature is invalid`() {
         val signatureData = Sign.signPrefixedMessage(
-                "AnotherMessage".toByteArray(Charsets.UTF_8),
+                message.toByteArray(Charsets.UTF_8),
                 keyPair
         )
         val signature = encodeSignature(signatureData)
 
         assertFailure {
-            checkSignature(message, address, signature)
+            checkSignature(anotherMessage, address, signature)
         }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided with wrong address`() {
+        val signatureData = Sign.signPrefixedMessage(
+                message.toByteArray(Charsets.UTF_8),
+                keyPair
+        )
+        val signature = encodeSignature(signatureData)
+
+        assertFailure {
+            checkSignature(message, anotherAddress, signature)
+        }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided with incorrect signature`() {
+        assertFailure {
+            checkSignature(message, address, "ABCD".hexStringToByteArray())
+        }.isInstanceOf(UserMistake::class.java).messageContains("invalid signature string")
     }
 
     @Test
@@ -70,40 +91,6 @@ class CheckSigERC191PersonalTest {
         assertFailure {
             CheckSigERC191Personal(Unit, opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Type error")
-    }
-
-    @Test
-    fun `should throw UserMistake when provided with incorrect address`() {
-        val signatureData = Sign.signPrefixedMessage(
-                message.toByteArray(Charsets.UTF_8),
-                keyPair
-        )
-        val signature = encodeSignature(signatureData)
-
-        assertFailure {
-            checkSignature(message, anotherAddress, signature)
-        }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
-    }
-
-    @Test
-    fun `should throw UserMistake when provided with incorrect signature`() {
-        assertFailure {
-            checkSignature(message, address, "ABCD".hexStringToByteArray())
-        }.isInstanceOf(UserMistake::class.java).messageContains("invalid signature string")
-    }
-
-    @Test
-    fun `should throw UserMistake when address does not match signature`() {
-        val message = "AnotherValidMessage"
-        val signatureData = Sign.signPrefixedMessage(
-                message.toByteArray(Charsets.UTF_8),
-                keyPair
-        )
-        val signature = encodeSignature(signatureData)
-
-        assertFailure {
-            checkSignature(message, anotherAddress, signature)
-        }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
     }
 
     private fun encodeSignature(signatureData: Sign.SignatureData): ByteArray =
