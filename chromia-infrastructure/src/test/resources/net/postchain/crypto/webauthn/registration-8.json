@@ -1,0 +1,22 @@
+{
+  "id": "Ir0vHfNykd__pwQdA3q-D7Emz47KrRrWnMS9NZFzb46GrbhN58Yp9HwubkqI2ZI_",
+  "rawId": "Ir0vHfNykd__pwQdA3q-D7Emz47KrRrWnMS9NZFzb46GrbhN58Yp9HwubkqI2ZI_",
+  "response": {
+    "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVifdKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvDFAAAAAQAAAAAAAAAAAAAAAAAAAAAAMCK9Lx3zcpHf_6cEHQN6vg-xJs-Oyq0a1pzEvTWRc2-Ohq24TefGKfR8Lm5KiNmSP6QBAQMnIAYhWCAivS8d83KR3_-nBB0DN0UeOEkQQcuMZ9qi8N3WKRpZ5KFrY3JlZFByb3RlY3QC",
+    "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiVXdXUWFUdF9WNWZfTEZpWVJDdG93dTBQWUJRbzlyZkJ1bXB1SFIybTdFWHZmUnlPbXFOQXZpOFEtem54UHVJUXExTE5wcFV3QW9jY042ZERITkQ2RFEiLCJvcmlnaW4iOiJodHRwczovL3dlYmF1dGhuLmlvIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+    "transports": [
+      "nfc",
+      "usb"
+    ],
+    "publicKeyAlgorithm": -8,
+    "publicKey": "MCowBQYDK2VwAyEAIr0vHfNykd__pwQdAzdFHjhJEEHLjGfaovDd1ikaWeQ",
+    "authenticatorData": "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvDFAAAAAQAAAAAAAAAAAAAAAAAAAAAAMCK9Lx3zcpHf_6cEHQN6vg-xJs-Oyq0a1pzEvTWRc2-Ohq24TefGKfR8Lm5KiNmSP6QBAQMnIAYhWCAivS8d83KR3_-nBB0DN0UeOEkQQcuMZ9qi8N3WKRpZ5KFrY3JlZFByb3RlY3QC"
+  },
+  "type": "public-key",
+  "clientExtensionResults": {
+    "credProps": {
+      "rk": true
+    }
+  },
+  "authenticatorAttachment": "cross-platform"
+}

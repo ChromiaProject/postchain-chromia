@@ -1,0 +1,22 @@
+{
+  "id": "QA07aaXowPUZBKU7zM0jj0gag9zUURjhJuU1ySwtVhyTvwQD_GfMpEK95ZiD_UxY",
+  "rawId": "QA07aaXowPUZBKU7zM0jj0gag9zUURjhJuU1ySwtVhyTvwQD_GfMpEK95ZiD_UxY",
+  "response": {
+    "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVjCdKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvDFAAAAAgAAAAAAAAAAAAAAAAAAAAAAMEANO2ml6MD1GQSlO8zNI49IGoPc1FEY4SblNcksLVYck78EA_xnzKRCveWYg_1MWKUBAgMmIAEhWCBADTtppejA9RkEpTvMQKXSdlKG6jPUD6eD6rn_yPtPTiJYIF3cr8hFcNLEEi_VKpSRMZel1SSSuENchR3Z3fS7lu5boWtjcmVkUHJvdGVjdAI",
+    "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoicmRGZnAtUXNxWndNdFFUR3JNLWxiU1YzUk5DVV9DY2liNUhqTzZoX0luejJpV2dJOTV6U3p4dDQwMWgtLVFQOTZrRktwREx3blNETkQ3M1dSd2ltQVEiLCJvcmlnaW4iOiJodHRwczovL3dlYmF1dGhuLmlvIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+    "transports": [
+      "nfc",
+      "usb"
+    ],
+    "publicKeyAlgorithm": -7,
+    "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQA07aaXowPUZBKU7zECl0nZShuoz1A-ng-q5_8j7T05d3K_IRXDSxBIv1SqUkTGXpdUkkrhDXIUd2d30u5buWw",
+    "authenticatorData": "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvDFAAAAAgAAAAAAAAAAAAAAAAAAAAAAMEANO2ml6MD1GQSlO8zNI49IGoPc1FEY4SblNcksLVYck78EA_xnzKRCveWYg_1MWKUBAgMmIAEhWCBADTtppejA9RkEpTvMQKXSdlKG6jPUD6eD6rn_yPtPTiJYIF3cr8hFcNLEEi_VKpSRMZel1SSSuENchR3Z3fS7lu5boWtjcmVkUHJvdGVjdAI"
+  },
+  "type": "public-key",
+  "clientExtensionResults": {
+    "credProps": {
+      "rk": true
+    }
+  },
+  "authenticatorAttachment": "cross-platform"
+}
