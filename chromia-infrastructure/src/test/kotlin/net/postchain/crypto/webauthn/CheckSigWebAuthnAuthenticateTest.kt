@@ -21,12 +21,8 @@ import org.junit.jupiter.api.assertDoesNotThrow
 
 class CheckSigWebAuthnAuthenticateTest {
 
-    @Test
-    fun `should throw UserMistake when provided unsupported algorithm`() {
-        assertFailure {
-            checkSignature(byteArrayOf(), "{}", 0, byteArrayOf(), byteArrayOf())
-        }.isInstanceOf(UserMistake::class.java).messageContains("unsupported algorithm")
-    }
+    val validClientDataJSON = """{"type":"webauthn.get","challenge":"dKb","origin":"https://example.com"}"""
+    val validAuthenticatorData = "bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b51900000000".hexStringToByteArray()
 
     @Test
     fun `should throw UserMistake when provided with incorrect argument counts`() {
@@ -54,6 +50,27 @@ class CheckSigWebAuthnAuthenticateTest {
         assertFailure {
             CheckSigWebAuthnAuthenticate(Unit, opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided invalid clientDataJSON`() {
+        assertFailure {
+            checkSignature(validAuthenticatorData, "bogus", -7, byteArrayOf(), byteArrayOf())
+        }.isInstanceOf(UserMistake::class.java).messageContains("invalid clientData")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided invalid authenticatorData`() {
+        assertFailure {
+            checkSignature(byteArrayOf(), validClientDataJSON, 7, byteArrayOf(), byteArrayOf())
+        }.isInstanceOf(UserMistake::class.java).messageContains("invalid authenticatorData")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided unsupported algorithm`() {
+        assertFailure {
+            checkSignature(validAuthenticatorData, validClientDataJSON, 0, byteArrayOf(), byteArrayOf())
+        }.isInstanceOf(UserMistake::class.java).messageContains("unsupported algorithm")
     }
 
     @Nested
@@ -121,78 +138,61 @@ class CheckSigWebAuthnAuthenticateTest {
 
         @Test
         fun `ECDSA -7 success`() {
-            val registrationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/registration-7.json")!!
-            val registrationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>(registrationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>() {})
-
-            val publicKey = registrationResponse!!.response!!.publicKey!!
-
-            val authenticationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/authentication-7.json")!!
-            val authenticationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>(authenticationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>() {})
-            val authenticatorData = authenticationResponse!!.response!!.authenticatorData
-            val clientDataJSON = authenticationResponse.response!!.clientDataJSON
-            val signature = authenticationResponse.response!!.signature
+            val publicKey = extractPublicKey("/net/postchain/crypto/webauthn/registration-7.json")
+            val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-7.json")
 
             assertDoesNotThrow {
-                checkSignature(authenticatorData, String(clientDataJSON), -7, publicKey, signature)
+                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, signature)
             }
         }
 
         @Test
         fun `ECDSA -7 wrong signature`() {
-            val registrationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/registration-7.json")!!
-            val registrationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>(registrationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>() {})
-
-            val publicKey = registrationResponse!!.response!!.publicKey!!
-
-            val authenticationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/authentication-7.json")!!
-            val authenticationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>(authenticationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>() {})
-            val authenticatorData = authenticationResponse!!.response!!.authenticatorData
-            val clientDataJSON = authenticationResponse.response!!.clientDataJSON
-            val signature = authenticationResponse.response!!.signature
+            val publicKey = extractPublicKey("/net/postchain/crypto/webauthn/registration-7.json")
+            val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-7.json")
 
             val wrongSignature = signature.clone()
             wrongSignature[30] = 17
             assertFailure {
-                checkSignature(authenticatorData, String(clientDataJSON), -7, publicKey, wrongSignature)
+                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
         @Test
         fun `EdDSA -8 success`() {
-            val registrationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/registration-8.json")!!
-            val registrationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>(registrationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>() {})
-
-            val publicKey = registrationResponse!!.response!!.publicKey!!
-
-            val authenticationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/authentication-8.json")!!
-            val authenticationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>(authenticationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>() {})
-            val authenticatorData = authenticationResponse!!.response!!.authenticatorData
-            val clientDataJSON = authenticationResponse.response!!.clientDataJSON
-            val signature = authenticationResponse.response!!.signature
+            val publicKey = extractPublicKey("/net/postchain/crypto/webauthn/registration-8.json")
+            val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-8.json")
 
             assertDoesNotThrow {
-                checkSignature(authenticatorData, String(clientDataJSON), -8, publicKey, signature)
+                checkSignature(authenticatorData, clientDataJSON, -8, publicKey, signature)
             }
         }
 
         @Test
         fun `EdDSA -8 wrong signature`() {
-            val registrationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/registration-8.json")!!
-            val registrationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>(registrationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>() {})
-
-            val publicKey = registrationResponse!!.response!!.publicKey!!
-
-            val authenticationResponseJSON = javaClass.getResourceAsStream("/net/postchain/crypto/webauthn/authentication-8.json")!!
-            val authenticationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>(authenticationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>() {})
-            val authenticatorData = authenticationResponse!!.response!!.authenticatorData
-            val clientDataJSON = authenticationResponse.response!!.clientDataJSON
-            val signature = authenticationResponse.response!!.signature
+            val publicKey = extractPublicKey("/net/postchain/crypto/webauthn/registration-8.json")
+            val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-8.json")
 
             val wrongSignature = signature.clone()
             wrongSignature[30] = 17
             assertFailure {
-                checkSignature(authenticatorData, String(clientDataJSON), -8, publicKey, wrongSignature)
+                checkSignature(authenticatorData, clientDataJSON, -8, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
+        }
+
+        private fun extractPublicKey(registrationResourcePath: String): ByteArray {
+            val registrationResponseJSON = javaClass.getResourceAsStream(registrationResourcePath)!!
+            val registrationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>(registrationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAttestationResponse?, RegistrationExtensionClientOutput?>?>() {})
+            return registrationResponse!!.response!!.publicKey!!
+        }
+
+        private fun extractAuthenticationData(authenticationResourcePath: String): Triple<ByteArray, String, ByteArray> {
+            val authenticationResponseJSON = javaClass.getResourceAsStream(authenticationResourcePath)!!
+            val authenticationResponse = objectConverter.jsonConverter.readValue<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>(authenticationResponseJSON, object : TypeReference<PublicKeyCredential<AuthenticatorAssertionResponse?, AuthenticationExtensionClientOutput?>?>() {})
+            val authenticatorData = authenticationResponse!!.response!!.authenticatorData
+            val clientDataJSON = authenticationResponse.response!!.clientDataJSON
+            val signature = authenticationResponse.response!!.signature
+            return Triple(authenticatorData, String(clientDataJSON), signature)
         }
     }
 

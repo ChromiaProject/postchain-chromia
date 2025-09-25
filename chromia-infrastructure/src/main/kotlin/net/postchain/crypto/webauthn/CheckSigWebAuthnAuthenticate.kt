@@ -1,5 +1,13 @@
 package net.postchain.crypto.webauthn
 
+import com.fasterxml.jackson.core.type.TypeReference
+import com.webauthn4j.converter.AuthenticatorDataConverter
+import com.webauthn4j.converter.exception.DataConversionException
+import com.webauthn4j.converter.util.ObjectConverter
+import com.webauthn4j.data.client.ClientDataType
+import com.webauthn4j.data.client.CollectedClientData
+import com.webauthn4j.data.extension.authenticator.AuthenticationExtensionAuthenticatorOutput
+import com.webauthn4j.verifier.exception.IllegalBackupStateException
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.TxEContext
@@ -46,20 +54,51 @@ class CheckSigWebAuthnAuthenticate(conf: Unit, opData: ExtOpData) : GTXOperation
     override fun isCompound() = true
 
     override fun checkCorrectnessWhileSyncing() {
-        verifySignature(data.args)
+        webAuthnAuthenticate(data.args)
     }
 
     override fun checkCorrectness() {
-        verifySignature(data.args)
+        webAuthnAuthenticate(data.args)
     }
 
-    private fun verifySignature(args: Array<out Gtv>) {
+    private fun webAuthnAuthenticate(args: Array<out Gtv>) {
         if (args.size != 5) throw UserMistake("need 5 args, got ${args.size}")
         val authenticatorData = args[0].asByteArray()
         val clientDataJSON = args[1].asString()
         val alg = args[2].asInteger()
         val publicKey = args[3].asByteArray()
         val signature = args[4].asByteArray()
+
+        webAuthnAuthenticate(authenticatorData, clientDataJSON, alg, publicKey, signature)
+    }
+
+    private fun webAuthnAuthenticate(authenticatorData: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
+        val objectConverter = ObjectConverter()
+
+        val clientData = try {
+            objectConverter.jsonConverter.readValue(clientDataJSON, object : TypeReference<CollectedClientData>() {})
+                    ?: throw UserMistake("invalid clientData")
+        } catch (_: DataConversionException) {
+            throw UserMistake("invalid clientData")
+        }
+
+        val authData = try {
+            AuthenticatorDataConverter(objectConverter).convert<AuthenticationExtensionAuthenticatorOutput>(authenticatorData)
+        } catch (_: DataConversionException) {
+            throw UserMistake("invalid authenticatorData")
+        }
+
+        if (clientData.type != ClientDataType.WEBAUTHN_GET) {
+            throw UserMistake("wrong clientData.type")
+        }
+
+        if (clientData.challenge.value.isEmpty()) {
+            throw UserMistake("missing clientData.challenge")
+        }
+
+        if (!authData.isFlagBE && authData.isFlagBS) {
+            throw IllegalBackupStateException("backup state bit must not be set if backup eligibility bit is not set")
+        }
 
         val signedData = authenticatorData + sha256Digest(clientDataJSON.toByteArray(Charsets.UTF_8))
 
