@@ -32,7 +32,7 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(Unit, opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf()), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("need 5 args")
     }
 
@@ -48,7 +48,7 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(Unit, opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf()), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
     }
 
@@ -86,6 +86,21 @@ class CheckSigWebAuthnAuthenticateTest {
         @Test
         fun `should success with valid signature`() {
             assertDoesNotThrow { checkSignature(authenticatorData, clientDataJSON, -7, publicKey, signature) }
+        }
+
+        @Test
+        fun `should throw UserMistake relying party identifier does not match`() {
+            assertFailure {
+                val args = arrayOf(
+                        gtv(authenticatorData),
+                        gtv(clientDataJSON),
+                        gtv(-7),
+                        gtv(publicKey),
+                        gtv(signature)
+                )
+                val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
+                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf("bogus.org", "webauthn.io")), opData).checkCorrectness()
+            }.isInstanceOf(UserMistake::class.java).messageContains("relying party identifier does not match")
         }
 
         @Test
@@ -205,6 +220,6 @@ class CheckSigWebAuthnAuthenticateTest {
                 gtv(signature)
         )
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-        CheckSigWebAuthnAuthenticate(Unit, opData).checkCorrectness()
+        CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf("example.org", "webauthn.io")), opData).checkCorrectness()
     }
 }

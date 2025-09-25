@@ -27,7 +27,7 @@ import java.security.spec.X509EncodedKeySpec
  * WebAuthn authenticate.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticating_a_user
  */
-class CheckSigWebAuthnAuthenticate(conf: Unit, opData: ExtOpData) : GTXOperation(opData) {
+class CheckSigWebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.checksig_webauthn_authenticate"
 
@@ -94,6 +94,14 @@ class CheckSigWebAuthnAuthenticate(conf: Unit, opData: ExtOpData) : GTXOperation
 
         if (clientData.challenge.value.isEmpty()) {
             throw UserMistake("missing clientData.challenge")
+        }
+
+        if (conf.allowedRelyingPartyIdentifiers.isNotEmpty()) {
+            if (!conf.allowedRelyingPartyIdentifiers.any {
+                        sha256Digest(it.toByteArray(Charsets.UTF_8)).contentEquals(authData.rpIdHash)
+                    }) {
+                throw UserMistake("relying party identifier does not match")
+            }
         }
 
         if (!authData.isFlagBE && authData.isFlagBS) {
