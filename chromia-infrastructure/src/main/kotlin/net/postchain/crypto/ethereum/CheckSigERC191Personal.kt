@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.crypto.ethereum
 
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
