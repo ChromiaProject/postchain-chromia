@@ -7,7 +7,6 @@ import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.data.client.ClientDataType
 import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.data.extension.authenticator.AuthenticationExtensionAuthenticatorOutput
-import com.webauthn4j.verifier.exception.IllegalBackupStateException
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.TxEContext
@@ -96,6 +95,17 @@ class CheckSigWebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) 
             throw UserMistake("missing clientData.challenge")
         }
 
+        if (conf.allowedOrigins.isNotEmpty()) {
+            if (!conf.allowedOrigins.contains(clientData.origin)) {
+                throw UserMistake("origin does not match")
+            }
+        }
+
+        @Suppress("USELESS_ELVIS") // clientData.crossOrigin can be null even though it's declared with @NotNull
+        if (!conf.allowCrossOrigin && (clientData.crossOrigin ?: false)) {
+            throw UserMistake("crossOrigin is set but now allowed")
+        }
+
         if (conf.allowedRelyingPartyIdentifiers.isNotEmpty()) {
             if (!conf.allowedRelyingPartyIdentifiers.any {
                         sha256Digest(it.toByteArray(Charsets.UTF_8)).contentEquals(authData.rpIdHash)
@@ -105,7 +115,7 @@ class CheckSigWebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) 
         }
 
         if (!authData.isFlagBE && authData.isFlagBS) {
-            throw IllegalBackupStateException("backup state bit must not be set if backup eligibility bit is not set")
+            throw UserMistake("backup state bit must not be set if backup eligibility bit is not set")
         }
 
         val signedData = authenticatorData + sha256Digest(clientDataJSON.toByteArray(Charsets.UTF_8))
