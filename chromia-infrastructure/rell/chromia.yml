@@ -2,6 +2,9 @@ blockchains:
   hybridcompute:
     type: library
     module: lib.hybridcompute
+  webauthn:
+    type: library
+    module: lib.webauthn
 
   hybridcompute_test:
     type: blockchain
@@ -91,8 +94,9 @@ blockchains:
         - x"0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D"
 
 compile:
-  rellVersion: 0.14.5
+  rellVersion: 0.14.12
 
 test:
   modules:
     - lib.hybridcompute.test.hc_test
+    - lib.webauthn.test.auth_test

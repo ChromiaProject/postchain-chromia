@@ -1,0 +1,14 @@
+@mount('webauthn')
+module;
+
+val auth_op_name = "gtxc.checksig_webauthn_authenticate";
+
+function require_auth(expected_challenge: text) {
+    require(op_context.exists, "not in an operation");
+    val auth_op = require(op_context.get_all_operations() @? { .name == auth_op_name },
+        "no %s operation in transaction".format(auth_op_name));
+    val client_data_json = text.from_gtv(auth_op.args[1]);
+    val client_data = map<text, gtv>.from_gtv_pretty(gtv.from_json(client_data_json));
+    val challenge = text.from_gtv(client_data["challenge"]);
+    require(challenge == expected_challenge, "wrong challenge");
+}

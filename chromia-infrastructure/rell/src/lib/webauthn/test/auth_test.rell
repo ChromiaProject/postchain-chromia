@@ -1,0 +1,38 @@
+@test module;
+
+import lib.webauthn;
+import ^.helper_operations.*;
+
+val challenge = "the challenge is here";
+
+function test_auth_success(){
+    rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            0,
+            x"",
+            x"",
+        ),
+        check_auth(challenge)
+    ).run();
+}
+
+function test_no_auth_op() {
+    rell.test.tx().op(
+        check_auth(challenge)
+    ).run_must_fail("no gtxc.checksig_webauthn_authenticate operation in transaction");
+}
+
+function test_auth_wrong_challenge(){
+    rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format("bad challenge"),
+            0,
+            x"",
+            x"",
+        ),
+        check_auth(challenge)
+    ).run_must_fail("wrong challenge");
+}

@@ -52,6 +52,8 @@ class CheckSigWebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) 
 
     override fun isCompound() = true
 
+    override fun isSinglePerTransaction() = true
+
     override fun checkCorrectnessWhileSyncing() {
         webAuthnAuthenticate(data.args)
     }
