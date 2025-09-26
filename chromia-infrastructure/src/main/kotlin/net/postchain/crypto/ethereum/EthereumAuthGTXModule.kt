@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.crypto.ethereum
 
 import net.postchain.core.EContext
 import net.postchain.gtx.GTXModuleMetadata
@@ -6,7 +6,7 @@ import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.SimpleGTXModule
 
 @Suppress("unused")
-class CryptoOpsGTXModule : SimpleGTXModule<Unit>(
+class EthereumAuthGTXModule : SimpleGTXModule<Unit>(
         Unit,
         mapOf(
                 CheckSigERC191Personal.OP_NAME to ::CheckSigERC191Personal,

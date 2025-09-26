@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.crypto.ethereum
 
 import assertk.assertFailure
 import assertk.assertions.isInstanceOf
