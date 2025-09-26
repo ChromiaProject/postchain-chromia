@@ -1,0 +1,16 @@
+module;
+
+import lib.webauthn;
+
+@mount("gtxc.checksig_webauthn_authenticate")
+operation checksig_webauthn_authenticate(
+     authenticator_data: byte_array,
+     client_data_json: text,
+     alg: integer,
+     public_key: byte_array,
+     signature: byte_array,
+) {}
+
+operation check_auth(expected_challenge: text) {
+    webauthn.require_auth(expected_challenge);
+}
