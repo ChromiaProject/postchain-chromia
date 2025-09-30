@@ -60,6 +60,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
 class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
         conf,
         mapOf(
+                CheckSigWebAuthnRegister.OP_NAME to ::CheckSigWebAuthnRegister,
                 CheckSigWebAuthnAuthenticate.OP_NAME to ::CheckSigWebAuthnAuthenticate,
         ),
         mapOf()
@@ -68,6 +69,7 @@ class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
 
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(
+                    CheckSigWebAuthnRegister.OP_NAME to CheckSigWebAuthnRegister.metadata,
                     CheckSigWebAuthnAuthenticate.OP_NAME to CheckSigWebAuthnAuthenticate.metadata,
             ),
             queries = mapOf())

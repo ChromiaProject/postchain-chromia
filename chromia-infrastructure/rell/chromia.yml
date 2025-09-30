@@ -99,4 +99,4 @@ compile:
 test:
   modules:
     - lib.hybridcompute.test.hc_test
-    - lib.webauthn.test.auth_test
+    - lib.webauthn.test
