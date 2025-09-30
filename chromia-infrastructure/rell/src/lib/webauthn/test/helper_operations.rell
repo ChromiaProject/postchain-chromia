@@ -11,6 +11,8 @@ operation checksig_webauthn_authenticate(
      signature: byte_array,
 ) {}
 
-operation check_auth(expected_challenge: text) {
-    webauthn.require_auth(expected_challenge);
+operation check_auth(expected_challenge: text, expected_alg: integer, expected_public_key: byte_array) {
+    val auth_data = webauthn.require_auth(expected_challenge);
+    require(auth_data.alg == expected_alg, "wrong alg");
+    require(auth_data.public_key == expected_public_key, "wrong public_key");
 }

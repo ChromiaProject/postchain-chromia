@@ -4,9 +4,56 @@ import lib.webauthn;
 import ^.helper_operations.*;
 
 val challenge = "the challenge is here";
+val challenge2 = "the other challenge is there";
+
+val alg = -7;
+val alg2 = -8;
+val public_key = "pubkey".hash();
+val public_key2 = "pubkey2".hash();
 
 function test_auth_success(){
     rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            alg,
+            public_key,
+            x"",
+        ),
+        check_auth(challenge, alg, public_key),
+    ).run();
+}
+
+function test_auth_success_double(){
+    rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            alg,
+            public_key,
+            x"",
+        ),
+        check_auth(challenge, alg, public_key),
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge2),
+            alg2,
+            public_key2,
+            x"",
+        ),
+        check_auth(challenge2, alg2, public_key2),
+    ).run();
+}
+
+function test_no_auth_op() {
+    rell.test.tx().op(
+        check_auth(challenge, alg, public_key),
+    ).run_must_fail("no gtxc.checksig_webauthn_authenticate operation before me in transaction");
+}
+
+function test_no_auth_op_before() {
+    rell.test.tx().op(
+        check_auth(challenge, alg, public_key),
         checksig_webauthn_authenticate(
             x"",
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
@@ -14,14 +61,7 @@ function test_auth_success(){
             x"",
             x"",
         ),
-        check_auth(challenge)
-    ).run();
-}
-
-function test_no_auth_op() {
-    rell.test.tx().op(
-        check_auth(challenge)
-    ).run_must_fail("no gtxc.checksig_webauthn_authenticate operation in transaction");
+    ).run_must_fail("no gtxc.checksig_webauthn_authenticate operation before me in transaction");
 }
 
 function test_auth_wrong_challenge(){
@@ -33,6 +73,6 @@ function test_auth_wrong_challenge(){
             x"",
             x"",
         ),
-        check_auth(challenge)
+        check_auth(challenge, alg, public_key),
     ).run_must_fail("wrong challenge");
 }
