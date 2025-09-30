@@ -4,6 +4,7 @@ import com.webauthn4j.data.client.Origin
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.DefaultValue
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleFactory
@@ -20,6 +21,14 @@ data class WebAuthnConfigData(
 
         @param:Name("allowed-relying-party-identifiers")
         val allowedRelyingPartyIdentifiers: List<String>, // https://w3c.github.io/webauthn/#rp-id
+
+        @param:Name("user-presence")
+        @param:DefaultValue(defaultBoolean = true)
+        val userPresence: Boolean, // https://w3c.github.io/webauthn/#concept-user-present
+
+        @param:Name("user-verification")
+        @param:DefaultValue(defaultBoolean = false)
+        val userVerification: Boolean, // https://w3c.github.io/webauthn/#user-verification
 )
 
 data class WebAuthnConfig(
@@ -28,6 +37,10 @@ data class WebAuthnConfig(
         val allowCrossOrigin: Boolean,
 
         val allowedRelyingPartyIdentifiers: List<String>,
+
+        val userPresence: Boolean,
+
+        val userVerification: Boolean,
 )
 
 @Suppress("unused")
@@ -38,6 +51,8 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
                 allowedOrigins = configData.allowedOrigins.map { Origin(it) },
                 allowCrossOrigin = configData.allowCrossOrigin,
                 allowedRelyingPartyIdentifiers = configData.allowedRelyingPartyIdentifiers,
+                userPresence = configData.userPresence,
+                userVerification = configData.userVerification,
         ))
     }
 }

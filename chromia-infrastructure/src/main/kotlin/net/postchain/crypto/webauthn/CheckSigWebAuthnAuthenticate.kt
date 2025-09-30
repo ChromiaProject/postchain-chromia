@@ -116,6 +116,18 @@ class CheckSigWebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) 
             }
         }
 
+        if (conf.userPresence) {
+            if (!authData.isFlagUP) {
+                throw UserMistake("user presence is required, but user is not present")
+            }
+        }
+
+        if (conf.userVerification) {
+            if (!authData.isFlagUV) {
+                throw UserMistake("user verification is required, but user is not verified")
+            }
+        }
+
         if (!authData.isFlagBE && authData.isFlagBS) {
             throw UserMistake("backup state bit must not be set if backup eligibility bit is not set")
         }

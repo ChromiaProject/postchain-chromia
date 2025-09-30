@@ -33,7 +33,7 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf()), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("need 5 args")
     }
 
@@ -49,7 +49,7 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf()), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
     }
 
@@ -78,8 +78,23 @@ class CheckSigWebAuthnAuthenticateTest {
                     gtv(byteArrayOf())
             )
             val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io")), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("crossOrigin is set but now allowed")
+    }
+
+    @Test
+    fun `should throw UserMistake when user is not verified`() {
+        assertFailure {
+            val args = arrayOf(
+                    gtv(validAuthenticatorData),
+                    gtv("""{"type":"webauthn.get","challenge":"dKb","origin":"https://example.org"}"""),
+                    gtv(-7),
+                    gtv(byteArrayOf()),
+                    gtv(byteArrayOf())
+            )
+            val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io"), userPresence = true, userVerification = true), opData).checkCorrectness()
+        }.isInstanceOf(UserMistake::class.java).messageContains("user verification is required, but user is not verified")
     }
 
     @Test
@@ -115,7 +130,7 @@ class CheckSigWebAuthnAuthenticateTest {
                         gtv(signature)
                 )
                 val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, listOf("example.org", "webauthn.io")), opData).checkCorrectness()
+                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("origin does not match")
         }
 
@@ -130,7 +145,7 @@ class CheckSigWebAuthnAuthenticateTest {
                         gtv(signature)
                 )
                 val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf("bogus.org", "webauthn.io")), opData).checkCorrectness()
+                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf("bogus.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("relying party identifier does not match")
         }
 
@@ -254,7 +269,9 @@ class CheckSigWebAuthnAuthenticateTest {
         CheckSigWebAuthnAuthenticate(WebAuthnConfig(
                 listOf(Origin("https://example.org"), Origin("https://webauthn.io")),
                 false,
-                listOf("example.org", "webauthn.io")
+                listOf("example.org", "webauthn.io"),
+                userPresence = true,
+                userVerification = false
         ), opData).checkCorrectness()
     }
 }
