@@ -57,8 +57,8 @@ function test_no_auth_op_before() {
         checksig_webauthn_authenticate(
             x"",
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
-            0,
-            x"",
+            alg,
+            public_key,
             x"",
         ),
     ).run_must_fail("no gtxc.checksig_webauthn_authenticate operation before me in transaction");
@@ -69,10 +69,36 @@ function test_auth_wrong_challenge(){
         checksig_webauthn_authenticate(
             x"",
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format("bad challenge"),
-            0,
-            x"",
+            alg,
+            public_key,
             x"",
         ),
         check_auth(challenge, alg, public_key),
     ).run_must_fail("wrong challenge");
+}
+
+function test_auth_wrong_alg(){
+    rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            0,
+            public_key,
+            x"",
+        ),
+        check_auth(challenge, alg, public_key),
+    ).run_must_fail("wrong alg");
+}
+
+function test_auth_wrong_public_key(){
+    rell.test.tx().op(
+        checksig_webauthn_authenticate(
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            alg,
+            x"",
+            x"",
+        ),
+        check_auth(challenge, alg, public_key),
+    ).run_must_fail("wrong public_key");
 }
