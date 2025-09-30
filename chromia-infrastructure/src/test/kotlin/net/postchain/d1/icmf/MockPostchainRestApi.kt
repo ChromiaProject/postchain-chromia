@@ -77,119 +77,119 @@ object MockPostchainRestApi : Closeable {
             override fun queryWithHeight(query: GtxQuery): Pair<Gtv, Long> = client.query(query.name, query.args) to 0
 
             override fun enqueueQuery(query: GtxQuery) {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun postTransaction(tx: ByteArray) {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getTransaction(txRID: TxRid): ByteArray? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean): TransactionInfoExt? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getLastTransactionNumber(): TransactionsCount {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getStatus(txRID: TxRid): ApiStatus {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getWaitingTransactions(): List<TxRid> {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getRejectedTransactions(): List<ApiRejectedTransaction> {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun checkQueryCorrectness(query: GtxQuery) {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun nodeStatusQuery(): StateNodeStatus {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun nodePeersStatusQuery(): List<StateNodeStatus> {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getCurrentBlockHeight(): BlockHeight {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlockchainNodeState(): BlockchainNodeState {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlockchainConfiguration(height: Long): ByteArray? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun validateBlockchainConfiguration(configuration: Gtv) {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getVersion(): Version {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getInfrastructureVersion(): InfraVersion {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getMetadata(): ApiMetadata {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
 
             override fun getBlockSigMaker(): SigMaker {
-                TODO("Not yet implemented")
+                throw NotImplementedError("not used in mock")
             }
         })
     }

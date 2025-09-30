@@ -712,7 +712,7 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
             lastAnchoredHeights.getOrDefault(clusterName to topic, -1)
 
     override fun loadLastAnchoredHeights(ctx: EContext): List<AnchorHeight> {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun saveLastAnchoredHeight(ctx: EContext, clusterName: String, topic: String, anchorHeight: Long) {
@@ -720,7 +720,7 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
     }
 
     override fun loadAllLastMessageHeights(ctx: EContext): List<MessageHeightForSender> {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun loadLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String): Long = -1
@@ -728,7 +728,7 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
     override fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long) {}
 
     override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun loadSpilledMessageCounts(ctx: EContext, cluster: String, anchorHeight: Long, topic: String): Map<BlockchainRid, Int> {
@@ -736,22 +736,22 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
     }
 
     override fun saveSpilledMessage(ctx: EContext, cluster: String, anchorHeight: Long, sender: BlockchainRid, topic: String, hash: ByteArray, merkleHashVersion: Long) {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun imprecateSpilledMessage(ctx: EContext, serial: Long) {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun deleteDappProvidedReceiverTopics(ctx: EContext) {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun saveDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>) {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic> {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 }
