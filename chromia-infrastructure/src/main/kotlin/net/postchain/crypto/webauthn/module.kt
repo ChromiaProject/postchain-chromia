@@ -1,0 +1,76 @@
+package net.postchain.crypto.webauthn
+
+import com.webauthn4j.data.client.Origin
+import net.postchain.common.BlockchainRid
+import net.postchain.core.EContext
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.DefaultValue
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.GTXModuleFactory
+import net.postchain.gtx.GTXModuleMetadata
+import net.postchain.gtx.MetadataProvider
+import net.postchain.gtx.SimpleGTXModule
+
+data class WebAuthnConfigData(
+        @param:Name("allowed-origins")
+        val allowedOrigins: List<String>, // https://w3c.github.io/webauthn/#dom-collectedclientdata-origin
+
+        @param:Name("allow-cross-origin")
+        val allowCrossOrigin: Boolean, // https://w3c.github.io/webauthn/#dom-collectedclientdata-crossorigin
+
+        @param:Name("relying-party-identifier")
+        val relyingPartyIdentifier: String, // https://w3c.github.io/webauthn/#rp-id
+
+        @param:Name("user-presence")
+        @param:DefaultValue(defaultBoolean = true)
+        val userPresence: Boolean, // https://w3c.github.io/webauthn/#concept-user-present
+
+        @param:Name("user-verification")
+        @param:DefaultValue(defaultBoolean = false)
+        val userVerification: Boolean, // https://w3c.github.io/webauthn/#user-verification
+)
+
+data class WebAuthnConfig(
+        val allowedOrigins: List<Origin>,
+
+        val allowCrossOrigin: Boolean,
+
+        val relyingPartyIdentifier: String,
+
+        val userPresence: Boolean,
+
+        val userVerification: Boolean,
+)
+
+@Suppress("unused")
+class WebAuthnGTXModuleFactory : GTXModuleFactory {
+    override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): WebAuthnGTXModule {
+        val configData = config.asDict()["webauthn"]!!.toObject<WebAuthnConfigData>()
+        return WebAuthnGTXModule(WebAuthnConfig(
+                allowedOrigins = configData.allowedOrigins.map { Origin(it) },
+                allowCrossOrigin = configData.allowCrossOrigin,
+                relyingPartyIdentifier = configData.relyingPartyIdentifier,
+                userPresence = configData.userPresence,
+                userVerification = configData.userVerification,
+        ))
+    }
+}
+
+class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
+        conf,
+        mapOf(
+                CheckSigWebAuthnRegister.OP_NAME to ::CheckSigWebAuthnRegister,
+                CheckSigWebAuthnAuthenticate.OP_NAME to ::CheckSigWebAuthnAuthenticate,
+        ),
+        mapOf()
+), MetadataProvider {
+    override fun initializeDB(ctx: EContext) {}
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(
+                    CheckSigWebAuthnRegister.OP_NAME to CheckSigWebAuthnRegister.metadata,
+                    CheckSigWebAuthnAuthenticate.OP_NAME to CheckSigWebAuthnAuthenticate.metadata,
+            ),
+            queries = mapOf())
+}
