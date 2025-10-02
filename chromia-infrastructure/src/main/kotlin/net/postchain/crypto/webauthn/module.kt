@@ -19,8 +19,8 @@ data class WebAuthnConfigData(
         @param:Name("allow-cross-origin")
         val allowCrossOrigin: Boolean, // https://w3c.github.io/webauthn/#dom-collectedclientdata-crossorigin
 
-        @param:Name("allowed-relying-party-identifiers")
-        val allowedRelyingPartyIdentifiers: List<String>, // https://w3c.github.io/webauthn/#rp-id
+        @param:Name("relying-party-identifier")
+        val relyingPartyIdentifier: String, // https://w3c.github.io/webauthn/#rp-id
 
         @param:Name("user-presence")
         @param:DefaultValue(defaultBoolean = true)
@@ -36,7 +36,7 @@ data class WebAuthnConfig(
 
         val allowCrossOrigin: Boolean,
 
-        val allowedRelyingPartyIdentifiers: List<String>,
+        val relyingPartyIdentifier: String,
 
         val userPresence: Boolean,
 
@@ -50,7 +50,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
         return WebAuthnGTXModule(WebAuthnConfig(
                 allowedOrigins = configData.allowedOrigins.map { Origin(it) },
                 allowCrossOrigin = configData.allowCrossOrigin,
-                allowedRelyingPartyIdentifiers = configData.allowedRelyingPartyIdentifiers,
+                relyingPartyIdentifier = configData.relyingPartyIdentifier,
                 userPresence = configData.userPresence,
                 userVerification = configData.userVerification,
         ))

@@ -33,7 +33,7 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("need 5 args")
     }
 
@@ -49,21 +49,21 @@ class CheckSigWebAuthnAuthenticateTest {
         val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid clientDataJSON`() {
         assertFailure {
-            checkSignature(validAuthenticatorData, "bogus", -7, byteArrayOf(), byteArrayOf())
+            checkSignature("example.org", validAuthenticatorData, "bogus", -7, byteArrayOf(), byteArrayOf())
         }.isInstanceOf(UserMistake::class.java).messageContains("invalid clientData")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid authenticatorData`() {
         assertFailure {
-            checkSignature(byteArrayOf(), validClientDataJSON, 7, byteArrayOf(), byteArrayOf())
+            checkSignature("example.org", byteArrayOf(), validClientDataJSON, 7, byteArrayOf(), byteArrayOf())
         }.isInstanceOf(UserMistake::class.java).messageContains("invalid authenticatorData")
     }
 
@@ -78,7 +78,7 @@ class CheckSigWebAuthnAuthenticateTest {
                     gtv(byteArrayOf())
             )
             val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("crossOrigin is set but now allowed")
     }
 
@@ -93,14 +93,14 @@ class CheckSigWebAuthnAuthenticateTest {
                     gtv(byteArrayOf())
             )
             val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io"), userPresence = true, userVerification = true), opData).checkCorrectness()
+            CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = true, userVerification = true), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("user verification is required, but user is not verified")
     }
 
     @Test
     fun `should throw UserMistake when provided unsupported algorithm`() {
         assertFailure {
-            checkSignature(validAuthenticatorData, validClientDataJSON, 0, byteArrayOf(), byteArrayOf())
+            checkSignature("example.org", validAuthenticatorData, validClientDataJSON, 0, byteArrayOf(), byteArrayOf())
         }.isInstanceOf(UserMistake::class.java).messageContains("unsupported algorithm")
     }
 
@@ -116,7 +116,7 @@ class CheckSigWebAuthnAuthenticateTest {
 
         @Test
         fun `should success with valid signature`() {
-            assertDoesNotThrow { checkSignature(authenticatorData, clientDataJSON, -7, publicKey, signature) }
+            assertDoesNotThrow { checkSignature("example.org", authenticatorData, clientDataJSON, -7, publicKey, signature) }
         }
 
         @Test
@@ -130,7 +130,7 @@ class CheckSigWebAuthnAuthenticateTest {
                         gtv(signature)
                 )
                 val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("origin does not match")
         }
 
@@ -145,7 +145,7 @@ class CheckSigWebAuthnAuthenticateTest {
                         gtv(signature)
                 )
                 val opData = ExtOpData(CheckSigWebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, listOf("bogus.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+                CheckSigWebAuthnAuthenticate(WebAuthnConfig(listOf(), true, "bogus.org", userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("relying party identifier does not match")
         }
 
@@ -154,7 +154,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val wrongSignature = signature.clone()
             wrongSignature[20] = 17
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
+                checkSignature("example.org", authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
@@ -163,7 +163,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val wrongSignature = signature.clone()
             wrongSignature[20] = 17
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
+                checkSignature("example.org", authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
@@ -172,7 +172,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val wrongPublicKey = publicKey.clone()
             wrongPublicKey[30] = 17
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, wrongPublicKey, signature)
+                checkSignature("example.org", authenticatorData, clientDataJSON, -7, wrongPublicKey, signature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
@@ -180,7 +180,7 @@ class CheckSigWebAuthnAuthenticateTest {
         fun `should throw UserMistake when provided with null public key`() {
             val nullPublicKey = ByteArray(publicKey.size)
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, nullPublicKey, signature)
+                checkSignature("example.org", authenticatorData, clientDataJSON, -7, nullPublicKey, signature)
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid public key")
         }
 
@@ -188,7 +188,7 @@ class CheckSigWebAuthnAuthenticateTest {
         fun `should throw UserMistake when provided with invalid public key`() {
             val invalidPublicKey = ByteArray(32) { it.toByte() }
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, invalidPublicKey, signature)
+                checkSignature("example.org", authenticatorData, clientDataJSON, -7, invalidPublicKey, signature)
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid public key")
         }
     }
@@ -203,7 +203,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-7.json")
 
             assertDoesNotThrow {
-                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, signature)
+                checkSignature("webauthn.io", authenticatorData, clientDataJSON, -7, publicKey, signature)
             }
         }
 
@@ -215,7 +215,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val wrongSignature = signature.clone()
             wrongSignature[30] = 17
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
+                checkSignature("webauthn.io", authenticatorData, clientDataJSON, -7, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
@@ -225,7 +225,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val (authenticatorData, clientDataJSON, signature) = extractAuthenticationData("/net/postchain/crypto/webauthn/authentication-8.json")
 
             assertDoesNotThrow {
-                checkSignature(authenticatorData, clientDataJSON, -8, publicKey, signature)
+                checkSignature("webauthn.io", authenticatorData, clientDataJSON, -8, publicKey, signature)
             }
         }
 
@@ -237,7 +237,7 @@ class CheckSigWebAuthnAuthenticateTest {
             val wrongSignature = signature.clone()
             wrongSignature[30] = 17
             assertFailure {
-                checkSignature(authenticatorData, clientDataJSON, -8, publicKey, wrongSignature)
+                checkSignature("webauthn.io", authenticatorData, clientDataJSON, -8, publicKey, wrongSignature)
             }.isInstanceOf(UserMistake::class.java).messageContains("signature verification failed")
         }
 
@@ -257,7 +257,7 @@ class CheckSigWebAuthnAuthenticateTest {
         }
     }
 
-    private fun checkSignature(authenticatorData: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
+    private fun checkSignature(rpId: String, authenticatorData: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
         val args = arrayOf(
                 gtv(authenticatorData),
                 gtv(clientDataJSON),
@@ -269,7 +269,7 @@ class CheckSigWebAuthnAuthenticateTest {
         CheckSigWebAuthnAuthenticate(WebAuthnConfig(
                 listOf(Origin("https://example.org"), Origin("https://webauthn.io")),
                 false,
-                listOf("example.org", "webauthn.io"),
+                rpId,
                 userPresence = true,
                 userVerification = false
         ), opData).checkCorrectness()

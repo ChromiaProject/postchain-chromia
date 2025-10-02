@@ -15,8 +15,7 @@ config:
     allowed-origins: # https://w3c.github.io/webauthn/#dom-collectedclientdata-origin
       - "https://my-dapp.somewhere.com/" 
     allow-cross-origin: false # https://w3c.github.io/webauthn/#dom-collectedclientdata-crossorigin 
-    allowed-relying-party-identifiers: # https://w3c.github.io/webauthn/#rp-id
-      - "my-dapp.somewhere.com"
+    relying-party-identifier: "my-dapp.somewhere.com" # https://w3c.github.io/webauthn/#rp-id
     user-presence: true # https://w3c.github.io/webauthn/#concept-user-present
     user-verification: false # https://w3c.github.io/webauthn/#user-verification
 libs:

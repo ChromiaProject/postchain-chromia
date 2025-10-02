@@ -251,10 +251,8 @@ abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : 
     }
 
     fun verifyRpId(authData: AuthenticatorData<*>) {
-        if (conf.allowedRelyingPartyIdentifiers.isNotEmpty()) {
-            if (!conf.allowedRelyingPartyIdentifiers.any {
-                        sha256Digest(it.toByteArray(Charsets.UTF_8)).contentEquals(authData.rpIdHash)
-                    }) {
+        if (conf.relyingPartyIdentifier.isNotEmpty()) { // TODO WebAuthn: require this to be set and always verify it
+            if (!sha256Digest(conf.relyingPartyIdentifier.toByteArray(Charsets.UTF_8)).contentEquals(authData.rpIdHash)) {
                 throw UserMistake("relying party identifier does not match")
             }
         }

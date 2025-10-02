@@ -33,7 +33,7 @@ class CheckSigWebAuthnRegisterTest {
         val opData = ExtOpData(CheckSigWebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("need 6 args")
     }
 
@@ -50,21 +50,21 @@ class CheckSigWebAuthnRegisterTest {
         val opData = ExtOpData(CheckSigWebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, listOf(), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid clientDataJSON`() {
         assertFailure {
-            checkRegistration(validId, validAttestationObject, "bogus", -7, validPublicKey, listOf("usb"))
+            checkRegistration("example.org", validId, validAttestationObject, "bogus", -7, validPublicKey, listOf("usb"))
         }.isInstanceOf(UserMistake::class.java).messageContains("invalid clientData")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid attestationObject`() {
         assertFailure {
-            checkRegistration(validId, byteArrayOf(), validClientDataJSON, -7, validPublicKey, listOf("usb"))
+            checkRegistration("example.org", validId, byteArrayOf(), validClientDataJSON, -7, validPublicKey, listOf("usb"))
         }.isInstanceOf(UserMistake::class.java).messageContains("invalid attestationObject")
     }
 
@@ -80,21 +80,21 @@ class CheckSigWebAuthnRegisterTest {
                     gtv(listOf(gtv("usb")))
             )
             val opData = ExtOpData(CheckSigWebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+            CheckSigWebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
         }.isInstanceOf(UserMistake::class.java).messageContains("crossOrigin is set but now allowed")
     }
 
     @Test
     fun `should throw UserMistake when clientData type is wrong`() {
         assertFailure {
-            checkRegistration(validId, validAttestationObject, """{"type":"webauthn.get","challenge":"dKb","origin":"https://example.org"}""", -7, validPublicKey, listOf("usb"))
+            checkRegistration("example.org", validId, validAttestationObject, """{"type":"webauthn.get","challenge":"dKb","origin":"https://example.org"}""", -7, validPublicKey, listOf("usb"))
         }.isInstanceOf(UserMistake::class.java).messageContains("wrong clientData.type")
     }
 
     @Test
     fun `should throw UserMistake when provided unsupported algorithm`() {
         assertFailure {
-            checkRegistration(validId, validAttestationObject, validClientDataJSON, 0, byteArrayOf(), listOf())
+            checkRegistration("example.org", validId, validAttestationObject, validClientDataJSON, 0, byteArrayOf(), listOf())
         }.isInstanceOf(UserMistake::class.java).messageContains("unsupported algorithm")
     }
 
@@ -110,7 +110,7 @@ class CheckSigWebAuthnRegisterTest {
 
         @Test
         fun `should success when valid`() {
-            assertDoesNotThrow { checkRegistration(credentialId, attestationObject, clientDataJSON, -7, publicKey, listOf()) }
+            assertDoesNotThrow { checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, -7, publicKey, listOf()) }
         }
 
         @Test
@@ -125,7 +125,7 @@ class CheckSigWebAuthnRegisterTest {
                         gtv(listOf())
                 )
                 val opData = ExtOpData(CheckSigWebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnRegister(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, listOf("example.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+                CheckSigWebAuthnRegister(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("origin does not match")
         }
 
@@ -141,7 +141,7 @@ class CheckSigWebAuthnRegisterTest {
                         gtv(listOf())
                 )
                 val opData = ExtOpData(CheckSigWebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, listOf("bogus.org", "webauthn.io"), userPresence = false, userVerification = false), opData).checkCorrectness()
+                CheckSigWebAuthnRegister(WebAuthnConfig(listOf(), true, "bogus.org", userPresence = false, userVerification = false), opData).checkCorrectness()
             }.isInstanceOf(UserMistake::class.java).messageContains("relying party identifier does not match")
         }
 
@@ -150,7 +150,7 @@ class CheckSigWebAuthnRegisterTest {
             val wrongPublicKey = publicKey.clone()
             wrongPublicKey[30] = 17
             assertFailure {
-                checkRegistration(credentialId, attestationObject, clientDataJSON, -7, wrongPublicKey, listOf())
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, -7, wrongPublicKey, listOf())
             }.isInstanceOf(UserMistake::class.java).messageContains("public key mismatch")
         }
 
@@ -158,7 +158,7 @@ class CheckSigWebAuthnRegisterTest {
         fun `should throw UserMistake when provided with null public key`() {
             val nullPublicKey = ByteArray(publicKey.size)
             assertFailure {
-                checkRegistration(credentialId, attestationObject, clientDataJSON, -7, nullPublicKey, listOf())
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, -7, nullPublicKey, listOf())
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid public key")
         }
 
@@ -166,7 +166,7 @@ class CheckSigWebAuthnRegisterTest {
         fun `should throw UserMistake when provided with invalid public key`() {
             val invalidPublicKey = ByteArray(32) { it.toByte() }
             assertFailure {
-                checkRegistration(credentialId, attestationObject, clientDataJSON, -7, invalidPublicKey, listOf())
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, -7, invalidPublicKey, listOf())
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid public key")
         }
     }
@@ -186,7 +186,7 @@ class CheckSigWebAuthnRegisterTest {
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration(id, attestationObject, clientDataJSON, -7, publicKey, transports)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, -7, publicKey, transports)
             }
         }
 
@@ -201,7 +201,7 @@ class CheckSigWebAuthnRegisterTest {
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertFailure {
-                checkRegistration(id, attestationObject, clientDataJSON, -8, publicKey, transports)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, -8, publicKey, transports)
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid public key")
         }
 
@@ -218,7 +218,7 @@ class CheckSigWebAuthnRegisterTest {
             val wrongPublicKey = publicKey.clone()
             wrongPublicKey[30] = 17
             assertFailure {
-                checkRegistration(id, attestationObject, clientDataJSON, -7, wrongPublicKey, transports)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, -7, wrongPublicKey, transports)
             }.isInstanceOf(UserMistake::class.java).messageContains("public key mismatch")
         }
 
@@ -235,7 +235,7 @@ class CheckSigWebAuthnRegisterTest {
             val wrongId = id.clone()
             wrongId[10] = 17
             assertFailure {
-                checkRegistration(wrongId, attestationObject, clientDataJSON, -7, publicKey, transports)
+                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, -7, publicKey, transports)
             }.isInstanceOf(UserMistake::class.java).messageContains("credentialId mismatch")
         }
 
@@ -250,7 +250,7 @@ class CheckSigWebAuthnRegisterTest {
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration(id, attestationObject, clientDataJSON, -8, publicKey, transports)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, -8, publicKey, transports)
             }
         }
 
@@ -267,7 +267,7 @@ class CheckSigWebAuthnRegisterTest {
             val wrongPublicKey = publicKey.clone()
             wrongPublicKey[30] = 17
             assertFailure {
-                checkRegistration(id, attestationObject, clientDataJSON, -8, wrongPublicKey, transports)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, -8, wrongPublicKey, transports)
             }.isInstanceOf(UserMistake::class.java).messageContains("public key mismatch")
         }
 
@@ -284,12 +284,12 @@ class CheckSigWebAuthnRegisterTest {
             val wrongId = id.clone()
             wrongId[10] = 17
             assertFailure {
-                checkRegistration(wrongId, attestationObject, clientDataJSON, -8, publicKey, transports)
+                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, -8, publicKey, transports)
             }.isInstanceOf(UserMistake::class.java).messageContains("credentialId mismatch")
         }
     }
 
-    private fun checkRegistration(id: ByteArray, attestationObject: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, transports: List<String>) {
+    private fun checkRegistration(rpId: String, id: ByteArray, attestationObject: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, transports: List<String>) {
         val args = arrayOf(
                 gtv(id),
                 gtv(attestationObject),
@@ -302,7 +302,7 @@ class CheckSigWebAuthnRegisterTest {
         CheckSigWebAuthnRegister(WebAuthnConfig(
                 listOf(Origin("https://example.org"), Origin("https://webauthn.io")),
                 false,
-                listOf("example.org", "webauthn.io"),
+                rpId,
                 userPresence = true,
                 userVerification = false
         ), opData).checkCorrectness()
