@@ -37,6 +37,8 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
         val COLUMN_HEIGHT: Field<Long> = field("height", SQLDataType.BIGINT.nullable(false))
     }
 
+    private fun nextDatumIdFunction(ctx: EContext) = "\"${ctx.chainID}.$FUNCTION_NEXT_DATUM_ID\""
+
     private fun DatabaseAccess.tableSenderDatumId(ctx: EContext) = tableName(ctx, TABLE_NAME_DATUM_ID)
     private fun DatabaseAccess.tableSentIcmfMessage(ctx: EContext) = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE)
 
@@ -76,7 +78,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                         .execute()
 
                 jooq.execute("""
-                    CREATE OR REPLACE FUNCTION "$FUNCTION_NEXT_DATUM_ID"() RETURNS BIGINT AS
+                    CREATE OR REPLACE FUNCTION ${nextDatumIdFunction(ctx)}() RETURNS BIGINT AS
                     'UPDATE "${tableSenderDatumId(ctx).replace("\"", "")}" SET ${COLUMN_DATUM_ID.name} = ${COLUMN_DATUM_ID.name} + 1 RETURNING ${COLUMN_DATUM_ID.name}'
                     LANGUAGE SQL;
                 """.trimIndent())
@@ -106,7 +108,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
 
     override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray): Long = DatabaseAccess.of(ctx).run {
         createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
-                .set(COLUMN_DATUM_ID, DSL.function(FUNCTION_NEXT_DATUM_ID, Long::class.java))
+                .set(COLUMN_DATUM_ID, DSL.function(nextDatumIdFunction(ctx), Long::class.java))
                 .set(COLUMN_TRANSACTION, transactionIid)
                 .set(COLUMN_TOPIC, topic)
                 .set(COLUMN_HEIGHT, height)
