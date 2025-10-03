@@ -86,9 +86,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider, Sna
 
     // We don't have any permanent datums
     override fun getPermanentDatumIdMax(ctx: EContext): Long? = null
-    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {
-        datumHandler(null)
-    }
+    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {}
 
     override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
         receiverRepository.persistDatums(ctx, datumList)
