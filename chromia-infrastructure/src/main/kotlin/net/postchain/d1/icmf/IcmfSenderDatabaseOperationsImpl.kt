@@ -23,10 +23,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
 
         const val PREFIX: String = "sys.x.icmf" // This name should not clash with Rell
 
-        const val TABLE_NAME_DATUM_ID = "${PREFIX}.sender_datum_id"
         const val TABLE_NAME_SENT_ICMF_MESSAGE = "${PREFIX}.sent_icmf_message"
-
-        const val FUNCTION_NEXT_DATUM_ID = "next_icmf_sender_datum_id"
 
         val COLUMN_DATUM_ID = field("datum_id", SQLDataType.BIGINT.nullable(false))
 
@@ -37,9 +34,6 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
         val COLUMN_HEIGHT: Field<Long> = field("height", SQLDataType.BIGINT.nullable(false))
     }
 
-    private fun nextDatumIdFunction(ctx: EContext) = "\"${ctx.chainID}.$FUNCTION_NEXT_DATUM_ID\""
-
-    private fun DatabaseAccess.tableSenderDatumId(ctx: EContext) = tableName(ctx, TABLE_NAME_DATUM_ID)
     private fun DatabaseAccess.tableSentIcmfMessage(ctx: EContext) = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE)
 
     override fun initialize(ctx: EContext) {
@@ -66,26 +60,6 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                     .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
                     .execute()
 
-            jooq.createTableIfNotExists(table(tableSenderDatumId(ctx)))
-                    .column(COLUMN_DATUM_ID)
-                    .execute()
-
-            val hasDatumIdRow = jooq.selectCount()
-                    .from(table(tableSenderDatumId(ctx)))
-                    .fetchOne()!!.value1() > 0
-
-            if (!hasDatumIdRow) {
-                jooq.insertInto(table(tableSenderDatumId(ctx)))
-                        .set(COLUMN_DATUM_ID, -1L)
-                        .execute()
-
-                jooq.execute("""
-                    CREATE OR REPLACE FUNCTION ${nextDatumIdFunction(ctx)}() RETURNS BIGINT AS
-                    'UPDATE "${tableSenderDatumId(ctx).replace("\"", "")}" SET ${COLUMN_DATUM_ID.name} = ${COLUMN_DATUM_ID.name} + 1 RETURNING ${COLUMN_DATUM_ID.name}'
-                    LANGUAGE SQL;
-                """.trimIndent())
-            }
-
             val columnAdded = jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                     .addColumnIfNotExists(COLUMN_DATUM_ID)
                     .execute()
@@ -94,27 +68,18 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                 jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                         .add(constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name))
                         .execute()
-
-                val numRows = jooq.execute("""
-                    UPDATE ${tableSentIcmfMessage(ctx)} 
-                    SET datum_id = subquery.datum_id_seq 
-                    FROM (
-                        SELECT id, (ROW_NUMBER() OVER (ORDER BY id) - 1) AS datum_id_seq 
-                        FROM ${tableSentIcmfMessage(ctx)}
-                    ) AS subquery 
-                    WHERE ${tableSentIcmfMessage(ctx)}.id = subquery.id
-                """)
-
-                jooq.update(table(tableSenderDatumId(ctx)))
-                        .set(COLUMN_DATUM_ID, numRows - 1L)
-                        .execute()
             }
         }
     }
 
     override fun saveSentMessage(ctx: EContext, transactionIid: Long, topic: String, height: Long, body: ByteArray): Long = DatabaseAccess.of(ctx).run {
         createJooq(ctx).insertInto(table(tableSentIcmfMessage(ctx)))
-                .set(COLUMN_DATUM_ID, DSL.function(nextDatumIdFunction(ctx), Long::class.java))
+                .set(COLUMN_DATUM_ID, DSL.coalesce(
+                        DSL.select(DSL.max(COLUMN_DATUM_ID).plus(1))
+                                .from(table(tableSentIcmfMessage(ctx)))
+                                .asField(),
+                        0L
+                ))
                 .set(COLUMN_TRANSACTION, transactionIid)
                 .set(COLUMN_TOPIC, topic)
                 .set(COLUMN_HEIGHT, height)
@@ -157,11 +122,6 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                                     .join(table(tableName(ctx, "transactions")).asTable("t"))
                                     .on(field("t.tx_rid", SQLDataType.BLOB).eq(field("message_data.tx_rid", SQLDataType.BLOB)))
                     )
-                    .execute()
-
-            // Update datum id
-            jooq.update(table(tableSenderDatumId(ctx)))
-                    .set(COLUMN_DATUM_ID, DSL.select(DSL.max(COLUMN_DATUM_ID)).from(table(tableSentIcmfMessage(ctx))))
                     .execute()
         }
     }
@@ -257,8 +217,8 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
     }
 
     override fun getMaxDatumId(ctx: EContext): Long? = DatabaseAccess.of(ctx).run {
-        createJooq(ctx).select(COLUMN_DATUM_ID)
-                .from(tableSenderDatumId(ctx))
+        createJooq(ctx).select(DSL.max(COLUMN_DATUM_ID))
+                .from(tableSentIcmfMessage(ctx))
                 .fetchOne()?.value1()
     }
 
