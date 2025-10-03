@@ -1,14 +1,27 @@
 package net.postchain.crypto.webauthn
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.webauthn4j.converter.AttestationObjectConverter
-import com.webauthn4j.converter.AuthenticatorDataConverter
 import com.webauthn4j.converter.exception.DataConversionException
-import com.webauthn4j.converter.util.ObjectConverter
-import com.webauthn4j.data.attestation.authenticator.AuthenticatorData
+import com.webauthn4j.data.AuthenticationData
+import com.webauthn4j.data.AuthenticationRequest
+import com.webauthn4j.data.AuthenticatorTransport
+import com.webauthn4j.data.PublicKeyCredentialParameters
+import com.webauthn4j.data.PublicKeyCredentialType
+import com.webauthn4j.data.RegistrationParameters
+import com.webauthn4j.data.RegistrationRequest
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.ClientDataType
 import com.webauthn4j.data.client.CollectedClientData
-import com.webauthn4j.data.extension.authenticator.AuthenticationExtensionAuthenticatorOutput
+import com.webauthn4j.server.ServerProperty
+import com.webauthn4j.verifier.OriginVerifierImpl
+import com.webauthn4j.verifier.exception.ConstraintViolationException
+import com.webauthn4j.verifier.exception.InconsistentClientDataTypeException
+import com.webauthn4j.verifier.exception.VerificationException
+import com.webauthn4j.verifier.internal.BEBSFlagsVerifier
+import com.webauthn4j.verifier.internal.BeanAssertUtil
+import com.webauthn4j.verifier.internal.ChallengeVerifier
+import com.webauthn4j.verifier.internal.CrossOriginFlagVerifier
+import com.webauthn4j.verifier.internal.RpIdHashVerifier
+import com.webauthn4j.verifier.internal.UPUVFlagsVerifier
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.TxEContext
@@ -78,39 +91,40 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
         webAuthnRegister(id, attestationObject, clientDataJSON, alg, publicKey, transports)
     }
 
-    private fun webAuthnRegister(id: ByteArray, attestationObject: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, transports: List<String>) {
-        val objectConverter = ObjectConverter()
-
-        val clientData = try {
-            objectConverter.jsonConverter.readValue(clientDataJSON, object : TypeReference<CollectedClientData>() {})
-                    ?: throw UserMistake("invalid clientData")
-        } catch (_: DataConversionException) {
-            throw UserMistake("invalid clientData")
+    private fun webAuthnRegister(id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, transports: List<String>) {
+        val registrationRequest = RegistrationRequest(
+                attestationObjectBytes,
+                clientDataJSON.toByteArray(Charsets.UTF_8),
+                /*clientExtensionsJSON=*/null,
+                transports.toSet(),
+        )
+        val registrationData = try {
+            conf.webAuthnManager.parse(registrationRequest)
+        } catch (e: DataConversionException) {
+            throw UserMistake(e.message ?: "verification failed")
         }
-
-        if (clientData.type != ClientDataType.WEBAUTHN_CREATE) {
-            throw UserMistake("wrong clientData.type")
-        }
-
+        val clientData = registrationData.collectedClientData ?: throw UserMistake("invalid client data")
         verifyChallenge(clientData)
+        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, clientData.challenge)
+        val registrationParameters = RegistrationParameters(
+                serverProperty,
+                listOf(
+                        PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.ES256),
+                        PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.EdDSA)
+                ),
+                conf.userVerification,
+                conf.userPresence,
+        )
+        val verifiedRegistrationData = try {
+            // TODO WebAuthn: Remove this when https://github.com/webauthn4j/webauthn4j/issues/1170 is fixed
+            CrossOriginFlagVerifier.verify(clientData, conf.allowCrossOrigin)
 
-        verifyOrigin(clientData)
-
-        val attObject = try {
-            AttestationObjectConverter(objectConverter).convert(attestationObject)
-                    ?: throw UserMistake("invalid attestationObject")
-        } catch (_: DataConversionException) {
-            throw UserMistake("invalid attestationObject")
+            conf.webAuthnManager.verify(registrationData, registrationParameters)
+        } catch (e: VerificationException) {
+            throw UserMistake(e.message ?: "verification failed")
         }
-        val authData = attObject.authenticatorData
 
-        verifyRpId(authData)
-
-        verifyUser(authData)
-
-        verifyBackup(authData)
-
-        val (coseKey, credentialId) = authData.attestedCredentialData?.let {
+        val (coseKey, credentialId) = verifiedRegistrationData.attestationObject?.authenticatorData?.attestedCredentialData?.let {
             it.coseKey to it.credentialId
         } ?: throw UserMistake("invalid attestationObject")
 
@@ -130,6 +144,10 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
         }
         if (!credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
+        }
+
+        if (verifiedRegistrationData.transports != transports.map { AuthenticatorTransport.create(it) }.toSet()) {
+            throw UserMistake("transports mismatch")
         }
     }
 }
@@ -183,38 +201,96 @@ class CheckSigWebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : We
         webAuthnAuthenticate(authenticatorData, clientDataJSON, alg, publicKey, signature)
     }
 
-    private fun webAuthnAuthenticate(authenticatorData: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
-        val objectConverter = ObjectConverter()
+    private fun webAuthnAuthenticate(authenticatorDataBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
+        val authenticationRequest = AuthenticationRequest(
+                /*credentialId=*/null,
+                /*userHandle=*/null,
+                authenticatorDataBytes,
+                clientDataJSON.toByteArray(Charsets.UTF_8),
+                /*clientExtensionsJSON=*/null,
+                signature,
+        )
 
-        val clientData = try {
-            objectConverter.jsonConverter.readValue(clientDataJSON, object : TypeReference<CollectedClientData>() {})
-                    ?: throw UserMistake("invalid clientData")
-        } catch (_: DataConversionException) {
-            throw UserMistake("invalid clientData")
+        val authenticationData: AuthenticationData = try {
+            conf.webAuthnManager.parse(authenticationRequest)
+        } catch (e: DataConversionException) {
+            throw UserMistake(e.message ?: "verification failed")
+        }
+        val collectedClientData = authenticationData.collectedClientData ?: throw UserMistake("invalid client data")
+        verifyChallenge(collectedClientData)
+        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+
+        try {
+            verifyAuthentication(authenticationData, serverProperty)
+        } catch (e: VerificationException) {
+            throw UserMistake(e.message ?: "verification failed")
         }
 
-        val authData = try {
-            AuthenticatorDataConverter(objectConverter).convert<AuthenticationExtensionAuthenticatorOutput>(authenticatorData)
-        } catch (_: DataConversionException) {
-            throw UserMistake("invalid authenticatorData")
+        verifySignature(authenticatorDataBytes, clientDataJSON, alg, publicKey, signature)
+    }
+
+    // Copied from https://github.com/webauthn4j/webauthn4j/blob/master/webauthn4j-core/src/main/java/com/webauthn4j/verifier/AuthenticationDataVerifier.java#L64
+    // and translated to Kotlin and modified
+    private fun verifyAuthentication(authenticationData: AuthenticationData, serverProperty: ServerProperty) {
+        // BeanAssertUtil.validate(authenticationData)
+
+        val collectedClientData = authenticationData.collectedClientData!!
+        val authenticatorData = authenticationData.authenticatorData!!
+
+        BeanAssertUtil.validate(collectedClientData)
+        BeanAssertUtil.validate(authenticatorData)
+
+        if (authenticatorData.attestedCredentialData != null) {
+            throw ConstraintViolationException("attestedCredentialData must be null on authentication")
         }
 
-        if (clientData.type != ClientDataType.WEBAUTHN_GET) {
-            throw UserMistake("wrong clientData.type")
+        if (collectedClientData.type != ClientDataType.WEBAUTHN_GET) {
+            throw InconsistentClientDataTypeException("ClientData.type must be 'get' on authentication, but it isn't.")
         }
 
-        verifyChallenge(clientData)
+        ChallengeVerifier.verify(collectedClientData, serverProperty)
 
-        verifyOrigin(clientData)
+        object : OriginVerifierImpl() {
+            fun verifyIt(collectedClientData: CollectedClientData, serverProperty: ServerProperty) {
+                verify(collectedClientData, serverProperty)
+            }
+        }.verifyIt(collectedClientData, serverProperty)
 
-        verifyRpId(authData)
+        CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
 
-        verifyUser(authData)
+        RpIdHashVerifier.verify(authenticatorData.rpIdHash, serverProperty)
 
-        verifyBackup(authData)
+        UPUVFlagsVerifier.verify(authenticatorData, conf.userPresence, conf.userVerification)
 
-        val signedData = authenticatorData + sha256Digest(clientDataJSON.toByteArray(Charsets.UTF_8))
+        BEBSFlagsVerifier.verify(authenticatorData)
 
+        // BEFlagVerifier.verify(authenticator, authenticatorData)
+
+        // AssertionSignatureVerifier().verify(authenticationData, authenticator.getAttestedCredentialData().getCOSEKey())
+
+        /*
+        val presentedSignCount: Long = authenticatorData.signCount
+        val storedSignCount = authenticator.getCounter()
+        if (presentedSignCount > 0 || storedSignCount > 0) {
+            if (presentedSignCount > storedSignCount) {
+                //no-op
+            } else {
+                maliciousCounterValueHandler.maliciousCounterValueDetected(authenticationObject)
+            }
+        }
+         */
+    }
+}
+
+abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+    fun verifyChallenge(clientData: CollectedClientData) {
+        if (clientData.challenge.value.isEmpty()) {
+            throw UserMistake("missing clientData.challenge")
+        }
+    }
+
+    fun verifySignature(authenticatorDataBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
+        val signedData = authenticatorDataBytes + sha256Digest(clientDataJSON.toByteArray(Charsets.UTF_8))
         try {
             val signatureChecker = Signature.getInstance(getSignatureAlgorithm(alg))
             signatureChecker.initVerify(parsePublicKey(alg, publicKey))
@@ -228,56 +304,6 @@ class CheckSigWebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : We
             throw UserMistake("unable to verify signature: ${e.message}")
         }
     }
-}
-
-abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
-    fun verifyChallenge(clientData: CollectedClientData) {
-        if (clientData.challenge.value.isEmpty()) {
-            throw UserMistake("missing clientData.challenge")
-        }
-    }
-
-    fun verifyOrigin(clientData: CollectedClientData) {
-        if (conf.allowedOrigins.isNotEmpty()) {
-            if (!conf.allowedOrigins.contains(clientData.origin)) {
-                throw UserMistake("origin does not match")
-            }
-        }
-
-        @Suppress("USELESS_ELVIS") // clientData.crossOrigin can be null even though it's declared with @NotNull
-        if (!conf.allowCrossOrigin && (clientData.crossOrigin ?: false)) {
-            throw UserMistake("crossOrigin is set but now allowed")
-        }
-    }
-
-    fun verifyRpId(authData: AuthenticatorData<*>) {
-        if (conf.relyingPartyIdentifier.isNotEmpty()) { // TODO WebAuthn: require this to be set and always verify it
-            if (!sha256Digest(conf.relyingPartyIdentifier.toByteArray(Charsets.UTF_8)).contentEquals(authData.rpIdHash)) {
-                throw UserMistake("relying party identifier does not match")
-            }
-        }
-    }
-
-    fun verifyBackup(authData: AuthenticatorData<*>) {
-        if (!authData.isFlagBE && authData.isFlagBS) {
-            throw UserMistake("backup state bit must not be set if backup eligibility bit is not set")
-        }
-    }
-
-    fun verifyUser(authData: AuthenticatorData<*>) {
-        if (conf.userPresence) {
-            if (!authData.isFlagUP) {
-                throw UserMistake("user presence is required, but user is not present")
-            }
-        }
-
-        if (conf.userVerification) {
-            if (!authData.isFlagUV) {
-                throw UserMistake("user verification is required, but user is not verified")
-            }
-        }
-    }
-
 
     fun parsePublicKey(alg: Long, publicKey: ByteArray): PublicKey = try {
         val key = X509EncodedKeySpec(publicKey)
