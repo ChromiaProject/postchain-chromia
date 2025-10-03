@@ -49,6 +49,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
             val simTableName = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE).replace("\"", "")
             jooq.createTableIfNotExists(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                     .column(COLUMN_ID)
+                    .column(COLUMN_DATUM_ID)
                     .column(COLUMN_TRANSACTION)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_HEIGHT)
@@ -57,7 +58,8 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                             constraint("${PRIMARY_KEY_PREFIX}$simTableName").primaryKey(COLUMN_ID.name),
                             constraint("${simTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
                                     .foreignKey(COLUMN_TRANSACTION.name)
-                                    .references(tableName(ctx, "transactions").replace("\"", ""), "tx_iid")
+                                    .references(tableName(ctx, "transactions").replace("\"", ""), "tx_iid"),
+                            constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
                     )
                     .execute()
             jooq.createIndexIfNotExists("${INDEX_PREFIX}${simTableName}_0")
@@ -89,6 +91,10 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                     .execute()
 
             if (columnAdded > 0) {
+                jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+                        .add(constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name))
+                        .execute()
+
                 val numRows = jooq.execute("""
                     UPDATE ${tableSentIcmfMessage(ctx)} 
                     SET datum_id = subquery.datum_id_seq 
@@ -265,6 +271,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                     .on(COLUMN_TRANSACTION.eq(DSL.field("tx_iid", Long::class.java)))
                     .where(COLUMN_DATUM_ID.ge(from))
                     .orderBy(COLUMN_DATUM_ID)
+                    .fetchSize(1)
                     .fetchLazy()
             cursor.use { c ->
                 for (rec in c) {
