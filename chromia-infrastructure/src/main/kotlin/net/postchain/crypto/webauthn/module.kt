@@ -1,5 +1,6 @@
 package net.postchain.crypto.webauthn
 
+import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.data.client.Origin
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
@@ -41,18 +42,22 @@ data class WebAuthnConfig(
         val userPresence: Boolean,
 
         val userVerification: Boolean,
+
+        val webAuthnManager: WebAuthnManager,
 )
 
 @Suppress("unused")
 class WebAuthnGTXModuleFactory : GTXModuleFactory {
     override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): WebAuthnGTXModule {
         val configData = config.asDict()["webauthn"]!!.toObject<WebAuthnConfigData>()
+        val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
         return WebAuthnGTXModule(WebAuthnConfig(
                 allowedOrigins = configData.allowedOrigins.map { Origin(it) },
                 allowCrossOrigin = configData.allowCrossOrigin,
                 relyingPartyIdentifier = configData.relyingPartyIdentifier,
                 userPresence = configData.userPresence,
                 userVerification = configData.userVerification,
+                webAuthnManager = webAuthnManager,
         ))
     }
 }
