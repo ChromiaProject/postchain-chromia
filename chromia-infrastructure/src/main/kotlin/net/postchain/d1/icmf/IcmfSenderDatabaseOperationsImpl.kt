@@ -25,7 +25,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
 
         const val TABLE_NAME_SENT_ICMF_MESSAGE = "${PREFIX}.sent_icmf_message"
 
-        val COLUMN_DATUM_ID = field("datum_id", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_DATUM_ID = field("datum_id", SQLDataType.BIGINT.nullable(true)) // Nullability will be removed after initial migration
 
         val COLUMN_ID: Field<Long> = field("id", SQLDataType.BIGINT.nullable(false).identity(true))
         val COLUMN_TRANSACTION: Field<Long> = field("transaction", SQLDataType.BIGINT.nullable(false))
@@ -43,7 +43,6 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
             val simTableName = tableName(ctx, TABLE_NAME_SENT_ICMF_MESSAGE).replace("\"", "")
             jooq.createTableIfNotExists(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                     .column(COLUMN_ID)
-                    .column(COLUMN_DATUM_ID)
                     .column(COLUMN_TRANSACTION)
                     .column(COLUMN_TOPIC)
                     .column(COLUMN_HEIGHT)
@@ -53,20 +52,41 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                             constraint("${simTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
                                     .foreignKey(COLUMN_TRANSACTION.name)
                                     .references(tableName(ctx, "transactions").replace("\"", ""), "tx_iid"),
-                            constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
                     )
                     .execute()
             jooq.createIndexIfNotExists("${INDEX_PREFIX}${simTableName}_0")
                     .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
                     .execute()
 
-            val columnAdded = jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+            jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                     .addColumnIfNotExists(COLUMN_DATUM_ID)
                     .execute()
 
-            if (columnAdded > 0) {
+            // Do migration if necessary
+            val datumIdMigrated = jooq.fetchExists(
+                    jooq.selectFrom("INFORMATION_SCHEMA.COLUMNS")
+                            .where(field("table_name").eq(tableSentIcmfMessage(ctx).replace("\"", "")))
+                            .and(field("column_name").eq(COLUMN_DATUM_ID.name))
+                            .and(field("is_nullable").eq("NO"))
+            )
+            if (!datumIdMigrated) {
+                jooq.execute("""
+                    UPDATE ${tableSentIcmfMessage(ctx)} 
+                    SET datum_id = subquery.datum_id_seq 
+                    FROM (
+                        SELECT id, (ROW_NUMBER() OVER (ORDER BY id) - 1) AS datum_id_seq 
+                        FROM ${tableSentIcmfMessage(ctx)}
+                    ) AS subquery 
+                    WHERE ${tableSentIcmfMessage(ctx)}.id = subquery.id
+                """)
+
                 jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                         .add(constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name))
+                        .execute()
+
+                jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+                        .alterColumn(COLUMN_DATUM_ID)
+                        .setNotNull()
                         .execute()
             }
         }
