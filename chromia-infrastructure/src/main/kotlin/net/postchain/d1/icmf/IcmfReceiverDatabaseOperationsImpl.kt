@@ -283,7 +283,7 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
                                 .from(tableSpilledMessage(ctx))
                                 // Just in case we have some legacy rows after postchain upgrade.
                                 // Snapshot won't be complete, but it should extremely rare and temporary until the old
-                                // spill has been processed.
+                                // spill has been processed. Besides, we don't allow enabling snapshot on existing chains currently.
                                 .where(COLUMN_SPILL_HEIGHT.isNotNull)
                                 .asTable("ranked")
                 )

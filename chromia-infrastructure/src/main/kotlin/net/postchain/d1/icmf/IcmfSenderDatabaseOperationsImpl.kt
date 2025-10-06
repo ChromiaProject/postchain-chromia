@@ -1,5 +1,6 @@
 package net.postchain.d1.icmf
 
+import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
@@ -16,7 +17,7 @@ import org.jooq.impl.SQLDataType
 
 class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
 
-    companion object {
+    companion object : KLogging() {
         const val PRIMARY_KEY_PREFIX: String = "PK_"
         const val FOREIGN_KEY_SUFFIX: String = "_FK"
         const val INDEX_PREFIX: String = "IDX_"
@@ -70,6 +71,8 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                             .and(field("is_nullable").eq("NO"))
             )
             if (!datumIdMigrated) {
+                logger.info("Migrating sent ICMF messages to be snapshot compatible...")
+
                 jooq.execute("""
                     UPDATE ${tableSentIcmfMessage(ctx)} 
                     SET datum_id = subquery.datum_id_seq 
@@ -88,6 +91,8 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                         .alterColumn(COLUMN_DATUM_ID)
                         .setNotNull()
                         .execute()
+
+                logger.info("Migration of sent ICMF messages to be snapshot compatible was completed.")
             }
         }
     }
