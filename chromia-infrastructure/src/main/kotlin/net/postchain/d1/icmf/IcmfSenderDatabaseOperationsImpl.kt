@@ -59,20 +59,20 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                     .on(simTableName, COLUMN_TOPIC.name, COLUMN_HEIGHT.name)
                     .execute()
 
-            jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
-                    .addColumnIfNotExists(COLUMN_DATUM_ID)
-                    .execute()
-
             // Do migration if necessary
-            val datumIdMigrated = jooq.fetchExists(
-                    jooq.selectFrom("INFORMATION_SCHEMA.COLUMNS")
-                            .where(field("table_name").eq(tableSentIcmfMessage(ctx).replace("\"", "")))
-                            .and(field("column_name").eq(COLUMN_DATUM_ID.name))
-                            .and(field("is_nullable").eq("NO"))
-            )
-            if (!datumIdMigrated) {
-                logger.info("Migrating sent ICMF messages to be snapshot compatible...")
+            val datumIdMigrated = jooq.selectCount()
+                    .from("information_schema.columns")
+                    .where(field("table_schema").eq(DSL.function("current_schema", String::class.java)))
+                    .and(field("table_name").eq(tableSentIcmfMessage(ctx).replace("\"", "")))
+                    .and(field("column_name").eq(COLUMN_DATUM_ID.name))
+                    .fetchOne(0, Int::class.java) != 0
 
+            if (!datumIdMigrated) {
+                jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
+                        .addColumn(COLUMN_DATUM_ID)
+                        .execute()
+
+                logger.info("Migrating sent ICMF messages to be snapshot compatible...")
                 jooq.execute("""
                     UPDATE ${tableSentIcmfMessage(ctx)} 
                     SET datum_id = subquery.datum_id_seq 
@@ -82,6 +82,7 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                     ) AS subquery 
                     WHERE ${tableSentIcmfMessage(ctx)}.id = subquery.id
                 """)
+                logger.info("Migration of sent ICMF messages to be snapshot compatible was completed.")
 
                 jooq.alterTable(table(tableSentIcmfMessage(ctx), TABLE_NAME_SENT_ICMF_MESSAGE))
                         .add(constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name))
@@ -92,7 +93,6 @@ class IcmfSenderDatabaseOperationsImpl : IcmfSenderDatabaseOperations {
                         .setNotNull()
                         .execute()
 
-                logger.info("Migration of sent ICMF messages to be snapshot compatible was completed.")
             }
         }
     }
