@@ -12,6 +12,7 @@ import net.postchain.gtx.GTXModuleFactory
 import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.SnapshotAware
 
 data class WebAuthnConfigData(
         @param:Name("allowed-origins")
@@ -44,6 +45,8 @@ data class WebAuthnConfig(
         val userVerification: Boolean,
 
         val webAuthnManager: WebAuthnManager,
+
+        val repository: WebAuthnRepository,
 )
 
 @Suppress("unused")
@@ -58,6 +61,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
                 userPresence = configData.userPresence,
                 userVerification = configData.userVerification,
                 webAuthnManager = webAuthnManager,
+                repository = WebAuthnRepositoryImpl(),
         ))
     }
 }
@@ -65,17 +69,19 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
 class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
         conf,
         mapOf(
-                CheckSigWebAuthnRegister.OP_NAME to ::CheckSigWebAuthnRegister,
-                CheckSigWebAuthnAuthenticate.OP_NAME to ::CheckSigWebAuthnAuthenticate,
+                WebAuthnRegister.OP_NAME to ::WebAuthnRegister,
+                WebAuthnAuthenticate.OP_NAME to ::WebAuthnAuthenticate,
         ),
         mapOf()
-), MetadataProvider {
-    override fun initializeDB(ctx: EContext) {}
-
+), MetadataProvider, SnapshotAware by conf.repository {
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(
-                    CheckSigWebAuthnRegister.OP_NAME to CheckSigWebAuthnRegister.metadata,
-                    CheckSigWebAuthnAuthenticate.OP_NAME to CheckSigWebAuthnAuthenticate.metadata,
+                    WebAuthnRegister.OP_NAME to WebAuthnRegister.metadata,
+                    WebAuthnAuthenticate.OP_NAME to WebAuthnAuthenticate.metadata,
             ),
             queries = mapOf())
+
+    override fun initializeDB(ctx: EContext) {
+        conf.repository.initializeDB(ctx)
+    }
 }

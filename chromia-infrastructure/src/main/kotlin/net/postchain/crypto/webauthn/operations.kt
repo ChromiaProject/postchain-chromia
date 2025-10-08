@@ -24,6 +24,9 @@ import com.webauthn4j.verifier.internal.RpIdHashVerifier
 import com.webauthn4j.verifier.internal.UPUVFlagsVerifier
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
+import net.postchain.common.wrap
+import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
@@ -42,7 +45,7 @@ import java.security.spec.X509EncodedKeySpec
  * WebAuthn register.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#creating_a_key_pair_and_registering_a_user
  */
-class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
+class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_register"
 
@@ -56,42 +59,41 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
                 // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorResponse/clientDataJSON from AuthenticatorAttestationResponse
                 ArgumentMetadata("client_data_json", setOf(GtvType.STRING)),
 
-                // COSE Algorithm Identifier, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKeyAlgorithm
-                ArgumentMetadata("alg", setOf(GtvType.INTEGER)),
-
-                // SubjectPublicKeyInfo, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKey
-                ArgumentMetadata("public_key", setOf(GtvType.BYTEARRAY)),
-
                 // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getTransports
                 ArgumentMetadata("transports", setOf(GtvType.ARRAY)),
         ))
     }
 
-    override fun apply(ctx: TxEContext) = true
+    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
-    override fun checkCorrectnessWhileSyncing() {
-        webAuthnRegister(data.args)
+    override fun checkCorrectnessWhileSyncing(ctxt: EContext) {
+        webAuthnRegister(ctxt, data.args)
     }
 
-    override fun checkCorrectness() {
-        webAuthnRegister(data.args)
+    override fun checkCorrectness(ctxt: EContext) {
+        webAuthnRegister(ctxt, data.args)
     }
 
-    private fun webAuthnRegister(args: Array<out Gtv>) {
-        if (args.size != 6) throw UserMistake("need 6 args, got ${args.size}")
+    private fun webAuthnRegister(ctxt: EContext, args: Array<out Gtv>) {
+        if (args.size != 4) throw UserMistake("need 4 args, got ${args.size}")
         val id = args[0].asByteArray()
         val attestationObject = args[1].asByteArray()
         val clientDataJSON = args[2].asString()
-        val alg = args[3].asInteger()
-        val publicKey = args[4].asByteArray()
-        val transports = args[5].asArray().map { it.asString() }
+        val transports = args[3].asArray().map { it.asString() }
 
-        webAuthnRegister(id, attestationObject, clientDataJSON, alg, publicKey, transports)
+        webAuthnRegister(ctxt, id, attestationObject, clientDataJSON, transports)
     }
 
-    private fun webAuthnRegister(id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, transports: List<String>) {
+    private fun webAuthnRegister(ctxt: EContext, id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>) {
+        if (id.isEmpty()) {
+            throw UserMistake("empty credentialId")
+        }
+        if (id.size > 1023) {
+            throw UserMistake("credentialId too long")
+        }
+
         val registrationRequest = RegistrationRequest(
                 attestationObjectBytes,
                 clientDataJSON.toByteArray(Charsets.UTF_8),
@@ -103,9 +105,11 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
         } catch (e: DataConversionException) {
             throw UserMistake(e.message ?: "verification failed")
         }
-        val clientData = registrationData.collectedClientData ?: throw UserMistake("invalid client data")
-        verifyChallenge(clientData)
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, clientData.challenge)
+        val collectedClientData = registrationData.collectedClientData ?: throw UserMistake("invalid client data")
+
+        verifyChallenge(collectedClientData)
+
+        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
         val registrationParameters = RegistrationParameters(
                 serverProperty,
                 listOf(
@@ -117,31 +121,23 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
         )
         val verifiedRegistrationData = try {
             // TODO WebAuthn: Remove this when https://github.com/webauthn4j/webauthn4j/issues/1170 is fixed
-            CrossOriginFlagVerifier.verify(clientData, conf.allowCrossOrigin)
+            CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
 
             conf.webAuthnManager.verify(registrationData, registrationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
         }
 
-        val (coseKey, credentialId) = verifiedRegistrationData.attestationObject?.authenticatorData?.attestedCredentialData?.let {
+        val attestationObject = verifiedRegistrationData.attestationObject
+                ?: throw UserMistake("invalid attestationObject")
+        val (coseKey, credentialId) = attestationObject.authenticatorData.attestedCredentialData?.let {
             it.coseKey to it.credentialId
-        } ?: throw UserMistake("invalid attestationObject")
+        } ?: throw UserMistake("invalid attestedCredentialData")
+        val alg = coseKey.algorithm?.value ?: throw UserMistake("invalid attestedCredentialData: no alg")
+        val publicKey = coseKey.publicKey?.encoded ?: throw UserMistake("invalid attestedCredentialData: no public key")
 
         parsePublicKey(alg, publicKey) // validate it
-        if (coseKey.algorithm?.value != alg) {
-            throw UserMistake("alg mismatch")
-        }
-        if (!coseKey.publicKey?.encoded.contentEquals(publicKey)) {
-            throw UserMistake("public key mismatch")
-        }
 
-        if (credentialId.isEmpty()) {
-            throw UserMistake("empty credentialId")
-        }
-        if (credentialId.size > 1023) {
-            throw UserMistake("credentialId too long")
-        }
         if (!credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
         }
@@ -149,61 +145,80 @@ class CheckSigWebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAut
         if (verifiedRegistrationData.transports != transports.map { AuthenticatorTransport.create(it) }.toSet()) {
             throw UserMistake("transports mismatch")
         }
+
+        credential = CredentialData(
+                id = id.wrap(),
+                alg = alg,
+                publicKey = publicKey.wrap(),
+                signCount = attestationObject.authenticatorData.signCount,
+                transports = transports.joinToString(separator = ","),
+                uvInitialized = attestationObject.authenticatorData.isFlagUV,
+                backupEligible = attestationObject.authenticatorData.isFlagBE,
+                backupState = attestationObject.authenticatorData.isFlagBS,
+        )
     }
+
+    override fun apply(ctx: TxEContext): Boolean = credential?.let {
+        conf.repository.persistCredential(ctx, data.opIndex, it)
+        true
+    } ?: false
 }
 
 /**
  * WebAuthn authenticate.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticating_a_user
  */
-class CheckSigWebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
+class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
-        const val OP_NAME = "gtxc.checksig_webauthn_authenticate"
+        const val OP_NAME = "gtxc.webauthn_authenticate"
 
         val metadata = OperationMetadata(args = listOf(
+                // https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential/rawId
+                ArgumentMetadata("id", setOf(GtvType.BYTEARRAY)),
+
                 // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAssertionResponse/authenticatorData from AuthenticatorAssertionResponse
                 ArgumentMetadata("authenticator_data", setOf(GtvType.BYTEARRAY)),
 
                 // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorResponse/clientDataJSON from AuthenticatorAssertionResponse
                 ArgumentMetadata("client_data_json", setOf(GtvType.STRING)),
 
-                // COSE Algorithm Identifier, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKeyAlgorithm
-                ArgumentMetadata("alg", setOf(GtvType.INTEGER)),
-
-                // SubjectPublicKeyInfo, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKey
-                ArgumentMetadata("public_key", setOf(GtvType.BYTEARRAY)),
-
                 // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAssertionResponse/signature from AuthenticatorAssertionResponse
                 ArgumentMetadata("signature", setOf(GtvType.BYTEARRAY)),
         ))
     }
 
-    override fun apply(ctx: TxEContext) = true
+    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
-    override fun checkCorrectnessWhileSyncing() {
-        webAuthnAuthenticate(data.args)
+    override fun checkCorrectnessWhileSyncing(ctxt: EContext) {
+        webAuthnAuthenticate(ctxt, data.args)
     }
 
-    override fun checkCorrectness() {
-        webAuthnAuthenticate(data.args)
+    override fun checkCorrectness(ctxt: EContext) {
+        webAuthnAuthenticate(ctxt, data.args)
     }
 
-    private fun webAuthnAuthenticate(args: Array<out Gtv>) {
-        if (args.size != 5) throw UserMistake("need 5 args, got ${args.size}")
-        val authenticatorData = args[0].asByteArray()
-        val clientDataJSON = args[1].asString()
-        val alg = args[2].asInteger()
-        val publicKey = args[3].asByteArray()
-        val signature = args[4].asByteArray()
+    private fun webAuthnAuthenticate(ctxt: EContext, args: Array<out Gtv>) {
+        if (args.size != 4) throw UserMistake("need 4 args, got ${args.size}")
+        val id = args[0].asByteArray()
+        val authenticatorData = args[1].asByteArray()
+        val clientDataJSON = args[2].asString()
+        val signature = args[3].asByteArray()
 
-        webAuthnAuthenticate(authenticatorData, clientDataJSON, alg, publicKey, signature)
+        webAuthnAuthenticate(ctxt, id, authenticatorData, clientDataJSON, signature)
     }
 
-    private fun webAuthnAuthenticate(authenticatorDataBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
+    private fun webAuthnAuthenticate(ctxt: EContext, id: ByteArray, authenticatorDataBytes: ByteArray, clientDataJSON: String, signature: ByteArray) {
+        if (id.isEmpty()) {
+            throw UserMistake("empty credentialId")
+        }
+        if (id.size > 1023) {
+            throw UserMistake("credentialId too long")
+        }
+
         val authenticationRequest = AuthenticationRequest(
-                /*credentialId=*/null,
+                /*credentialId=*/id,
                 /*userHandle=*/null,
                 authenticatorDataBytes,
                 clientDataJSON.toByteArray(Charsets.UTF_8),
@@ -217,8 +232,14 @@ class CheckSigWebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : We
             throw UserMistake(e.message ?: "verification failed")
         }
         val collectedClientData = authenticationData.collectedClientData ?: throw UserMistake("invalid client data")
+        val authenticatorData = authenticationData.authenticatorData ?: throw UserMistake("invalid authenticator data")
+
         verifyChallenge(collectedClientData)
+
         val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+
+        val credential = conf.repository.fetchCredential(ctxt, id)
+                ?: throw UserMistake("credential with id ${id.toHex()} not registered")
 
         try {
             verifyAuthentication(authenticationData, serverProperty)
@@ -226,8 +247,15 @@ class CheckSigWebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : We
             throw UserMistake(e.message ?: "verification failed")
         }
 
-        verifySignature(authenticatorDataBytes, clientDataJSON, alg, publicKey, signature)
+        verifySignature(authenticatorDataBytes, clientDataJSON, credential.alg, credential.publicKey.data, signature)
+
+        this.credential = credential.copy(signCount = authenticatorData.signCount, backupState = authenticatorData.isFlagBS)
     }
+
+    override fun apply(ctx: TxEContext): Boolean = credential?.let {
+        conf.repository.updateCredential(ctx, it.id.data, it.signCount, it.backupState)
+        true
+    } ?: false
 
     // Copied from https://github.com/webauthn4j/webauthn4j/blob/master/webauthn4j-core/src/main/java/com/webauthn4j/verifier/AuthenticationDataVerifier.java#L64
     // and translated to Kotlin and modified

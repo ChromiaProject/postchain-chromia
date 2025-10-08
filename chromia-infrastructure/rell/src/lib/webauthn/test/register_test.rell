@@ -8,10 +8,6 @@ val challenge2 = "the other challenge is there";
 
 val id = "the id".hash();
 val id2 = "other id".hash();
-val alg = -7;
-val alg2 = -8;
-val public_key = "pubkey".hash();
-val public_key2 = "pubkey2".hash();
 
 function test_register_success(){
     rell.test.tx().op(
@@ -19,11 +15,9 @@ function test_register_success(){
             id,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            public_key,
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
     ).run();
 }
 
@@ -33,38 +27,32 @@ function test_register_success_double(){
             id,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            public_key,
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
         webauthn_register(
             id2,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge2),
-            alg2,
-            public_key2,
             ["nfc"],
         ),
-        check_register(challenge2, id2, alg2, public_key2, ["nfc"]),
+        check_register(challenge2, id2, ["nfc"]),
     ).run();
 }
 
 function test_no_register_op() {
     rell.test.tx().op(
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
     ).run_must_fail("no gtxc.webauthn_register operation before me in transaction");
 }
 
 function test_no_register_op_before() {
     rell.test.tx().op(
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
         webauthn_register(
             id,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            public_key,
             ["nfc", "usb"],
         ),
     ).run_must_fail("no gtxc.webauthn_register operation before me in transaction");
@@ -76,11 +64,9 @@ function test_register_wrong_challenge(){
             id,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format("bad challenge"),
-            alg,
-            public_key,
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
     ).run_must_fail("wrong challenge");
 }
 
@@ -90,40 +76,10 @@ function test_register_wrong_id(){
             x"",
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            public_key,
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
     ).run_must_fail("wrong id");
-}
-
-function test_register_wrong_alg(){
-    rell.test.tx().op(
-        webauthn_register(
-            id,
-            x"",
-            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            0,
-            public_key,
-            ["nfc", "usb"],
-        ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
-    ).run_must_fail("wrong alg");
-}
-
-function test_register_wrong_public_key(){
-    rell.test.tx().op(
-        webauthn_register(
-            id,
-            x"",
-            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            x"",
-            ["nfc", "usb"],
-        ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
-    ).run_must_fail("wrong public_key");
 }
 
 function test_register_wrong_transports(){
@@ -132,10 +88,8 @@ function test_register_wrong_transports(){
             id,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            alg,
-            public_key,
             ["foo", "bar"],
         ),
-        check_register(challenge, id, alg, public_key, ["nfc", "usb"]),
+        check_register(challenge, id, ["nfc", "usb"]),
     ).run_must_fail("wrong transports");
 }
