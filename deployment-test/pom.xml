@@ -148,7 +148,7 @@
                 <executions>
                     <execution>
                         <id>unpack-eif</id>
-                        <phase>generate-sources</phase>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -161,7 +161,7 @@
                     </execution>
                     <execution>
                         <id>unpack-contracts</id>
-                        <phase>generate-resources</phase>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -367,7 +367,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>${project.build.directory}/generated-test-sources</source>
+                                <source>${project.build.directory}/generated-sources</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -433,33 +433,20 @@
                         </includes>
                     </abiSourceFiles>
                     <outputDirectory>
-                        <abi>${project.build.directory}/generated-test-resources</abi>
-                        <java>${project.build.directory}/generated-test-sources</java>
+                        <abi>${project.build.directory}/generated-resources</abi>
+                        <java>${project.build.directory}/generated-sources</java>
                     </outputDirectory>
                     <outputFormat>java,abi</outputFormat>
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>generate-test-sources</phase>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
-                <executions>
-                  <execution>
-                    <goals>
-                      <goal>test-jar</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
         </plugins>
     </build>
 
