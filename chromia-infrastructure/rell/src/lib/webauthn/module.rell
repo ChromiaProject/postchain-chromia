@@ -2,12 +2,10 @@
 module;
 
 val register_op_name = "gtxc.webauthn_register";
-val auth_op_name = "gtxc.checksig_webauthn_authenticate";
+val auth_op_name = "gtxc.webauthn_authenticate";
 
 struct credential_record {
     id: byte_array;
-    alg: integer;
-    public_key: byte_array;
     transports: list<text>;
 }
 
@@ -22,27 +20,24 @@ function require_register(expected_challenge: text): credential_record {
 
     return credential_record(
         id = byte_array.from_gtv(register_op.args[0]),
-        alg = integer.from_gtv(register_op.args[3]),
-        public_key = byte_array.from_gtv(register_op.args[4]),
-        transports = list<text>.from_gtv(register_op.args[5]),
+        transports = list<text>.from_gtv(register_op.args[3]),
     );
 }
 
 struct auth_data {
-    alg: integer;
-    public_key: byte_array;
+    id: byte_array;
 }
 
 function require_auth(expected_challenge: text): auth_data {
     require(op_context.exists, "not in an operation");
     val auth_op = extract_op(auth_op_name);
 
-    val client_data_json = text.from_gtv(auth_op.args[1]);
+    val client_data_json = text.from_gtv(auth_op.args[2]);
     val client_data = map<text, gtv>.from_gtv_pretty(gtv.from_json(client_data_json));
     val challenge = text.from_gtv(client_data["challenge"]);
     require(challenge == expected_challenge, "wrong challenge");
 
-    return auth_data(integer.from_gtv(auth_op.args[2]), byte_array.from_gtv(auth_op.args[3]));
+    return auth_data(id = byte_array.from_gtv(auth_op.args[0]));
 }
 
 function extract_op(name): gtx_operation {

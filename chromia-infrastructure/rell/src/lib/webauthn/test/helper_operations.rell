@@ -7,30 +7,24 @@ operation webauthn_register(
     id: byte_array,
     attestation_object: byte_array,
     client_data_json: text,
-    alg: integer,
-    public_key: byte_array,
     transports: list<text>,
 ) {}
 
-@mount("gtxc.checksig_webauthn_authenticate")
-operation checksig_webauthn_authenticate(
+@mount("gtxc.webauthn_authenticate")
+operation webauthn_authenticate(
+    id: byte_array,
     authenticator_data: byte_array,
     client_data_json: text,
-    alg: integer,
-    public_key: byte_array,
     signature: byte_array,
 ) {}
 
-operation check_register(expected_challenge: text, expected_id: byte_array, expected_alg: integer, expected_public_key: byte_array, expected_transports: list<text>) {
+operation check_register(expected_challenge: text, expected_id: byte_array, expected_transports: list<text>) {
     val credential_record = webauthn.require_register(expected_challenge);
     require(credential_record.id == expected_id, "wrong id");
-    require(credential_record.alg == expected_alg, "wrong alg");
-    require(credential_record.public_key == expected_public_key, "wrong public_key");
     require(credential_record.transports == expected_transports, "wrong transports");
 }
 
-operation check_auth(expected_challenge: text, expected_alg: integer, expected_public_key: byte_array) {
+operation check_auth(expected_challenge: text, expected_id: byte_array) {
     val auth_data = webauthn.require_auth(expected_challenge);
-    require(auth_data.alg == expected_alg, "wrong alg");
-    require(auth_data.public_key == expected_public_key, "wrong public_key");
+    require(auth_data.id == expected_id, "wrong id");
 }

@@ -11,6 +11,7 @@ import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
+import net.postchain.core.MockEContext
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
@@ -184,7 +185,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
         verify(chromiaQueryProvider).getClusterAnchoringQuery()
     }
@@ -211,7 +212,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
         verify(chromiaQueryProvider, never()).getClusterAnchoringQuery()
     }
@@ -238,7 +239,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -273,7 +274,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -317,7 +318,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -368,7 +369,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -403,7 +404,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -450,7 +451,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -497,7 +498,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -549,7 +550,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -601,7 +602,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -648,7 +649,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -667,7 +668,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -686,7 +687,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<GTXOpMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -731,7 +732,7 @@ class IccfValidationTest {
                 listOf(signature)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         val exception = assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(MockEContext(1))
         }
         assertThat(exception.message).contains("contains no normal operation")
     }
@@ -766,7 +767,7 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
     }
 
@@ -810,11 +811,11 @@ class IccfValidationTest {
         val iccfGTXOperation = IccfGTXOperation(iccfContext, iccfExtOpData)
 
         assertThrows<UserMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
 
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectnessWhileSyncing()
+            iccfGTXOperation.checkCorrectnessWhileSyncing(MockEContext(1))
         }
     }
 
@@ -849,13 +850,13 @@ class IccfValidationTest {
 
         // Reject duplicate while building
         val gtxOpMistake = assertThrows<GTXOpMistake> {
-            iccfGTXOperation.checkCorrectness()
+            iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
         assertThat(gtxOpMistake.message).contains("Duplicate iccf_proof operation")
 
         // Ignore duplicate while syncing
         assertDoesNotThrow {
-            iccfGTXOperation.checkCorrectnessWhileSyncing()
+            iccfGTXOperation.checkCorrectnessWhileSyncing(MockEContext(1))
         }
     }
 }
