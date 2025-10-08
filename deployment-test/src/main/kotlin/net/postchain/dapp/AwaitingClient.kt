@@ -1,11 +1,11 @@
 package net.postchain.dapp
 
+import junit.framework.TestCase.fail
 import net.postchain.client.core.PostchainClient
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
-import org.junit.jupiter.api.Assertions.fail
 
 class AwaitingClient(val client: PostchainClient): PostchainClient by client {
     override fun query(name: String, args: Gtv): Gtv {
@@ -18,7 +18,7 @@ internal fun <T> awaitQueryResult(atMost: Duration = Duration.TWO_MINUTES, asser
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         try {
             result = assertion()
-        } catch (ignore: Exception) {
+        } catch (_: Exception) {
             fail() // Will make sure we try again
         }
     }

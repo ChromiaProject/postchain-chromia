@@ -11,6 +11,7 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Capability
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
+import junit.framework.TestCase.assertEquals
 import mu.KotlinLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -46,6 +47,7 @@ import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
+import net.postchain.dapp.awaitQueryResult
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -53,12 +55,12 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.DiskHelper
-import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getMasterContainerUserAndGroups
 import net.postchain.images.directory1.getResolvedDockerHost
@@ -71,7 +73,6 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
@@ -106,7 +107,7 @@ open class ManagedModeBase(private val logDir: String) {
     protected val systemCluster = "system"
     protected val systemContainer = "system"
 
-    var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
+    open var chain0Config: String = this::class.java.getResource("/directory1deployment/manager.xml")!!.readText()
     lateinit var chain0Brid: BlockchainRid
     lateinit var ecBrid: BlockchainRid
     private var nodeDbs = mutableMapOf<PostchainContainer, ChainDatabaseCommunicator>()
@@ -453,9 +454,15 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun deployDapp(dappName: String, containerName: String, icmfReceiver: ByteArray? = null, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
+        val configGtv = compileDapp(dappName, icmfReceiver = icmfReceiver)
+        val config = GtvMLEncoder.encodeXMLGtv(configGtv)
+        deployDapp(dappName, containerName, config, assertSigners)
+    }
+
+    protected fun deployDapp(dappName: String, containerName: String, config: String, assertSigners: Array<PostchainContainer> = arrayOf(node1, node2, node3)) {
         testLogger.info("Deploy new dapp $dappName")
 
-        val configGtv = compileDapp(dappName, icmfReceiver = icmfReceiver)
+        val configGtv = GtvMLParser.parseGtvML(config)
 
         val txRid = node1.c0.transactionBuilder().addNop()
                 .proposeBlockchainOperation(node1.providerPubkey, GtvEncoder.encodeGtv(configGtv), dappName, containerName, "")
