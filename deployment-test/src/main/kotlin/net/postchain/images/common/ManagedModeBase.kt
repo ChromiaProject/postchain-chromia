@@ -11,7 +11,6 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Capability
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannel
-import junit.framework.TestCase.assertEquals
 import mu.KotlinLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.chain0.cm_api.cmGetClusterInfo
@@ -73,6 +72,7 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
