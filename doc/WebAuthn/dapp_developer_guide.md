@@ -32,8 +32,22 @@ libs:
 
 ### Client
 
-The client calls `navigator.credentials.create({publicKey: {...}})`, see 
-https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions,
+The client calls 
+```javascript
+navigator.credentials.create({publicKey: {
+    challenge: uniqueChallenge, // this needs to be unique
+    rp: {
+      name: "My DApp", // user readable name of the DApp 
+      id: "my-dapp.somewhere.com", // this needs to match "relying-party-identifier" in blockchain config
+    },
+    pubKeyCredParams: [
+      { alg: -7, type: 'public-key' }, // ES256
+      { alg: -8, type: 'public-key' }, // EdDSA
+    ],
+    // other properties here    
+}});
+```
+see https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions,
 and then includes this operation before the registration operation in the transaction:
 ```
 operation gtxc.webauthn_register(
@@ -56,17 +70,23 @@ It will store the public key and other information in a credential record.
 
 ### Rell
 
-Call the function `webauthn.require_register(expected_challenge: text)` in the register operation,
-and pass in the [challenge](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions#challenge) that the client used. Use the returned `credential_record`'s `id` field to register 
-the credential.
+Call the function `webauthn.require_register()` in the register operation. Use the returned `credential_record`'s
+`id` field to register the credential.
 
 
 ## Authentication
 
 ### Client
 
-The client calls `navigator.credentials.get({publicKey: {...}})`, see 
-https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions,
+The client calls 
+```javascript
+navigator.credentials.get({publicKey: {
+    challenge: uniqueChallenge, // this needs to be unique
+    rpId: "my-dapp.somewhere.com", // this needs to match "relying-party-identifier" in blockchain config
+    // other properties here    
+}});
+```
+see https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions,
 and then includes this operation before the authenticated operation in the transaction:
 ```
 operation gtxc.webauthn_authenticate(
@@ -89,8 +109,8 @@ will look up the credential record stored by previous `gtxc.webauthn_register` o
 
 ### Rell
 
-Call the function `webauthn.require_auth(expected_challenge: text)` in operations that should be authenticated,
-and pass in the [challenge](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions#challenge) that the client used. Use the returned `auth_data` to identify the authenticated user.
+Call the function `webauthn.require_auth()` in operations that should be authenticated. Use the returned `auth_data`'s
+`id` field to identify the authenticated user.
 
 
 ## DApp example repository
