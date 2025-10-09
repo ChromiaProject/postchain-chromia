@@ -18,13 +18,13 @@ operation webauthn_authenticate(
     signature: byte_array,
 ) {}
 
-operation check_register(expected_challenge: text, expected_id: byte_array, expected_transports: list<text>) {
-    val credential_record = webauthn.require_register(expected_challenge);
+operation check_register(expected_id: byte_array, expected_transports: list<text>) {
+    val credential_record = webauthn.require_register();
     require(credential_record.id == expected_id, "wrong id");
     require(credential_record.transports == expected_transports, "wrong transports");
 }
 
-operation check_auth(expected_challenge: text, expected_id: byte_array) {
-    val auth_data = webauthn.require_auth(expected_challenge);
+operation check_auth(expected_id: byte_array) {
+    val auth_data = webauthn.require_auth();
     require(auth_data.id == expected_id, "wrong id");
 }

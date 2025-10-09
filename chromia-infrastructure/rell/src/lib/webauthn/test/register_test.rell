@@ -17,7 +17,7 @@ function test_register_success(){
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
     ).run();
 }
 
@@ -29,26 +29,26 @@ function test_register_success_double(){
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
         webauthn_register(
             id2,
             x"",
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge2),
             ["nfc"],
         ),
-        check_register(challenge2, id2, ["nfc"]),
+        check_register(id2, ["nfc"]),
     ).run();
 }
 
 function test_no_register_op() {
     rell.test.tx().op(
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
     ).run_must_fail("no gtxc.webauthn_register operation before me in transaction");
 }
 
 function test_no_register_op_before() {
     rell.test.tx().op(
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
         webauthn_register(
             id,
             x"",
@@ -58,16 +58,25 @@ function test_no_register_op_before() {
     ).run_must_fail("no gtxc.webauthn_register operation before me in transaction");
 }
 
-function test_register_wrong_challenge(){
+function test_register_duplicate_challenge(){
     rell.test.tx().op(
         webauthn_register(
             id,
             x"",
-            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format("bad challenge"),
+            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, ["nfc", "usb"]),
-    ).run_must_fail("wrong challenge");
+        check_register(id, ["nfc", "usb"]),
+    ).nop().run();
+    rell.test.tx().op(
+        webauthn_register(
+            id,
+            x"",
+            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
+            ["nfc", "usb"],
+        ),
+        check_register(id, ["nfc", "usb"]),
+    ).nop().run_must_fail("challenge is not unique");
 }
 
 function test_register_wrong_id(){
@@ -78,7 +87,7 @@ function test_register_wrong_id(){
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
             ["nfc", "usb"],
         ),
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
     ).run_must_fail("wrong id");
 }
 
@@ -90,6 +99,6 @@ function test_register_wrong_transports(){
             "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
             ["foo", "bar"],
         ),
-        check_register(challenge, id, ["nfc", "usb"]),
+        check_register(id, ["nfc", "usb"]),
     ).run_must_fail("wrong transports");
 }

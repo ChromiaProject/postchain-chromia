@@ -17,7 +17,7 @@ function test_auth_success(){
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
             x"",
         ),
-        check_auth(challenge, id),
+        check_auth(id),
     ).run();
 }
 
@@ -29,26 +29,26 @@ function test_auth_success_double(){
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
             x"",
         ),
-        check_auth(challenge, id),
+        check_auth(id),
         webauthn_authenticate(
             id2,
             x"",
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge2),
             x"",
         ),
-        check_auth(challenge2, id2),
+        check_auth(id2),
     ).run();
 }
 
 function test_no_auth_op() {
     rell.test.tx().op(
-        check_auth(challenge, id),
+        check_auth(id),
     ).run_must_fail("no gtxc.webauthn_authenticate operation before me in transaction");
 }
 
 function test_no_auth_op_before() {
     rell.test.tx().op(
-        check_auth(challenge, id),
+        check_auth(id),
         webauthn_authenticate(
             id,
             x"",
@@ -58,16 +58,25 @@ function test_no_auth_op_before() {
     ).run_must_fail("no gtxc.webauthn_authenticate operation before me in transaction");
 }
 
-function test_auth_wrong_challenge(){
+function test_auth_duplicate_challenge(){
     rell.test.tx().op(
         webauthn_authenticate(
             id,
             x"",
-            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format("bad challenge"),
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
             x"",
         ),
-        check_auth(challenge, id),
-    ).run_must_fail("wrong challenge");
+        check_auth(id),
+    ).nop().run();
+    rell.test.tx().op(
+        webauthn_authenticate(
+            id,
+            x"",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
+            x"",
+        ),
+        check_auth(id),
+    ).nop().run_must_fail("challenge is not unique");
 }
 
 function test_auth_wrong_id(){
@@ -78,6 +87,6 @@ function test_auth_wrong_id(){
             "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
             x"",
         ),
-        check_auth(challenge, id),
+        check_auth(id),
     ).run_must_fail("wrong id");
 }
