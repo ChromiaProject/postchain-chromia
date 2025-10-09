@@ -34,7 +34,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         val COLUMN_DELETED = field("deleted", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_TRANSACTION = field("transaction", SQLDataType.BIGINT.nullable(false))
         val COLUMN_OP_INDEX = field("op_index", SQLDataType.INTEGER.nullable(false))
-        val COLUMN_ALG = field("alg", SQLDataType.BIGINT.nullable(false))
         val COLUMN_PUBLIC_KEY = field("public_key", SQLDataType.BLOB.nullable(false))
         val COLUMN_SIGN_COUNT = field("sign_count", SQLDataType.BIGINT.nullable(false))
         val COLUMN_TRANSPORTS = field("transports", SQLDataType.CLOB.nullable(false))
@@ -60,7 +59,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .column(COLUMN_DELETED)
                     .column(COLUMN_TRANSACTION)
                     .column(COLUMN_OP_INDEX)
-                    .column(COLUMN_ALG)
                     .column(COLUMN_PUBLIC_KEY)
                     .column(COLUMN_SIGN_COUNT)
                     .column(COLUMN_TRANSPORTS)
@@ -99,7 +97,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .set(COLUMN_DELETED, false)
                     .set(COLUMN_TRANSACTION, ctx.txIID)
                     .set(COLUMN_OP_INDEX, opIndex)
-                    .set(COLUMN_ALG, data.alg)
                     .set(COLUMN_PUBLIC_KEY, data.publicKey.data)
                     .set(COLUMN_SIGN_COUNT, data.signCount)
                     .set(COLUMN_TRANSPORTS, data.transports)
@@ -121,9 +118,10 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         )
     }
 
-    override fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, backupState: Boolean): Unit = DatabaseAccess.of(ctx).run {
+    override fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, uvInitialized: Boolean, backupState: Boolean): Unit = DatabaseAccess.of(ctx).run {
         dslContext(ctx).update(table(tableCredential(ctx)))
                 .set(COLUMN_SIGN_COUNT, signCount)
+                .set(COLUMN_UV_INITIALIZED, uvInitialized)
                 .set(COLUMN_BACKUP_STATE, backupState)
                 .where(COLUMN_ID.eq(id))
                 .execute()
@@ -175,7 +173,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                             credential.deleted,
                             credential.txRid?.data,
                             credential.opIndex,
-                            credential.alg,
                             credential.publicKey.data,
                             credential.signCount,
                             credential.transports,
@@ -193,7 +190,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                 COLUMN_DELETED.name,
                                 COLUMN_TX_RID.name,
                                 COLUMN_OP_INDEX.name,
-                                COLUMN_ALG.name,
                                 COLUMN_PUBLIC_KEY.name,
                                 COLUMN_SIGN_COUNT.name,
                                 COLUMN_TRANSPORTS.name,
@@ -210,7 +206,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                 COLUMN_DELETED,
                                 COLUMN_TRANSACTION,
                                 COLUMN_OP_INDEX,
-                                COLUMN_ALG,
                                 COLUMN_PUBLIC_KEY,
                                 COLUMN_SIGN_COUNT,
                                 COLUMN_TRANSPORTS,
@@ -224,7 +219,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_DELETED.name}", SQLDataType.BOOLEAN),
                                         COLUMN_TX_IID,
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_OP_INDEX.name}", SQLDataType.INTEGER),
-                                        field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_ALG.name}", SQLDataType.BIGINT),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_PUBLIC_KEY.name}", SQLDataType.BLOB),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_SIGN_COUNT.name}", SQLDataType.BIGINT),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_TRANSPORTS.name}", SQLDataType.CLOB),
@@ -248,7 +242,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                 COLUMN_DELETED,
                 COLUMN_TX_RID,
                 COLUMN_OP_INDEX,
-                COLUMN_ALG,
                 COLUMN_PUBLIC_KEY,
                 COLUMN_SIGN_COUNT,
                 COLUMN_TRANSPORTS,
@@ -267,7 +260,6 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                 deleted = it[COLUMN_DELETED],
                 txRid = it[COLUMN_TX_RID].wrap(),
                 opIndex = it[COLUMN_OP_INDEX].toLong(),
-                alg = it[COLUMN_ALG],
                 publicKey = it[COLUMN_PUBLIC_KEY].wrap(),
                 signCount = it[COLUMN_SIGN_COUNT],
                 transports = it[COLUMN_TRANSPORTS],

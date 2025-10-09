@@ -2,50 +2,39 @@ package net.postchain.crypto.webauthn
 
 import com.webauthn4j.converter.exception.DataConversionException
 import com.webauthn4j.data.AuthenticationData
+import com.webauthn4j.data.AuthenticationParameters
 import com.webauthn4j.data.AuthenticationRequest
 import com.webauthn4j.data.AuthenticatorTransport
 import com.webauthn4j.data.PublicKeyCredentialParameters
 import com.webauthn4j.data.PublicKeyCredentialType
 import com.webauthn4j.data.RegistrationParameters
 import com.webauthn4j.data.RegistrationRequest
+import com.webauthn4j.data.attestation.authenticator.AAGUID
+import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
+import com.webauthn4j.data.attestation.authenticator.COSEKey
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
-import com.webauthn4j.data.client.ClientDataType
 import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.server.ServerProperty
-import com.webauthn4j.verifier.OriginVerifierImpl
-import com.webauthn4j.verifier.exception.ConstraintViolationException
-import com.webauthn4j.verifier.exception.InconsistentClientDataTypeException
 import com.webauthn4j.verifier.exception.VerificationException
-import com.webauthn4j.verifier.internal.BEBSFlagsVerifier
-import com.webauthn4j.verifier.internal.BeanAssertUtil
-import com.webauthn4j.verifier.internal.ChallengeVerifier
 import com.webauthn4j.verifier.internal.CrossOriginFlagVerifier
-import com.webauthn4j.verifier.internal.RpIdHashVerifier
-import com.webauthn4j.verifier.internal.UPUVFlagsVerifier
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.OperationMetadata
 import net.postchain.gtx.data.ExtOpData
-import java.security.GeneralSecurityException
-import java.security.KeyFactory
-import java.security.PublicKey
-import java.security.Signature
-import java.security.spec.X509EncodedKeySpec
 
 /**
  * WebAuthn register.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#creating_a_key_pair_and_registering_a_user
  */
-class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
+class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_register"
 
@@ -86,12 +75,10 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
         webAuthnRegister(ctxt, id, attestationObject, clientDataJSON, transports)
     }
 
-    private fun webAuthnRegister(ctxt: EContext, id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>) {
+    private fun webAuthnRegister(@Suppress("unused") ctxt: EContext, id: ByteArray,
+                                 attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>) {
         if (id.isEmpty()) {
             throw UserMistake("empty credentialId")
-        }
-        if (id.size > 1023) {
-            throw UserMistake("credentialId too long")
         }
 
         val registrationRequest = RegistrationRequest(
@@ -133,22 +120,14 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
         val (coseKey, credentialId) = attestationObject.authenticatorData.attestedCredentialData?.let {
             it.coseKey to it.credentialId
         } ?: throw UserMistake("invalid attestedCredentialData")
-        val alg = coseKey.algorithm?.value ?: throw UserMistake("invalid attestedCredentialData: no alg")
-        val publicKey = coseKey.publicKey?.encoded ?: throw UserMistake("invalid attestedCredentialData: no public key")
-
-        parsePublicKey(alg, publicKey) // validate it
+        val publicKey = conf.objectConverter.cborConverter.writeValueAsBytes(coseKey)
 
         if (!credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
         }
 
-        if (verifiedRegistrationData.transports != transports.map { AuthenticatorTransport.create(it) }.toSet()) {
-            throw UserMistake("transports mismatch")
-        }
-
         credential = CredentialData(
                 id = id.wrap(),
-                alg = alg,
                 publicKey = publicKey.wrap(),
                 signCount = attestationObject.authenticatorData.signCount,
                 transports = transports.joinToString(separator = ","),
@@ -168,7 +147,7 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
  * WebAuthn authenticate.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticating_a_user
  */
-class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
+class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_authenticate"
 
@@ -232,7 +211,6 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
             throw UserMistake(e.message ?: "verification failed")
         }
         val collectedClientData = authenticationData.collectedClientData ?: throw UserMistake("invalid client data")
-        val authenticatorData = authenticationData.authenticatorData ?: throw UserMistake("invalid authenticator data")
 
         verifyChallenge(collectedClientData)
 
@@ -241,115 +219,52 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
         val credential = conf.repository.fetchCredential(ctxt, id)
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
 
+        val coseKey = try {
+            conf.objectConverter.cborConverter.readValue(credential.publicKey.data, COSEKey::class.java)!!
+        } catch (e: DataConversionException) {
+            throw UserMistake(e.message ?: "verification failed")
+        }
+
+        val attestedCredentialData = AttestedCredentialData(AAGUID.NULL, id, coseKey)
+
+        val credentialRecord = CustomCredentialRecord(
+                uvInitialized = credential.uvInitialized,
+                backupEligible = credential.backupEligible,
+                backupState = credential.backupState,
+                credential.signCount,
+                attestedCredentialData,
+                credential.transports.split(",").map { AuthenticatorTransport.create(it) }.toSet(),
+        )
+
+        val authenticationParameters = AuthenticationParameters(
+                serverProperty,
+                credentialRecord,
+                /*allowCredentials=*/null,
+                conf.userVerification,
+                conf.userPresence
+        )
+
         try {
-            verifyAuthentication(authenticationData, serverProperty)
+            conf.webAuthnManager.verify(authenticationData, authenticationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
         }
 
-        verifySignature(authenticatorDataBytes, clientDataJSON, credential.alg, credential.publicKey.data, signature)
-
-        this.credential = credential.copy(signCount = authenticatorData.signCount, backupState = authenticatorData.isFlagBS)
+        this.credential = credential.copy(
+                signCount = credentialRecord.counter,
+                uvInitialized = credentialRecord.isUvInitialized!!,
+                backupState = credentialRecord.isBackedUp!!
+        )
     }
 
     override fun apply(ctx: TxEContext): Boolean = credential?.let {
-        conf.repository.updateCredential(ctx, it.id.data, it.signCount, it.backupState)
+        conf.repository.updateCredential(ctx, it.id.data, it.signCount, uvInitialized = it.uvInitialized, backupState = it.backupState)
         true
     } ?: false
-
-    // Copied from https://github.com/webauthn4j/webauthn4j/blob/master/webauthn4j-core/src/main/java/com/webauthn4j/verifier/AuthenticationDataVerifier.java#L64
-    // and translated to Kotlin and modified
-    private fun verifyAuthentication(authenticationData: AuthenticationData, serverProperty: ServerProperty) {
-        // BeanAssertUtil.validate(authenticationData)
-
-        val collectedClientData = authenticationData.collectedClientData!!
-        val authenticatorData = authenticationData.authenticatorData!!
-
-        BeanAssertUtil.validate(collectedClientData)
-        BeanAssertUtil.validate(authenticatorData)
-
-        if (authenticatorData.attestedCredentialData != null) {
-            throw ConstraintViolationException("attestedCredentialData must be null on authentication")
-        }
-
-        if (collectedClientData.type != ClientDataType.WEBAUTHN_GET) {
-            throw InconsistentClientDataTypeException("ClientData.type must be 'get' on authentication, but it isn't.")
-        }
-
-        ChallengeVerifier.verify(collectedClientData, serverProperty)
-
-        object : OriginVerifierImpl() {
-            fun verifyIt(collectedClientData: CollectedClientData, serverProperty: ServerProperty) {
-                verify(collectedClientData, serverProperty)
-            }
-        }.verifyIt(collectedClientData, serverProperty)
-
-        CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
-
-        RpIdHashVerifier.verify(authenticatorData.rpIdHash, serverProperty)
-
-        UPUVFlagsVerifier.verify(authenticatorData, conf.userPresence, conf.userVerification)
-
-        BEBSFlagsVerifier.verify(authenticatorData)
-
-        // BEFlagVerifier.verify(authenticator, authenticatorData)
-
-        // AssertionSignatureVerifier().verify(authenticationData, authenticator.getAttestedCredentialData().getCOSEKey())
-
-        /*
-        val presentedSignCount: Long = authenticatorData.signCount
-        val storedSignCount = authenticator.getCounter()
-        if (presentedSignCount > 0 || storedSignCount > 0) {
-            if (presentedSignCount > storedSignCount) {
-                //no-op
-            } else {
-                maliciousCounterValueHandler.maliciousCounterValueDetected(authenticationObject)
-            }
-        }
-         */
-    }
 }
 
-abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
-    fun verifyChallenge(clientData: CollectedClientData) {
-        if (clientData.challenge.value.isEmpty()) {
-            throw UserMistake("missing clientData.challenge")
-        }
-    }
-
-    fun verifySignature(authenticatorDataBytes: ByteArray, clientDataJSON: String, alg: Long, publicKey: ByteArray, signature: ByteArray) {
-        val signedData = authenticatorDataBytes + sha256Digest(clientDataJSON.toByteArray(Charsets.UTF_8))
-        try {
-            val signatureChecker = Signature.getInstance(getSignatureAlgorithm(alg))
-            signatureChecker.initVerify(parsePublicKey(alg, publicKey))
-            signatureChecker.update(signedData)
-            if (!signatureChecker.verify(signature)) {
-                throw UserMistake("signature verification failed")
-            }
-        } catch (e: GeneralSecurityException) {
-            throw UserMistake("unable to verify signature: ${e.message}")
-        } catch (e: IllegalArgumentException) {
-            throw UserMistake("unable to verify signature: ${e.message}")
-        }
-    }
-
-    fun parsePublicKey(alg: Long, publicKey: ByteArray): PublicKey = try {
-        val key = X509EncodedKeySpec(publicKey)
-        val kFact = KeyFactory.getInstance(getKeyAlgorithm(alg))
-        kFact.generatePublic(key)
-    } catch (e: GeneralSecurityException) {
-        throw UserMistake("invalid public key: ${e.message}")
-    }
-
-    fun getKeyAlgorithm(coseAlgorithm: Long): String = when (coseAlgorithm) {
-        -7L -> "EC"
-        -8L -> "EdDSA"
-        else -> throw UserMistake("unsupported algorithm: $coseAlgorithm")
-    }
-
-    fun getSignatureAlgorithm(coseAlgorithm: Long): String = when (coseAlgorithm) {
-        -7L -> "SHA256withECDSA"
-        -8L -> "ed25519"
-        else -> throw UserMistake("unsupported algorithm: $coseAlgorithm")
+fun verifyChallenge(clientData: CollectedClientData) {
+    if (clientData.challenge.value.isEmpty()) {
+        throw UserMistake("missing clientData.challenge")
     }
 }

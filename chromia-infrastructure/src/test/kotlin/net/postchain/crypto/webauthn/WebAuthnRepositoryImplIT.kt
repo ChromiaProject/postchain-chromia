@@ -2,6 +2,7 @@ package net.postchain.crypto.webauthn
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -56,7 +57,6 @@ class WebAuthnRepositoryImplIT {
                 val jooq = repository.dslContext(ctx)
 
                 val credentialId = "test_credential_id".toByteArray()
-                val alg = -7L
                 val publicKey = "test_public_key".toByteArray()
                 val transports = "usb,nfc"
 
@@ -67,7 +67,6 @@ class WebAuthnRepositoryImplIT {
                 // Insert credential
                 val credential = CredentialData(
                         id = credentialId.wrap(),
-                        alg = alg,
                         publicKey = publicKey.wrap(),
                         signCount = 2L,
                         transports = transports,
@@ -97,17 +96,19 @@ class WebAuthnRepositoryImplIT {
                 ))
 
                 reset(snapshotContext)
-                repository.updateCredential(txCtx, credentialId, 5, true)
+                repository.updateCredential(txCtx, credentialId, 5, uvInitialized = false, backupState = true)
                 verify(snapshotContext).emitDatum(txCtx, 0, credential.copy(
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
                         signCount = 5,
+                        uvInitialized = false,
                         backupState = true,
                 ).toGtv(), false)
 
                 val fetchedUpdatedCredential = repository.fetchCredential(ctx, credentialId)
                 requireNotNull(fetchedUpdatedCredential)
                 assertThat(fetchedUpdatedCredential.signCount).isEqualTo(5L)
+                assertThat(fetchedUpdatedCredential.uvInitialized).isFalse()
                 assertThat(fetchedUpdatedCredential.backupState).isTrue()
 
                 reset(snapshotContext)
@@ -117,6 +118,7 @@ class WebAuthnRepositoryImplIT {
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
                         signCount = 5,
+                        uvInitialized = false,
                         backupState = true,
                 ).toGtv(), false)
 
@@ -150,7 +152,6 @@ class WebAuthnRepositoryImplIT {
                 val jooq = repository.dslContext(ctx)
 
                 val credentialId = "test_credential_id".toByteArray()
-                val alg = -7L
                 val publicKey = "test_public_key".toByteArray()
                 val transports = "usb,nfc"
 
@@ -164,7 +165,6 @@ class WebAuthnRepositoryImplIT {
                         deleted = false,
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
-                        alg = alg,
                         publicKey = publicKey.wrap(),
                         signCount = 2L,
                         transports = transports,
@@ -213,8 +213,6 @@ class WebAuthnRepositoryImplIT {
 
                 val credentialId1 = "credential_1".toByteArray()
                 val credentialId2 = "credential_2".toByteArray()
-                val alg1 = -7L
-                val alg2 = -8L
                 val publicKey1 = "public_key_1".toByteArray()
                 val publicKey2 = "public_key_2".toByteArray()
 
@@ -222,7 +220,6 @@ class WebAuthnRepositoryImplIT {
 
                 val credential1 = CredentialData(
                         id = credentialId1.wrap(),
-                        alg = alg1,
                         publicKey = publicKey1.wrap(),
                         signCount = 10L,
                         transports = "usb",
@@ -234,7 +231,6 @@ class WebAuthnRepositoryImplIT {
 
                 val credential2 = CredentialData(
                         id = credentialId2.wrap(),
-                        alg = alg2,
                         publicKey = publicKey2.wrap(),
                         signCount = 20L,
                         transports = "nfc",
@@ -257,15 +253,17 @@ class WebAuthnRepositoryImplIT {
                 assertThat(fetched2.signCount).isEqualTo(20L)
                 assertThat(fetched2.transports).isEqualTo("nfc")
 
-                repository.updateCredential(blockCtx, credentialId1, 15, true)
+                repository.updateCredential(blockCtx, credentialId1, 15, uvInitialized = false, backupState = true)
 
                 val updatedFetched1 = requireNotNull(repository.fetchCredential(ctx, credentialId1))
                 assertThat(updatedFetched1.signCount).isEqualTo(15L)
+                assertThat(updatedFetched1.uvInitialized).isFalse()
                 assertThat(updatedFetched1.backupState).isTrue()
 
                 // Verify the second credential unchanged
                 val unchangedFetched2 = requireNotNull(repository.fetchCredential(ctx, credentialId2))
                 assertThat(unchangedFetched2.signCount).isEqualTo(20L)
+                assertThat(unchangedFetched2.uvInitialized).isFalse()
                 assertThat(unchangedFetched2.backupState).isTrue()
 
                 repository.deleteCredential(blockCtx, credentialId1)

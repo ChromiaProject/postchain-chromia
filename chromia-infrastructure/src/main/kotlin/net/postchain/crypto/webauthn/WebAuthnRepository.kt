@@ -14,7 +14,7 @@ interface WebAuthnRepository : SnapshotAware {
 
     fun persistCredential(ctx: TxEContext, opIndex: Int, data: CredentialData)
 
-    fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, backupState: Boolean)
+    fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, uvInitialized: Boolean, backupState: Boolean)
 
     fun deleteCredential(ctx: BlockEContext, id: ByteArray)
 
@@ -36,7 +36,6 @@ data class CredentialData(
         val deleted: Boolean = false,
         val txRid: WrappedByteArray? = null,
         val opIndex: Long? = null,
-        val alg: Long,
         val publicKey: WrappedByteArray,
         val signCount: Long,
         val transports: String,
