@@ -63,6 +63,8 @@ class IcmfReceiverRepository(
     }
 
     fun emitIcmfStateDatums(bctx: BlockEContext) {
+        if (snapshotContext == null) return
+
         if (hasNewanchoringHeights) {
             emitDatum(bctx, getAnchoringHeightDatum(bctx))
         }
