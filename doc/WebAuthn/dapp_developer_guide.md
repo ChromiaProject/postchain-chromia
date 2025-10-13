@@ -18,6 +18,7 @@ config:
     relying-party-identifier: "my-dapp.somewhere.com" # https://w3c.github.io/webauthn/#rp-id
     user-presence: true # https://w3c.github.io/webauthn/#concept-user-present
     user-verification: false # https://w3c.github.io/webauthn/#user-verification
+    verify-attestation: false # https://w3c.github.io/webauthn/#reg-ceremony-verify-attestation
 libs:
   webauthn:
     registry: https://gitlab.com/chromaway/postchain-chromia
