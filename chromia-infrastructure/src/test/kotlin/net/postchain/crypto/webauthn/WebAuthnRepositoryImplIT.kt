@@ -1,8 +1,10 @@
 package net.postchain.crypto.webauthn
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -23,6 +25,7 @@ import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.COLUMN_TRA
 import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.TABLE_NAME_CREDENTIAL
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtx.SnapshotContext
+import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL.table
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -128,6 +131,10 @@ class WebAuthnRepositoryImplIT {
                 assertThat(deletedResult[COLUMN_DELETED]).isTrue()
 
                 assertThat(repository.fetchCredential(ctx, credentialId)).isNull()
+
+                assertFailure {
+                    repository.persistCredential(txCtx, opIndex + 1, credential)
+                }.isInstanceOf<DataAccessException>()
 
                 true
             }

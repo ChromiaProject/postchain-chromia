@@ -54,33 +54,35 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         ))
     }
 
+    @Volatile
     private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
     override fun checkCorrectnessWhileSyncing(ctxt: EContext) {
-        webAuthnRegister(ctxt, data.args)
+        webAuthnRegister(ctxt, data.args, true)
     }
 
     override fun checkCorrectness(ctxt: EContext) {
-        webAuthnRegister(ctxt, data.args)
+        webAuthnRegister(ctxt, data.args, false)
     }
 
-    private fun webAuthnRegister(ctxt: EContext, args: Array<out Gtv>) {
+    private fun webAuthnRegister(ctxt: EContext, args: Array<out Gtv>, isSyncing: Boolean) {
         if (args.size != 4) throw UserMistake("need 4 args, got ${args.size}")
         val id = args[0].asByteArray()
         val attestationObject = args[1].asByteArray()
         val clientDataJSON = args[2].asString()
         val transports = args[3].asArray().map { it.asString() }
 
-        webAuthnRegister(ctxt, id, attestationObject, clientDataJSON, transports)
+        webAuthnRegister(ctxt, id, attestationObject, clientDataJSON, transports, isSyncing)
     }
 
-    private fun webAuthnRegister(@Suppress("unused") ctxt: EContext, id: ByteArray,
-                                 attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>) {
-        if (id.isEmpty()) {
-            throw UserMistake("empty credentialId")
-        }
+    private fun webAuthnRegister(ctxt: EContext,
+                                 id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>,
+                                 isSyncing: Boolean) {
+        verifyCredentialId(id)
+
+        val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val registrationRequest = RegistrationRequest(
                 attestationObjectBytes,
@@ -89,7 +91,7 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
                 transports.toSet(),
         )
         val registrationData = try {
-            conf.webAuthnManager.parse(registrationRequest)
+            webAuthnManager.parse(registrationRequest)
         } catch (e: DataConversionException) {
             throw UserMistake(e.message ?: "verification failed")
         }
@@ -111,7 +113,7 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
             // TODO WebAuthn: Remove this when https://github.com/webauthn4j/webauthn4j/issues/1170 is fixed
             CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
 
-            conf.webAuthnManager.verify(registrationData, registrationParameters)
+            webAuthnManager.verify(registrationData, registrationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
         }
@@ -125,6 +127,10 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
 
         if (!credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
+        }
+
+        if (conf.repository.fetchCredential(ctxt, id) != null) {
+            throw UserMistake("credential with id ${id.toHex()} already registered")
         }
 
         credential = CredentialData(
@@ -167,35 +173,35 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         ))
     }
 
+    @Volatile
     private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
     override fun checkCorrectnessWhileSyncing(ctxt: EContext) {
-        webAuthnAuthenticate(ctxt, data.args)
+        webAuthnAuthenticate(ctxt, data.args, true)
     }
 
     override fun checkCorrectness(ctxt: EContext) {
-        webAuthnAuthenticate(ctxt, data.args)
+        webAuthnAuthenticate(ctxt, data.args, false)
     }
 
-    private fun webAuthnAuthenticate(ctxt: EContext, args: Array<out Gtv>) {
+    private fun webAuthnAuthenticate(ctxt: EContext, args: Array<out Gtv>, isSyncing: Boolean) {
         if (args.size != 4) throw UserMistake("need 4 args, got ${args.size}")
         val id = args[0].asByteArray()
         val authenticatorData = args[1].asByteArray()
         val clientDataJSON = args[2].asString()
         val signature = args[3].asByteArray()
 
-        webAuthnAuthenticate(ctxt, id, authenticatorData, clientDataJSON, signature)
+        webAuthnAuthenticate(ctxt, id, authenticatorData, clientDataJSON, signature, isSyncing)
     }
 
-    private fun webAuthnAuthenticate(ctxt: EContext, id: ByteArray, authenticatorDataBytes: ByteArray, clientDataJSON: String, signature: ByteArray) {
-        if (id.isEmpty()) {
-            throw UserMistake("empty credentialId")
-        }
-        if (id.size > 1023) {
-            throw UserMistake("credentialId too long")
-        }
+    private fun webAuthnAuthenticate(ctxt: EContext,
+                                     id: ByteArray, authenticatorDataBytes: ByteArray, clientDataJSON: String, signature: ByteArray,
+                                     isSyncing: Boolean) {
+        verifyCredentialId(id)
+
+        val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val authenticationRequest = AuthenticationRequest(
                 /*credentialId=*/id,
@@ -207,7 +213,7 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         )
 
         val authenticationData: AuthenticationData = try {
-            conf.webAuthnManager.parse(authenticationRequest)
+            webAuthnManager.parse(authenticationRequest)
         } catch (e: DataConversionException) {
             throw UserMistake(e.message ?: "verification failed")
         }
@@ -215,18 +221,19 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
 
         verifyChallenge(collectedClientData)
 
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
-
         val credential = conf.repository.fetchCredential(ctxt, id)
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
 
         val coseKey = try {
-            conf.objectConverter.cborConverter.readValue(credential.publicKey.data, COSEKey::class.java)!!
+            conf.objectConverter.cborConverter.readValue(credential.publicKey.data, COSEKey::class.java)
+                    ?: throw UserMistake("invalid public key")
         } catch (e: DataConversionException) {
             throw UserMistake(e.message ?: "verification failed")
         }
 
         val attestedCredentialData = AttestedCredentialData(AAGUID.NULL, id, coseKey)
+
+        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
 
         val credentialRecord = CustomCredentialRecord(
                 uvInitialized = credential.uvInitialized,
@@ -246,7 +253,7 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         )
 
         try {
-            conf.webAuthnManager.verify(authenticationData, authenticationParameters)
+            webAuthnManager.verify(authenticationData, authenticationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
         }
@@ -264,8 +271,23 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
     } ?: false
 }
 
+// https://w3c.github.io/webauthn/#credential-id
+const val CREDENTIAL_ID_MAX_SIZE = 1023
+
+fun verifyCredentialId(id: ByteArray) {
+    if (id.isEmpty()) {
+        throw UserMistake("empty id")
+    }
+    if (id.size > CREDENTIAL_ID_MAX_SIZE) {
+        throw UserMistake("id too long, can be at most $CREDENTIAL_ID_MAX_SIZE bytes")
+    }
+}
+
+// https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
+const val CHALLENGE_MIN_SIZE = 16
+
 fun verifyChallenge(clientData: CollectedClientData) {
-    if (clientData.challenge.value.isEmpty()) {
-        throw UserMistake("missing clientData.challenge")
+    if (clientData.challenge.value.size < CHALLENGE_MIN_SIZE) {
+        throw UserMistake("clientData.challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
     }
 }
