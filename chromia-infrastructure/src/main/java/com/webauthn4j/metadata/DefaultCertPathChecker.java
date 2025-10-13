@@ -16,7 +16,6 @@
 
 package com.webauthn4j.metadata;
 
-import com.webauthn4j.metadata.exception.CertPathCheckException;
 import com.webauthn4j.metadata.exception.MDSException;
 import com.webauthn4j.util.CertificateUtil;
 
@@ -43,9 +42,9 @@ public class DefaultCertPathChecker implements CertPathChecker {
         try {
             certPathValidator.validate(context.getCertPath(), certPathParameters);
         } catch (InvalidAlgorithmParameterException e) {
-            throw new CertPathCheckException("invalid algorithm parameter", e);
+            throw new MDSException("invalid algorithm parameter", e);
         } catch (CertPathValidatorException e) {
-            throw new CertPathCheckException("invalid cert path", e);
+            throw new MDSException("invalid cert path", e);
         }
     }
 }

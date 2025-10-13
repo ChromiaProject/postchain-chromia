@@ -8,7 +8,6 @@ import com.webauthn4j.metadata.DefaultCertPathChecker
 import com.webauthn4j.metadata.anchor.MetadataBLOBBasedTrustAnchorRepository
 import com.webauthn4j.metadata.data.MetadataBLOB
 import com.webauthn4j.metadata.data.MetadataBLOBFactory
-import com.webauthn4j.metadata.exception.CertPathCheckException
 import com.webauthn4j.metadata.exception.MDSException
 import com.webauthn4j.verifier.attestation.statement.androidkey.AndroidKeyAttestationStatementVerifier
 import com.webauthn4j.verifier.attestation.statement.androidsafetynet.AndroidSafetyNetAttestationStatementVerifier
@@ -18,7 +17,9 @@ import com.webauthn4j.verifier.attestation.statement.tpm.TPMAttestationStatement
 import com.webauthn4j.verifier.attestation.statement.u2f.FIDOU2FAttestationStatementVerifier
 import com.webauthn4j.verifier.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessVerifier
 import com.webauthn4j.verifier.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessVerifier
+import mu.KLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.DefaultValue
@@ -29,9 +30,11 @@ import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.SnapshotAware
+import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
+import java.time.LocalDate
 
 data class WebAuthnConfigData(
         @param:Name("allowed-origins")
@@ -70,12 +73,94 @@ data class WebAuthnConfig(
 
 @Suppress("unused")
 class WebAuthnGTXModuleFactory : GTXModuleFactory {
+    companion object : KLogging() {
+        // refresh this root certificate before it expires at 2029-03-18: https://valid.r3.roots.globalsign.com/
+        val fidoMDSTrustAnchor = loadTrustAnchor("/net/postchain/crypto/webauthn/root-r3.crt")
+
+        internal fun loadTrustAnchor(resourcePath: String): TrustAnchor {
+            val certFactory = CertificateFactory.getInstance("X.509")
+            val cert = WebAuthnGTXModule::class.java.getResourceAsStream(resourcePath).use {
+                if (it == null) throw MDSException("Classpath resource not found: $resourcePath")
+                certFactory.generateCertificate(it) as X509Certificate
+            }
+            try {
+                cert.checkValidity()
+            } catch (e: CertificateException) {
+                logger.error("FIDO MDS root certificate is not valid: ${e.message}, get a new one at https://valid.r3.roots.globalsign.com/")
+            }
+            return TrustAnchor(cert, null)
+        }
+
+        // TODO WebAuthn: refresh this FIDO MDS3 blob monthly: https://fidoalliance.org/metadata/
+        //                next update 2025-11-01
+        val fidoMDSMetadataBLOB = loadMetadataBLOB(ObjectConverter(), "/net/postchain/crypto/webauthn/fido-mds3.blob", setOf(fidoMDSTrustAnchor))
+
+        internal fun loadMetadataBLOB(objectConverter: ObjectConverter, resourcePath: String, trustAnchors: Set<TrustAnchor>): MetadataBLOB {
+            val metadataBLOBFactory = MetadataBLOBFactory(objectConverter)
+            val data = WebAuthnGTXModule::class.java.getResourceAsStream(resourcePath)?.use {
+                it.readAllBytes().toString(Charsets.UTF_8)
+            } ?: throw MDSException("Classpath resource not found: $resourcePath")
+            val metadataBLOB = metadataBLOBFactory.parse(data)
+            if (!metadataBLOB.isValidSignature) {
+                throw MDSException("MetadataBLOB signature is invalid")
+            }
+            validateCertPath(metadataBLOB, trustAnchors)
+            val nextUpdate = metadataBLOB.payload.nextUpdate
+            if (LocalDate.now().isAfter(nextUpdate)) {
+                logger.warn("FIDO MDS3 blob is expired (nextUpdate: $nextUpdate), get a new one at https://fidoalliance.org/metadata/")
+            }
+            return metadataBLOB
+        }
+
+        private fun validateCertPath(metadataBLOB: MetadataBLOB, trustAnchors: Set<TrustAnchor>) {
+            val certPath = metadataBLOB.header.x5c ?: throw MDSException("MetadataBLOB certificate chain missing")
+            DefaultCertPathChecker().check(CertPathCheckContext(certPath, trustAnchors, true))
+        }
+
+        internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): Pair<WebAuthnManager, WebAuthnManager> = if (verifyAttestation) {
+            val certPathTrustworthinessVerifier = DefaultCertPathTrustworthinessVerifier(
+                    MetadataBLOBBasedTrustAnchorRepository({ fidoMDSMetadataBLOB }))
+            val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier()
+            selfAttestationTrustworthinessVerifier.isSelfAttestationAllowed = false
+            WebAuthnManager(
+                    listOf(
+                            FIDOU2FAttestationStatementVerifier(),
+                            PackedAttestationStatementVerifier(),
+                            TPMAttestationStatementVerifier(),
+                            AndroidKeyAttestationStatementVerifier(),
+                            AndroidSafetyNetAttestationStatementVerifier(),
+                            AppleAnonymousAttestationStatementVerifier(),
+                    ),
+                    certPathTrustworthinessVerifier,
+                    selfAttestationTrustworthinessVerifier,
+                    listOf(),
+                    listOf(),
+                    objectConverter,
+            ) to WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+        } else {
+            val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+            webAuthnManager to webAuthnManager
+        }
+    }
+
     override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): WebAuthnGTXModule {
-        val configData = config.asDict()["webauthn"]!!.toObject<WebAuthnConfigData>()
+        val configData = config.asDict()["webauthn"]?.toObject<WebAuthnConfigData>()
+                ?: throw UserMistake("No 'webauthn' in blockchain config")
+        if (configData.allowedOrigins.isEmpty()) {
+            throw UserMistake("'webauthn.allowed-origins' must not be empty")
+        }
+        val allowedOrigins = try {
+            configData.allowedOrigins.map { Origin(it) }
+        } catch (e: Exception) {
+            throw UserMistake("Invalid origin format in 'webauthn.allowed-origins': ${e.message}")
+        }
+        if (configData.relyingPartyIdentifier.isBlank()) {
+            throw UserMistake("'relying-party-identifier' must not be empty")
+        }
         val objectConverter = ObjectConverter()
         val (strictWebAuthnManager, nonStrictWebAuthnManager) = createWebAuthnManager(objectConverter, configData.verifyAttestation)
         return WebAuthnGTXModule(WebAuthnConfig(
-                allowedOrigins = configData.allowedOrigins.map { Origin(it) },
+                allowedOrigins = allowedOrigins,
                 allowCrossOrigin = configData.allowCrossOrigin,
                 relyingPartyIdentifier = configData.relyingPartyIdentifier,
                 userPresence = configData.userPresence,
@@ -105,69 +190,5 @@ class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
 
     override fun initializeDB(ctx: EContext) {
         conf.repository.initializeDB(ctx)
-    }
-}
-
-internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): Pair<WebAuthnManager, WebAuthnManager> = if (verifyAttestation) {
-    // TODO WebAuthn: refresh this root certificate before it expires at 2029-03-18: https://valid.r3.roots.globalsign.com/
-    val fidoMDSTrustAnchor = loadTrustAnchor("/net/postchain/crypto/webauthn/root-r3.crt")
-
-    // TODO WebAuthn: refresh this FIDO MDS3 blob monthly: https://fidoalliance.org/metadata/
-    //                next update 2025-11-01
-    val fidoMDSMetadataBLOB = loadMetadataBLOB(objectConverter, "/net/postchain/crypto/webauthn/fido-mds3.blob", setOf(fidoMDSTrustAnchor))
-
-    val certPathTrustworthinessVerifier = DefaultCertPathTrustworthinessVerifier(
-            MetadataBLOBBasedTrustAnchorRepository({ fidoMDSMetadataBLOB }))
-    val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier()
-    selfAttestationTrustworthinessVerifier.isSelfAttestationAllowed = false
-    WebAuthnManager(
-            listOf(
-                    FIDOU2FAttestationStatementVerifier(),
-                    PackedAttestationStatementVerifier(),
-                    TPMAttestationStatementVerifier(),
-                    AndroidKeyAttestationStatementVerifier(),
-                    AndroidSafetyNetAttestationStatementVerifier(),
-                    AppleAnonymousAttestationStatementVerifier(),
-            ),
-            certPathTrustworthinessVerifier,
-            selfAttestationTrustworthinessVerifier,
-            listOf(),
-            listOf(),
-            objectConverter,
-    ) to WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
-} else {
-    val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
-    webAuthnManager to webAuthnManager
-}
-
-internal fun loadTrustAnchor(resourcePath: String): TrustAnchor {
-    val certFactory = CertificateFactory.getInstance("X.509")
-    val cert = WebAuthnGTXModule::class.java.getResourceAsStream(resourcePath).use {
-        if (it == null) throw MDSException("Classpath resource not found: $resourcePath")
-        certFactory.generateCertificate(it) as X509Certificate
-    }
-    return TrustAnchor(cert, null)
-}
-
-internal fun loadMetadataBLOB(objectConverter: ObjectConverter, resourcePath: String, trustAnchors: Set<TrustAnchor>): MetadataBLOB {
-    val metadataBLOBFactory = MetadataBLOBFactory(objectConverter)
-    val data = WebAuthnGTXModule::class.java.getResourceAsStream(resourcePath).use {
-        if (it == null) throw MDSException("Classpath resource not found: $resourcePath")
-        String(it.readAllBytes(), Charsets.UTF_8)
-    }
-    val metadataBLOB = metadataBLOBFactory.parse(data)
-    if (!metadataBLOB.isValidSignature) {
-        throw MDSException("MetadataBLOB signature is invalid")
-    }
-    validateCertPath(metadataBLOB, trustAnchors)
-    return metadataBLOB
-}
-
-private fun validateCertPath(metadataBLOB: MetadataBLOB, trustAnchors: Set<TrustAnchor>) {
-    val certPath = metadataBLOB.header.x5c
-    try {
-        DefaultCertPathChecker().check(CertPathCheckContext(certPath, trustAnchors, true))
-    } catch (e: CertPathCheckException) {
-        throw MDSException("MetadataBLOB certificate chain validation failed", e)
     }
 }

@@ -22,6 +22,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.wrap
 import net.postchain.core.MockEContext
+import net.postchain.crypto.webauthn.WebAuthnGTXModuleFactory.Companion.createWebAuthnManager
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.ExtOpData
