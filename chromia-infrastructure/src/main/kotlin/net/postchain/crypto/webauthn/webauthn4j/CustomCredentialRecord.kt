@@ -1,4 +1,4 @@
-package net.postchain.crypto.webauthn
+package net.postchain.crypto.webauthn.webauthn4j
 
 import com.webauthn4j.credential.CoreCredentialRecordImpl
 import com.webauthn4j.credential.CredentialRecord

@@ -23,6 +23,7 @@ import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
+import net.postchain.crypto.webauthn.webauthn4j.CustomCredentialRecord
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.ArgumentMetadata
