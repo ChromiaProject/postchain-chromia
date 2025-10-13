@@ -37,7 +37,6 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>chromia-core</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -70,17 +69,14 @@
             <groupId>net.postchain</groupId>
             <artifactId>chromia-devtools</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -91,27 +87,26 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.junit-pioneer</groupId>
             <artifactId>junit-pioneer</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk-jvm</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -153,7 +148,7 @@
                 <executions>
                     <execution>
                         <id>unpack-eif</id>
-                        <phase>generate-sources</phase>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -166,7 +161,7 @@
                     </execution>
                     <execution>
                         <id>unpack-contracts</id>
-                        <phase>generate-resources</phase>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -264,7 +259,7 @@
                             <rootFolder>${project.basedir}/..</rootFolder>
                             <configFile>deployment-test/src/test/resources/net/postchain/images/directory1/directory1.yml</configFile>
                             <source>${directory.source}</source>
-                            <target>${project.build.directory}/test-classes/directory1deployment</target>
+                            <target>${project.build.directory}/classes/directory1deployment</target>
                         </configuration>
                     </execution>
 
@@ -372,7 +367,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>${project.build.directory}/generated-test-sources</source>
+                                <source>${project.build.directory}/generated-sources</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -438,33 +433,20 @@
                         </includes>
                     </abiSourceFiles>
                     <outputDirectory>
-                        <abi>${project.build.directory}/generated-test-resources</abi>
-                        <java>${project.build.directory}/generated-test-sources</java>
+                        <abi>${project.build.directory}/generated-resources</abi>
+                        <java>${project.build.directory}/generated-sources</java>
                     </outputDirectory>
                     <outputFormat>java,abi</outputFormat>
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>generate-test-sources</phase>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
-                <executions>
-                  <execution>
-                    <goals>
-                      <goal>test-jar</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
         </plugins>
     </build>
 

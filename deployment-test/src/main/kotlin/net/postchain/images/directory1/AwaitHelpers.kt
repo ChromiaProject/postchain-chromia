@@ -14,7 +14,7 @@ fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: ()
     await.pollInterval(Duration.ONE_SECOND).atMost(atMost).untilAsserted {
         try {
             result = assertion()
-        } catch (ignore: Exception) {
+        } catch (_: Exception) {
             fail() // Will make sure we try again
         }
     }

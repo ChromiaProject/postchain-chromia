@@ -18,6 +18,7 @@ config:
     relying-party-identifier: "my-dapp.somewhere.com" # https://w3c.github.io/webauthn/#rp-id
     user-presence: true # https://w3c.github.io/webauthn/#concept-user-present
     user-verification: false # https://w3c.github.io/webauthn/#user-verification
+    verify-attestation: false # https://w3c.github.io/webauthn/#reg-ceremony-verify-attestation
 libs:
   webauthn:
     registry: https://gitlab.com/chromaway/postchain-chromia
@@ -32,8 +33,22 @@ libs:
 
 ### Client
 
-The client calls `navigator.credentials.create({publicKey: {...}})`, see 
-https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions,
+The client calls 
+```javascript
+navigator.credentials.create({publicKey: {
+    challenge: uniqueChallenge, // this needs to be unique
+    rp: {
+      name: "My DApp", // user readable name of the DApp 
+      id: "my-dapp.somewhere.com", // this needs to match "relying-party-identifier" in blockchain config
+    },
+    pubKeyCredParams: [
+      { alg: -7, type: 'public-key' }, // ES256
+      { alg: -8, type: 'public-key' }, // EdDSA
+    ],
+    // other properties here    
+}});
+```
+see https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions,
 and then includes this operation before the registration operation in the transaction:
 ```
 operation gtxc.webauthn_register(
@@ -46,57 +61,57 @@ operation gtxc.webauthn_register(
     // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorResponse/clientDataJSON from AuthenticatorAttestationResponse
     client_data_json: text,
 
-    // COSE Algorithm Identifier, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKeyAlgorithm
-    alg: integer,
-
-    // SubjectPublicKeyInfo, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKey
-    public_key: byte_array,
-
     // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getTransports
     transports: list<text>,
 )
 ```
 
 Note that the `gtxc.webauthn_register` operation is provided by the GTX module and not implemented in Rell.
+It will store the public key and other information in a credential record. 
 
 ### Rell
 
-Call the function `webauthn.require_register(expected_challenge: text)` in the register operation,
-and pass in the [challenge](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions#challenge) that the client used. Use the returned `credential_record` to register the credential.
+Call the function `webauthn.require_register()` in the register operation. Use the returned `credential_record`'s
+`id` field to register the credential.
 
 
 ## Authentication
 
 ### Client
 
-The client calls `navigator.credentials.get({publicKey: {...}})`, see 
-https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions,
+The client calls 
+```javascript
+navigator.credentials.get({publicKey: {
+    challenge: uniqueChallenge, // this needs to be unique
+    rpId: "my-dapp.somewhere.com", // this needs to match "relying-party-identifier" in blockchain config
+    // other properties here    
+}});
+```
+see https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions,
 and then includes this operation before the authenticated operation in the transaction:
 ```
-operation gtxc.checksig_webauthn_authenticate(
+operation gtxc.webauthn_authenticate(
+    // https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential/rawId
+    id: byte_array,
+
     // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAssertionResponse/authenticatorData from AuthenticatorAssertionResponse
     authenticator_data: byte_array,
 
     // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorResponse/clientDataJSON from AuthenticatorAssertionResponse
     client_data_json: text,
 
-    // COSE Algorithm Identifier, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKeyAlgorithm
-    alg: integer,
-
-    // SubjectPublicKeyInfo, https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAttestationResponse/getPublicKey
-    public_key: byte_array,
-
     // https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorAssertionResponse/signature from AuthenticatorAssertionResponse
     signature: byte_array,
 )
 ```
 
-Note that the `gtxc.checksig_webauthn_authenticate` operation is provided by the GTX module and not implemented in Rell.
+Note that the `gtxc.webauthn_authenticate` operation is provided by the GTX module and not implemented in Rell. It
+will look up the credential record stored by previous `gtxc.webauthn_register` operation based on the `id`. 
 
 ### Rell
 
-Call the function `webauthn.require_auth(expected_challenge: text)` in operations that should be authenticated,
-and pass in the [challenge](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions#challenge) that the client used. Use the returned `auth_data` to identify the authenticated user.
+Call the function `webauthn.require_auth()` in operations that should be authenticated. Use the returned `auth_data`'s
+`id` field to identify the authenticated user.
 
 
 ## DApp example repository
