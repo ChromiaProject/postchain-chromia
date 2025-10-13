@@ -34,12 +34,13 @@ import org.mockito.kotlin.verify
 class WebAuthnRegisterTest {
 
     val validId = "41afefa16f97ca9b2d23eb86ccb64098d20db90856062eb249c33a9b672f26df61930a56b87a2fca66334b03458abf879717c12cc68ed73290af2e2664796b9220".hexStringToByteArray()
-    val validClientDataJSON = """{"type":"webauthn.create","challenge":"dKb","origin":"https://example.org"}"""
+    val validClientDataJSON = """{"type":"webauthn.create","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}"""
     val validAttestationObject = "a363666d74646e6f6e656761747453746d74a068617574684461746158a4bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b559000000008446ccb9ab1db374750b2367ff6f3a1f0020f91f391db4c9b2fde0ea70189cba3fb63f579ba6122b33ad94ff3ec330084be4a5010203262001215820afefa16f97ca9b2d23eb86ccb64098d20db90856062eb249c33a9b672f26df61225820930a56b87a2fca66334b03458abf879717c12cc68ed73290af2e2664796b9220".hexStringToByteArray()
 
     val objectConverter = ObjectConverter()
-    val nonStrictWebAuthnManager = createWebAuthnManager(objectConverter, false)
-    val strictWebAuthnManager = createWebAuthnManager(objectConverter, true)
+    private val webAuthnManagers = createWebAuthnManager(objectConverter, true)
+    val strictWebAuthnManager = webAuthnManagers.first
+    val nonStrictWebAuthnManager = webAuthnManagers.second
     val attestationObjectConverter = AttestationObjectConverter(objectConverter)
     val webAuthnRepository: WebAuthnRepository = mock()
     val ctx = MockEContext(0)
@@ -54,7 +55,7 @@ class WebAuthnRegisterTest {
         val opData = ExtOpData(WebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            WebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+            WebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
         }.isInstanceOf(UserMistake::class.java).messageContains("need 4 args")
     }
 
@@ -69,7 +70,7 @@ class WebAuthnRegisterTest {
         val opData = ExtOpData(WebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
         assertFailure {
-            WebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+            WebAuthnRegister(WebAuthnConfig(listOf(), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
         }.isInstanceOf(UserMistake::class.java).messageContains("Can't create ByteArray from string")
     }
 
@@ -93,18 +94,18 @@ class WebAuthnRegisterTest {
             val args = arrayOf(
                     gtv(validId),
                     gtv(validAttestationObject),
-                    gtv("""{"type":"webauthn.create","challenge":"dKb","origin":"https://example.org","crossOrigin":true}"""),
+                    gtv("""{"type":"webauthn.create","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org","crossOrigin":true}"""),
                     gtv(listOf(gtv("usb")))
             )
             val opData = ExtOpData(WebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-            WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+            WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
         }.isInstanceOf(UserMistake::class.java).messageContains("Cross-origin request is prohibited")
     }
 
     @Test
     fun `should throw UserMistake when clientData type is wrong`() {
         assertFailure {
-            checkRegistration("example.org", validId, validAttestationObject, """{"type":"webauthn.get","challenge":"dKb","origin":"https://example.org"}""", ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", validId, validAttestationObject, """{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}""", ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("ClientData.type must be 'create' on registration")
     }
 
@@ -146,7 +147,7 @@ class WebAuthnRegisterTest {
                         gtv(listOf())
                 )
                 val opData = ExtOpData(WebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+                WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
             }.isInstanceOf(UserMistake::class.java).messageContains("The collectedClientData 'https://example.org' origin doesn't match")
         }
 
@@ -160,7 +161,7 @@ class WebAuthnRegisterTest {
                         gtv(listOf())
                 )
                 val opData = ExtOpData(WebAuthnRegister.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
-                WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org")), true, "bogus.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+                WebAuthnRegister(WebAuthnConfig(listOf(Origin("https://example.org")), true, "bogus.org", userPresence = false, userVerification = false, objectConverter, nonStrictWebAuthnManager, nonStrictWebAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
             }.isInstanceOf(UserMistake::class.java).messageContains("rpIdHash doesn't match the hash of preconfigured rpId")
         }
 
@@ -201,8 +202,15 @@ class WebAuthnRegisterTest {
         @Test
         fun `should throw UserMistake for no attestation in strict mode`() {
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("AttestationVerifier is not configured to handle the supplied AttestationStatement format 'none'")
+        }
+
+        @Test
+        fun `should not check attestation in strict mode while syncing`() {
+            assertDoesNotThrow {
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
+            }
         }
     }
 
@@ -224,8 +232,15 @@ class WebAuthnRegisterTest {
         @Test
         fun `should throw UserMistake for self attestation in strict mode`() {
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("SELF attestations is prohibited by configuration")
+        }
+
+        @Test
+        fun `should not check attestation in strict mode while syncing`() {
+            assertDoesNotThrow {
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
+            }
         }
     }
 
@@ -381,7 +396,8 @@ class WebAuthnRegisterTest {
                                   uv: Boolean,
                                   be: Boolean,
                                   bs: Boolean,
-                                  webAuthnManager: WebAuthnManager = nonStrictWebAuthnManager) {
+                                  webAuthnManager: WebAuthnManager = nonStrictWebAuthnManager,
+                                  isSyncing: Boolean = false) {
         val args = arrayOf(
                 gtv(id),
                 gtv(attestationObject),
@@ -396,12 +412,18 @@ class WebAuthnRegisterTest {
                 rpId,
                 userPresence = true,
                 userVerification = uv,
-                webAuthnManager = webAuthnManager,
+                strictWebAuthnManager = webAuthnManager,
+                nonStrictWebAuthnManager = nonStrictWebAuthnManager,
                 objectConverter = objectConverter,
                 repository = webAuthnRepository,
         ), opData)
-        op.checkCorrectness(ctx)
-        op.apply(txCtx)
+        if (isSyncing) {
+            op.checkCorrectnessWhileSyncing(ctx)
+            op.applyWhileSyncing(txCtx)
+        } else {
+            op.checkCorrectness(ctx)
+            op.apply(txCtx)
+        }
         verify(webAuthnRepository).persistCredential(txCtx, opIndex, CredentialData(
                 id = id.wrap(),
                 publicKey = publicKey.wrap(),

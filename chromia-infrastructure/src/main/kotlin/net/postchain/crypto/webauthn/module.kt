@@ -58,19 +58,13 @@ data class WebAuthnConfigData(
 
 data class WebAuthnConfig(
         val allowedOrigins: List<Origin>,
-
         val allowCrossOrigin: Boolean,
-
         val relyingPartyIdentifier: String,
-
         val userPresence: Boolean,
-
         val userVerification: Boolean,
-
         val objectConverter: ObjectConverter,
-
-        val webAuthnManager: WebAuthnManager,
-
+        val strictWebAuthnManager: WebAuthnManager,
+        val nonStrictWebAuthnManager: WebAuthnManager,
         val repository: WebAuthnRepository,
 )
 
@@ -79,7 +73,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
     override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): WebAuthnGTXModule {
         val configData = config.asDict()["webauthn"]!!.toObject<WebAuthnConfigData>()
         val objectConverter = ObjectConverter()
-        val webAuthnManager = createWebAuthnManager(objectConverter, configData.verifyAttestation)
+        val (strictWebAuthnManager, nonStrictWebAuthnManager) = createWebAuthnManager(objectConverter, configData.verifyAttestation)
         return WebAuthnGTXModule(WebAuthnConfig(
                 allowedOrigins = configData.allowedOrigins.map { Origin(it) },
                 allowCrossOrigin = configData.allowCrossOrigin,
@@ -87,7 +81,8 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
                 userPresence = configData.userPresence,
                 userVerification = configData.userVerification,
                 objectConverter = objectConverter,
-                webAuthnManager = webAuthnManager,
+                strictWebAuthnManager = strictWebAuthnManager,
+                nonStrictWebAuthnManager = nonStrictWebAuthnManager,
                 repository = WebAuthnRepositoryImpl(),
         ))
     }
@@ -113,7 +108,7 @@ class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
     }
 }
 
-internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): WebAuthnManager = if (verifyAttestation) {
+internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): Pair<WebAuthnManager, WebAuthnManager> = if (verifyAttestation) {
     // TODO WebAuthn: refresh this root certificate before it expires at 2029-03-18: https://valid.r3.roots.globalsign.com/
     val fidoMDSTrustAnchor = loadTrustAnchor("/net/postchain/crypto/webauthn/root-r3.crt")
 
@@ -139,9 +134,10 @@ internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttes
             listOf(),
             listOf(),
             objectConverter,
-    )
+    ) to WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
 } else {
-    WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+    val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+    webAuthnManager to webAuthnManager
 }
 
 internal fun loadTrustAnchor(resourcePath: String): TrustAnchor {
