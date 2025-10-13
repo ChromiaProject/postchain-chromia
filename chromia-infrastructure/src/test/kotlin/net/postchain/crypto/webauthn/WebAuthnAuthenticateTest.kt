@@ -170,7 +170,9 @@ class WebAuthnAuthenticateTest {
 
         @Test
         fun `should success with valid signature`() {
-            assertDoesNotThrow { checkAuthentication("example.org", credentialId, authenticatorData, clientDataJSON, signature, 0, uv = false, bs = true) }
+            assertDoesNotThrow {
+                checkAuthentication("example.org", credentialId, authenticatorData, clientDataJSON, signature, 0, uv = false, bs = true)
+            }
         }
 
         @Test

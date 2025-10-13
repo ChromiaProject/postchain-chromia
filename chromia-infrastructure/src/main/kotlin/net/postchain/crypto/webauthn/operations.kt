@@ -54,6 +54,7 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         ))
     }
 
+    @Volatile
     private var credential: CredentialData? = null
 
     override fun isCompound() = true
@@ -76,7 +77,7 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         webAuthnRegister(ctxt, id, attestationObject, clientDataJSON, transports, isSyncing)
     }
 
-    private fun webAuthnRegister(@Suppress("unused") ctxt: EContext,
+    private fun webAuthnRegister(ctxt: EContext,
                                  id: ByteArray, attestationObjectBytes: ByteArray, clientDataJSON: String, transports: List<String>,
                                  isSyncing: Boolean) {
         verifyCredentialId(id)
@@ -128,6 +129,10 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
             throw UserMistake("credentialId mismatch")
         }
 
+        if (conf.repository.fetchCredential(ctxt, id) != null) {
+            throw UserMistake("credential with id ${id.toHex()} already registered")
+        }
+
         credential = CredentialData(
                 id = id.wrap(),
                 publicKey = publicKey.wrap(),
@@ -168,6 +173,7 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         ))
     }
 
+    @Volatile
     private var credential: CredentialData? = null
 
     override fun isCompound() = true
@@ -219,7 +225,8 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
 
         val coseKey = try {
-            conf.objectConverter.cborConverter.readValue(credential.publicKey.data, COSEKey::class.java)!!
+            conf.objectConverter.cborConverter.readValue(credential.publicKey.data, COSEKey::class.java)
+                    ?: throw UserMistake("invalid public key")
         } catch (e: DataConversionException) {
             throw UserMistake(e.message ?: "verification failed")
         }

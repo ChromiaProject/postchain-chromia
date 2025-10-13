@@ -29,8 +29,12 @@ import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class WebAuthnRegisterTest {
 
@@ -135,7 +139,17 @@ class WebAuthnRegisterTest {
 
         @Test
         fun `should success when valid`() {
-            assertDoesNotThrow { checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true) }
+            assertDoesNotThrow {
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true)
+            }
+        }
+
+        @Test
+        fun `should throw UserMistake when id is already registered`() {
+            whenever(webAuthnRepository.fetchCredential(any(), eq(credentialId))) doReturn mock()
+            assertFailure {
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true)
+            }.isInstanceOf(UserMistake::class.java).messageContains("already registered")
         }
 
         @Test
@@ -227,7 +241,9 @@ class WebAuthnRegisterTest {
 
         @Test
         fun `should success when valid`() {
-            assertDoesNotThrow { checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true) }
+            assertDoesNotThrow {
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true)
+            }
         }
 
         @Test
