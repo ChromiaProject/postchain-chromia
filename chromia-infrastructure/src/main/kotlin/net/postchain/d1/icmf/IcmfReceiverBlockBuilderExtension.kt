@@ -16,7 +16,7 @@ const val ICMF_RECEIVER_TOPICS_EVENT_TYPE = "icmf_receiver_topics"
 /**
  * Installs the event processor for ICMF receiver topic configuration events.
  */
-class IcmfReceiverBlockBuilderExtension(private val icmfReceiverRepository: IcmfReceiverRepository) : BaseBlockBuilderExtension, TxEventSink {
+class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var blockEContext: BlockEContext
@@ -28,8 +28,6 @@ class IcmfReceiverBlockBuilderExtension(private val icmfReceiverRepository: Icmf
         this.blockEContext = blockEContext
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_RECEIVER_TOPICS_EVENT_TYPE, this)
-        // Flush some initial empty states
-        if (blockEContext.height == 0L) icmfReceiverRepository.emitIcmfStateDatums(blockEContext)
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {

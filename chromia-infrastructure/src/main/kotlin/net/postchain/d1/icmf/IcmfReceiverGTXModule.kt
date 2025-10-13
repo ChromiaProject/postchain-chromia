@@ -30,7 +30,7 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider, Sna
     private val specialTxExtension = IcmfReceiverSpecialTxExtension(receiverRepository)
     private val _specialTxExtensions = listOf(specialTxExtension)
     private lateinit var delegateTransactorMaker: TransactorMaker
-    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension(receiverRepository)
+    private val blockBuilderExtension = IcmfReceiverBlockBuilderExtension()
 
     private val operations: Map<String, (ExtOpData) -> Transactor> = mapOf(
             AnchorHeaderOp.OP_NAME to ::DummyGTXOperation,
@@ -83,6 +83,8 @@ class IcmfReceiverGTXModule : GTXModule, OperationWrapper, MetadataProvider, Sna
     override fun initializeSnapshotContext(context: SnapshotContext) {
         receiverRepository.snapshotContext = context
     }
+
+    override fun getInitialDatums(ctx: EContext): List<SnapshotDatum> = receiverRepository.getInitialReceiverDatums(ctx)
 
     // We don't have any permanent datums
     override fun getPermanentDatumIdMax(ctx: EContext): Long? = null

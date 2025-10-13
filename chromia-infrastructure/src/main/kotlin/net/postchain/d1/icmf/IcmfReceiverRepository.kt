@@ -24,7 +24,6 @@ class IcmfReceiverRepository(
     private var hasNewanchoringHeights = false
     private var hasNewMessageHeights = false
     private var hasNewSpilledMessages = false
-    private var hasNewDappProvidedTopics = false
 
     companion object {
         const val ANCHORING_HEIGHT_DATUM_ID = 0L
@@ -64,43 +63,53 @@ class IcmfReceiverRepository(
     }
 
     fun emitIcmfStateDatums(bctx: BlockEContext) {
-        if (hasNewanchoringHeights || bctx.height == 0L) {
-            snapshotContext?.emitDatum(
-                    bctx,
-                    ANCHORING_HEIGHT_DATUM_ID,
-                    gtv(dbOperations.loadLastAnchoredHeights(bctx).map { it.toGtv() }),
-                    false
-            )
+        if (hasNewanchoringHeights) {
+            emitDatum(bctx, getAnchoringHeightDatum(bctx))
         }
 
-        if (hasNewMessageHeights || bctx.height == 0L) {
-            snapshotContext?.emitDatum(
-                    bctx,
-                    MESSAGE_HEIGHT_DATUM_ID,
-                    gtv(dbOperations.loadAllLastMessageHeights(bctx).map { it.toGtv() }),
-                    false
-            )
+        if (hasNewMessageHeights) {
+            emitDatum(bctx, getMessageHeightDatum(bctx))
         }
 
-        if (hasNewSpilledMessages || bctx.height == 0L) {
-            snapshotContext?.emitDatum(
-                    bctx,
-                    SPILLED_MESSAGES_DATUM_ID,
-                    gtv(dbOperations.loadSpilledMessageStates(bctx).map { it.toGtv() }),
-                    false
-            )
-        }
-
-        if (bctx.height == 0L) {
-            // Emit an empty placeholder datum at height 0
-            snapshotContext?.emitDatum(
-                    bctx,
-                    DAPP_PROVIDED_TOPICS_DATUM_ID,
-                    gtv(listOf()),
-                    false
-            )
+        if (hasNewSpilledMessages) {
+            emitDatum(bctx, getSpilledMessagesDatum(bctx))
         }
     }
+
+    private fun emitDatum(bctx: BlockEContext, datum: SnapshotDatum) {
+        snapshotContext?.emitDatum(bctx, datum.id, datum.data, datum.isPermanent)
+    }
+
+    fun getInitialReceiverDatums(ctx: EContext) = listOf(
+            getAnchoringHeightDatum(ctx),
+            getMessageHeightDatum(ctx),
+            getSpilledMessagesDatum(ctx),
+            getDappProviderTopicsDatum(ctx)
+    )
+
+    private fun getAnchoringHeightDatum(ctx: EContext) = SnapshotDatum(
+            ANCHORING_HEIGHT_DATUM_ID,
+            gtv(dbOperations.loadLastAnchoredHeights(ctx).map { it.toGtv() }),
+            false
+    )
+
+    private fun getMessageHeightDatum(ctx: EContext) = SnapshotDatum(
+            MESSAGE_HEIGHT_DATUM_ID,
+            gtv(dbOperations.loadAllLastMessageHeights(ctx).map { it.toGtv() }),
+            false
+    )
+
+    private fun getSpilledMessagesDatum(ctx: EContext) = SnapshotDatum(
+            SPILLED_MESSAGES_DATUM_ID,
+            gtv(dbOperations.loadSpilledMessageStates(ctx).map { it.toGtv() }),
+            false
+    )
+
+    private fun getDappProviderTopicsDatum(ctx: EContext) = SnapshotDatum(
+            DAPP_PROVIDED_TOPICS_DATUM_ID,
+            gtv(dbOperations.loadDappProvidedReceiverTopics(ctx).map { GtvObjectMapper.toGtvDictionary(it) }),
+            false
+    )
 
     /**
      * @return The complete list of dapp provider topics
@@ -121,7 +130,6 @@ class IcmfReceiverRepository(
                 false
         )
 
-        hasNewDappProvidedTopics = true
         return allTopics
     }
 
