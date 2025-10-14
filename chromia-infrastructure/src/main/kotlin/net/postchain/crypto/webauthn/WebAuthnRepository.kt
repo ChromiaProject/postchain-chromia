@@ -19,12 +19,17 @@ interface WebAuthnRepository : SnapshotAware {
     fun deleteCredential(ctx: BlockEContext, id: ByteArray)
 
     fun fetchCredential(ctx: EContext, id: ByteArray): CredentialData?
+
+    fun persistChallenge(ctx: BlockEContext, challenge: ByteArray)
+
+    fun challengeExists(ctx: EContext, challenge: ByteArray): Boolean
 }
 
 sealed interface Entity {
     companion object {
         fun fromGtv(gtv: Gtv): Entity = when (val type = gtv.asDict()["type"]?.asInteger()) {
             CredentialData.TYPE -> CredentialData.fromGtv(gtv)
+            ChallengeData.TYPE -> ChallengeData.fromGtv(gtv)
             else -> throw UserMistake("Unrecognized type: $type")
         }
     }
@@ -46,6 +51,18 @@ data class CredentialData(
     companion object {
         const val TYPE = 1L
         fun fromGtv(data: Gtv): CredentialData = GtvObjectMapper.fromGtv(data, CredentialData::class)
+    }
+
+    fun toGtv(): Gtv = GtvObjectMapper.toGtvDictionary(this)
+}
+
+data class ChallengeData(
+        val type: Long = TYPE,
+        val challenge: WrappedByteArray,
+) : Entity {
+    companion object {
+        const val TYPE = 2L
+        fun fromGtv(data: Gtv): ChallengeData = GtvObjectMapper.fromGtv(data, ChallengeData::class)
     }
 
     fun toGtv(): Gtv = GtvObjectMapper.toGtvDictionary(this)

@@ -118,12 +118,12 @@
         <dependency>
           <groupId>com.webauthn4j</groupId>
           <artifactId>webauthn4j-core</artifactId>
-          <version>0.29.6.RELEASE</version>
+          <version>0.29.7.RELEASE</version>
         </dependency>
         <dependency>
           <groupId>com.webauthn4j</groupId>
           <artifactId>webauthn4j-metadata</artifactId>
-          <version>0.29.6.RELEASE</version>
+          <version>0.29.7.RELEASE</version>
         </dependency>
 
         <!-- We want access to integration test setup classes -->
