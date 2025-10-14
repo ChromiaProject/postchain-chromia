@@ -58,27 +58,6 @@ function test_no_auth_op_before() {
     ).run_must_fail("no gtxc.webauthn_authenticate operation before me in transaction");
 }
 
-function test_auth_duplicate_challenge(){
-    rell.test.tx().op(
-        webauthn_authenticate(
-            id,
-            x"",
-            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
-            x"",
-        ),
-        check_auth(id),
-    ).nop().run();
-    rell.test.tx().op(
-        webauthn_authenticate(
-            id,
-            x"",
-            "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge),
-            x"",
-        ),
-        check_auth(id),
-    ).nop().run_must_fail("challenge is not unique");
-}
-
 function test_auth_wrong_id(){
     rell.test.tx().op(
         webauthn_authenticate(

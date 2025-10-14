@@ -13,7 +13,6 @@ import com.webauthn4j.data.attestation.authenticator.AAGUID
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
 import com.webauthn4j.data.attestation.authenticator.COSEKey
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
-import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.verifier.exception.VerificationException
 import com.webauthn4j.verifier.internal.CrossOriginFlagVerifier
@@ -21,6 +20,7 @@ import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.wrap
+import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.webauthn.webauthn4j.CustomCredentialRecord
@@ -35,7 +35,7 @@ import net.postchain.gtx.data.ExtOpData
  * WebAuthn register.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#creating_a_key_pair_and_registering_a_user
  */
-class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_register"
 
@@ -53,9 +53,6 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
                 ArgumentMetadata("transports", setOf(GtvType.ARRAY)),
         ))
     }
-
-    @Volatile
-    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
@@ -97,7 +94,7 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         }
         val collectedClientData = registrationData.collectedClientData ?: throw UserMistake("invalid client data")
 
-        verifyChallenge(collectedClientData)
+        verifyChallenge(ctxt, collectedClientData.challenge.value)
 
         val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
         val registrationParameters = RegistrationParameters(
@@ -144,17 +141,21 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         )
     }
 
-    override fun apply(ctx: TxEContext): Boolean = credential?.let {
-        conf.repository.persistCredential(ctx, data.opIndex, it)
-        true
-    } ?: false
+    override fun apply(ctx: TxEContext): Boolean {
+        persistChallenge(ctx)
+
+        return credential?.let {
+            conf.repository.persistCredential(ctx, data.opIndex, it)
+            true
+        } ?: false
+    }
 }
 
 /**
  * WebAuthn authenticate.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticating_a_user
  */
-class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_authenticate"
 
@@ -172,9 +173,6 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
                 ArgumentMetadata("signature", setOf(GtvType.BYTEARRAY)),
         ))
     }
-
-    @Volatile
-    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
@@ -219,7 +217,7 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         }
         val collectedClientData = authenticationData.collectedClientData ?: throw UserMistake("invalid client data")
 
-        verifyChallenge(collectedClientData)
+        verifyChallenge(ctxt, collectedClientData.challenge.value)
 
         val credential = conf.repository.fetchCredential(ctxt, id)
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
@@ -265,29 +263,53 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         )
     }
 
-    override fun apply(ctx: TxEContext): Boolean = credential?.let {
-        conf.repository.updateCredential(ctx, it.id.data, it.signCount, uvInitialized = it.uvInitialized, backupState = it.backupState)
-        true
-    } ?: false
-}
+    override fun apply(ctx: TxEContext): Boolean {
+        persistChallenge(ctx)
 
-// https://w3c.github.io/webauthn/#credential-id
-const val CREDENTIAL_ID_MAX_SIZE = 1023
-
-fun verifyCredentialId(id: ByteArray) {
-    if (id.isEmpty()) {
-        throw UserMistake("empty id")
-    }
-    if (id.size > CREDENTIAL_ID_MAX_SIZE) {
-        throw UserMistake("id too long, can be at most $CREDENTIAL_ID_MAX_SIZE bytes")
+        return credential?.let {
+            conf.repository.updateCredential(ctx, it.id.data, it.signCount, uvInitialized = it.uvInitialized, backupState = it.backupState)
+            true
+        } ?: false
     }
 }
 
-// https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
-const val CHALLENGE_MIN_SIZE = 16
+abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+    companion object {
+        // https://w3c.github.io/webauthn/#credential-id
+        const val CREDENTIAL_ID_MAX_SIZE = 1023
 
-fun verifyChallenge(clientData: CollectedClientData) {
-    if (clientData.challenge.value.size < CHALLENGE_MIN_SIZE) {
-        throw UserMistake("clientData.challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
+        // https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
+        const val CHALLENGE_MIN_SIZE = 16
+    }
+
+    @Volatile
+    protected var credential: CredentialData? = null
+
+    @Volatile
+    protected var challenge: ByteArray? = null
+
+    fun verifyCredentialId(id: ByteArray) {
+        if (id.isEmpty()) {
+            throw UserMistake("empty id")
+        }
+        if (id.size > CREDENTIAL_ID_MAX_SIZE) {
+            throw UserMistake("id too long, can be at most $CREDENTIAL_ID_MAX_SIZE bytes")
+        }
+    }
+
+    fun verifyChallenge(ctxt: EContext, givenChallenge: ByteArray) {
+        if (givenChallenge.size < CHALLENGE_MIN_SIZE) {
+            throw UserMistake("challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
+        }
+
+        if (conf.repository.challengeExists(ctxt, givenChallenge)) {
+            throw UserMistake("challenge is not unique")
+        }
+
+        challenge = givenChallenge
+    }
+
+    fun persistChallenge(ctxt: BlockEContext) {
+        challenge?.let { conf.repository.persistChallenge(ctxt, it) }
     }
 }

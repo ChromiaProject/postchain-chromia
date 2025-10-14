@@ -28,8 +28,11 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
 
         const val ALIAS_CREDENTIAL_DATA = "credential_data"
 
-        const val TABLE_NAME_CREDENTIAL = "${PREFIX}.credential"
         val COLUMN_DATUM_ID = field("datum_id", SQLDataType.BIGINT.nullable(false).identity(true))
+
+        const val TABLE_NAME_DATUM_ID = "${PREFIX}.datum_id"
+
+        const val TABLE_NAME_CREDENTIAL = "${PREFIX}.credential"
         val COLUMN_ID = field("id", SQLDataType.BLOB.nullable(false))
         val COLUMN_DELETED = field("deleted", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_TRANSACTION = field("transaction", SQLDataType.BIGINT.nullable(false))
@@ -40,19 +43,28 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         val COLUMN_UV_INITIALIZED = field("uv_initialized", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_ELIGIBLE = field("backup_eligible", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_STATE = field("backup_state", SQLDataType.BOOLEAN.nullable(false))
+
+        const val TABLE_NAME_CHALLENGE = "${PREFIX}.challenge"
+        val COLUMN_CHALLENGE = field("challenge", SQLDataType.BLOB.nullable(false))
     }
 
     @Volatile
     private var snapshotContext: SnapshotContext? = null
 
     private fun DatabaseAccess.tableTransactions(ctx: EContext) = tableName(ctx, TABLE_NAME_TRANSACTIONS)
+    private fun DatabaseAccess.tableDatumId(ctx: EContext) = tableName(ctx, TABLE_NAME_DATUM_ID)
     private fun DatabaseAccess.tableCredential(ctx: EContext) = tableName(ctx, TABLE_NAME_CREDENTIAL)
+    private fun DatabaseAccess.tableChallenge(ctx: EContext) = tableName(ctx, TABLE_NAME_CHALLENGE)
 
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
             val jooq = dslContext(ctx)
 
-            val simTableName = tableName(ctx, TABLE_NAME_CREDENTIAL).replace("\"", "")
+            jooq.createTableIfNotExists(table(tableDatumId(ctx), TABLE_NAME_DATUM_ID))
+                    .column(COLUMN_DATUM_ID)
+                    .execute()
+
+            val simCredentialTableName = tableName(ctx, TABLE_NAME_CREDENTIAL).replace("\"", "")
             jooq.createTableIfNotExists(table(tableCredential(ctx), TABLE_NAME_CREDENTIAL))
                     .column(COLUMN_DATUM_ID)
                     .column(COLUMN_ID)
@@ -66,33 +78,31 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .column(COLUMN_BACKUP_ELIGIBLE)
                     .column(COLUMN_BACKUP_STATE)
                     .constraints(
-                            constraint("${PRIMARY_KEY_PREFIX}$simTableName").primaryKey(COLUMN_ID.name),
-                            constraint("${simTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
+                            constraint("${PRIMARY_KEY_PREFIX}$simCredentialTableName").primaryKey(COLUMN_ID.name),
+                            constraint("${simCredentialTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
                                     .foreignKey(COLUMN_TRANSACTION.name)
                                     .references(tableTransactions(ctx).replace("\"", ""), COLUMN_TX_IID.name),
-                            constraint("${simTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
+                            constraint("${simCredentialTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
+                    )
+                    .execute()
+
+            val simChallengeTableName = tableName(ctx, TABLE_NAME_CHALLENGE).replace("\"", "")
+            jooq.createTableIfNotExists(table(tableChallenge(ctx), TABLE_NAME_CHALLENGE))
+                    .column(COLUMN_DATUM_ID)
+                    .column(COLUMN_CHALLENGE)
+                    .constraints(
+                            constraint("${PRIMARY_KEY_PREFIX}$simChallengeTableName").primaryKey(COLUMN_CHALLENGE.name),
+                            constraint("${simChallengeTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
                     )
                     .execute()
         }
     }
 
-    override fun initializeSnapshotContext(context: SnapshotContext) {
-        snapshotContext = context
-    }
-
-    override fun getPermanentDatumIdMax(ctx: EContext) = null
-
-    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {}
-
     override fun persistCredential(ctx: TxEContext, opIndex: Int, data: CredentialData) {
         val datumId = DatabaseAccess.of(ctx).run {
+            val nextDatumId = nextDatumId(ctx)
             dslContext(ctx).insertInto(table(tableCredential(ctx)))
-                    .set(COLUMN_DATUM_ID, DSL.coalesce(
-                            DSL.select(DSL.max(COLUMN_DATUM_ID).plus(1))
-                                    .from(table(tableCredential(ctx)))
-                                    .asField(),
-                            0L
-                    ))
+                    .set(COLUMN_DATUM_ID, nextDatumId)
                     .set(COLUMN_ID, data.id.data)
                     .set(COLUMN_DELETED, false)
                     .set(COLUMN_TRANSACTION, ctx.txIID)
@@ -103,8 +113,8 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .set(COLUMN_UV_INITIALIZED, data.uvInitialized)
                     .set(COLUMN_BACKUP_ELIGIBLE, data.backupEligible)
                     .set(COLUMN_BACKUP_STATE, data.backupState)
-                    .returning(COLUMN_DATUM_ID)
-                    .fetchOne()!![COLUMN_DATUM_ID]
+                    .execute()
+            nextDatumId
         }
 
         snapshotContext?.emitDatum(
@@ -116,6 +126,26 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                 ).toGtv(),
                 false
         )
+    }
+
+    private fun nextDatumId(ctx: BlockEContext): Long = DatabaseAccess.of(ctx).run {
+        val lastDatumId = dslContext(ctx).select(
+                COLUMN_DATUM_ID,
+        )
+                .from(tableDatumId(ctx))
+                .fetchOne()?.get(COLUMN_DATUM_ID)
+
+        if (lastDatumId == null) {
+            dslContext(ctx).insertInto(table(tableDatumId(ctx)))
+                    .set(COLUMN_DATUM_ID, 0L)
+                    .execute()
+            0
+        } else {
+            dslContext(ctx).update(table(tableDatumId(ctx)))
+                    .set(COLUMN_DATUM_ID, lastDatumId + 1)
+                    .execute()
+            lastDatumId + 1
+        }
     }
 
     override fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, uvInitialized: Boolean, backupState: Boolean): Unit = DatabaseAccess.of(ctx).run {
@@ -154,6 +184,78 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
 
     override fun fetchCredential(ctx: EContext, id: ByteArray): CredentialData? =
             fetchCredentialInternal(ctx, id)?.let { if (!it.second.deleted) it.second else null }
+
+    override fun persistChallenge(ctx: BlockEContext, challenge: ByteArray) {
+        val datumId = DatabaseAccess.of(ctx).run {
+            val nextDatumId = nextDatumId(ctx)
+            dslContext(ctx).insertInto(table(tableChallenge(ctx)))
+                    .set(COLUMN_DATUM_ID, nextDatumId)
+                    .set(COLUMN_CHALLENGE, challenge)
+                    .execute()
+            nextDatumId
+        }
+
+        snapshotContext?.emitDatum(
+                ctx,
+                datumId,
+                ChallengeData(challenge = challenge.wrap()).toGtv(),
+                true
+        )
+    }
+
+    override fun challengeExists(ctx: EContext, challenge: ByteArray) = DatabaseAccess.of(ctx).run {
+        dslContext(ctx).select(
+                COLUMN_CHALLENGE,
+        )
+                .from(tableChallenge(ctx))
+                .where(COLUMN_CHALLENGE.eq(challenge))
+                .count() > 0
+    }
+
+    override fun initializeSnapshotContext(context: SnapshotContext) {
+        snapshotContext = context
+    }
+
+    override fun getPermanentDatumIdMax(ctx: EContext): Long? = DatabaseAccess.of(ctx).run {
+        dslContext(ctx).select(DSL.max(COLUMN_DATUM_ID))
+                .from(tableChallenge(ctx))
+                .fetchOne()?.value1()
+    }
+
+    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {
+        var continueStreaming = true
+        streamChallengesFromDatumId(ctx, datumIdFrom) { row ->
+            if (!continueStreaming) return@streamChallengesFromDatumId false
+            val datumGtv = row.second.toGtv()
+            val datum = SnapshotDatum(row.first, datumGtv, true)
+            continueStreaming = datumHandler(datum)
+            continueStreaming
+        }
+        // Signal end of stream
+        if (continueStreaming) {
+            datumHandler(null)
+        }
+    }
+
+    private fun streamChallengesFromDatumId(ctx: EContext, from: Long, rowHandler: (Pair<Long, ChallengeData>) -> Boolean) {
+        DatabaseAccess.of(ctx).run {
+            val jooq = dslContext(ctx)
+            val cursor = jooq.select(COLUMN_DATUM_ID, COLUMN_CHALLENGE)
+                    .from(tableChallenge(ctx))
+                    .where(COLUMN_DATUM_ID.ge(from))
+                    .orderBy(COLUMN_DATUM_ID)
+                    .fetchSize(1)
+                    .fetchLazy()
+            cursor.use { c ->
+                for (rec in c) {
+                    val row = rec[COLUMN_DATUM_ID] to ChallengeData(
+                            challenge = rec[COLUMN_CHALLENGE].wrap(),
+                    )
+                    if (!rowHandler(row)) break
+                }
+            }
+        }
+    }
 
     override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
         val datums = datumList.map {
@@ -230,6 +332,27 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                         .join(table(tableTransactions(ctx)).asTable("t"))
                                         .on(field("t.${COLUMN_TX_RID.name}", SQLDataType.BLOB).eq(field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_TX_RID.name}", SQLDataType.BLOB)))
                         )
+                        .execute()
+            }
+        }
+
+        val challenges = datums.filter { it.second is ChallengeData }
+        if (challenges.isNotEmpty()) {
+            DatabaseAccess.of(ctx).run {
+                val jooq = dslContext(ctx)
+
+                val valuesRows = challenges.map { (datumId, entity) ->
+                    val challenge = entity as ChallengeData // safe since we filter on is ChallengeData above
+                    DSL.row(
+                            datumId,
+                            challenge.challenge.data,
+                    )
+                }
+                jooq.insertInto(table(tableChallenge(ctx)))
+                        .columns(
+                                COLUMN_DATUM_ID,
+                                COLUMN_CHALLENGE,
+                        ).valuesOfRows(valuesRows)
                         .execute()
             }
         }

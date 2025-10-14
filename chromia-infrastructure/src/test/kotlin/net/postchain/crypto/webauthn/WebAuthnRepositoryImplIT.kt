@@ -22,6 +22,7 @@ import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.COLUMN_DEL
 import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.COLUMN_ID
 import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.COLUMN_OP_INDEX
 import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.COLUMN_TRANSACTION
+import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.TABLE_NAME_CHALLENGE
 import net.postchain.crypto.webauthn.WebAuthnRepositoryImpl.Companion.TABLE_NAME_CREDENTIAL
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtx.SnapshotContext
@@ -29,9 +30,13 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL.table
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoMoreInteractions
+import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
 
 @Timeout(60, unit = TimeUnit.SECONDS)
@@ -42,7 +47,7 @@ class WebAuthnRepositoryImplIT {
     val snapshotContext: SnapshotContext = mock()
 
     @Test
-    fun `should initialize database and insert, fetch, update, and delete credentials with snapshot emission`() {
+    fun `should initialize database and insert, fetch, update, and delete credentials, and insert and check challenges, with snapshot emission`() {
         val repository = WebAuthnRepositoryImpl()
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             withWriteConnection(storage, 100) { ctx ->
@@ -59,13 +64,41 @@ class WebAuthnRepositoryImplIT {
 
                 val jooq = repository.dslContext(ctx)
 
+                val challenge1 = ByteArray(16) { 1 }
+                val challenge2 = ByteArray(16) { 2 }
+
                 val credentialId = "test_credential_id".toByteArray()
                 val publicKey = "test_public_key".toByteArray()
                 val transports = "usb,nfc"
 
+                val tableChallenge = db.tableName(ctx, TABLE_NAME_CHALLENGE)
+                assertThat(jooq.fetchCount(table(tableChallenge))).isEqualTo(0)
+                assertThat(repository.challengeExists(ctx, challenge1)).isFalse()
+                assertThat(repository.challengeExists(ctx, challenge2)).isFalse()
+
                 val tableCredential = db.tableName(ctx, TABLE_NAME_CREDENTIAL)
                 assertThat(jooq.fetchCount(table(tableCredential))).isEqualTo(0)
                 assertThat(repository.fetchCredential(ctx, credentialId)).isNull()
+
+                val datumHandler: (datum: SnapshotDatum?) -> Boolean = mock()
+                whenever(datumHandler.invoke(any())).doReturn(true)
+
+                assertThat(repository.getPermanentDatumIdMax(ctx)).isNull()
+
+                repository.persistChallenge(txCtx, challenge1)
+                val challengeData = ChallengeData(
+                        challenge = challenge1.wrap()
+                ).toGtv()
+                verify(snapshotContext).emitDatum(txCtx, 0, challengeData, true)
+                assertThat(repository.challengeExists(ctx, challenge1)).isTrue()
+                assertThat(repository.challengeExists(ctx, challenge2)).isFalse()
+
+                assertThat(repository.getPermanentDatumIdMax(ctx)).isEqualTo(0L)
+
+                repository.getPermanentDatums(ctx, 0, datumHandler)
+                verify(datumHandler).invoke(SnapshotDatum(0, challengeData, true))
+                verify(datumHandler).invoke(null)
+                verifyNoMoreInteractions(datumHandler)
 
                 // Insert credential
                 val credential = CredentialData(
@@ -80,7 +113,7 @@ class WebAuthnRepositoryImplIT {
                 val opIndex = 1
                 reset(snapshotContext)
                 repository.persistCredential(txCtx, opIndex, credential)
-                verify(snapshotContext).emitDatum(txCtx, 0, credential.copy(
+                verify(snapshotContext).emitDatum(txCtx, 1, credential.copy(
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
                 ).toGtv(), false)
@@ -100,7 +133,7 @@ class WebAuthnRepositoryImplIT {
 
                 reset(snapshotContext)
                 repository.updateCredential(txCtx, credentialId, 5, uvInitialized = false, backupState = true)
-                verify(snapshotContext).emitDatum(txCtx, 0, credential.copy(
+                verify(snapshotContext).emitDatum(txCtx, 1, credential.copy(
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
                         signCount = 5,
@@ -116,7 +149,7 @@ class WebAuthnRepositoryImplIT {
 
                 reset(snapshotContext)
                 repository.deleteCredential(txCtx, credentialId)
-                verify(snapshotContext).emitDatum(txCtx, 0, credential.copy(
+                verify(snapshotContext).emitDatum(txCtx, 1, credential.copy(
                         deleted = true,
                         txRid = tx.getRID().wrap(),
                         opIndex = opIndex.toLong(),
@@ -131,6 +164,10 @@ class WebAuthnRepositoryImplIT {
                 assertThat(deletedResult[COLUMN_DELETED]).isTrue()
 
                 assertThat(repository.fetchCredential(ctx, credentialId)).isNull()
+
+                assertFailure {
+                    repository.persistChallenge(txCtx, challenge1)
+                }.isInstanceOf<DataAccessException>()
 
                 assertFailure {
                     repository.persistCredential(txCtx, opIndex + 1, credential)
@@ -158,13 +195,25 @@ class WebAuthnRepositoryImplIT {
 
                 val jooq = repository.dslContext(ctx)
 
+                val challenge1 = ByteArray(16) { 1 }
+
                 val credentialId = "test_credential_id".toByteArray()
                 val publicKey = "test_public_key".toByteArray()
                 val transports = "usb,nfc"
 
+                val tableChallenge = db.tableName(ctx, TABLE_NAME_CHALLENGE)
+                assertThat(jooq.fetchCount(table(tableChallenge))).isEqualTo(0)
+                assertThat(repository.challengeExists(ctx, challenge1)).isFalse()
+
                 val tableCredential = db.tableName(ctx, TABLE_NAME_CREDENTIAL)
                 assertThat(jooq.fetchCount(table(tableCredential))).isEqualTo(0)
                 assertThat(repository.fetchCredential(ctx, credentialId)).isNull()
+
+                repository.constructDatum(ctx, listOf(
+                        SnapshotDatum(0, ChallengeData(challenge = challenge1.wrap()).toGtv(), true)
+                ))
+
+                assertThat(repository.challengeExists(ctx, challenge1)).isTrue()
 
                 val opIndex = 1
                 val credential = CredentialData(
@@ -181,7 +230,7 @@ class WebAuthnRepositoryImplIT {
                 )
 
                 repository.constructDatum(ctx, listOf(
-                        SnapshotDatum(0, credential.toGtv(), false)
+                        SnapshotDatum(1, credential.toGtv(), false)
                 ))
 
                 val result = requireNotNull(jooq.selectFrom(table(tableCredential))

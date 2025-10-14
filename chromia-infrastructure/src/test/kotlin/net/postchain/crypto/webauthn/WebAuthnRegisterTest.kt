@@ -6,6 +6,7 @@ import assertk.assertions.messageContains
 import com.fasterxml.jackson.core.type.TypeReference
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.converter.AttestationObjectConverter
+import com.webauthn4j.converter.CollectedClientDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.data.AuthenticatorAttestationResponse
 import com.webauthn4j.data.PublicKeyCredential
@@ -13,7 +14,10 @@ import com.webauthn4j.data.attestation.AttestationObject
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
 import com.webauthn4j.data.attestation.authenticator.AuthenticatorData
 import com.webauthn4j.data.attestation.authenticator.COSEKey
+import com.webauthn4j.data.client.ClientDataType
+import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.data.client.Origin
+import com.webauthn4j.data.client.challenge.DefaultChallenge
 import com.webauthn4j.data.extension.client.RegistrationExtensionClientOutput
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseTxEContext
@@ -38,16 +42,24 @@ import org.mockito.kotlin.whenever
 
 class WebAuthnRegisterTest {
 
+    val objectConverter = ObjectConverter()
+    val collectedClientDataConverter = CollectedClientDataConverter(objectConverter)
+
     val validId = "41afefa16f97ca9b2d23eb86ccb64098d20db90856062eb249c33a9b672f26df61930a56b87a2fca66334b03458abf879717c12cc68ed73290af2e2664796b9220".hexStringToByteArray()
     val validClientDataJSON = """{"type":"webauthn.create","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}"""
     val validAttestationObject = "a363666d74646e6f6e656761747453746d74a068617574684461746158a4bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b559000000008446ccb9ab1db374750b2367ff6f3a1f0020f91f391db4c9b2fde0ea70189cba3fb63f579ba6122b33ad94ff3ec330084be4a5010203262001215820afefa16f97ca9b2d23eb86ccb64098d20db90856062eb249c33a9b672f26df61225820930a56b87a2fca66334b03458abf879717c12cc68ed73290af2e2664796b9220".hexStringToByteArray()
+    val existingChallenge = ByteArray(16) { 1 }
+    val duplicateClientDataJSON = collectedClientDataConverter.convertToBytes(
+            CollectedClientData(ClientDataType.WEBAUTHN_CREATE, DefaultChallenge(existingChallenge), Origin("https://example.org"), null)
+    ).toString(Charsets.UTF_8)
 
-    val objectConverter = ObjectConverter()
     private val webAuthnManagers = createWebAuthnManager(objectConverter, true)
     val strictWebAuthnManager = webAuthnManagers.first
     val nonStrictWebAuthnManager = webAuthnManagers.second
     val attestationObjectConverter = AttestationObjectConverter(objectConverter)
-    val webAuthnRepository: WebAuthnRepository = mock()
+    val webAuthnRepository: WebAuthnRepository = mock {
+        on { challengeExists(any(), eq(existingChallenge)) } doReturn true
+    }
     val ctx = MockEContext(0)
     val blockCtx = BaseBlockEContext(ctx, 0, 0, 0, mapOf()) { _, _, _ -> }
     val txCtx = BaseTxEContext(blockCtx, 0, TestTransaction(0))
@@ -84,6 +96,13 @@ class WebAuthnRegisterTest {
         assertFailure {
             checkRegistration("example.org", validId, validAttestationObject, "bogus", ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("Input data does not match expected form")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided duplicate challenge`() {
+        assertFailure {
+            checkRegistration("example.org", validId, validAttestationObject, duplicateClientDataJSON, ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+        }.isInstanceOf(UserMistake::class.java).messageContains("challenge is not unique")
     }
 
     @Test
@@ -441,6 +460,10 @@ class WebAuthnRegisterTest {
             op.checkCorrectness(ctx)
             op.apply(txCtx)
         }
+
+        val challenge = collectedClientDataConverter.convert(clientDataJSON.toByteArray(Charsets.UTF_8))!!.challenge.value
+        verify(webAuthnRepository).persistChallenge(txCtx, challenge)
+
         verify(webAuthnRepository).persistCredential(txCtx, opIndex, CredentialData(
                 id = id.wrap(),
                 publicKey = publicKey.wrap(),
