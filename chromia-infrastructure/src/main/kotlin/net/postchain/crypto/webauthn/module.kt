@@ -29,7 +29,6 @@ import net.postchain.gtx.GTXModuleFactory
 import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.SimpleGTXModule
-import net.postchain.gtx.SnapshotAware
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.TrustAnchor
@@ -180,7 +179,7 @@ class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
                 WebAuthnAuthenticate.OP_NAME to ::WebAuthnAuthenticate,
         ),
         mapOf()
-), MetadataProvider, SnapshotAware by conf.repository {
+), MetadataProvider /* TODO enable snapshots , SnapshotAware by conf.repository */ {
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(
                     WebAuthnRegister.OP_NAME to WebAuthnRegister.metadata,
