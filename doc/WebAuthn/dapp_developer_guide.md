@@ -45,6 +45,10 @@ navigator.credentials.create({publicKey: {
       { alg: -7, type: 'public-key' }, // ES256
       { alg: -8, type: 'public-key' }, // EdDSA
     ],
+    authenticatorSelection: {
+      residentKey: 'required',
+    },        
+    attestation: 'direct', // specify 'none' if "verify-attestation" in blockchain config is false, 'direct' if it's true
     // other properties here    
 }});
 ```
