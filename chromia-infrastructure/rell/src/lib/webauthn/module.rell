@@ -1,4 +1,3 @@
-@mount('webauthn')
 module;
 
 val register_op_name = "gtxc.webauthn_register";
