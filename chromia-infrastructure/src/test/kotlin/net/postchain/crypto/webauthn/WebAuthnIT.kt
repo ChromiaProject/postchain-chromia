@@ -12,13 +12,11 @@ import com.webauthn4j.data.extension.client.AuthenticationExtensionClientOutput
 import com.webauthn4j.data.extension.client.RegistrationExtensionClientOutput
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.query
-import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
-import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxOp
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -28,6 +26,7 @@ import java.util.concurrent.TimeUnit
 class WebAuthnIT : ManagedModeTest() {
 
     val objectConverter = ObjectConverter()
+    val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     @Test
     fun `register and authenticate success`() {
@@ -45,11 +44,10 @@ class WebAuthnIT : ManagedModeTest() {
         val transports = registrationResponse.response!!.transports.map { it.value }
 
         enqueueTx(
-                dappChain, makeTransaction(
-                dappChain,
+                dappChain, merkleHashCalculator,
                 GtxOp(WebAuthnRegister.OP_NAME, gtv(credentialId), gtv(attestationObject), gtv(registrationClientDataJSON), gtv(transports.map { gtv(it) })),
                 GtxOp("register_user", gtv(userName)),
-        ))
+        )
         buildBlock(dappChain, 0)
 
         for (node in getChainNodes(dappChain)) {
@@ -66,11 +64,10 @@ class WebAuthnIT : ManagedModeTest() {
         val signature = authenticationResponse.response!!.signature
 
         enqueueTx(
-                dappChain, makeTransaction(
-                dappChain,
+                dappChain, merkleHashCalculator,
                 GtxOp(WebAuthnAuthenticate.OP_NAME, gtv(credentialId), gtv(authenticatorData), gtv(authenticationClientDataJSON), gtv(signature)),
                 GtxOp("create_book", gtv(bookName)),
-        ))
+        )
         buildBlock(dappChain, 1)
 
         for (node in getChainNodes(dappChain)) {
@@ -88,13 +85,5 @@ class WebAuthnIT : ManagedModeTest() {
                 setOf(),
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
                 blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
-    }
-
-    fun makeTransaction(chainId: Long, vararg ops: GtxOp): ByteArray {
-        val builder = GtxBuilder(ChainUtil.ridOf(chainId), emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
-        ops.forEach { builder.addOperation(it.opName, *it.args) }
-        return builder
-                .addNop()
-                .finish().buildGtx().encode()
     }
 }
