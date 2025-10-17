@@ -20,12 +20,8 @@ config:
     user-verification: false # https://w3c.github.io/webauthn/#user-verification
     verify-attestation: false # https://w3c.github.io/webauthn/#reg-ceremony-verify-attestation
 libs:
-  webauthn:
-    registry: https://gitlab.com/chromaway/postchain-chromia
-    path: chromia-infrastructure/rell/src/lib/webauthn
-    tagOrBranch: ${VERSION}
-    rid: x"${LIBRARY_RID}"
-    insecure: false
+  com.chromia.webauthn:
+    version: ${VERSION}
 ```
 
 

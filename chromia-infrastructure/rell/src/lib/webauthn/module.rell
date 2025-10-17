@@ -29,6 +29,34 @@ function require_auth(): auth_data {
     return auth_data(id = byte_array.from_gtv(auth_op.args[0]));
 }
 
+function extract_webauthn_register_args() {
+    val args = extract_op(register_op_name).args;
+    val id = byte_array.from_gtv(args[0]);
+    val attestation_object = byte_array.from_gtv(args[1]);
+    val client_data = map<text, gtv>.from_gtv_pretty(gtv.from_json(text.from_gtv(args[2])));
+    val transports = list<text>.from_gtv(args[3]);
+    return (
+        id = id,
+        attestation_object = attestation_object,
+        client_data = client_data,
+        transports = transports,
+    );
+}
+
+function extract_webauthn_auth_args() {
+    val args = extract_op(auth_op_name).args;
+    val id = byte_array.from_gtv(args[0]);
+    val authenticator_data = byte_array.from_gtv(args[1]);
+    val client_data = map<text, gtv>.from_gtv_pretty(gtv.from_json(text.from_gtv(args[2])));
+    val signature = byte_array.from_gtv(args[3]);
+    return (
+        id = id,
+        authenticator_data = authenticator_data,
+        client_data = client_data,
+        signature = signature,
+    );
+}
+
 function extract_op(name): gtx_operation {
     val all_ops = op_context.get_all_operations();
     for (i in range(op_context.op_index - 1, -1, step = -1)) {
