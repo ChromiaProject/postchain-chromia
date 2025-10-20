@@ -11,6 +11,18 @@ if [ "$RID_EXISTING" = "null" ]; then
   echo "First deploy of library $LIBRARY_NAME"
   VERSION=$2
   DESCRIPTION=$3
+
+  echo "Creating $LIBRARY_NAME $VERSION..."
+  echo "RID: $RID_NEW"
+
+  chr library create \
+    --url "$LIBRARY_CHAIN_API_URL" \
+    --brid "$LIBRARY_CHAIN_BRID" \
+    --library "$LIBRARY_NAME" \
+    --organization com.chromia \
+    --name "$LIBRARY_NAME" \
+    --version "$VERSION" \
+    --description "$DESCRIPTION"
 else
   VERSION=${2:-$CI_COMMIT_TAG}
   DESCRIPTION=`echo $EXISTING | jq -r '.version_description'`
@@ -27,15 +39,15 @@ else
   fi
 
   echo "previous RID: $RID_EXISTING"
+
+  echo "Deploying $LIBRARY_NAME $VERSION..."
+  echo "new RID: $RID_NEW"
+
+  chr library deploy \
+    --url "$LIBRARY_CHAIN_API_URL" \
+    --brid "$LIBRARY_CHAIN_BRID" \
+    --library "$LIBRARY_NAME" \
+    --id "com.chromia.$LIBRARY_NAME" \
+    --version "$VERSION" \
+    --description "$DESCRIPTION"
 fi
-
-echo "Deploying $LIBRARY_NAME $VERSION..."
-echo "new RID: $RID_NEW"
-
-chr library deploy \
-  --url "$LIBRARY_CHAIN_API_URL" \
-  --brid "$LIBRARY_CHAIN_BRID" \
-  --library "$LIBRARY_NAME" \
-  --id "com.chromia.$LIBRARY_NAME" \
-  --version "$VERSION" \
-  --description "$DESCRIPTION"
