@@ -9,7 +9,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import kotlin.math.max
 
@@ -42,11 +42,12 @@ class IntraClusterTopicPipe(
         val heightToQueryFrom = max(currentPointer, skipToHeight - 1)
         val allMessages = query.query(
                 QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
-                GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(heightToQueryFrom)))
+                gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(heightToQueryFrom)))
         ).asArray().map {
-            val size = GtvEncoder.encodeGtv(it["body"]!!).size
-            if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
-            it["height"]!!.asInteger() to IcmfMessage(it["body"]!!, size)
+            val body = it["body"]!!
+            val size = GtvEncoder.encodeGtv(body).size
+            if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
+            it["height"]!!.asInteger() to IcmfMessage(body, size)
         }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
 
         val packets = mutableListOf<IcmfPacket>()

@@ -35,16 +35,26 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
         val message = SentIcmfMessage.fromGtv(data)
 
         if (!isValidTopicName(message.topic)) {
-            logger.info("ICMF message with invalid topic ${message.topic} will not be sent")
-        } else if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
+            logger.info("ICMF message with invalid topic will not be sent")
+            return
+        }
+
+        if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
-        } else {
-            logger.info("ICMF message sent in topic ${message.topic}")
-            dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, GtvEncoder.encodeGtv(message.body))
-            val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
-            ctxt.addAfterAppendHook {
-                queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
-            }
+            return
+        }
+
+        val encodedBody = GtvEncoder.encodeGtv(message.body)
+        if (encodedBody.size > ICMF_MESSAGE_MAX_SIZE) {
+            logger.info("ICMF message with topic ${message.topic} and too big body will not be sent")
+            return
+        }
+
+        logger.info("ICMF message sent in topic ${message.topic}")
+        dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, encodedBody)
+        val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
+        ctxt.addAfterAppendHook {
+            queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
         }
     }
 

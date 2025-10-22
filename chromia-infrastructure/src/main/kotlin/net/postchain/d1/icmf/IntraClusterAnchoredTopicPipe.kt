@@ -83,7 +83,7 @@ class IntraClusterAnchoredTopicPipe(
                         GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(decodedHeader.getHeight())))
                 ).asArray().map {
                     val size = GtvEncoder.encodeGtv(it).size
-                    if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
+                    if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
                     IcmfMessage(it, size)
                 }
 
