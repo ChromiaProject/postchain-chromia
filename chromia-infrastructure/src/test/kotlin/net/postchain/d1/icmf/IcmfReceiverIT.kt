@@ -2,6 +2,7 @@ package net.postchain.d1.icmf
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
@@ -19,6 +20,7 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.common.createLogCaptor
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.d1.QueryProviderMocks
@@ -70,12 +72,15 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
     private val remoteSenderMessageBody = gtv("remote")
     private val remoteSenderEncodedMessageBody = GtvEncoder.encodeGtv(remoteSenderMessageBody)
-    private val remoteSenderQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody))
-    private val remoteSenderSecondQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), 1, 0)
+    private val remoteSenderQueryResponse =
+            createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody))
+    private val remoteSenderSecondQueryResponse =
+            createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), 1, 0)
 
     private val localSenderMessageBody = gtv("local")
     private val localSenderEncodedMessageBody = GtvEncoder.encodeGtv(localSenderMessageBody)
-    private val localSenderQueryResponse = createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody))
+    private val localSenderQueryResponse =
+            createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody))
 
     private val otherLocalSenderMessageBody = gtv("other")
     private val dbOperations = IcmfReceiverDatabaseOperationsImpl()
@@ -94,7 +99,11 @@ class IcmfReceiverIT : IcmfBaseIT() {
      * @param anchorQueryResponse Pass multiple responses to mock sending at multiple heights
      * @param messageQueryResponse Pass the messages to send at each height
      */
-    private fun setupClientMocks(anchorQueryResponse: List<Gtv> = listOf(remoteSenderQueryResponse), messageQueryResponse: List<Gtv> = listOf(remoteSenderMessageBody), topic: String = "my-topic") {
+    private fun setupClientMocks(
+            anchorQueryResponse: List<Gtv> = listOf(remoteSenderQueryResponse),
+            messageQueryResponse: List<Gtv> = listOf(remoteSenderMessageBody),
+            topic: String = "my-topic"
+    ) {
         val clusterAnchoringChainClientMock: PostchainClient = mock {}
         val senderOneChainClientMock: PostchainClient = mock {}
 
@@ -105,29 +114,46 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
             doReturn(gtv(listOf(response))).whenever(clusterAnchoringChainClientMock).query(
                     "icmf_get_headers_with_messages_after_height",
-                    gtv(mapOf(
-                            "topic" to gtv(topic),
-                            "from_anchor_height" to gtv(messageHeight - 1)
-                    ))
+                    gtv(
+                            mapOf(
+                                    "topic" to gtv(topic),
+                                    "from_anchor_height" to gtv(messageHeight - 1)
+                            )
+                    )
             )
 
             doReturn(gtv(messageQueryResponse)).whenever(senderOneChainClientMock).query(
                     QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
-                    gtv(mapOf(
-                            "topic" to gtv(topic),
-                            "height" to gtv(messageHeight)
-                    ))
+                    gtv(
+                            mapOf(
+                                    "topic" to gtv(topic),
+                                    "height" to gtv(messageHeight)
+                            )
+                    )
             )
         }
 
         MockPostchainRestApi.addMockClient(clusterAnchoringChainRid, 1, clusterAnchoringChainClientMock)
-        MockPostchainRestApi.addMockClient(remoteSenderChainRid, 100,senderOneChainClientMock)
+        MockPostchainRestApi.addMockClient(remoteSenderChainRid, 100, senderOneChainClientMock)
     }
 
-    private fun setupNonAnchoredClientMocks(senderChainRid: BlockchainRid = remoteSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic") {
+    private fun setupNonAnchoredClientMocks(
+            senderChainRid: BlockchainRid = remoteSenderChainRid,
+            messageHeight: Long = 0,
+            prevMessageHeight: Long = -1,
+            topic: String = "my-topic"
+    ) {
         val senderChainClientMock: PostchainClient = mock {}
 
-        doReturn(createBlockDetail(senderChainRid, listOf(remoteSenderMessageBody), topic, messageHeight, prevMessageHeight))
+        doReturn(
+                createBlockDetail(
+                        senderChainRid,
+                        listOf(remoteSenderMessageBody),
+                        topic,
+                        messageHeight,
+                        prevMessageHeight
+                )
+        )
                 .whenever(senderChainClientMock).blockAtHeight(messageHeight)
 
         doReturn(gtv(listOf())).whenever(senderChainClientMock).query(
@@ -135,18 +161,25 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 any()
         )
 
-        doReturn(gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(messageHeight)))))).whenever(senderChainClientMock).query(
+        doReturn(gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(messageHeight)))))).whenever(
+                senderChainClientMock
+        ).query(
                 QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
-                gtv(mapOf(
-                        "topic" to gtv(topic),
-                        "height" to gtv(messageHeight - 1)
-                ))
+                gtv(
+                        mapOf(
+                                "topic" to gtv(topic),
+                                "height" to gtv(messageHeight - 1)
+                        )
+                )
         )
 
-        MockPostchainRestApi.addMockClient(senderChainRid, 100,senderChainClientMock)
+        MockPostchainRestApi.addMockClient(senderChainRid, 100, senderChainClientMock)
     }
 
-    private fun setupQueriesMocks(localSenderQueryResponse: Gtv = this.localSenderQueryResponse, topic: String = "my-topic") {
+    private fun setupQueriesMocks(
+            localSenderQueryResponse: Gtv = this.localSenderQueryResponse,
+            topic: String = "my-topic"
+    ) {
         QueryProviderMocks.clearMocks()
 
         QueryProviderMocks.clusterAnchoringQueries = object : PostchainBlockClient {
@@ -176,7 +209,12 @@ class IcmfReceiverIT : IcmfBaseIT() {
         })
     }
 
-    private fun setupNonAnchoredQueriesMock(senderBrid: BlockchainRid = localSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic") {
+    private fun setupNonAnchoredQueriesMock(
+            senderBrid: BlockchainRid = localSenderChainRid,
+            messageHeight: Long = 0,
+            prevMessageHeight: Long = -1,
+            topic: String = "my-topic"
+    ) {
         QueryProviderMocks.clearMocks()
 
         // Set no messages as default for all local senders
@@ -190,15 +228,27 @@ class IcmfReceiverIT : IcmfBaseIT() {
         addNonAnchoredQueriesMock(senderBrid, messageHeight, prevMessageHeight, topic)
     }
 
-    private fun addNonAnchoredQueriesMock(senderBrid: BlockchainRid = localSenderChainRid, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic", messageBody: Gtv = localSenderMessageBody) {
+    private fun addNonAnchoredQueriesMock(
+            senderBrid: BlockchainRid = localSenderChainRid,
+            messageHeight: Long = 0,
+            prevMessageHeight: Long = -1,
+            topic: String = "my-topic",
+            messageBodies: List<Gtv> = listOf(localSenderMessageBody)
+    ) {
 
         QueryProviderMocks.addMockQueries(senderBrid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == messageHeight) createBlockDetail(senderBrid, listOf(messageBody), topic, messageHeight, prevMessageHeight) else null
+                    if (height == messageHeight) createBlockDetail(
+                            senderBrid,
+                            messageBodies,
+                            topic,
+                            messageHeight,
+                            prevMessageHeight
+                    ) else null
 
             override fun query(name: String, args: Gtv) =
                     if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv(topic) && args["height"]!!.asInteger() < messageHeight)
-                        gtv(listOf(gtv(mapOf("body" to messageBody, "height" to gtv(messageHeight)))))
+                        gtv(messageBodies.map { gtv(mapOf("body" to it, "height" to gtv(messageHeight))) })
                     else
                         gtv(listOf())
         })
@@ -209,24 +259,44 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         QueryProviderMocks.addMockQueries(localSenderChainRid2, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(localSenderChainRid2, listOf(otherLocalSenderMessageBody), "failing-topic") else null
+                    if (height == 0L) createBlockDetail(
+                            localSenderChainRid2,
+                            listOf(otherLocalSenderMessageBody),
+                            "failing-topic"
+                    ) else null
 
             override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("failing-topic") && args["height"] == gtv(-1))
-                        gtv(listOf(
-                                gtv(mapOf("body" to otherLocalSenderMessageBody, "height" to gtv(0)))))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("failing-topic") && args["height"] == gtv(
+                                    -1
+                            )
+                    )
+                        gtv(
+                                listOf(
+                                        gtv(mapOf("body" to otherLocalSenderMessageBody, "height" to gtv(0)))
+                                )
+                        )
                     else
                         gtv(listOf())
         })
 
         QueryProviderMocks.addMockQueries(localSenderChainRid, object : PostchainBlockClient {
             override fun blockAtHeight(height: Long) =
-                    if (height == 0L) createBlockDetail(localSenderChainRid, listOf(localSenderMessageBody), "my-topic") else null
+                    if (height == 0L) createBlockDetail(
+                            localSenderChainRid,
+                            listOf(localSenderMessageBody),
+                            "my-topic"
+                    ) else null
 
             override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
-                        gtv(listOf(
-                                gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(
+                                    -1
+                            )
+                    )
+                        gtv(
+                                listOf(
+                                        gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))
+                                )
+                        )
                     else
                         gtv(listOf())
         })
@@ -254,8 +324,16 @@ class IcmfReceiverIT : IcmfBaseIT() {
             for (node in getChainNodes(dappChain)) {
                 val messages = getTestMessages(node, dappChain)
                 assertThat(messages).hasSize(3)
-                assertThat(messages.filter { it.sender == remoteSenderChainRid && it.topic == "my-topic" && it.body.contentEquals(remoteSenderEncodedMessageBody) }).hasSize(2)
-                assertThat(messages.any { it.sender == localSenderChainRid && it.topic == "my-topic" && it.body.contentEquals(localSenderEncodedMessageBody) }).isTrue()
+                assertThat(messages.filter {
+                    it.sender == remoteSenderChainRid && it.topic == "my-topic" && it.body.data.contentEquals(
+                            remoteSenderEncodedMessageBody
+                    )
+                }).hasSize(2)
+                assertThat(messages.any {
+                    it.sender == localSenderChainRid && it.topic == "my-topic" && it.body.data.contentEquals(
+                            localSenderEncodedMessageBody
+                    )
+                }).isTrue()
             }
         }
     }
@@ -285,7 +363,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val message = messages[0]
                 assertThat(message.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(message.topic).isEqualTo("my-topic")
-                assertThat(message.body.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+                assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
             }
         }
 
@@ -319,7 +397,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val message = messages[0]
                 assertThat(message.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(message.topic).isEqualTo("my-topic")
-                assertThat(message.body.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+                assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
             }
         }
 
@@ -351,7 +429,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(localSenderChainRid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
         }
     }
 
@@ -380,7 +458,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(localSenderChainRid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
         }
 
         buildBlock(dappChain)
@@ -413,7 +491,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val message = messages[0]
                 assertThat(message.sender).isEqualTo(localSenderChainRid)
                 assertThat(message.topic).isEqualTo("my-topic")
-                assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+                assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
             }
         }
     }
@@ -423,20 +501,28 @@ class IcmfReceiverIT : IcmfBaseIT() {
     fun anchoringReceiver() {
         QueryProviderMocks.clearMocks()
         QueryProviderMocks.addMockQueries(clusterAnchoringChainRid, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) = createBlockDetail(clusterAnchoringChainRid, listOf(remoteSenderMessageBody), "my-topic")
+            override fun blockAtHeight(height: Long) =
+                    createBlockDetail(clusterAnchoringChainRid, listOf(remoteSenderMessageBody), "my-topic")
 
             override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(
+                                    -1
+                            )
+                    )
                         gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
         })
 
         QueryProviderMocks.addMockQueries(systemAnchoringChainRid, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) = createBlockDetail(systemAnchoringChainRid, listOf(localSenderMessageBody), "my-topic")
+            override fun blockAtHeight(height: Long) =
+                    createBlockDetail(systemAnchoringChainRid, listOf(localSenderMessageBody), "my-topic")
 
             override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(-1))
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(
+                                    -1
+                            )
+                    )
                         gtv(listOf(gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
                     else
                         gtv(listOf())
@@ -445,7 +531,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_anchoring_receiver_1.xml")!!.readText()
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_anchoring_receiver_1.xml")!!
+                        .readText()
         )
 
         val dappChain = startNewBlockchain(
@@ -460,8 +547,16 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val messages = getTestMessages(node, dappChain)
 
                 assertThat(messages).hasSize(2)
-                assertThat(messages.any { it.sender == clusterAnchoringChainRid && it.topic == "my-topic" && it.body.contentEquals(remoteSenderEncodedMessageBody) }).isTrue()
-                assertThat(messages.any { it.sender == systemAnchoringChainRid && it.topic == "my-topic" && it.body.contentEquals(localSenderEncodedMessageBody) }).isTrue()
+                assertThat(messages.any {
+                    it.sender == clusterAnchoringChainRid && it.topic == "my-topic" && it.body.data.contentEquals(
+                            remoteSenderEncodedMessageBody
+                    )
+                }).isTrue()
+                assertThat(messages.any {
+                    it.sender == systemAnchoringChainRid && it.topic == "my-topic" && it.body.data.contentEquals(
+                            localSenderEncodedMessageBody
+                    )
+                }).isTrue()
             }
         }
     }
@@ -529,12 +624,12 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val firstMessage = messages[0]
                 assertThat(firstMessage.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(firstMessage.topic).isEqualTo("my-topic")
-                assertThat(firstMessage.body.contentEquals(encodedMessageBody)).isTrue()
+                assertThat(firstMessage.body.data.contentEquals(encodedMessageBody)).isTrue()
 
                 val secondMessage = messages[1]
                 assertThat(secondMessage.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(secondMessage.topic).isEqualTo("my-topic")
-                assertThat(secondMessage.body.contentEquals(secondEncodedMessageBody)).isTrue()
+                assertThat(secondMessage.body.data.contentEquals(secondEncodedMessageBody)).isTrue()
 
                 assertThat(firstMessage.height).isLessThan(secondMessage.height)
             }
@@ -625,7 +720,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(directoryChainBrid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
         }
     }
 
@@ -663,7 +758,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(localSenderChainRid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
             assertThat(message.height).isEqualTo(1)
         }
     }
@@ -693,7 +788,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(localSenderChainRid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
             assertThat(message.height).isEqualTo(0)
         }
 
@@ -720,7 +815,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(localSenderChainRid)
             assertThat(message.topic).isEqualTo("my-topic")
-            assertThat(message.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
             assertThat(message.height).isEqualTo(0)
         }
 
@@ -734,7 +829,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
             messages.forEach {
                 assertThat(it.sender).isEqualTo(localSenderChainRid)
                 assertThat(it.topic).isEqualTo("my-topic")
-                assertThat(it.body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+                assertThat(it.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
             }
             assertThat(messages[0].height).isEqualTo(0)
             assertThat(messages[1].height).isEqualTo(3)
@@ -745,8 +840,20 @@ class IcmfReceiverIT : IcmfBaseIT() {
     fun `dapp receiver config - add local topic and read messages`() {
 
         setupNonAnchoredQueriesMock(messageHeight = 2, topic = "L_topic-defined-in-config")
-        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                2,
+                -1,
+                "L_topic-1",
+                messageBodies = listOf(gtv("topic-1-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                2,
+                -1,
+                "L_topic-2",
+                messageBodies = listOf(gtv("topic-2-message"))
+        )
 
         startManagedSystem(3, 0)
 
@@ -760,19 +867,23 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         // Add two more topics
-        val tx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+        val tx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1, GtxOp(
                 "receiver_icmf_update_topics_op",
-                gtv(gtv(
-                        gtv("L_topic-1"),
-                        gtv(localSenderChainRid2.data),
-                        gtv(0)
-                ), gtv(
+                gtv(
+                        gtv(
+                                gtv("L_topic-1"),
+                                gtv(localSenderChainRid2.data),
+                                gtv(0)
+                        ), gtv(
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
                         gtv(0)
-                )),
+                )
+                ),
                 gtv(true)
-        ))
+        )
+        )
 
         buildBlock(dappChain1, tx)
 
@@ -786,15 +897,15 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
                 assertThat(messages[0].sender).isEqualTo(localSenderChainRid)
                 assertThat(messages[0].topic).isEqualTo("L_topic-defined-in-config")
-                assertThat(messages[0].body.contentEquals(localSenderEncodedMessageBody)).isTrue()
+                assertThat(messages[0].body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
 
                 assertThat(messages[1].sender).isEqualTo(localSenderChainRid2)
                 assertThat(messages[1].topic).isEqualTo("L_topic-1")
-                assertThat(GtvDecoder.decodeGtv(messages[1].body)).isEqualTo(gtv("topic-1-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[1].body.data)).isEqualTo(gtv("topic-1-message"))
 
                 assertThat(messages[2].sender).isEqualTo(localSenderChainRid3)
                 assertThat(messages[2].topic).isEqualTo("L_topic-2")
-                assertThat(GtvDecoder.decodeGtv(messages[2].body)).isEqualTo(gtv("topic-2-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[2].body.data)).isEqualTo(gtv("topic-2-message"))
             }
         }
     }
@@ -803,9 +914,12 @@ class IcmfReceiverIT : IcmfBaseIT() {
     fun `dapp receiver config - add global topic and read messages`() {
 
         val topic = "G_my-topic"
-        val remoteSenderQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), topic = topic)
-        val remoteSenderSecondQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), 1, 0, topic = topic)
-        val localSenderQueryResponse = createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody), topic = topic)
+        val remoteSenderQueryResponse =
+                createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), topic = topic)
+        val remoteSenderSecondQueryResponse =
+                createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), 1, 0, topic = topic)
+        val localSenderQueryResponse =
+                createQueryResponseForMessage(localSenderChainRid, listOf(localSenderMessageBody), topic = topic)
 
         setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse), topic = topic)
         setupQueriesMocks(localSenderQueryResponse, topic)
@@ -815,15 +929,19 @@ class IcmfReceiverIT : IcmfBaseIT() {
         val dappChain = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
 
         // Add topics
-        val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
+        val addTopicsTx = makeTransaction(
+                getChainNodes(dappChain)[0], dappChain, GtxOp(
                 "receiver_icmf_update_topics_op",
-                gtv(gtv(
-                        gtv(topic),
-                        GtvNull,
-                        gtv(0)
-                )),
+                gtv(
+                        gtv(
+                                gtv(topic),
+                                GtvNull,
+                                gtv(0)
+                        )
+                ),
                 gtv(true)
-        ))
+        )
+        )
 
         buildBlock(dappChain, addTopicsTx)
 
@@ -833,8 +951,16 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val messages = getTestMessages(node, dappChain)
 
                 assertThat(messages).hasSize(3)
-                assertThat(messages.filter { it.sender == remoteSenderChainRid && it.topic == topic && it.body.contentEquals(remoteSenderEncodedMessageBody) }).hasSize(2)
-                assertThat(messages.any { it.sender == localSenderChainRid && it.topic == topic && it.body.contentEquals(localSenderEncodedMessageBody) }).isTrue()
+                assertThat(messages.filter {
+                    it.sender == remoteSenderChainRid && it.topic == topic && it.body.data.contentEquals(
+                            remoteSenderEncodedMessageBody
+                    )
+                }).hasSize(2)
+                assertThat(messages.any {
+                    it.sender == localSenderChainRid && it.topic == topic && it.body.data.contentEquals(
+                            localSenderEncodedMessageBody
+                    )
+                }).isTrue()
             }
         }
     }
@@ -843,7 +969,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
     fun `dapp receiver config - add global topic with brid and read messages`() {
 
         val topic = "G_my-topic"
-        val remoteSenderQueryResponse = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), topic = topic)
+        val remoteSenderQueryResponse =
+                createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody), topic = topic)
         setupClientMocks(listOf(remoteSenderQueryResponse), listOf(remoteSenderMessageBody), topic)
 
         startManagedSystem(3, 0)
@@ -851,15 +978,19 @@ class IcmfReceiverIT : IcmfBaseIT() {
         val dappChain = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
 
         // Add topics
-        val addTopicsTx = makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp(
+        val addTopicsTx = makeTransaction(
+                getChainNodes(dappChain)[0], dappChain, GtxOp(
                 "receiver_icmf_update_topics_op",
-                gtv(gtv(
-                        gtv(topic),
-                        gtv(remoteSenderChainRid.data),
-                        gtv(0)
-                )),
+                gtv(
+                        gtv(
+                                gtv(topic),
+                                gtv(remoteSenderChainRid.data),
+                                gtv(0)
+                        )
+                ),
                 gtv(true)
-        ))
+        )
+        )
 
         buildBlock(dappChain, addTopicsTx)
 
@@ -873,7 +1004,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val message = messages[0]
                 assertThat(message.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(message.topic).isEqualTo(topic)
-                assertThat(message.body.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+                assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
             }
         }
 
@@ -888,8 +1019,20 @@ class IcmfReceiverIT : IcmfBaseIT() {
      */
     @Test
     fun `dapp receiver config - remove 1 topic and stop receive messages on that topic`() {
-        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                2,
+                -1,
+                "L_topic-1",
+                messageBodies = listOf(gtv("topic-1-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                2,
+                -1,
+                "L_topic-2",
+                messageBodies = listOf(gtv("topic-2-message"))
+        )
 
         startManagedSystem(3, 0)
 
@@ -902,19 +1045,23 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         // Add two more topics
-        val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+        val addTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1, GtxOp(
                 "receiver_icmf_update_topics_op",
-                gtv(gtv(
-                        gtv("L_topic-1"),
-                        gtv(localSenderChainRid2.data),
-                        gtv(0)
-                ), gtv(
+                gtv(
+                        gtv(
+                                gtv("L_topic-1"),
+                                gtv(localSenderChainRid2.data),
+                                gtv(0)
+                        ), gtv(
                         gtv("L_topic-2"),
                         gtv(localSenderChainRid3.data),
                         gtv(0)
-                )),
+                )
+                ),
                 gtv(true)
-        ))
+        )
+        )
 
         buildBlock(dappChain1, addTopicsTx)
 
@@ -928,27 +1075,43 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
                 assertThat(messages[0].sender).isEqualTo(localSenderChainRid2)
                 assertThat(messages[0].topic).isEqualTo("L_topic-1")
-                assertThat(GtvDecoder.decodeGtv(messages[0].body)).isEqualTo(gtv("topic-1-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[0].body.data)).isEqualTo(gtv("topic-1-message"))
 
                 assertThat(messages[1].sender).isEqualTo(localSenderChainRid3)
                 assertThat(messages[1].topic).isEqualTo("L_topic-2")
-                assertThat(GtvDecoder.decodeGtv(messages[1].body)).isEqualTo(gtv("topic-2-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[1].body.data)).isEqualTo(gtv("topic-2-message"))
             }
         }
 
         // New messages
-        addNonAnchoredQueriesMock(localSenderChainRid2, 6, 2, "L_topic-1", messageBody = gtv("topic-1-second-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 6, 2, "L_topic-2", messageBody = gtv("topic-2-second-message"))
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                6,
+                2,
+                "L_topic-1",
+                messageBodies = listOf(gtv("topic-1-second-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                6,
+                2,
+                "L_topic-2",
+                messageBodies = listOf(gtv("topic-2-second-message"))
+        )
 
-        val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+        val removeTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1, GtxOp(
                 "receiver_icmf_update_topics_op",
-                gtv(gtv(
-                        gtv("L_topic-2"),
-                        gtv(localSenderChainRid3.data),
-                        gtv(0)
-                )),
+                gtv(
+                        gtv(
+                                gtv("L_topic-2"),
+                                gtv(localSenderChainRid3.data),
+                                gtv(0)
+                        )
+                ),
                 gtv(true)
-        ))
+        )
+        )
 
         buildBlock(dappChain1, removeTopicsTx)
 
@@ -959,10 +1122,10 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val messages = getTestMessages(node, dappChain1)
 
                 assertThat(messages).hasSize(4)
-                with (messages[3]) {
+                with(messages[3]) {
                     assertThat(sender).isEqualTo(localSenderChainRid3)
                     assertThat(topic).isEqualTo("L_topic-2")
-                    assertThat(GtvDecoder.decodeGtv(body)).isEqualTo(gtv("topic-2-second-message"))
+                    assertThat(GtvDecoder.decodeGtv(body.data)).isEqualTo(gtv("topic-2-second-message"))
                 }
             }
         }
@@ -983,9 +1146,27 @@ class IcmfReceiverIT : IcmfBaseIT() {
      */
     @Test
     fun `dapp receiver config - add, replace and add topics`() {
-        addNonAnchoredQueriesMock(localSenderChainRid, 2, -1, "L_topic-1", messageBody = gtv("topic-1-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid2, 2, -1, "L_topic-2", messageBody = gtv("topic-2-message"))
-        addNonAnchoredQueriesMock(localSenderChainRid3, 2, -1, "L_topic-3", messageBody = gtv("topic-3-message"))
+        addNonAnchoredQueriesMock(
+                localSenderChainRid,
+                2,
+                -1,
+                "L_topic-1",
+                messageBodies = listOf(gtv("topic-1-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                2,
+                -1,
+                "L_topic-2",
+                messageBodies = listOf(gtv("topic-2-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                2,
+                -1,
+                "L_topic-3",
+                messageBodies = listOf(gtv("topic-3-message"))
+        )
 
         startManagedSystem(3, 0)
 
@@ -997,19 +1178,26 @@ class IcmfReceiverIT : IcmfBaseIT() {
             assertThat(result.size).isZero()
         }
 
-        val addTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
+        val addTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1,
                 // Operation #1 - add a topic - this one will be ignored due to the following reset op
-                GtxOp("receiver_icmf_update_topics_op",
+                GtxOp(
+                        "receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-1"), gtv(localSenderChainRid.data), gtv(0))),
-                        gtv(false)),
+                        gtv(false)
+                ),
                 // Operation #2 - replace topics (this will add one topic)
-                GtxOp("receiver_icmf_update_topics_op",
+                GtxOp(
+                        "receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-2"), gtv(localSenderChainRid2.data), gtv(0))),
-                        gtv(true)),
+                        gtv(true)
+                ),
                 // Operation #3 - add another topic
-                GtxOp("receiver_icmf_update_topics_op",
+                GtxOp(
+                        "receiver_icmf_update_topics_op",
                         gtv(gtv(gtv("L_topic-3"), gtv(localSenderChainRid3.data), gtv(0))),
-                        gtv(false)),
+                        gtv(false)
+                ),
         )
 
         buildBlock(dappChain1, addTopicsTx)
@@ -1024,30 +1212,31 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
                 assertThat(messages[0].sender).isEqualTo(localSenderChainRid2)
                 assertThat(messages[0].topic).isEqualTo("L_topic-2")
-                assertThat(GtvDecoder.decodeGtv(messages[0].body)).isEqualTo(gtv("topic-2-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[0].body.data)).isEqualTo(gtv("topic-2-message"))
 
                 assertThat(messages[1].sender).isEqualTo(localSenderChainRid3)
                 assertThat(messages[1].topic).isEqualTo("L_topic-3")
-                assertThat(GtvDecoder.decodeGtv(messages[1].body)).isEqualTo(gtv("topic-3-message"))
+                assertThat(GtvDecoder.decodeGtv(messages[1].body.data)).isEqualTo(gtv("topic-3-message"))
             }
         }
 
         withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain1) { ctx ->
             val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
             assertThat(result.size).isEqualTo(2)
-            with (result[0]) {
+            with(result[0]) {
                 assertThat(topic).isEqualTo("L_topic-2")
                 assertThat(bcRid.contentEquals(localSenderChainRid2.data)).isTrue()
                 assertThat(skipToHeight).isEqualTo(0)
             }
-            with (result[1]) {
+            with(result[1]) {
                 assertThat(topic).isEqualTo("L_topic-3")
                 assertThat(bcRid.contentEquals(localSenderChainRid3.data)).isTrue()
                 assertThat(skipToHeight).isEqualTo(0)
             }
         }
 
-        val removeTopicsTx = makeTransaction(getChainNodes(dappChain1)[0], dappChain1,
+        val removeTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1,
                 // Operation #1 - add a topic - this one will be ignored due to the following reset op
                 GtxOp("receiver_icmf_update_topics_op", GtvArray(listOf<Gtv>().toTypedArray()), gtv(true)),
         )
@@ -1068,7 +1257,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         nodes.forEach { node ->
             val receiverGTXModule = node.getModules(1L).find { it is IcmfReceiverGTXModule }!!
-            val receiverSpecialTxExtension = receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
+            val receiverSpecialTxExtension =
+                    receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
             receiverSpecialTxExtension.anchoredReceivers.forEach {
                 it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
                     assertThat(pipe.queueLength).isEqualTo(0)
@@ -1091,7 +1281,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata.xml")!!.readText())
+        val dappGtvConfig =
+                GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata.xml")!!.readText())
 
         val dappChain = startNewBlockchain(
                 setOf(0, 1, 2),
@@ -1125,7 +1316,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
 
         startManagedSystem(3, 0)
 
-        val dappGtvConfig = GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata_and_spill.xml")!!.readText())
+        val dappGtvConfig =
+                GtvMLParser.parseGtvML(javaClass.getResource("/icmf/receiver_with_metadata_and_spill.xml")!!.readText())
 
         val dappChain = startNewBlockchain(
                 setOf(0, 1, 2),
@@ -1148,7 +1340,55 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
     }
 
-    private fun createQueryResponseForMessage(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, messageHeight: Long = 0, prevMessageHeight: Long = -1, topic: String = "my-topic"): Gtv {
+    @Test
+    fun `rate limit`() {
+        setupNonAnchoredQueriesMock(messageHeight = 0, prevMessageHeight = -1, topic = "L_topic-1")
+        addNonAnchoredQueriesMock(
+                messageHeight = 0,
+                prevMessageHeight = -1,
+                topic = "L_topic-1",
+                messageBodies = listOf(gtv("local-0"), gtv("local-1"), gtv("local-2"))
+        )
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_intra_cluster_without_anchoring_with_ratelimit_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            val messages = getTestMessages(node, dappChain)
+            assertThat(messages).isEmpty()
+        }
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            val messages = getTestMessages(node, dappChain)
+            assertThat(messages).containsExactly(
+                    TestMessage(localSenderChainRid, "L_topic-1", GtvEncoder.encodeGtv(gtv("local-0")).wrap(), 1),
+                    TestMessage(localSenderChainRid, "L_topic-1", GtvEncoder.encodeGtv(gtv("local-1")).wrap(), 1),
+                    TestMessage(localSenderChainRid, "L_topic-1", GtvEncoder.encodeGtv(gtv("local-2")).wrap(), 1),
+            )
+        }
+
+        verifyPipesAreEmpty(dappChain)
+    }
+
+    private fun createQueryResponseForMessage(
+            blockchainRid: BlockchainRid,
+            messageBodies: List<Gtv>,
+            messageHeight: Long = 0,
+            prevMessageHeight: Long = -1,
+            topic: String = "my-topic"
+    ): Gtv {
         val blockDetail = createBlockDetail(blockchainRid, messageBodies, topic, messageHeight, prevMessageHeight)
         return gtv(
                 mapOf(
@@ -1159,7 +1399,13 @@ class IcmfReceiverIT : IcmfBaseIT() {
         )
     }
 
-    private fun createBlockDetail(blockchainRid: BlockchainRid, messageBodies: List<Gtv>, topic: String, messageHeight: Long = 0, prevMessageHeight: Long = -1): BlockDetail {
+    private fun createBlockDetail(
+            blockchainRid: BlockchainRid,
+            messageBodies: List<Gtv>,
+            topic: String,
+            messageHeight: Long = 0,
+            prevMessageHeight: Long = -1
+    ): BlockDetail {
         val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
         val blockHeader = BlockHeaderData(
                 gtv(blockchainRid.data),
@@ -1199,7 +1445,11 @@ class IcmfReceiverIT : IcmfBaseIT() {
         )
     }
 
-    private fun buildAnchorHeader(icmfHeaders: List<ByteArray>, prevHeight: Long = -1, topic: String = "my-topic"): BlockDetail {
+    private fun buildAnchorHeader(
+            icmfHeaders: List<ByteArray>,
+            prevHeight: Long = -1,
+            topic: String = "my-topic"
+    ): BlockDetail {
         val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
         val icmfBlockRids = icmfHeaders.map {
             val decodedHeader = BlockHeaderData.fromBinary(it)
@@ -1218,9 +1468,11 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 GtvNull,
                 gtv(
                         mapOf(
-                                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
-                                        topic to TopicHeaderData(gtv(icmfBlockRids).merkleHash(hashCalculator), prevHeight).toGtv()
-                                )),
+                                ICMF_ANCHOR_HEADERS_EXTRA to gtv(
+                                        mapOf(
+                                                topic to TopicHeaderData(gtv(icmfBlockRids).merkleHash(hashCalculator), prevHeight).toGtv()
+                                        )
+                                ),
                                 MERKLE_HASH_VERSION_EXTRA_HEADER to gtv(2)
                         )
                 )
@@ -1242,10 +1494,10 @@ class IcmfReceiverIT : IcmfBaseIT() {
         )
     }
 
-    class TestMessage(
+    data class TestMessage(
             val sender: BlockchainRid,
             val topic: String,
-            val body: ByteArray,
+            val body: WrappedByteArray,
             val height: Long
     )
 
@@ -1262,9 +1514,15 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 jooq.select()
                         .from(da.tableName(ctx, testMessageTable))
                         .fetch()
-                        .map { TestMessage(BlockchainRid(it[COLUMN_SENDER]), it[COLUMN_TOPIC], it[COLUMN_BODY], it[COLUMN_HEIGHT]) }
+                        .map {
+                            TestMessage(
+                                    BlockchainRid(it[COLUMN_SENDER]),
+                                    it[COLUMN_TOPIC],
+                                    it[COLUMN_BODY].wrap(),
+                                    it[COLUMN_HEIGHT]
+                            )
+                        }
             }
         }
     }
-
 }

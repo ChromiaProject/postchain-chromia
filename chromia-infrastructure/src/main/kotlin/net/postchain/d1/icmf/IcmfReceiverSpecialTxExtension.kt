@@ -20,6 +20,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvType
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -54,14 +55,24 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
     lateinit var directoryChainBrid: BlockchainRid
     lateinit var initialDappProvidedTopics: List<IcmfReceiverEventTopic>
 
-    private val _relevantOps = setOf(AnchorHeaderOp.OP_NAME, AnchoredHeaderOp.OP_NAME, NonAnchoredHeaderOp.OP_NAME, MessageHashOp.OP_NAME, MessageOp.OP_NAME)
+    private val _relevantOps = setOf(
+            AnchorHeaderOp.OP_NAME,
+            AnchoredHeaderOp.OP_NAME,
+            NonAnchoredHeaderOp.OP_NAME,
+            MessageHashOp.OP_NAME,
+            MessageOp.OP_NAME
+    )
+    private lateinit var module: GTXModule
     private lateinit var cryptoSystem: CryptoSystem
+    private var hasRateLimitQuery: Boolean = false
     private var systemAnchoringBrid: BlockchainRid? = null
 
     private val blockedPipes = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+        this.module = module
         cryptoSystem = cs
+        hasRateLimitQuery = module.getQueries().contains(RECEIVER_RATE_LIMIT_QUERY_NAME)
     }
 
     override fun getRelevantOps() = _relevantOps
@@ -77,8 +88,20 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val allOps = mutableListOf<OpData>()
         val messageLimit = AtomicLong(icmfReceiverBlockchainConfigData.messageLimit)
-        createNonAnchoredOperations(bctx, allOps, nonAnchoredReceivers.flatMap { it.getRelevantPipes() }, BASE_SPECIAL_TX_OVERHEAD, messageLimit).let { size ->
-            createAnchoredOperations(bctx, allOps, anchoredReceivers.flatMap { it.getRelevantPipes() }, size, messageLimit)
+        createNonAnchoredOperations(
+                bctx,
+                allOps,
+                nonAnchoredReceivers.flatMap { it.getRelevantPipes() },
+                BASE_SPECIAL_TX_OVERHEAD,
+                messageLimit
+        ).let { size ->
+            createAnchoredOperations(
+                    bctx,
+                    allOps,
+                    anchoredReceivers.flatMap { it.getRelevantPipes() },
+                    size,
+                    messageLimit
+            )
         }
         bctx.addAfterCommitHook {
             blockedPipes.clear()
@@ -96,10 +119,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         var currentSize = initialSize
         var isFull = false
         for (pipe in pipes) {
-            if (pipe.mightHaveNewPackets() && !isFull && pipe.route.topic !in blockedPipes) {
-                val blockchainRid = pipe.id
+            val blockchainRid = pipe.id
 
-                var currentMessageHeight: Long = dbOperations.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
+            if (pipe.mightHaveNewPackets() && !isFull && pipe.route.topic !in blockedPipes && !delayPipe(bctx, blockchainRid, pipe.route.topic)) {
+                var currentMessageHeight: Long =
+                        dbOperations.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
 
                 // Clean up packets that are no longer relevant
                 pipe.markTaken(currentMessageHeight, bctx)
@@ -108,11 +132,21 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     val icmfPackets = pipe.fetchNext(currentMessageHeight)
                     if (icmfPackets != null) {
                         for (packet in icmfPackets.packets) {
-                            val spilledMessageCounts = dbOperations.loadSpilledMessageCounts(bctx, "", packet.height, pipe.route.topic)
+                            val spilledMessageCounts =
+                                    dbOperations.loadSpilledMessageCounts(bctx, "", packet.height, pipe.route.topic)
                             val spilledCount = spilledMessageCounts[packet.sender] ?: 0
-                            val (newSize, filled) = processMessages(spilledCount, packet, currentSize, allOps, isFull, currentMessageHeight, messageLimit) { header, witness ->
-                                NonAnchoredHeaderOp(header, witness).toOpData()
-                            }
+                            val (newSize, filled) = processMessages(
+                                    spilledCount,
+                                    packet,
+                                    currentSize,
+                                    allOps,
+                                    isFull,
+                                    currentMessageHeight,
+                                    messageLimit,
+                                    { header, witness ->
+                                        NonAnchoredHeaderOp(header, witness).toOpData()
+                                    },
+                            )
                             currentSize = newSize
                             isFull = filled
                         }
@@ -134,7 +168,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             initialSize: Int,
             messageLimit: AtomicLong
     ): Int {
-        val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
+        val lastAnchoredHeights =
+                dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 
         var currentSize = initialSize
         var isFull = false
@@ -153,19 +188,38 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                         for (anchorPacket in icmfPackets.packets) {
                             if (isFull) break
 
-                            val spilledMessageCounts = dbOperations.loadSpilledMessageCounts(bctx, clusterName, anchorPacket.height, pipe.route.topic)
+                            val spilledMessageCounts = dbOperations.loadSpilledMessageCounts(
+                                    bctx,
+                                    clusterName,
+                                    anchorPacket.height,
+                                    pipe.route.topic
+                            )
                             if (spilledMessageCounts.isEmpty()) {
-                                val anchorHeaderOp = AnchorHeaderOp(clusterName, anchorPacket.rawAnchorHeader, anchorPacket.rawAnchorWitness).toOpData()
+                                val anchorHeaderOp = AnchorHeaderOp(
+                                        clusterName,
+                                        anchorPacket.rawAnchorHeader,
+                                        anchorPacket.rawAnchorWitness
+                                ).toOpData()
                                 allOps.add(anchorHeaderOp)
                                 currentSize += anchorHeaderOp.getEncodedSize()
                             }
 
                             for (packet in anchorPacket.packets) {
                                 val spilledCount = spilledMessageCounts[packet.sender] ?: 0
-                                val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
-                                val (newSize, filled) = processMessages(spilledCount, packet, currentSize, allOps, isFull, currentPrevMessageBlockHeight, messageLimit) { header, witness ->
-                                    AnchoredHeaderOp(header, witness).toOpData()
-                                }
+                                val currentPrevMessageBlockHeight =
+                                        dbOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
+                                val (newSize, filled) = processMessages(
+                                        spilledCount,
+                                        packet,
+                                        currentSize,
+                                        allOps,
+                                        isFull,
+                                        currentPrevMessageBlockHeight,
+                                        messageLimit,
+                                        { header, witness ->
+                                            AnchoredHeaderOp(header, witness).toOpData()
+                                        },
+                                )
                                 currentSize = newSize
                                 isFull = filled
                             }
@@ -187,7 +241,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
      * The only variable in hash op size is topic, so we can use placeholders for brid and message hash
      */
     private fun calculateIcmfPacketOverheadSize(icmfPacket: IcmfPacket, headerOp: OpData) = headerOp.getEncodedSize() +
-            MessageHashOp(BlockchainRid.ZERO_RID, icmfPacket.topic, EMPTY_HASH).toOpData().getEncodedSize() * icmfPacket.messages.size
+            MessageHashOp(BlockchainRid.ZERO_RID, icmfPacket.topic, EMPTY_HASH).toOpData()
+                    .getEncodedSize() * icmfPacket.messages.size
 
     private fun processMessages(
             spilledCount: Int,
@@ -197,7 +252,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             isFull: Boolean,
             currentPrevMessageBlockHeight: Long,
             messageLimit: AtomicLong,
-            headerOpCreator: (ByteArray, ByteArray) -> OpData
+            headerOpCreator: (ByteArray, ByteArray) -> OpData,
     ): Pair<Int, Boolean> {
         var currentSize = initialSize
         var filled = isFull
@@ -221,7 +276,14 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 allOps.add(headerOp)
 
                 for (message in packet.messages) {
-                    allOps.add(MessageHashOp(packet.sender, packet.topic, message.body.merkleHash(packet.merkleHashCalculator)).toOpData())
+                    allOps.add(
+                            MessageHashOp(
+                                    packet.sender,
+                                    packet.topic,
+                                    message.body.merkleHash(packet.merkleHashCalculator)
+                            ).toOpData()
+                    )
+
                     val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
                     val messageOpSize = messageOp.getEncodedSize()
                     if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
@@ -235,9 +297,27 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 filled = true
             }
         }
-        // else already processed in previous block, so skip it here
+        // else already processed in the previous block, so skip it here
 
         return Pair(currentSize, filled)
+    }
+
+    private fun delayPipe(bctx: BlockEContext, sender: BlockchainRid, topic: String): Boolean = try {
+        if (hasRateLimitQuery) {
+            module.query(
+                    bctx, RECEIVER_RATE_LIMIT_QUERY_NAME,
+                    GtvObjectMapper.toGtvDictionary(
+                            ReceiverRateLimitRequest(
+                                    sender = sender.data,
+                                    topic = topic,
+                            )
+                    )
+            ).asDict()
+        }
+        false
+    } catch (e: UserMistake) {
+        logger.debug { "In block ${bctx.height}, messages from $sender in topic $topic are delayed until next block: ${e.message}" }
+        true
     }
 
     /**
@@ -252,7 +332,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         val headerBlockRidsByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         var currentHeaderData: HeaderValidationInfo? = null
         val bodyHashesByTopic: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
-        val bodyHashesBySenderAndTopic: MutableMap<Pair<BlockchainRid, String>, MutableList<MessageHash>> = mutableMapOf()
+        val bodyHashesBySenderAndTopic: MutableMap<Pair<BlockchainRid, String>, MutableList<MessageHash>> =
+                mutableMapOf()
         val peerCache = mutableMapOf<BlockchainRid, Pair<ByteArray, Collection<PubKey>>>()
         var messageLimit = icmfReceiverBlockchainConfigData.messageLimit
         for (op in ops) {
@@ -260,11 +341,21 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 AnchorHeaderOp.OP_NAME -> {
                     val anchorHeaderOp = AnchorHeaderOp.fromOpData(op) ?: return false
 
-                    if (!validateHeaders(headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys }, currentAnchorHeaderData, bctx)) return false
+                    if (!validateHeaders(
+                                    headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys },
+                                    currentAnchorHeaderData,
+                                    bctx
+                            )
+                    ) return false
                     if (currentAnchorHeaderData != null) {
                         for (topic in headerBlockRidsByTopic.keys) {
                             if (bodyHashesByTopic.containsKey(topic)) {
-                                dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
+                                dbOperations.saveLastAnchoredHeight(
+                                        bctx,
+                                        currentAnchorHeaderData.cluster,
+                                        topic,
+                                        currentAnchorHeaderData.height
+                                )
                             }
                         }
                     }
@@ -275,7 +366,15 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     val blockRid = decodedHeader.toGtv().merkleHash(anchorHeaderHashCalculator)
                     val peers = getCachedPeers(peerCache, decodedHeader, blockchainConfigProvider) ?: return false
 
-                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, anchorHeaderOp.rawHeader, anchorHeaderOp.rawWitness, blockRid, cryptoSystem, peers, ICMF_ANCHOR_HEADERS_EXTRA)
+                    val anchorHeaderData = TopicHeaderData.extractTopicHeaderData(
+                            decodedHeader,
+                            anchorHeaderOp.rawHeader,
+                            anchorHeaderOp.rawWitness,
+                            blockRid,
+                            cryptoSystem,
+                            peers,
+                            ICMF_ANCHOR_HEADERS_EXTRA
+                    )
                             ?: return false
 
                     currentAnchorHeaderData = AnchorHeaderValidationInfo(
@@ -307,7 +406,15 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     val blockRid = decodedHeader.toGtv().merkleHash(messageHeaderHashCalculator)
                     val peers = getCachedPeers(peerCache, decodedHeader, blockchainConfigProvider) ?: return false
 
-                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, peers, ICMF_BLOCK_HEADER_EXTRA)
+                    val topicData = TopicHeaderData.extractTopicHeaderData(
+                            decodedHeader,
+                            headerOp.rawHeader,
+                            headerOp.rawWitness,
+                            blockRid,
+                            cryptoSystem,
+                            peers,
+                            ICMF_BLOCK_HEADER_EXTRA
+                    )
                             ?: return false
 
                     if (headerOp is AnchoredHeaderOp) {
@@ -336,7 +443,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     if (currentAnchorHeaderData != null) {
                         if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
                     } else {
-                        if (!validateNonAnchoredMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic, currentHeaderData.height)) return false
+                        if (!validateNonAnchoredMessageSenderAndTopic(
+                                        messageHashOp.sender,
+                                        messageHashOp.topic,
+                                        currentHeaderData.height
+                                )
+                        ) return false
                     }
 
                     val topicData = currentHeaderData.icmfHeaderData[messageHashOp.topic]
@@ -358,23 +470,37 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                         return false
                     }
                     val messageOp = MessageOp.fromOpData(op) ?: return false
-                    val latestReceivedHashForTopic = bodyHashesBySenderAndTopic[messageOp.sender to messageOp.topic]?.removeLastOrNull()
+                    val latestReceivedHashForTopic =
+                            bodyHashesBySenderAndTopic[messageOp.sender to messageOp.topic]?.removeLastOrNull()
                     if (latestReceivedHashForTopic == null) {
-                        val spilledMessage = dbOperations.loadOldestSpilledMessage(bctx, messageOp.sender, messageOp.topic)
+                        val spilledMessage =
+                                dbOperations.loadOldestSpilledMessage(bctx, messageOp.sender, messageOp.topic)
                         if (spilledMessage == null) {
                             logger.warn("Received unexpected message op for sender ${messageOp.sender} and topic ${messageOp.topic}")
                             return false
                         }
 
-                        val messageBodyHash = messageOp.body.merkleHash(makeMerkleHashCalculator(spilledMessage.merkleHashVersion))
+                        val messageBodyHash =
+                                messageOp.body.merkleHash(makeMerkleHashCalculator(spilledMessage.merkleHashVersion))
                         if (!spilledMessage.hash.contentEquals(messageBodyHash)) {
                             logger.warn("Hash of message body ${messageBodyHash.toHex()} does not match latest spilled message hash operation value ${spilledMessage.hash.toHex()} for topic ${messageOp.topic}")
                             return false
                         }
                         dbOperations.imprecateSpilledMessage(bctx, spilledMessage.serial)
 
-                        if (dbOperations.loadSpilledMessageCounts(bctx, spilledMessage.cluster, spilledMessage.anchorHeight, messageOp.topic).isEmpty()) {
-                            dbOperations.saveLastAnchoredHeight(bctx, spilledMessage.cluster, messageOp.topic, spilledMessage.anchorHeight)
+                        if (dbOperations.loadSpilledMessageCounts(
+                                        bctx,
+                                        spilledMessage.cluster,
+                                        spilledMessage.anchorHeight,
+                                        messageOp.topic
+                                ).isEmpty()
+                        ) {
+                            dbOperations.saveLastAnchoredHeight(
+                                    bctx,
+                                    spilledMessage.cluster,
+                                    messageOp.topic,
+                                    spilledMessage.anchorHeight
+                            )
                         }
                     } else { // no spill
                         if (currentHeaderData == null) {
@@ -399,7 +525,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         if (!validateMessages(bodyHashesByTopic, currentHeaderData, bctx)) {
             return false
         }
-        if (!validateHeaders(headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys }, currentAnchorHeaderData, bctx)) {
+        if (!validateHeaders(
+                        headerBlockRidsByTopic.filter { it.key in bodyHashesByTopic.keys },
+                        currentAnchorHeaderData,
+                        bctx
+                )
+        ) {
             return false
         }
 
@@ -407,21 +538,42 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             for ((key, hashes) in bodyHashesBySenderAndTopic) {
                 val (sender, topic) = key
                 hashes.forEach {
-                    dbOperations.saveSpilledMessage(bctx, currentAnchorHeaderData.cluster, currentAnchorHeaderData.height, sender, topic, it.hash, it.merkleHashVersion)
+                    dbOperations.saveSpilledMessage(
+                            bctx,
+                            currentAnchorHeaderData.cluster,
+                            currentAnchorHeaderData.height,
+                            sender,
+                            topic,
+                            it.hash,
+                            it.merkleHashVersion
+                    )
                 }
             }
 
             for (topic in headerBlockRidsByTopic.keys) {
                 // If we actually received messages on the topic and there is no spill we can save as last anchor height
                 if (bodyHashesByTopic.containsKey(topic) && bodyHashesBySenderAndTopic.filterKeys { it.second == topic }.values.all { it.isEmpty() }) {
-                    dbOperations.saveLastAnchoredHeight(bctx, currentAnchorHeaderData.cluster, topic, currentAnchorHeaderData.height)
+                    dbOperations.saveLastAnchoredHeight(
+                            bctx,
+                            currentAnchorHeaderData.cluster,
+                            topic,
+                            currentAnchorHeaderData.height
+                    )
                 }
             }
         } else if (currentHeaderData != null) {
             for ((key, hashes) in bodyHashesBySenderAndTopic) {
                 val (sender, topic) = key
                 hashes.forEach {
-                    dbOperations.saveSpilledMessage(bctx, "", currentHeaderData.height, sender, topic, it.hash, it.merkleHashVersion)
+                    dbOperations.saveSpilledMessage(
+                            bctx,
+                            "",
+                            currentHeaderData.height,
+                            sender,
+                            topic,
+                            it.hash,
+                            it.merkleHashVersion
+                    )
                 }
             }
         }
@@ -445,7 +597,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
                 || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
                 || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)) {
+                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
+        ) {
             return true
         }
 
@@ -476,7 +629,13 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     return false
                 }
 
-                if (!validatePreviousHeaderHeight(bctx, currentAnchorHeaderData.cluster, topic, anchorHeaderData.previousBlockHeight)) return false
+                if (!validatePreviousHeaderHeight(
+                                bctx,
+                                currentAnchorHeaderData.cluster,
+                                topic,
+                                anchorHeaderData.previousBlockHeight
+                        )
+                ) return false
 
                 if (!hash.contentEquals(anchorHeaderData.hash)) {
                     logger.warn("Invalid block-rid hash, expected ${anchorHeaderData.hash.toHex()} but was ${hash.toHex()}")
@@ -521,7 +680,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         return true
     }
 
-    private fun validatePreviousHeaderHeight(bctx: BlockEContext, cluster: String, topic: String, previousHeight: Long): Boolean {
+    private fun validatePreviousHeaderHeight(
+            bctx: BlockEContext,
+            cluster: String,
+            topic: String,
+            previousHeight: Long
+    ): Boolean {
         val currentPrevHeaderHeight = dbOperations.loadLastAnchoredHeight(bctx, cluster, topic)
 
         if (previousHeight != currentPrevHeaderHeight) {
@@ -539,8 +703,9 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             prevMessageBlockHeight: Long,
             height: Long
     ): Boolean {
-        val skipToHeight = icmfReceiverBlockchainConfigData.local?.find { it.blockchainRid.contentEquals(sender) && it.topic == topic }
-                ?.skipToHeight ?: 0
+        val skipToHeight =
+                icmfReceiverBlockchainConfigData.local?.find { it.blockchainRid.contentEquals(sender) && it.topic == topic }
+                        ?.skipToHeight ?: 0
         val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
         if ((skipToHeight == 0L || prevMessageBlockHeight >= skipToHeight) && prevMessageBlockHeight != currentPrevMessageBlockHeight) {
@@ -605,11 +770,13 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             // operation __icmf_anchor_header(cluster: text, block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__icmf_anchor_header"
 
-            val metadata = OperationMetadata(args = listOf(
-                    ArgumentMetadata(name = "cluster", gtvTypes = setOf(GtvType.STRING)),
-                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
-                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
-            ))
+            val metadata = OperationMetadata(
+                    args = listOf(
+                            ArgumentMetadata(name = "cluster", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                            ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    )
+            )
 
             fun fromOpData(opData: OpData): AnchorHeaderOp? {
                 if (opData.opName != OP_NAME) return null
@@ -619,7 +786,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 }
 
                 return try {
-                    AnchorHeaderOp(opData.args[0].asString(), opData.args[1].asByteArray(), opData.args[2].asByteArray())
+                    AnchorHeaderOp(
+                            opData.args[0].asString(),
+                            opData.args[1].asByteArray(),
+                            opData.args[2].asByteArray()
+                    )
                 } catch (e: UserMistake) {
                     logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
                     null
@@ -643,10 +814,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             // operation __anchored_icmf_header(block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__anchored_icmf_header"
 
-            val metadata = OperationMetadata(args = listOf(
-                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
-                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
-            ))
+            val metadata = OperationMetadata(
+                    args = listOf(
+                            ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                            ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    )
+            )
 
             fun fromOpData(opData: OpData): AnchoredHeaderOp? {
                 if (opData.opName != OP_NAME) return null
@@ -675,10 +848,12 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             // operation __non_anchored_icmf_header(block_header: byte_array, witness: byte_array)
             const val OP_NAME = "__non_anchored_icmf_header"
 
-            val metadata = OperationMetadata(args = listOf(
-                    ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
-                    ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
-            ))
+            val metadata = OperationMetadata(
+                    args = listOf(
+                            ArgumentMetadata(name = "block_header", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                            ArgumentMetadata(name = "witness", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    )
+            )
 
             fun fromOpData(opData: OpData): NonAnchoredHeaderOp? {
                 if (opData.opName != OP_NAME) return null
@@ -708,11 +883,13 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             // operation __anchored_icmf_message_hash(sender: byte_array, topic: text, hash: byte_array)
             const val OP_NAME = "__anchored_icmf_message_hash"
 
-            val metadata = OperationMetadata(args = listOf(
-                    ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
-                    ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
-                    ArgumentMetadata(name = "hash", gtvTypes = setOf(GtvType.BYTEARRAY)),
-            ))
+            val metadata = OperationMetadata(
+                    args = listOf(
+                            ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(name = "hash", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    )
+            )
 
             fun fromOpData(opData: OpData): MessageHashOp? {
                 if (opData.opName != OP_NAME) return null
@@ -722,7 +899,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                 }
 
                 return try {
-                    MessageHashOp(BlockchainRid(opData.args[0].asByteArray()), opData.args[1].asString(), opData.args[2].asByteArray())
+                    MessageHashOp(
+                            BlockchainRid(opData.args[0].asByteArray()),
+                            opData.args[1].asString(),
+                            opData.args[2].asByteArray()
+                    )
                 } catch (e: UserMistake) {
                     logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
                     null
@@ -742,13 +923,23 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
             const val OP_NAME = "__icmf_message"
 
-            val metadata = OperationMetadata(args = listOf(
-                    ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
-                    ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
-                    ArgumentMetadata(name = "body", gtvTypes = setOf(
-                            GtvType.NULL, GtvType.BYTEARRAY, GtvType.STRING, GtvType.INTEGER, GtvType.DICT, GtvType.ARRAY, GtvType.BIGINTEGER
-                    )),
-            ))
+            val metadata = OperationMetadata(
+                    args = listOf(
+                            ArgumentMetadata(name = "sender", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                            ArgumentMetadata(name = "topic", gtvTypes = setOf(GtvType.STRING)),
+                            ArgumentMetadata(
+                                    name = "body", gtvTypes = setOf(
+                                    GtvType.NULL,
+                                    GtvType.BYTEARRAY,
+                                    GtvType.STRING,
+                                    GtvType.INTEGER,
+                                    GtvType.DICT,
+                                    GtvType.ARRAY,
+                                    GtvType.BIGINTEGER
+                            )
+                            ),
+                    )
+            )
 
             fun fromOpData(opData: OpData): MessageOp? = fromOpNameAndArgs(opData.opName, opData.args)
 

@@ -34,7 +34,7 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         val message = SentIcmfMessage.fromGtv(data)
 
-        if (!message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
+        if (!isValidTopicName(message.topic)) {
             logger.info("ICMF message with invalid topic ${message.topic} will not be sent")
         } else if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")

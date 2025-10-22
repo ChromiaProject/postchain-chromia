@@ -46,6 +46,13 @@ Configuration:
           level: warn
         - ref: FileAppender
 
+      - name: net.postchain.Rell
+        level: info
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
+        - ref: FileAppender
+
       - name: net.postchain.d1
         level: debug
         additivity: false

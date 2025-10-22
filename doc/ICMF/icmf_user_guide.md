@@ -59,6 +59,21 @@ operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
 
 The `sender` parameter here is the blockchain-rid of the sender chain.
 
+### Rate-limit received messages
+
+You can implement a special query with mount name `icmf.receiver_rate_limit` to rate-limit incoming messages in local topics. 
+This query is called once per block and pipe (combination of sender and topic), and if it throws (e.g. by `require()` or 
+`rell.error()`), no messages from that pipe will be processed in the current block. The query needs to return an empty 
+GtvDict (which might be filled with properties in the future). 
+
+```
+@mount("icmf.")
+query receiver_rate_limit(sender: byte_array, topic: text): map<text, gtv> {
+    // do checks here
+    return [:];
+}
+```
+
 ### Topic and sender configuration
 You also need to configure which topics and sender chains you want to listen to.
 
