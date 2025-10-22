@@ -102,11 +102,11 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         txExt.icmfReceiverBlockchainConfigData = config
         txExt.specialTxSizeMargin = config.specialTxMarginBytes
 
-        if (maxBlockSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
-            logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+        if (maxBlockSize < ICMF_MESSAGE_MAX_SIZE + config.specialTxMarginBytes) {
+            logger.warn("Configured max block size $maxBlockSize for blockchain is lower than recommended minimum size for ICMF message reception ${ICMF_MESSAGE_MAX_SIZE + config.specialTxMarginBytes}")
         }
-        if (maxTxSize < MAX_MESSAGE_SIZE + config.specialTxMarginBytes) {
-            logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${MAX_MESSAGE_SIZE + config.specialTxMarginBytes}")
+        if (maxTxSize < ICMF_MESSAGE_MAX_SIZE + config.specialTxMarginBytes) {
+            logger.warn("Configured max tx size $maxTxSize for blockchain is lower than recommended minimum size for ICMF message reception ${ICMF_MESSAGE_MAX_SIZE + config.specialTxMarginBytes}")
         }
 
         if (config.global != null) {

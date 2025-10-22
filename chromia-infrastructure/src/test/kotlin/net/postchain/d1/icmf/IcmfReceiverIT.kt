@@ -588,7 +588,7 @@ class IcmfReceiverIT : IcmfBaseIT() {
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
             assertThat(appender.events.map { it.message.toString() })
-                    .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
+                    .contains("Message with size ${encodedMessageBody.size} bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
         }
     }
 
