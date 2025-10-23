@@ -32,22 +32,21 @@ Configuration:
   Loggers:
 
     Root:
-      level: warn
+      level: info
       AppenderRef:
       - ref: ConsoleAppender
       - ref: FileAppender
 
     Logger:
       - name: net.postchain
-        level: debug
+        level: info
         additivity: false
         AppenderRef:
         - ref: ConsoleAppender
-          level: warn
         - ref: FileAppender
 
       - name: net.postchain.d1
-        level: debug
+        level: info
         additivity: false
         AppenderRef:
         - ref: ConsoleAppender
@@ -61,7 +60,7 @@ Configuration:
         - ref: FileAppender
 
       - name: net.postchain.ebft.syncmanager.common
-        level: error
+        level: info
 
       - name: net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
         level: info

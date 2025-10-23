@@ -2,7 +2,6 @@ package net.postchain.test
 
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import kotlin.collections.plus
 
 fun Gtv.modify(dictPath: List<String>, modifier: (Gtv) -> Gtv): Gtv {
     return if (dictPath.isEmpty()) {
