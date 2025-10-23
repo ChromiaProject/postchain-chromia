@@ -1083,6 +1083,34 @@ class IcmfReceiverIT : IcmfBaseIT() {
             }
         }
 
+        val removeTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+                "receiver_icmf_update_topics_op",
+                gtv(
+                        gtv(
+                                gtv("L_topic-1"),
+                                gtv(localSenderChainRid2.data),
+                                gtv(0)
+                        )
+                ),
+                gtv(false),
+                gtv(true),
+        )
+        )
+        buildBlock(dappChain1, removeTopicsTx)
+
+        for (node in getChainNodes(dappChain1)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+                val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
+                assertThat(result.size).isEqualTo(1)
+                with(result[0]) {
+                    assertThat(topic).isEqualTo("L_topic-2")
+                    assertThat(bcRid.contentEquals(localSenderChainRid3.data)).isTrue()
+                    assertThat(skipToHeight).isEqualTo(0)
+                }
+            }
+        }
+
         // New messages
         addNonAnchoredQueriesMock(
                 localSenderChainRid2,
@@ -1099,21 +1127,89 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 messageBodies = listOf(gtv("topic-2-second-message"))
         )
 
-        val removeTopicsTx = makeTransaction(
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain1)
+
+            for (node in getChainNodes(dappChain1)) {
+                val messages = getTestMessages(node, dappChain1)
+
+                assertThat(messages).hasSize(3)
+                with(messages[2]) {
+                    assertThat(sender).isEqualTo(localSenderChainRid3)
+                    assertThat(topic).isEqualTo("L_topic-2")
+                    assertThat(GtvDecoder.decodeGtv(body.data)).isEqualTo(gtv("topic-2-second-message"))
+                }
+            }
+        }
+
+        verifyPipesAreEmpty(dappChain1)
+    }
+
+    @Test
+    fun `dapp receiver config - add and remove senders on the same topic`() {
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                2,
+                -1,
+                "L_topic-1",
+                messageBodies = listOf(gtv("sender-2-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                2,
+                -1,
+                "L_topic-1",
+                messageBodies = listOf(gtv("sender-3-message"))
+        )
+
+        startManagedSystem(3, 0)
+
+        val dappChain1 = deployDynamicTopicDappChain(configFile = "/icmf/dynamic_receiver_no_topics.xml")
+        buildBlock(dappChain1)
+
+        for (node in getChainNodes(dappChain1)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+                val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
+                assertThat(result.size).isZero()
+            }
+        }
+
+        // Add two senders
+        val addTopicsTx = makeTransaction(
                 getChainNodes(dappChain1)[0], dappChain1, GtxOp(
                 "receiver_icmf_update_topics_op",
                 gtv(
                         gtv(
-                                gtv("L_topic-2"),
-                                gtv(localSenderChainRid3.data),
+                                gtv("L_topic-1"),
+                                gtv(localSenderChainRid2.data),
                                 gtv(0)
-                        )
+                        ), gtv(
+                        gtv("L_topic-1"),
+                        gtv(localSenderChainRid3.data),
+                        gtv(0)
+                )
                 ),
                 gtv(true)
         )
         )
+        buildBlock(dappChain1, addTopicsTx)
 
-        buildBlock(dappChain1, removeTopicsTx)
+        for (node in getChainNodes(dappChain1)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+                val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
+                assertThat(result.size).isEqualTo(2)
+                with(result[0]) {
+                    assertThat(topic).isEqualTo("L_topic-1")
+                    assertThat(bcRid.contentEquals(localSenderChainRid2.data)).isTrue()
+                    assertThat(skipToHeight).isEqualTo(0)
+                }
+                with(result[1]) {
+                    assertThat(topic).isEqualTo("L_topic-1")
+                    assertThat(bcRid.contentEquals(localSenderChainRid3.data)).isTrue()
+                    assertThat(skipToHeight).isEqualTo(0)
+                }
+            }
+        }
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain1)
@@ -1121,11 +1217,73 @@ class IcmfReceiverIT : IcmfBaseIT() {
             for (node in getChainNodes(dappChain1)) {
                 val messages = getTestMessages(node, dappChain1)
 
-                assertThat(messages).hasSize(4)
-                with(messages[3]) {
+                assertThat(messages).hasSize(2)
+
+                assertThat(messages[0].sender).isEqualTo(localSenderChainRid2)
+                assertThat(messages[0].topic).isEqualTo("L_topic-1")
+                assertThat(GtvDecoder.decodeGtv(messages[0].body.data)).isEqualTo(gtv("sender-2-message"))
+
+                assertThat(messages[1].sender).isEqualTo(localSenderChainRid3)
+                assertThat(messages[1].topic).isEqualTo("L_topic-1")
+                assertThat(GtvDecoder.decodeGtv(messages[1].body.data)).isEqualTo(gtv("sender-3-message"))
+            }
+        }
+
+        val removeTopicsTx = makeTransaction(
+                getChainNodes(dappChain1)[0], dappChain1, GtxOp(
+                "receiver_icmf_update_topics_op",
+                gtv(
+                        gtv(
+                                gtv("L_topic-1"),
+                                gtv(localSenderChainRid2.data),
+                                gtv(0)
+                        )
+                ),
+                gtv(false),
+                gtv(true),
+        )
+        )
+        buildBlock(dappChain1, removeTopicsTx)
+
+        for (node in getChainNodes(dappChain1)) {
+            withReadConnection(node.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+                val result = dbOperations.loadDappProvidedReceiverTopics(ctx)
+                assertThat(result.size).isEqualTo(1)
+                with(result[0]) {
+                    assertThat(topic).isEqualTo("L_topic-1")
+                    assertThat(bcRid.contentEquals(localSenderChainRid3.data)).isTrue()
+                    assertThat(skipToHeight).isEqualTo(0)
+                }
+            }
+        }
+
+        // New messages
+        addNonAnchoredQueriesMock(
+                localSenderChainRid2,
+                6,
+                2,
+                "L_topic-1",
+                messageBodies = listOf(gtv("sender-2-second-message"))
+        )
+        addNonAnchoredQueriesMock(
+                localSenderChainRid3,
+                6,
+                2,
+                "L_topic-1",
+                messageBodies = listOf(gtv("sender-3-second-message"))
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain1)
+
+            for (node in getChainNodes(dappChain1)) {
+                val messages = getTestMessages(node, dappChain1)
+
+                assertThat(messages).hasSize(3)
+                with(messages[2]) {
                     assertThat(sender).isEqualTo(localSenderChainRid3)
-                    assertThat(topic).isEqualTo("L_topic-2")
-                    assertThat(GtvDecoder.decodeGtv(body.data)).isEqualTo(gtv("topic-2-second-message"))
+                    assertThat(topic).isEqualTo("L_topic-1")
+                    assertThat(GtvDecoder.decodeGtv(body.data)).isEqualTo(gtv("sender-3-second-message"))
                 }
             }
         }
@@ -1249,31 +1407,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
     }
 
-    private fun verifyPipesAreEmpty(dappChain: Long) {
-        // Let all nodes be primary once, so they can clean their pipes
-        repeat(nodes.size) {
-            buildBlock(dappChain)
-        }
-
-        nodes.forEach { node ->
-            val receiverGTXModule = node.getModules(1L).find { it is IcmfReceiverGTXModule }!!
-            val receiverSpecialTxExtension =
-                    receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
-            receiverSpecialTxExtension.anchoredReceivers.forEach {
-                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
-                    assertThat(pipe.queueLength).isEqualTo(0)
-                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
-                }
-            }
-            receiverSpecialTxExtension.nonAnchoredReceivers.forEach {
-                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
-                    assertThat(pipe.queueLength).isEqualTo(0)
-                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
-                }
-            }
-        }
-    }
-
     @Test
     fun `Metadata receiver rell code`() {
         setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse))
@@ -1380,6 +1513,31 @@ class IcmfReceiverIT : IcmfBaseIT() {
         }
 
         verifyPipesAreEmpty(dappChain)
+    }
+
+    private fun verifyPipesAreEmpty(dappChain: Long) {
+        // Let all nodes be primary once, so they can clean their pipes
+        repeat(nodes.size) {
+            buildBlock(dappChain)
+        }
+
+        nodes.forEach { node ->
+            val receiverGTXModule = node.getModules(1L).find { it is IcmfReceiverGTXModule }!!
+            val receiverSpecialTxExtension =
+                    receiverGTXModule.getSpecialTxExtensions()[0] as IcmfReceiverSpecialTxExtension
+            receiverSpecialTxExtension.anchoredReceivers.forEach {
+                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
+                    assertThat(pipe.queueLength).isEqualTo(0)
+                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
+                }
+            }
+            receiverSpecialTxExtension.nonAnchoredReceivers.forEach {
+                it.getRelevantPipes().filterIsInstance<QueuedPipe>().forEach { pipe ->
+                    assertThat(pipe.queueLength).isEqualTo(0)
+                    assertThat(pipe.queueSizeBytes).isEqualTo(0)
+                }
+            }
+        }
     }
 
     private fun createQueryResponseForMessage(

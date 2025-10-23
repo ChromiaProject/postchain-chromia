@@ -214,6 +214,17 @@ class IcmfReceiverDatabaseOperationsImpl : IcmfReceiverDatabaseOperations {
         }
     }
 
+    override fun deleteDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>) {
+        DatabaseAccess.of(ctx).run {
+            topics.forEach {
+                createJooq(ctx).deleteFrom(table(tableDappProvidedReceiverTopic(ctx)))
+                        .where(COLUMN_TOPIC.eq(it.topic))
+                        .and(COLUMN_SENDER_NULLABLE.eq(it.bcRid))
+                        .execute()
+            }
+        }
+    }
+
     override fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic> {
         return DatabaseAccess.of(ctx).run {
             val jooq = createJooq(ctx)
