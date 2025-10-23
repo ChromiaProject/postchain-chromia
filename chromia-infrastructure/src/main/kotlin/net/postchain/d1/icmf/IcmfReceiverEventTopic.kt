@@ -9,6 +9,9 @@ import net.postchain.gtv.mapper.Nullable
 data class IcmfReceiverEventMessage(
         val replace: Boolean,
 
+        @DefaultValue(defaultBoolean = false)
+        val remove: Boolean = false,
+
         @Nullable
         val topics: List<IcmfReceiverEventTopic>?
 )

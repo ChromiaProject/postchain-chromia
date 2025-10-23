@@ -17,6 +17,7 @@ interface IcmfReceiverDatabaseOperations {
     fun imprecateSpilledMessage(ctx: EContext, serial: Long)
     fun deleteDappProvidedReceiverTopics(ctx: EContext)
     fun saveDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>)
+    fun deleteDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>)
     fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic>
 }
 

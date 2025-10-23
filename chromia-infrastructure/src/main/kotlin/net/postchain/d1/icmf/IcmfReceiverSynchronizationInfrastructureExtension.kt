@@ -76,20 +76,23 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 // Dapp event listener callback
                 withIcmfReceiverBlockBuilderExtension(configuration.module) { blockBuilder ->
                     blockBuilder.addEventListener { update, ctx: EContext ->
-
-                        val dappProvidedTopics: MutableList<IcmfReceiverEventTopic> = mutableListOf()
                         update.forEach {
                             if (it.replace) {
                                 dbOperations.deleteDappProvidedReceiverTopics(ctx)
                             }
                             if (!it.topics.isNullOrEmpty()) {
-                                dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
+                                if (it.remove) {
+                                    dbOperations.deleteDappProvidedReceiverTopics(ctx, it.topics)
+                                } else { // add
+                                    dbOperations.saveDappProvidedReceiverTopics(ctx, it.topics)
+                                }
                             }
                         }
-                        dappProvidedTopics.addAll(dbOperations.loadDappProvidedReceiverTopics(ctx))
 
                         removeReceivers(configuration.chainID, txExt)
-                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt, maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider, dappProvidedTopics)
+                        addReceivers(engine, configuration, clusterManagement, rawIcmfReceiverConfig, txExt,
+                                maxBlockSize, maxTxSize, queryProvider, blockchainConfigProvider, clientProvider,
+                                dbOperations.loadDappProvidedReceiverTopics(ctx))
                     }
                 }
             }

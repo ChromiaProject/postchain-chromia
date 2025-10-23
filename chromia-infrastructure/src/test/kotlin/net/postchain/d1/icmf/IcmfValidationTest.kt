@@ -751,6 +751,10 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
         throw NotImplementedError("not used in mock")
     }
 
+    override fun deleteDappProvidedReceiverTopics(ctx: EContext, topics: List<IcmfReceiverEventTopic>) {
+        throw NotImplementedError("not used in mock")
+    }
+
     override fun loadDappProvidedReceiverTopics(ctx: EContext): List<IcmfReceiverEventTopic> {
         throw NotImplementedError("not used in mock")
     }

@@ -44,6 +44,7 @@ blockchains:
         allowed_blockchain_features:
           - "merkle_hash_version"
         required_blockchain_features: [ ]
+        require_min_merkle_hash_version: 2
       auth_service:
         pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
         include_system_cluster: true
@@ -191,6 +192,7 @@ blockchains:
         allowed_blockchain_features:
           - "merkle_hash_version"
         required_blockchain_features: []
+        require_min_merkle_hash_version: 2
       node_software_version:
         node_image:
           url: registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server
@@ -337,6 +339,13 @@ blockchains:
         asset_icon: "https://s3.eu-central-1.amazonaws.com/www.chromiadev.net/assets/tCHR.png"
         economy_chain_blockchain_rid: x"00"
         proposal_revoke_timeout_days: 1
+        mna_migration_enabled: true
+        mna_asset_id: x"0000000000000000000000000000000000000000000000000000000000000000"
+        mna_evm_supply:
+          - network_id: 97
+            total_supply: 0
+          - network_id: 11155111
+            total_supply: 0
       lib.hbridge.core:
         evm_read_offsets:
           "1337": 0
