@@ -41,7 +41,8 @@ operation init(
         asset_origin.asset,
         hbridge.bridge_mode.foreign,
         use_snapshots = true,
-        bridge_address = recovery_address
+        bridge_address = recovery_address,
+        skip_to_height = 0
     );
 }
 
