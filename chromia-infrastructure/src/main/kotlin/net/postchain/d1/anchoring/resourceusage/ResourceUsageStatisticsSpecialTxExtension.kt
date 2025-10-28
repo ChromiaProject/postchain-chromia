@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
@@ -149,13 +150,13 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
                         }
                     }
                     if (resourceType == ResourceType.SPACE_USAGE_PERCENTAGE) {
-                        if (value < 0 || value > 100) {
+                        if (value !in 0..100) {
                             logger.warn("Invalid value: $value for space usage percentage resource type!")
                             return false
                         }
                     }
                     if (!nodePubkey.contentEquals(subjectID)) {
-                        logger.warn("Signature pubkey: $subjectID does not correspond to node pubkey: $nodePubkey assigned to free space left resource measurement.")
+                        logger.warn("Signature pubkey: ${subjectID.wrap()} does not correspond to node pubkey: ${nodePubkey.wrap()} assigned to free space left resource measurement.")
                         return false
                     }
                     if (!processedResourceUsageStatisticsOpResourceType.getOrPut(opData.containerName) { mutableSetOf() }.add(resourceType)) {
@@ -172,7 +173,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
         }
         if (::signers.isInitialized) {
             if (signers.none { it.contentEquals(subjectID) }) {
-                logger.warn("Signature pubkey: $subjectID does not correspond to any known signers: $signers ")
+                logger.warn("Signature pubkey: ${subjectID.wrap()} does not correspond to any known signers: ${signers.map { it.wrap() }}")
                 return false
             }
         }
