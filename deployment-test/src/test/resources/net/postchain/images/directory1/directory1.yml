@@ -279,6 +279,7 @@ blockchains:
           - network_id: 11155111
             asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
             bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
+            skip_to_height: 0
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6
