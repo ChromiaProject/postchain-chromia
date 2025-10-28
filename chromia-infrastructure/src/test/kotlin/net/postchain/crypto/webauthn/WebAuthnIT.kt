@@ -14,6 +14,7 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.query
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -42,6 +43,12 @@ class WebAuthnIT : ManagedModeTest() {
         val attestationObject = registrationResponse.response!!.attestationObject
         val registrationClientDataJSON = String(registrationResponse.response!!.clientDataJSON)
         val transports = registrationResponse.response!!.transports.map { it.value }
+        val aaguid = ByteArray(16)
+
+        for (node in getChainNodes(dappChain)) {
+            assertThat(node.query(dappChain) { it.query(QUERY_WEBAUTHN_GET_CREDENTIAL, gtv(mapOf("id" to gtv(credentialId)))) })
+                    .isEqualTo(GtvNull)
+        }
 
         enqueueTx(
                 dappChain, merkleHashCalculator,
@@ -51,6 +58,11 @@ class WebAuthnIT : ManagedModeTest() {
         buildBlock(dappChain, 0)
 
         for (node in getChainNodes(dappChain)) {
+            val response = node.query(dappChain) { it.query(QUERY_WEBAUTHN_GET_CREDENTIAL, gtv(mapOf("id" to gtv(credentialId)))) }!!.asDict()
+            assertThat(response["id"]!!.asByteArray()).isContentEqualTo(credentialId)
+            assertThat(response["aaguid"]!!.asByteArray()).isContentEqualTo(aaguid)
+            assertThat(response["transports"]!!.asString()).isEqualTo("usb,nfc")
+            assertThat(response["signCount"]!!.asInteger()).isEqualTo(2)
             assertThat(node.query(dappChain) { it.query("get_user", gtv(mapOf("user_name" to gtv(userName)))) }!!
                     .asDict()["credential_id"]!!.asByteArray())
                     .isContentEqualTo(credentialId)
@@ -71,6 +83,11 @@ class WebAuthnIT : ManagedModeTest() {
         buildBlock(dappChain, 1)
 
         for (node in getChainNodes(dappChain)) {
+            val response = node.query(dappChain) { it.query(QUERY_WEBAUTHN_GET_CREDENTIAL, gtv(mapOf("id" to gtv(credentialId)))) }!!.asDict()
+            assertThat(response["id"]!!.asByteArray()).isContentEqualTo(credentialId)
+            assertThat(response["aaguid"]!!.asByteArray()).isContentEqualTo(aaguid)
+            assertThat(response["transports"]!!.asString()).isEqualTo("usb,nfc")
+            assertThat(response["signCount"]!!.asInteger()).isEqualTo(6)
             assertThat(node.query(dappChain) { it.query("get_book", gtv(mapOf("name" to gtv(bookName)))) }!!
                     .asDict()["user_name"]!!.asString())
                     .isEqualTo(userName)

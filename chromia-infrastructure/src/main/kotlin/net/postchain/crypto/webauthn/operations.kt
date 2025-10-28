@@ -117,12 +117,11 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
 
         val attestationObject = verifiedRegistrationData.attestationObject
                 ?: throw UserMistake("invalid attestationObject")
-        val (coseKey, credentialId) = attestationObject.authenticatorData.attestedCredentialData?.let {
-            it.coseKey to it.credentialId
-        } ?: throw UserMistake("invalid attestedCredentialData")
-        val publicKey = conf.objectConverter.cborConverter.writeValueAsBytes(coseKey)
+        val attestedCredentialData = attestationObject.authenticatorData.attestedCredentialData
+                ?: throw UserMistake("invalid attestedCredentialData")
+        val publicKey = conf.objectConverter.cborConverter.writeValueAsBytes(attestedCredentialData.coseKey)
 
-        if (!credentialId.contentEquals(id)) {
+        if (!attestedCredentialData.credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
         }
 
@@ -132,12 +131,15 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
 
         credential = CredentialData(
                 id = id.wrap(),
+                aaguid = (attestedCredentialData.aaguid.bytes ?: ByteArray(16)).wrap(),
                 publicKey = publicKey.wrap(),
                 signCount = attestationObject.authenticatorData.signCount,
                 transports = transports.joinToString(separator = ","),
                 uvInitialized = attestationObject.authenticatorData.isFlagUV,
                 backupEligible = attestationObject.authenticatorData.isFlagBE,
                 backupState = attestationObject.authenticatorData.isFlagBS,
+                suspiciousSignCountStored = null,
+                suspiciousSignCountPresented = null,
         )
     }
 
@@ -229,7 +231,7 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
             throw UserMistake(e.message ?: "verification failed")
         }
 
-        val attestedCredentialData = AttestedCredentialData(AAGUID.NULL, id, coseKey)
+        val attestedCredentialData = AttestedCredentialData(AAGUID(credential.aaguid.data), id, coseKey)
 
         val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
 
@@ -256,10 +258,16 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
             throw UserMistake(e.message ?: "verification failed")
         }
 
+        credentialRecord.suspiciousSignCount?.let { (presentedSignCount, storedSignCount) ->
+            logger.info("Suspicious signCount value detected for credentialId=${id.toHex()}: authData.signCount=${presentedSignCount}, credentialRecord.signCount=${storedSignCount}")
+        }
+
         this.credential = credential.copy(
                 signCount = credentialRecord.counter,
                 uvInitialized = credentialRecord.isUvInitialized!!,
-                backupState = credentialRecord.isBackedUp!!
+                backupState = credentialRecord.isBackedUp!!,
+                suspiciousSignCountPresented = credentialRecord.suspiciousSignCount?.first,
+                suspiciousSignCountStored = credentialRecord.suspiciousSignCount?.second,
         )
     }
 
@@ -267,7 +275,15 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
         persistChallenge(ctx)
 
         return credential?.let {
-            conf.repository.updateCredential(ctx, it.id.data, it.signCount, uvInitialized = it.uvInitialized, backupState = it.backupState)
+            conf.repository.updateCredential(
+                    ctx,
+                    it.id.data,
+                    it.signCount,
+                    uvInitialized = it.uvInitialized,
+                    backupState = it.backupState,
+                    suspiciousSignCountPresented = it.suspiciousSignCountPresented,
+                    suspiciousSignCountStored = it.suspiciousSignCountStored,
+            )
             true
         } ?: false
     }
