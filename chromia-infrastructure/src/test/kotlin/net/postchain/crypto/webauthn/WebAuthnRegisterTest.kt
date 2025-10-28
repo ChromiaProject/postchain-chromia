@@ -94,21 +94,21 @@ class WebAuthnRegisterTest {
     @Test
     fun `should throw UserMistake when provided invalid clientDataJSON`() {
         assertFailure {
-            checkRegistration("example.org", validId, validAttestationObject, "bogus", ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", validId, validAttestationObject, "bogus", ByteArray(0), ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("Input data does not match expected form")
     }
 
     @Test
     fun `should throw UserMistake when provided duplicate challenge`() {
         assertFailure {
-            checkRegistration("example.org", validId, validAttestationObject, duplicateClientDataJSON, ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", validId, validAttestationObject, duplicateClientDataJSON, ByteArray(0), ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("challenge is not unique")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid attestationObject`() {
         assertFailure {
-            checkRegistration("example.org", validId, byteArrayOf(), validClientDataJSON, ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", validId, byteArrayOf(), validClientDataJSON, ByteArray(0), ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("Input data does not match expected form")
     }
 
@@ -129,7 +129,7 @@ class WebAuthnRegisterTest {
     @Test
     fun `should throw UserMistake when clientData type is wrong`() {
         assertFailure {
-            checkRegistration("example.org", validId, validAttestationObject, """{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}""", ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", validId, validAttestationObject, """{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}""", ByteArray(0), ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("ClientData.type must be 'create' on registration")
     }
 
@@ -142,7 +142,7 @@ class WebAuthnRegisterTest {
         val clientDataJSON = String("7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a2276716a776477414a76566679774e3976367039304f69666b7468752d6b6a79474c48717465705f49354b59222c226f726967696e223a2268747470733a2f2f6578616d706c652e6f7267222c2263726f73734f726967696e223a66616c73657d".hexStringToByteArray())
 
         assertFailure {
-            checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
+            checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, ByteArray(0), ByteArray(0), listOf("usb"), 0, uv = false, be = true, bs = true)
         }.isInstanceOf(UserMistake::class.java).messageContains("alg not listed in options.pubKeyCredParams is used")
     }
 
@@ -154,12 +154,14 @@ class WebAuthnRegisterTest {
         val credentialId = "f91f391db4c9b2fde0ea70189cba3fb63f579ba6122b33ad94ff3ec330084be4".hexStringToByteArray()
         val attestationObject = "a363666d74646e6f6e656761747453746d74a068617574684461746158a4bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b559000000008446ccb9ab1db374750b2367ff6f3a1f0020f91f391db4c9b2fde0ea70189cba3fb63f579ba6122b33ad94ff3ec330084be4a5010203262001215820afefa16f97ca9b2d23eb86ccb64098d20db90856062eb249c33a9b672f26df61225820930a56b87a2fca66334b03458abf879717c12cc68ed73290af2e2664796b9220".hexStringToByteArray()
         val clientDataJSON = String("7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a22414d4d507434557878475453746e63647134313759447742466938767049612d7077386f4f755657345441222c226f726967696e223a2268747470733a2f2f6578616d706c652e6f7267222c2263726f73734f726967696e223a66616c73652c22657874726144617461223a22636c69656e74446174614a534f4e206d617920626520657874656e6465642077697468206164646974696f6e616c206669656c647320696e20746865206675747572652c207375636820617320746869733a20426b5165446a646354427258426941774a544c4535513d3d227d".hexStringToByteArray())
-        val publicKey = extractPublicKey(attestationObject)
+        val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+        val aaguid = aaguidAndPublicKey.first
+        val publicKey = aaguidAndPublicKey.second
 
         @Test
         fun `should success when valid`() {
             assertDoesNotThrow {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = false, be = true, bs = true)
             }
         }
 
@@ -167,7 +169,7 @@ class WebAuthnRegisterTest {
         fun `should throw UserMistake when id is already registered`() {
             whenever(webAuthnRepository.fetchCredential(any(), eq(credentialId))) doReturn mock()
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = false, be = true, bs = true)
             }.isInstanceOf(UserMistake::class.java).messageContains("already registered")
         }
 
@@ -204,7 +206,7 @@ class WebAuthnRegisterTest {
             val wrongCredentialId = credentialId.clone()
             wrongCredentialId[20] = 17
             assertFailure {
-                checkRegistration("example.org", wrongCredentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true)
+                checkRegistration("example.org", wrongCredentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = false, be = true, bs = true)
             }.isInstanceOf(UserMistake::class.java).messageContains("credentialId mismatch")
         }
 
@@ -229,21 +231,21 @@ class WebAuthnRegisterTest {
                     decodedAttestationObject.attestationStatement
             ))
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObjectBytes, clientDataJSON, publicKey, listOf("usb"), 0, uv = false, be = true, bs = true)
+                checkRegistration("example.org", credentialId, attestationObjectBytes, clientDataJSON, aaguid, publicKey, listOf("usb"), 0, uv = false, be = true, bs = true)
             }.isInstanceOf(UserMistake::class.java).messageContains("x, y or d must be present")
         }
 
         @Test
         fun `should throw UserMistake for no attestation in strict mode`() {
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("AttestationVerifier is not configured to handle the supplied AttestationStatement format 'none'")
         }
 
         @Test
         fun `should not check attestation in strict mode while syncing`() {
             assertDoesNotThrow {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = false, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
             }
         }
     }
@@ -256,26 +258,28 @@ class WebAuthnRegisterTest {
         val credentialId = "455ef34e2043a87db3d4afeb39bbcb6cc32df9347c789a865ecdca129cbef58c".hexStringToByteArray()
         val attestationObject = "a363666d74667061636b65646761747453746d74a263616c67266373696758483046022100ae045923ded832b844cae4d5fc864277c0dc114ad713e271af0f0d371bd3ac540221009077a088ed51a673951ad3ba2673d5029bab65b64f4ea67b234321f86fcfac5d68617574684461746158a4bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b55d00000000df850e09db6afbdfab51697791506cfc0020455ef34e2043a87db3d4afeb39bbcb6cc32df9347c789a865ecdca129cbef58ca5010203262001215820eb151c8176b225cc651559fecf07af450fd85802046656b34c18f6cf193843c5225820927b8aa427a2be1b8834d233a2d34f61f13bfd44119c325d5896e183fee484f2".hexStringToByteArray()
         val clientDataJSON = String("7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a2265476e4374334c55745936366b336a506a796e6962506b31716e666644616966715a774c33417032392d55222c226f726967696e223a2268747470733a2f2f6578616d706c652e6f7267222c2263726f73734f726967696e223a66616c73652c22657874726144617461223a22636c69656e74446174614a534f4e206d617920626520657874656e6465642077697468206164646974696f6e616c206669656c647320696e20746865206675747572652c207375636820617320746869733a205539685458764b453255526b4d6e625f3078594856673d3d227d".hexStringToByteArray())
-        val publicKey = extractPublicKey(attestationObject)
+        val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+        val aaguid = aaguidAndPublicKey.first
+        val publicKey = aaguidAndPublicKey.second
 
         @Test
         fun `should success when valid`() {
             assertDoesNotThrow {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = true, be = true, bs = true)
             }
         }
 
         @Test
         fun `should throw UserMistake for self attestation in strict mode`() {
             assertFailure {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("SELF attestations is prohibited by configuration")
         }
 
         @Test
         fun `should not check attestation in strict mode while syncing`() {
             assertDoesNotThrow {
-                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
+                checkRegistration("example.org", credentialId, attestationObject, clientDataJSON, aaguid, publicKey, listOf(), 0, uv = true, be = true, bs = true, strictWebAuthnManager, isSyncing = true)
             }
         }
     }
@@ -289,11 +293,13 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false)
             }
         }
 
@@ -304,13 +310,15 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             val wrongId = id.clone()
             wrongId[10] = 17
             assertFailure {
-                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false)
+                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("credentialId mismatch")
         }
 
@@ -321,11 +329,13 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, publicKey, transports, 1, uv = true, be = false, bs = false)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, aaguid, publicKey, transports, 1, uv = true, be = false, bs = false)
             }
         }
 
@@ -336,13 +346,15 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             val wrongId = id.clone()
             wrongId[10] = 17
             assertFailure {
-                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, publicKey, transports, 1, uv = true, be = false, bs = false)
+                checkRegistration("webauthn.io", wrongId, attestationObject, clientDataJSON, aaguid, publicKey, transports, 1, uv = true, be = false, bs = false)
             }.isInstanceOf(UserMistake::class.java).messageContains("credentialId mismatch")
         }
     }
@@ -356,11 +368,13 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
             }
         }
 
@@ -371,14 +385,16 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             val invalidAttestationObject = attestationObject.clone()
             invalidAttestationObject[40] = 17 // tamper with the signature
 
             assertFailure {
-                checkRegistration("webauthn.io", id, invalidAttestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
+                checkRegistration("webauthn.io", id, invalidAttestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
             }.isInstanceOf(UserMistake::class.java).messageContains("`sig` in attestation statement is not valid signature")
         }
 
@@ -389,14 +405,16 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             val invalidAttestationObject = attestationObject.clone()
             invalidAttestationObject[160] = 17  // tamper with the certificate
 
             assertFailure {
-                checkRegistration("webauthn.io", id, invalidAttestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
+                checkRegistration("webauthn.io", id, invalidAttestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
             }.isInstanceOf(UserMistake::class.java).messageContains("invalid cert path")
         }
 
@@ -407,25 +425,29 @@ class WebAuthnRegisterTest {
             val id = registrationResponse!!.rawId!!
             val attestationObject = registrationResponse.response!!.attestationObject
             val clientDataJSON = String(registrationResponse.response!!.clientDataJSON)
-            val publicKey = extractPublicKey(attestationObject)
+            val aaguidAndPublicKey = extractAaguidAndPublicKey(attestationObject)
+            val aaguid = aaguidAndPublicKey.first
+            val publicKey = aaguidAndPublicKey.second
             val transports = registrationResponse.response!!.transports.map { it.value }
 
             assertDoesNotThrow {
-                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
+                checkRegistration("webauthn.io", id, attestationObject, clientDataJSON, aaguid, publicKey, transports, 2, uv = true, be = false, bs = false, strictWebAuthnManager)
             }
         }
     }
 
-    private fun extractPublicKey(attestationObject: ByteArray): ByteArray {
+    private fun extractAaguidAndPublicKey(attestationObject: ByteArray): Pair<ByteArray, ByteArray> {
         val decodedAttestationObject = attestationObjectConverter.convert(attestationObject)!!
+        val aaguid = decodedAttestationObject.authenticatorData.attestedCredentialData!!.aaguid.bytes!!
         val coseKey = decodedAttestationObject.authenticatorData.attestedCredentialData!!.coseKey
-        return objectConverter.cborConverter.writeValueAsBytes(coseKey)
+        return aaguid to objectConverter.cborConverter.writeValueAsBytes(coseKey)
     }
 
     private fun checkRegistration(rpId: String,
                                   id: ByteArray,
                                   attestationObject: ByteArray,
                                   clientDataJSON: String,
+                                  aaguid: ByteArray,
                                   publicKey: ByteArray,
                                   transports: List<String>,
                                   signCount: Long,
@@ -466,12 +488,15 @@ class WebAuthnRegisterTest {
 
         verify(webAuthnRepository).persistCredential(txCtx, opIndex, CredentialData(
                 id = id.wrap(),
+                aaguid = aaguid.wrap(),
                 publicKey = publicKey.wrap(),
                 signCount = signCount,
                 transports = transports.joinToString(separator = ","),
                 uvInitialized = uv,
                 backupEligible = be,
                 backupState = bs,
+                suspiciousSignCountPresented = null,
+                suspiciousSignCountStored = null,
         ))
     }
 }

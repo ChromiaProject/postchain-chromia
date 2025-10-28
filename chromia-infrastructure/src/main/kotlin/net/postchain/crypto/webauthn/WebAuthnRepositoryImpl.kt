@@ -37,12 +37,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         val COLUMN_DELETED = field("deleted", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_TRANSACTION = field("transaction", SQLDataType.BIGINT.nullable(false))
         val COLUMN_OP_INDEX = field("op_index", SQLDataType.INTEGER.nullable(false))
+        val COLUMN_AAGUID = field("aaguid", SQLDataType.BLOB.nullable(false))
         val COLUMN_PUBLIC_KEY = field("public_key", SQLDataType.BLOB.nullable(false))
         val COLUMN_SIGN_COUNT = field("sign_count", SQLDataType.BIGINT.nullable(false))
         val COLUMN_TRANSPORTS = field("transports", SQLDataType.CLOB.nullable(false))
         val COLUMN_UV_INITIALIZED = field("uv_initialized", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_ELIGIBLE = field("backup_eligible", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_STATE = field("backup_state", SQLDataType.BOOLEAN.nullable(false))
+        val COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED = field("suspicious_sign_count_presented", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_SUSPICIOUS_SIGN_COUNT_STORED = field("suspicious_sign_count_stored", SQLDataType.BIGINT.nullable(false))
 
         const val TABLE_NAME_CHALLENGE = "${PREFIX}.challenge"
         val COLUMN_CHALLENGE = field("challenge", SQLDataType.BLOB.nullable(false))
@@ -71,12 +74,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .column(COLUMN_DELETED)
                     .column(COLUMN_TRANSACTION)
                     .column(COLUMN_OP_INDEX)
+                    .column(COLUMN_AAGUID)
                     .column(COLUMN_PUBLIC_KEY)
                     .column(COLUMN_SIGN_COUNT)
                     .column(COLUMN_TRANSPORTS)
                     .column(COLUMN_UV_INITIALIZED)
                     .column(COLUMN_BACKUP_ELIGIBLE)
                     .column(COLUMN_BACKUP_STATE)
+                    .column(COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED)
+                    .column(COLUMN_SUSPICIOUS_SIGN_COUNT_STORED)
                     .constraints(
                             constraint("${PRIMARY_KEY_PREFIX}$simCredentialTableName").primaryKey(COLUMN_ID.name),
                             constraint("${simCredentialTableName}_${COLUMN_TRANSACTION.name}${FOREIGN_KEY_SUFFIX}")
@@ -84,6 +90,18 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                     .references(tableTransactions(ctx).replace("\"", ""), COLUMN_TX_IID.name),
                             constraint("${simCredentialTableName}_${COLUMN_DATUM_ID.name}_unique").unique(COLUMN_DATUM_ID.name)
                     )
+                    .execute()
+
+            jooq.alterTable(table(tableCredential(ctx)))
+                    .addColumnIfNotExists(COLUMN_AAGUID)
+                    .execute()
+
+            jooq.alterTable(table(tableCredential(ctx)))
+                    .addColumnIfNotExists(COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED)
+                    .execute()
+
+            jooq.alterTable(table(tableCredential(ctx)))
+                    .addColumnIfNotExists(COLUMN_SUSPICIOUS_SIGN_COUNT_STORED)
                     .execute()
 
             val simChallengeTableName = tableName(ctx, TABLE_NAME_CHALLENGE).replace("\"", "")
@@ -107,12 +125,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                     .set(COLUMN_DELETED, false)
                     .set(COLUMN_TRANSACTION, ctx.txIID)
                     .set(COLUMN_OP_INDEX, opIndex)
+                    .set(COLUMN_AAGUID, data.aaguid.data)
                     .set(COLUMN_PUBLIC_KEY, data.publicKey.data)
                     .set(COLUMN_SIGN_COUNT, data.signCount)
                     .set(COLUMN_TRANSPORTS, data.transports)
                     .set(COLUMN_UV_INITIALIZED, data.uvInitialized)
                     .set(COLUMN_BACKUP_ELIGIBLE, data.backupEligible)
                     .set(COLUMN_BACKUP_STATE, data.backupState)
+                    .set(COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED, -1)
+                    .set(COLUMN_SUSPICIOUS_SIGN_COUNT_STORED, -1)
                     .execute()
             nextDatumId
         }
@@ -148,11 +169,17 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         }
     }
 
-    override fun updateCredential(ctx: BlockEContext, id: ByteArray, signCount: Long, uvInitialized: Boolean, backupState: Boolean): Unit = DatabaseAccess.of(ctx).run {
+    override fun updateCredential(
+            ctx: BlockEContext, id: ByteArray,
+            signCount: Long, uvInitialized: Boolean, backupState: Boolean,
+            suspiciousSignCountPresented: Long?, suspiciousSignCountStored: Long?,
+    ): Unit = DatabaseAccess.of(ctx).run {
         dslContext(ctx).update(table(tableCredential(ctx)))
                 .set(COLUMN_SIGN_COUNT, signCount)
                 .set(COLUMN_UV_INITIALIZED, uvInitialized)
                 .set(COLUMN_BACKUP_STATE, backupState)
+                .set(COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED, suspiciousSignCountPresented ?: -1)
+                .set(COLUMN_SUSPICIOUS_SIGN_COUNT_STORED, suspiciousSignCountStored ?: -1)
                 .where(COLUMN_ID.eq(id))
                 .execute()
 
@@ -275,12 +302,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                             credential.deleted,
                             credential.txRid?.data,
                             credential.opIndex,
+                            credential.aaguid.data,
                             credential.publicKey.data,
                             credential.signCount,
                             credential.transports,
                             credential.uvInitialized,
                             credential.backupEligible,
                             credential.backupState,
+                            credential.suspiciousSignCountPresented ?: -1,
+                            credential.suspiciousSignCountStored ?: -1,
                     )
                 }
 
@@ -292,12 +322,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                 COLUMN_DELETED.name,
                                 COLUMN_TX_RID.name,
                                 COLUMN_OP_INDEX.name,
+                                COLUMN_AAGUID.name,
                                 COLUMN_PUBLIC_KEY.name,
                                 COLUMN_SIGN_COUNT.name,
                                 COLUMN_TRANSPORTS.name,
                                 COLUMN_UV_INITIALIZED.name,
                                 COLUMN_BACKUP_ELIGIBLE.name,
                                 COLUMN_BACKUP_STATE.name,
+                                COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED.name,
+                                COLUMN_SUSPICIOUS_SIGN_COUNT_STORED.name,
                         )
 
                 // Insert with join to get tx_iid from tx_rid
@@ -308,12 +341,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                 COLUMN_DELETED,
                                 COLUMN_TRANSACTION,
                                 COLUMN_OP_INDEX,
+                                COLUMN_AAGUID,
                                 COLUMN_PUBLIC_KEY,
                                 COLUMN_SIGN_COUNT,
                                 COLUMN_TRANSPORTS,
                                 COLUMN_UV_INITIALIZED,
                                 COLUMN_BACKUP_ELIGIBLE,
                                 COLUMN_BACKUP_STATE,
+                                COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED,
+                                COLUMN_SUSPICIOUS_SIGN_COUNT_STORED,
                         ).select(
                                 DSL.select(
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_DATUM_ID.name}", SQLDataType.BIGINT),
@@ -321,12 +357,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_DELETED.name}", SQLDataType.BOOLEAN),
                                         COLUMN_TX_IID,
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_OP_INDEX.name}", SQLDataType.INTEGER),
+                                        field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_AAGUID.name}", SQLDataType.BLOB),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_PUBLIC_KEY.name}", SQLDataType.BLOB),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_SIGN_COUNT.name}", SQLDataType.BIGINT),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_TRANSPORTS.name}", SQLDataType.CLOB),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_UV_INITIALIZED.name}", SQLDataType.BOOLEAN),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_BACKUP_ELIGIBLE.name}", SQLDataType.BOOLEAN),
                                         field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_BACKUP_STATE.name}", SQLDataType.BOOLEAN),
+                                        field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED.name}", SQLDataType.BIGINT),
+                                        field("${ALIAS_CREDENTIAL_DATA}.${COLUMN_SUSPICIOUS_SIGN_COUNT_STORED.name}", SQLDataType.BIGINT),
                                 )
                                         .from(valuesTable)
                                         .join(table(tableTransactions(ctx)).asTable("t"))
@@ -365,12 +404,15 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                 COLUMN_DELETED,
                 COLUMN_TX_RID,
                 COLUMN_OP_INDEX,
+                COLUMN_AAGUID,
                 COLUMN_PUBLIC_KEY,
                 COLUMN_SIGN_COUNT,
                 COLUMN_TRANSPORTS,
                 COLUMN_UV_INITIALIZED,
                 COLUMN_BACKUP_ELIGIBLE,
                 COLUMN_BACKUP_STATE,
+                COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED,
+                COLUMN_SUSPICIOUS_SIGN_COUNT_STORED,
         )
                 .from(tableCredential(ctx))
                 .join(table(tableTransactions(ctx)))
@@ -383,14 +425,19 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
                 deleted = it[COLUMN_DELETED],
                 txRid = it[COLUMN_TX_RID].wrap(),
                 opIndex = it[COLUMN_OP_INDEX].toLong(),
+                aaguid = it[COLUMN_AAGUID].wrap(),
                 publicKey = it[COLUMN_PUBLIC_KEY].wrap(),
                 signCount = it[COLUMN_SIGN_COUNT],
                 transports = it[COLUMN_TRANSPORTS],
                 uvInitialized = it[COLUMN_UV_INITIALIZED],
                 backupEligible = it[COLUMN_BACKUP_ELIGIBLE],
                 backupState = it[COLUMN_BACKUP_STATE],
+                suspiciousSignCountPresented = nullIfMinusOne(it[COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED]),
+                suspiciousSignCountStored = nullIfMinusOne(it[COLUMN_SUSPICIOUS_SIGN_COUNT_STORED]),
         )
     }
+
+    private fun nullIfMinusOne(value: Long): Long? = if (value == -1L) null else value
 
     internal fun dslContext(ctx: EContext) = using(ctx.conn, SQLDialect.POSTGRES)
 }
