@@ -36,7 +36,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -74,6 +73,7 @@ import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.SelinuxContext
@@ -99,7 +99,7 @@ open class ManagedModeBase(private val logDir: String) {
     lateinit var node5: PostchainContainer
 
     val resolvedDockerHost = getResolvedDockerHost()
-    protected val dockerClient: DockerClient = DockerClientFactory.create()
+    protected val dockerClient: DockerClient = DockerClientFactory.lazyClient()
     protected val dapps = mutableMapOf<String, BlockchainRid>()
     lateinit var clusterAnchoringBrid: BlockchainRid
     lateinit var systemAnchoringBrid: BlockchainRid
