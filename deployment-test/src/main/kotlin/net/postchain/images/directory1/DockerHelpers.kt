@@ -26,14 +26,10 @@ import kotlin.io.path.pathString
 
 val testLogger = KotlinLogging.logger("TestLogger")
 
-internal fun getResolvedDockerHost(): URI? {
-    return if (System.getenv("DOCKER_HOST") != null) {
-        val dockerUri = URI(System.getenv("DOCKER_HOST"))
-        // Pass docker host to master container with hostname resolved
-        URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
-    } else {
-        null
-    }
+internal fun getResolvedDockerHost(): URI? = (System.getenv("POSTCHAIN_DOCKER_HOST") ?: System.getenv("DOCKER_HOST"))?.let {
+    val dockerUri = URI(it)
+    // Pass docker host to master container with hostname resolved
+    URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
 }
 
 internal fun setupMasterNodeConfig(hostName: String, nodeConfig: File, hostMountDir: Path?, generateKeys: Boolean): AppConfig {
