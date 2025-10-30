@@ -1,5 +1,6 @@
 package net.postchain.crypto.webauthn
 
+import com.webauthn4j.data.attestation.authenticator.AAGUID
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.common.wrap
@@ -37,15 +38,18 @@ class WebAuthnRepositoryImpl : WebAuthnRepository {
         val COLUMN_DELETED = field("deleted", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_TRANSACTION = field("transaction", SQLDataType.BIGINT.nullable(false))
         val COLUMN_OP_INDEX = field("op_index", SQLDataType.INTEGER.nullable(false))
-        val COLUMN_AAGUID = field("aaguid", SQLDataType.BLOB.nullable(false))
+        val COLUMN_AAGUID = field("aaguid",
+                SQLDataType.BLOB.nullable(false).defaultValue(AAGUID.ZERO.bytes))
         val COLUMN_PUBLIC_KEY = field("public_key", SQLDataType.BLOB.nullable(false))
         val COLUMN_SIGN_COUNT = field("sign_count", SQLDataType.BIGINT.nullable(false))
         val COLUMN_TRANSPORTS = field("transports", SQLDataType.CLOB.nullable(false))
         val COLUMN_UV_INITIALIZED = field("uv_initialized", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_ELIGIBLE = field("backup_eligible", SQLDataType.BOOLEAN.nullable(false))
         val COLUMN_BACKUP_STATE = field("backup_state", SQLDataType.BOOLEAN.nullable(false))
-        val COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED = field("suspicious_sign_count_presented", SQLDataType.BIGINT.nullable(false))
-        val COLUMN_SUSPICIOUS_SIGN_COUNT_STORED = field("suspicious_sign_count_stored", SQLDataType.BIGINT.nullable(false))
+        val COLUMN_SUSPICIOUS_SIGN_COUNT_PRESENTED = field("suspicious_sign_count_presented",
+                SQLDataType.BIGINT.nullable(false).defaultValue(-1L))
+        val COLUMN_SUSPICIOUS_SIGN_COUNT_STORED = field("suspicious_sign_count_stored",
+                SQLDataType.BIGINT.nullable(false).defaultValue(-1L))
 
         const val TABLE_NAME_CHALLENGE = "${PREFIX}.challenge"
         val COLUMN_CHALLENGE = field("challenge", SQLDataType.BLOB.nullable(false))

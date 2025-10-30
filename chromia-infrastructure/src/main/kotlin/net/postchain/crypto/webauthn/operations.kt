@@ -131,7 +131,7 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
 
         credential = CredentialData(
                 id = id.wrap(),
-                aaguid = (attestedCredentialData.aaguid.bytes ?: ByteArray(16)).wrap(),
+                aaguid = (attestedCredentialData.aaguid.bytes ?: AAGUID.ZERO.bytes!!).wrap(),
                 publicKey = publicKey.wrap(),
                 signCount = attestationObject.authenticatorData.signCount,
                 transports = transports.joinToString(separator = ","),
