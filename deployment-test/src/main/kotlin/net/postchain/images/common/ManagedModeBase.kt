@@ -73,7 +73,6 @@ import net.postchain.server.grpc.StartBlockchainRequest
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.SelinuxContext
@@ -98,8 +97,9 @@ open class ManagedModeBase(private val logDir: String) {
     lateinit var node4: PostchainContainer
     lateinit var node5: PostchainContainer
 
+    val dockerHost = net.postchain.containers.bpm.docker.DockerClientFactory.dockerHost()
     val resolvedDockerHost = getResolvedDockerHost()
-    protected val dockerClient: DockerClient = DockerClientFactory.lazyClient()
+    protected val dockerClient: DockerClient = org.testcontainers.DockerClientFactory.lazyClient()
     protected val dapps = mutableMapOf<String, BlockchainRid>()
     lateinit var clusterAnchoringBrid: BlockchainRid
     lateinit var systemAnchoringBrid: BlockchainRid
@@ -117,9 +117,6 @@ open class ManagedModeBase(private val logDir: String) {
     protected val PostchainContainer.ec get() = client(ecBrid)
     protected val PostchainContainer.tc get() = client(tcBrid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
-
-    // Install location of docker socket
-    private val dockerSocket = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
 
     fun nodes() = buildList {
         if (::node1.isInitialized && node1.isRunning) add(node1)
@@ -217,10 +214,11 @@ open class ManagedModeBase(private val logDir: String) {
                 .withEnv("POSTCHAIN_SUBNODE_NETWORK", network.id)
                 .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withEnv("POSTCHAIN_DOCKER_HOST", resolvedDockerHost?.toString())
                 .apply {
-                    if (System.getenv("DOCKER_HOST") == null) {
+                    if (dockerHost.startsWith("unix://")) {
                         // Mount host machines docker socket into master container
+                        val dockerSocket = dockerHost.substring("unix://".length)
                         addFileSystemBind(dockerSocket, dockerSocket, BindMode.READ_ONLY, SelinuxContext.SHARED)
                     }
 
