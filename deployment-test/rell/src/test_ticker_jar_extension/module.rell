@@ -1,0 +1,11 @@
+module;
+
+object tick_data {
+    mutable latest_tick: integer = 0;
+}
+
+operation __tick(tick: integer) {
+    tick_data.latest_tick = tick;
+}
+
+query get_latest_tick() = tick_data.latest_tick;

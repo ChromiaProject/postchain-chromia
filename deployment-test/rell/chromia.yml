@@ -176,6 +176,20 @@ blockchains:
       async_query_queue_capacity: 10
       async_query_timeout_seconds: 5
 
+  test_ticker_jar_extension:
+    module: test_ticker_jar_extension
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        maxblocktime: 1000
+        maxblocktransactions: 500
+      gtx:
+        modules:
+          - "net.postchain.d1.dummy.DummyExtensionGTXModule"
+      sync_ext:
+        - "net.postchain.d1.dummy.DummySynchronizationInfrastructureExtension"
+
 libs:
   ft4:
     registry: https://gitlab.com/chromaway/ft4-lib.git
