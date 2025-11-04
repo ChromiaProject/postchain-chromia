@@ -716,7 +716,7 @@ class IccfValidationTest {
             this.queryProvider = chromiaQueryProvider
             this.nodeIsReplica = false
         }
-        val gtxModule = object: SimpleGTXModule<IccfGTXModuleContext>(
+        val gtxModule = object : SimpleGTXModule<IccfGTXModuleContext>(
                 iccfContext,
                 mapOf(ICCF_OP_NAME to ::IccfGTXOperation),
                 mapOf()

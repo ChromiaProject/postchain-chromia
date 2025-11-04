@@ -302,6 +302,37 @@ class IcmfReceiverIT : IcmfBaseIT() {
         })
     }
 
+    private fun setupAnchoringReceiverMocks(topic: String) {
+        QueryProviderMocks.clearMocks()
+        QueryProviderMocks.addMockQueries(clusterAnchoringChainRid, object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long) =
+                    createBlockDetail(clusterAnchoringChainRid, listOf(remoteSenderMessageBody), topic)
+
+            override fun query(name: String, args: Gtv) =
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv(topic) && args["height"] == gtv(
+                                    -1
+                            )
+                    )
+                        gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(0)))))
+                    else
+                        gtv(listOf())
+        })
+
+        QueryProviderMocks.addMockQueries(systemAnchoringChainRid, object : PostchainBlockClient {
+            override fun blockAtHeight(height: Long) =
+                    createBlockDetail(systemAnchoringChainRid, listOf(localSenderMessageBody), topic)
+
+            override fun query(name: String, args: Gtv) =
+                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv(topic) && args["height"] == gtv(
+                                    -1
+                            )
+                    )
+                        gtv(listOf(gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
+                    else
+                        gtv(listOf())
+        })
+    }
+
     @Test
     fun globalTopicReceiver() {
         setupClientMocks(listOf(remoteSenderQueryResponse, remoteSenderSecondQueryResponse))
@@ -373,8 +404,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun interClusterSpecificChainReceiverWithoutAnchoring() {
-        setupNonAnchoredClientMocks()
-
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
@@ -388,6 +417,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
 
+        setupNonAnchoredClientMocks(topic = "my-topic")
+
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
             for (node in getChainNodes(dappChain)) {
@@ -397,6 +428,44 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 val message = messages[0]
                 assertThat(message.sender).isEqualTo(remoteSenderChainRid)
                 assertThat(message.topic).isEqualTo("my-topic")
+                assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+            }
+        }
+
+        verifyPipesAreEmpty(dappChain)
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun interClusterSpecificChainReceiverWithoutAnchoringToMe() {
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_without_anchoring_to_me.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        val myBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+
+        setupNonAnchoredClientMocks(topic = topicWithReceiver("my-topic", myBrid))
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                val messages = getTestMessages(node, dappChain)
+
+                assertThat(messages).hasSize(1)
+                val message = messages[0]
+                assertThat(message.sender).isEqualTo(remoteSenderChainRid)
+                assertThat(message.topic).isEqualTo(topicWithReceiver("my-topic", myBrid))
                 assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
             }
         }
@@ -499,35 +568,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
     @Test
     @Timeout(60, unit = TimeUnit.SECONDS)
     fun anchoringReceiver() {
-        QueryProviderMocks.clearMocks()
-        QueryProviderMocks.addMockQueries(clusterAnchoringChainRid, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) =
-                    createBlockDetail(clusterAnchoringChainRid, listOf(remoteSenderMessageBody), "my-topic")
-
-            override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(
-                                    -1
-                            )
-                    )
-                        gtv(listOf(gtv(mapOf("body" to remoteSenderMessageBody, "height" to gtv(0)))))
-                    else
-                        gtv(listOf())
-        })
-
-        QueryProviderMocks.addMockQueries(systemAnchoringChainRid, object : PostchainBlockClient {
-            override fun blockAtHeight(height: Long) =
-                    createBlockDetail(systemAnchoringChainRid, listOf(localSenderMessageBody), "my-topic")
-
-            override fun query(name: String, args: Gtv) =
-                    if (name == QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT && args["topic"] == gtv("my-topic") && args["height"] == gtv(
-                                    -1
-                            )
-                    )
-                        gtv(listOf(gtv(mapOf("body" to localSenderMessageBody, "height" to gtv(0)))))
-                    else
-                        gtv(listOf())
-        })
-
         startManagedSystem(3, 0)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
@@ -540,6 +580,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 setOf(),
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
+
+        setupAnchoringReceiverMocks(topic = "my-topic")
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             buildBlock(dappChain)
@@ -554,6 +596,48 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 }).isTrue()
                 assertThat(messages.any {
                     it.sender == systemAnchoringChainRid && it.topic == "my-topic" && it.body.data.contentEquals(
+                            localSenderEncodedMessageBody
+                    )
+                }).isTrue()
+            }
+        }
+    }
+
+    @Test
+    @Timeout(60, unit = TimeUnit.SECONDS)
+    fun anchoringReceiverToMe() {
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_anchoring_receiver_to_me.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        val myBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+
+        setupAnchoringReceiverMocks(topic = topicWithReceiver("my-topic", myBrid))
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                val messages = getTestMessages(node, dappChain)
+
+                assertThat(messages).hasSize(2)
+                assertThat(messages.any {
+                    it.sender == clusterAnchoringChainRid && it.topic == topicWithReceiver("my-topic", myBrid) && it.body.data.contentEquals(
+                            remoteSenderEncodedMessageBody
+                    )
+                }).isTrue()
+                assertThat(messages.any {
+                    it.sender == systemAnchoringChainRid && it.topic == topicWithReceiver("my-topic", myBrid) && it.body.data.contentEquals(
                             localSenderEncodedMessageBody
                     )
                 }).isTrue()
@@ -699,7 +783,6 @@ class IcmfReceiverIT : IcmfBaseIT() {
         val directoryChainBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, 0L) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }
-        setupNonAnchoredQueriesMock(directoryChainBrid)
 
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_directory_chain_receiver_1.xml")!!
@@ -712,6 +795,8 @@ class IcmfReceiverIT : IcmfBaseIT() {
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
         )
 
+        setupNonAnchoredQueriesMock(directoryChainBrid, topic = "my-topic")
+
         buildBlock(dappChain)
         for (node in getChainNodes(dappChain)) {
             val messages = getTestMessages(node, dappChain)
@@ -720,6 +805,43 @@ class IcmfReceiverIT : IcmfBaseIT() {
             val message = messages[0]
             assertThat(message.sender).isEqualTo(directoryChainBrid)
             assertThat(message.topic).isEqualTo("my-topic")
+            assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
+        }
+    }
+
+    @Test
+    fun directoryChainReceiverToMe() {
+        startManagedSystem(3, 0)
+
+        val directoryChainBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, 0L) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_directory_chain_receiver_to_me.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        val myBrid = withReadConnection(nodes[0].postchainContext.blockBuilderStorage, dappChain) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+
+        setupNonAnchoredQueriesMock(directoryChainBrid, topic = topicWithReceiver("my-topic", myBrid))
+
+        buildBlock(dappChain)
+        for (node in getChainNodes(dappChain)) {
+            val messages = getTestMessages(node, dappChain)
+
+            assertThat(messages).hasSize(1)
+            val message = messages[0]
+            assertThat(message.sender).isEqualTo(directoryChainBrid)
+            assertThat(message.topic).isEqualTo(topicWithReceiver("my-topic", myBrid))
             assertThat(message.body.data.contentEquals(localSenderEncodedMessageBody)).isTrue()
         }
     }
