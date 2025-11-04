@@ -41,7 +41,7 @@ class IcmfValidationTest {
     private val spilledMessage = gtv("hej")
     private val specialTxSizeMargin = 100 * 1024L
     private val messageLimit = 100L
-    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf(topic, secondTopic), null), null, null, null, specialTxSizeMargin, 10)
+    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf(topic, secondTopic), null), null, null, null, null, null, null, specialTxSizeMargin, 10)
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
@@ -329,7 +329,7 @@ class IcmfValidationTest {
 
     @Test
     fun successWithoutAnchoring() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, 10))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 10))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -345,7 +345,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredOrigin() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null, null, null, null, null, specialTxSizeMargin, messageLimit))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -361,7 +361,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredTopic() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf("another-topic"), null), null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf("another-topic"), null), null, null, null, null, null, null, specialTxSizeMargin, messageLimit))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -376,7 +376,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredSender() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic, 0))), null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -409,11 +409,11 @@ class IcmfValidationTest {
         )
 
         val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
-                        ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
-                                topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv(),
-                                irrelevantTopic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv()
-                        ))
+                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv(),
+                        irrelevantTopic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1).toGtv()
                 ))
+        ))
         val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
         val rawAnchorWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
@@ -505,7 +505,7 @@ class IcmfValidationTest {
 
     @Test
     fun `Topics in header that we dont receive messages ops for should not impact validation for local receivers`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, messageLimit))
 
         val relevantMessageBodies = listOf(gtv("hej"))
         val irrelevantMessageBodies = listOf(gtv("hej on another topic"))
@@ -531,7 +531,7 @@ class IcmfValidationTest {
 
     @Test
     fun `Messages before skipped height should be rejected`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 1)), null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 1)), null, null, null, null, null, specialTxSizeMargin, messageLimit))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -548,7 +548,7 @@ class IcmfValidationTest {
     @Test
     fun `Messages can't exceed set message limit if signer`() {
 
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, 1))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1))
 
         val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
         val block = createBlockDetail(
@@ -565,7 +565,7 @@ class IcmfValidationTest {
     @Test
     fun `Messages can exceed set message limit if not signer`() {
 
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, specialTxSizeMargin, 1), nodeIsSigner = false)
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1), nodeIsSigner = false)
 
         val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
         val block = createBlockDetail(

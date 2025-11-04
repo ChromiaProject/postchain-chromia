@@ -15,13 +15,25 @@ data class IcmfReceiverBlockchainConfigData(
         @Nullable
         val local: List<IcmfReceiverSpecificBlockChainConfig>?,
 
+        @Name("local-to-me")
+        @Nullable
+        val localToMe: List<IcmfReceiverSpecificBlockChainConfigWithoutSkipToHeight>?,
+
         @Name("anchoring")
         @Nullable
         val anchoring: IcmfReceiverTopicsConfig?,
 
+        @Name("anchoring-to-me")
+        @Nullable
+        val anchoringToMe: IcmfReceiverTopicsConfig?,
+
         @Name("directory-chain")
         @Nullable
         val directoryChain: IcmfReceiverTopicsConfig?,
+
+        @Name("directory-chain-to-me")
+        @Nullable
+        val directoryChainToMe: IcmfReceiverTopicsConfig?,
 
         @Name("special-tx-margin-bytes")
         @DefaultValue(100 * 1024) // 100 KiB
@@ -56,6 +68,14 @@ data class IcmfReceiverSpecificBlockChainConfig(
         @Name("skip-to-height")
         @DefaultValue(0)
         val skipToHeight: Long
+)
+
+data class IcmfReceiverSpecificBlockChainConfigWithoutSkipToHeight(
+        @Name("bc-rid")
+        val blockchainRid: ByteArray,
+
+        @Name("topic")
+        val topic: String,
 )
 
 data class IcmfReceiverTopicsConfig(

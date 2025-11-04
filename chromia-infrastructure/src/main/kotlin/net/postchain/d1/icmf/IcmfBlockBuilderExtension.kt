@@ -44,17 +44,23 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
             return
         }
 
+        if (message.receiver != null && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
+            logger.info("ICMF message to specific receiver must have local topic")
+            return
+        }
+
         val encodedBody = GtvEncoder.encodeGtv(message.body)
         if (encodedBody.size > ICMF_MESSAGE_MAX_SIZE) {
             logger.info("ICMF message with topic ${message.topic} and too big body will not be sent")
             return
         }
 
-        logger.info("ICMF message sent in topic ${message.topic}")
-        dbOperations.saveSentMessage(ctxt, ctxt.txIID, message.topic, ctxt.height, encodedBody)
-        val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
+        logger.info("ICMF message sent in topic ${message.topic}${if (message.receiver != null) " to ${message.receiver}" else ""}")
+        val topic = message.receiver?.let { topicWithReceiver(message.topic, it) } ?: message.topic
+        dbOperations.saveSentMessage(ctxt, ctxt.txIID, topic, ctxt.height, encodedBody)
+        val previousMessageBlockHeight = dbOperations.getPreviousSentMessageBlockHeight(ctxt, topic, ctxt.height)
         ctxt.addAfterAppendHook {
-            queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
+            queuedEvents.add(SentIcmfMessageItem(topic, message.body, previousMessageBlockHeight))
         }
     }
 

@@ -63,6 +63,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             MessageOp.OP_NAME
     )
     private lateinit var module: GTXModule
+    private lateinit var me: BlockchainRid
     private lateinit var cryptoSystem: CryptoSystem
     private var hasRateLimitQuery: Boolean = false
     private var systemAnchoringBrid: BlockchainRid? = null
@@ -71,6 +72,7 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
+        me = blockchainRID
         cryptoSystem = cs
         hasRateLimitQuery = module.getQueries().contains(RECEIVER_RATE_LIMIT_QUERY_NAME)
     }
@@ -582,9 +584,13 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
     }
 
     private fun validateNonAnchoredMessageSenderAndTopic(sender: BlockchainRid, topic: String, height: Long): Boolean {
-        if (icmfReceiverBlockchainConfigData.local?.any { it.blockchainRid.contentEquals(sender.data) && it.topic == topic && height >= it.skipToHeight } == true
+        if (icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic && height >= it.skipToHeight } == true
+                || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
                 || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)) {
+                || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
+                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
+                || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid)
+        ) {
             return true
         }
 
@@ -596,8 +602,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
                 || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
                 || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
                 || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
+                || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
                 || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
+                || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid)
         ) {
             return true
         }
