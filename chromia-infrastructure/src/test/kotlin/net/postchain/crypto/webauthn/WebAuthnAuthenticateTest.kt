@@ -5,15 +5,25 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.messageContains
 import com.fasterxml.jackson.core.type.TypeReference
 import com.webauthn4j.converter.AttestationObjectConverter
+import com.webauthn4j.converter.AuthenticatorDataConverter
 import com.webauthn4j.converter.CollectedClientDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.data.AuthenticatorAssertionResponse
 import com.webauthn4j.data.AuthenticatorAttestationResponse
+import com.webauthn4j.data.KeyProtectionType
+import com.webauthn4j.data.MatcherProtectionType
 import com.webauthn4j.data.PublicKeyCredential
+import com.webauthn4j.data.UserVerificationMethod
+import com.webauthn4j.data.attestation.authenticator.AuthenticatorData
 import com.webauthn4j.data.client.ClientDataType
 import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.data.client.Origin
+import com.webauthn4j.data.client.TokenBinding
+import com.webauthn4j.data.client.TokenBindingStatus
 import com.webauthn4j.data.client.challenge.DefaultChallenge
+import com.webauthn4j.data.extension.UvmEntries
+import com.webauthn4j.data.extension.UvmEntry
+import com.webauthn4j.data.extension.authenticator.AuthenticationExtensionsAuthenticatorOutputs
 import com.webauthn4j.data.extension.client.AuthenticationExtensionClientOutput
 import com.webauthn4j.data.extension.client.RegistrationExtensionClientOutput
 import net.postchain.base.BaseBlockEContext
@@ -24,6 +34,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.core.MockEContext
+import net.postchain.crypto.sha256Digest
 import net.postchain.crypto.webauthn.WebAuthnGTXModuleFactory.Companion.createWebAuthnManager
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory.gtv
@@ -38,6 +49,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.experimental.or
 
 class WebAuthnAuthenticateTest {
 
@@ -45,14 +57,16 @@ class WebAuthnAuthenticateTest {
     val collectedClientDataConverter = CollectedClientDataConverter(objectConverter)
 
     val validId = "f91f391db4c9b2fde0ea70189cba3fb63f579ba6122b33ad94ff3ec330084be4".hexStringToByteArray()
-    val validClientDataJSON = """{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org"}"""
+    val validClientDataJSON = """{"type":"webauthn.get","challenge":"OcDnUhQXulTUPo3JUXT0I97pvzzYBP9tZchXyav01Ag","origin":"https://example.org","crossOrigin":false}"""
     val validAuthenticatorData = "bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b51900000000".hexStringToByteArray()
+    val validSignature = "3046022100f50a4e2e4409249c4a853ba361282f09841df4dd4547a13a87780218deffcd380221008480ac0f0b93538174f575bf11a1dd5d78c6e486013f937295ea13653e331e87".hexStringToByteArray()
     val validAAGUID = "08987058cadc4b81b6e130de50dcbe96".hexStringToByteArray()
     val validPublicKey = "A5010203262001215820AFEFA16F97CA9B2D23EB86CCB64098D20DB90856062EB249C33A9B672F26DF61225820930A56B87A2FCA66334B03458ABF879717C12CC68ED73290AF2E2664796B9220".hexStringToByteArray()
     val existingChallenge = ByteArray(16) { 1 }
     val duplicateClientDataJSON = collectedClientDataConverter.convertToBytes(
             CollectedClientData(ClientDataType.WEBAUTHN_GET, DefaultChallenge(existingChallenge), Origin("https://example.org"), null)
     ).toString(Charsets.UTF_8)
+    val longOrigin = Origin("https://${"x".repeat(250)}.com")
 
     val webAuthnManager = createWebAuthnManager(objectConverter, false).first
     val attestationObjectConverter = AttestationObjectConverter(objectConverter)
@@ -93,7 +107,7 @@ class WebAuthnAuthenticateTest {
                 gtv("message"),
                 gtv("{}"),
                 gtv(0),
-                gtv(byteArrayOf()),
+                gtv(validSignature),
         )
         val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
 
@@ -105,21 +119,28 @@ class WebAuthnAuthenticateTest {
     @Test
     fun `should throw UserMistake when provided invalid clientDataJSON`() {
         assertFailure {
-            checkAuthentication("example.org", validId, validAuthenticatorData, "bogus", byteArrayOf(), 0, uv = false, bs = false)
+            checkAuthentication("example.org", validId, validAuthenticatorData, "bogus", validSignature, 0, uv = false, bs = false)
         }.isInstanceOf(UserMistake::class.java).messageContains("Input data does not match expected form")
     }
 
     @Test
     fun `should throw UserMistake when provided duplicate challenge`() {
         assertFailure {
-            checkAuthentication("example.org", validId, validAuthenticatorData, duplicateClientDataJSON, byteArrayOf(), 0, uv = false, bs = false)
+            checkAuthentication("example.org", validId, validAuthenticatorData, duplicateClientDataJSON, validSignature, 0, uv = false, bs = false)
         }.isInstanceOf(UserMistake::class.java).messageContains("challenge is not unique")
     }
 
     @Test
     fun `should throw UserMistake when provided invalid authenticatorData`() {
         assertFailure {
-            checkAuthentication("example.org", validId, byteArrayOf(), validClientDataJSON, byteArrayOf(), 0, uv = false, bs = false)
+            checkAuthentication("example.org", validId, byteArrayOf(), validClientDataJSON, validSignature, 0, uv = false, bs = false)
+        }.isInstanceOf(UserMistake::class.java).messageContains("provided data does not have proper byte layout")
+    }
+
+    @Test
+    fun `should throw UserMistake when provided authenticatorData is too large`() {
+        assertFailure {
+            checkAuthentication("example.org", validId, validAuthenticatorData + ByteArray(16), validClientDataJSON, validSignature, 0, uv = false, bs = false)
         }.isInstanceOf(UserMistake::class.java).messageContains("provided data does not have proper byte layout")
     }
 
@@ -130,7 +151,7 @@ class WebAuthnAuthenticateTest {
                     gtv(validId),
                     gtv(validAuthenticatorData),
                     gtv("""{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org","crossOrigin":true}"""),
-                    gtv(byteArrayOf())
+                    gtv(validSignature)
             )
             val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
             WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
@@ -144,7 +165,7 @@ class WebAuthnAuthenticateTest {
                     gtv(validId),
                     gtv(validAuthenticatorData),
                     gtv(validClientDataJSON),
-                    gtv(byteArrayOf())
+                    gtv(validSignature)
             )
             val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
             WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = true, userVerification = true, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
@@ -159,11 +180,57 @@ class WebAuthnAuthenticateTest {
                     gtv(invalidId),
                     gtv(validAuthenticatorData),
                     gtv(validClientDataJSON),
-                    gtv(byteArrayOf())
+                    gtv(validSignature)
             )
             val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
             WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = true, userVerification = false, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
         }.isInstanceOf(UserMistake::class.java).messageContains("credential with id ${invalidId.toHex()} not registered")
+    }
+
+    @Nested
+    inner class SizeLimits {
+        @Test
+        fun `should throw UserMistake when authenticatorData has superfluous data at end`() {
+            assertFailure {
+                checkAuthentication("example.org", validId, validAuthenticatorData + ByteArray(16), validClientDataJSON, validSignature, 0, uv = false, bs = false)
+            }.isInstanceOf(UserMistake::class.java).messageContains("provided data does not have proper byte layout")
+        }
+
+        @Test
+        fun `should throw UserMistake when authenticatorData is too large`() {
+            val authenticatorData = AuthenticatorData(sha256Digest("example.org".toByteArray(Charsets.UTF_8)),
+                    AuthenticatorData.BIT_UP or AuthenticatorData.BIT_BE or AuthenticatorData.BIT_ED, 17, null,
+                    AuthenticationExtensionsAuthenticatorOutputs.BuilderForAuthentication()
+                            .setUvm(UvmEntries(List(256) {
+                                UvmEntry(UserVerificationMethod.PATTERN_EXTERNAL, KeyProtectionType.REMOTE_HANDLE, MatcherProtectionType.SOFTWARE)
+                            }))
+                            .setHMACGetSecret(ByteArray(64) { 1 })
+                            .build()).let { AuthenticatorDataConverter(objectConverter).convert(it) }
+            assertFailure {
+                checkAuthentication("example.org", validId, authenticatorData, validClientDataJSON, validSignature, 0, uv = false, bs = false)
+            }.isInstanceOf(UserMistake::class.java).messageContains("authenticatorData is too large")
+        }
+
+        @Test
+        fun `should throw UserMistake when clientData is too large`() {
+            val clientDataJSON = CollectedClientData(
+                    ClientDataType.WEBAUTHN_GET,
+                    DefaultChallenge(ByteArray(64) { it.toByte() }),
+                    longOrigin,
+                    false,
+                    TokenBinding(TokenBindingStatus.PRESENT, "x".repeat(64))
+            ).let { CollectedClientDataConverter(objectConverter).convertToBytes(it) }.toString(Charsets.UTF_8)
+            assertFailure {
+                checkAuthentication("example.org", validId, validAuthenticatorData, clientDataJSON, validSignature, 0, uv = false, bs = false)
+            }.isInstanceOf(UserMistake::class.java).messageContains("clientData is too large")
+        }
+
+        @Test
+        fun `should throw UserMistake when signature has superfluous data at end`() {
+            assertFailure {
+                checkAuthentication("example.org", validId, validAuthenticatorData, validClientDataJSON, validSignature + ByteArray(16), 0, uv = false, bs = false)
+            }.isInstanceOf(UserMistake::class.java).messageContains("Assertion signature is not valid")
+        }
     }
 
     @Nested
@@ -486,7 +553,7 @@ class WebAuthnAuthenticateTest {
         val opIndex = 1
         val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, opIndex, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
         val op = WebAuthnAuthenticate(WebAuthnConfig(
-                listOf(Origin("https://example.org"), Origin("https://webauthn.io")),
+                listOf(Origin("https://example.org"), Origin("https://webauthn.io"), longOrigin),
                 false,
                 rpId,
                 userPresence = true,

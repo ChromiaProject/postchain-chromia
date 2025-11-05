@@ -79,6 +79,12 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
                                  isSyncing: Boolean) {
         verifyCredentialId(id)
 
+        verifyAttestationObject(attestationObjectBytes)
+
+        verifyClientData(clientDataJSON)
+
+        verifyTransports(transports)
+
         val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val registrationRequest = RegistrationRequest(
@@ -201,6 +207,10 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
                                      isSyncing: Boolean) {
         verifyCredentialId(id)
 
+        verifyAuthenticatorData(authenticatorDataBytes)
+
+        verifyClientData(clientDataJSON)
+
         val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val authenticationRequest = AuthenticationRequest(
@@ -292,10 +302,19 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
 abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
     companion object {
         // https://w3c.github.io/webauthn/#credential-id
-        const val CREDENTIAL_ID_MAX_SIZE = 1023
+        const val MAX_CREDENTIAL_ID_SIZE = 1023
 
         // https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
         const val CHALLENGE_MIN_SIZE = 16
+        const val CHALLENGE_MAX_SIZE = 64
+
+        const val MAX_ATTESTATION_OBJECT_SIZE = 4096
+        const val MAX_AUTHENTICATOR_DATA_SIZE = 1024
+
+        const val CLIENT_DATA_MAX_SIZE = 512
+
+        const val MAX_TRANSPORTS = 6
+        const val MAX_TRANSPORT_SIZE = 16
     }
 
     @Volatile
@@ -308,8 +327,8 @@ abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : 
         if (id.isEmpty()) {
             throw UserMistake("empty id")
         }
-        if (id.size > CREDENTIAL_ID_MAX_SIZE) {
-            throw UserMistake("id too long, can be at most $CREDENTIAL_ID_MAX_SIZE bytes")
+        if (id.size > MAX_CREDENTIAL_ID_SIZE) {
+            throw UserMistake("id too long, can be at most $MAX_CREDENTIAL_ID_SIZE bytes")
         }
     }
 
@@ -318,11 +337,45 @@ abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : 
             throw UserMistake("challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
         }
 
+        if (givenChallenge.size > CHALLENGE_MAX_SIZE) {
+            throw UserMistake("challenge is too long")
+        }
+
         if (conf.repository.challengeExists(ctxt, givenChallenge)) {
             throw UserMistake("challenge is not unique")
         }
 
         challenge = givenChallenge
+    }
+
+    fun verifyAttestationObject(attestationObjectBytes: ByteArray) {
+        if (attestationObjectBytes.size > MAX_ATTESTATION_OBJECT_SIZE) {
+            throw UserMistake("attestationObject is too large")
+        }
+    }
+
+    fun verifyAuthenticatorData(authenticatorDataBytes: ByteArray) {
+        if (authenticatorDataBytes.size > MAX_AUTHENTICATOR_DATA_SIZE) {
+            throw UserMistake("authenticatorData is too large")
+        }
+    }
+
+    fun verifyClientData(clientDataJSON: String) {
+        if (clientDataJSON.length > CLIENT_DATA_MAX_SIZE) {
+            throw UserMistake("clientData is too large")
+        }
+    }
+
+    fun verifyTransports(transports: List<String>) {
+        if (transports.size > MAX_TRANSPORTS) {
+            throw UserMistake("too many transports, only $MAX_TRANSPORTS allowed")
+        }
+
+        for (transport in transports) {
+            if (transport.length > MAX_TRANSPORT_SIZE) {
+                throw UserMistake("too long transport, only $MAX_TRANSPORT_SIZE allowed")
+            }
+        }
     }
 
     fun persistChallenge(ctxt: BlockEContext) {
