@@ -126,6 +126,8 @@ sealed interface Computation {
     val type: String
 }
 
+class TakenComputation(override val type: String) : Computation
+
 class StartedComputation(override val type: String) : Computation
 
 class FinishedComputation(override val type: String, val output: Gtv) : Computation
