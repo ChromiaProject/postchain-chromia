@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -98,7 +99,7 @@ class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shut
     private var loadFail = false
     private var loadTimeout = false
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         logger.info("init")
         if (configuration.rawConfig["hybridcompute"]!!.asDict()["load_fail"]?.asBoolean() == true) {
             loadFail = true

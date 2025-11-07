@@ -3,6 +3,7 @@ package net.postchain.hybridcompute
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.PostchainContextAware
@@ -15,7 +16,7 @@ class StubHybridComputeEngine : HybridComputeEngine, PostchainContextAware {
     private var initialized = false
     private var loaded = false
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         initialized = true
     }
 

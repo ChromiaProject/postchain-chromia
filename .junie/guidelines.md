@@ -141,7 +141,7 @@ open class YourGTXModule : SimpleGTXModule<YourModuleContext>(
         queries = mapOf(/* query metadata */)
     )
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         // Initialize module-specific context
     }
 }
