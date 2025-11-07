@@ -22,7 +22,7 @@ class HybridComputeGTXModule : SimpleGTXModule<Unit>(
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf(specialTransactionExtension)
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         specialTransactionExtension.initSigMaker(postchainContext.appConfig.pubKeyByteArray, postchainContext.appConfig.privKeyByteArray)
     }
 }

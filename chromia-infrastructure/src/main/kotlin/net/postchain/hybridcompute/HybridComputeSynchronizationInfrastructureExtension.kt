@@ -2,6 +2,7 @@ package net.postchain.hybridcompute
 
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.base.withWriteConnection
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.BlockchainProcess
@@ -39,7 +40,10 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 }
                 val engine = newInstanceOf<HybridComputeEngine>(config.engine)
                 if (engine is PostchainContextAware) {
-                    engine.initializeContext(configuration, postchainContext)
+                    withWriteConnection(postchainContext.blockBuilderStorage, configuration.chainID) { ctx ->
+                        engine.initializeContext(configuration, postchainContext, ctx)
+                        true
+                    }
                 }
                 txExt.config = config
                 txExt.engine = engine
