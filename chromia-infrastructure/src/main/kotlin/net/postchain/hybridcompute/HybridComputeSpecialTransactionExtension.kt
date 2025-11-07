@@ -120,137 +120,142 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
-            position == SpecialTransactionPosition.Begin
+            position == SpecialTransactionPosition.Begin || position == SpecialTransactionPosition.End
 
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val now = Instant.now()
-        if (position != SpecialTransactionPosition.Begin) return listOf()
         if (!loaded.get()) {
             logger.info("Engine not loaded yet, returning empty list from createSpecialOperations")
             return listOf()
         }
-        return buildList {
-            if (hasDistributedTimeout) {
-                computations.keys.removeIf { id -> module.query(bctx, IS_REQUEST_FAILED, gtv(Pair("id", gtv(id)))).asBoolean() }
-            }
-            for ((id, computation) in computations) {
-                when (computation) {
-                    is TakenComputation -> {
-                        logger.warn("Request id [$id] of type [${computation.type}] was taken but not started, removing")
-                        computations.remove(id)
+        val now = Instant.now()
+        when (position) {
+            SpecialTransactionPosition.Begin ->
+                return buildList {
+                    if (hasDistributedTimeout) {
+                        computations.keys.removeIf { id -> module.query(bctx, IS_REQUEST_FAILED, gtv(Pair("id", gtv(id)))).asBoolean() }
                     }
+                    for ((id, computation) in computations) {
+                        when (computation) {
+                            is TakenComputation -> {
+                                logger.warn("Request id [$id] of type [${computation.type}] was taken but not started, removing")
+                                computations.remove(id)
+                            }
 
-                    is StartedComputation -> {} // nothing to do
+                            is StartedComputation -> {} // nothing to do
 
-                    is FinishedComputation -> {
-                        logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
-                        val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
-                        add(ResponseOp(id, computation.type, computation.output, signature.subjectID, signature.data).toOpData())
-                        bctx.addAfterCommitHook { computations.remove(id) }
-                    }
+                            is FinishedComputation -> {
+                                logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
+                                val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                                add(ResponseOp(id, computation.type, computation.output, signature.subjectID, signature.data).toOpData())
+                                bctx.addAfterCommitHook { computations.remove(id) }
+                            }
 
-                    is FailedComputation -> {
-                        logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
-                        val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
-                        add(FailureOp(id, computation.type, computation.errorMessage, signature.subjectID, signature.data).toOpData())
-                        bctx.addAfterCommitHook { computations.remove(id) }
-                    }
-                }
-            }
-
-            var takenRequests = 0
-            for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
-                if (engine.name != request.type) {
-                    logger.warn("No engine found for request id [${request.id}] of type [${request.type}]")
-                    continue
-                }
-
-                val periodLength = containerRateLimits[request.type]?.periodLength ?: DEFAULT_PERIOD_LENGTH
-                val rateLimit = containerRateLimits[request.type]?.rateLimit ?: Long.MAX_VALUE
-                if (container != null) {
-                    val currentPoints = dbOperations.fetchPoints(
-                            bctx, container = container!!, type = request.type, now = now, periodLength = periodLength)
-                    val estimatedPoints = try {
-                        engine.estimatePoints(request.input)
-                    } catch (e: UserMistake) {
-                        logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed, skipping it: ${e.message}")
-                        continue
-                    } catch (e: Exception) {
-                        logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed unexpectedly, skipping it: $e", e)
-                        continue
-                    }
-                    if (currentPoints + estimatedPoints > rateLimit) {
-                        logger.warn("Rate limit for container [$container] and type [${request.type}] exceeded, skipping request id [${request.id}]")
-                        continue
-                    }
-                }
-
-                if (takenRequests >= config.concurrency) continue
-
-                if (computations.putIfAbsent(request.id, TakenComputation(request.type)) != null) continue
-
-                val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
-                add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
-                takenRequests++
-
-                bctx.addAfterCommitHook {
-                    try {
-                        val timeoutFuture = AtomicReference<ScheduledFuture<*>?>()
-                        val future = computer.submit {
-                            computations.replace(request.id, StartedComputation(request.type))
-                            logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
-                            try {
-                                val (outputPointsConsumed, duration) = measureTimedValue { engine.compute(request.input) }
-                                val (output, pointsConsumed) = outputPointsConsumed
-                                if (!Thread.currentThread().isInterrupted) {
-                                    logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
-                                    computations.replace(request.id, FinishedComputation(request.type, output))
-                                } else {
-                                    logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
-                                    computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
-                                }
-                                container?.let {
-                                    dbOperations.incrementPoints(bctx, container = it, type = request.type,
-                                            containerCreationTime = containerCreationTime, now = now,
-                                            periodLength = periodLength,
-                                            pointsConsumed = pointsConsumed)
-                                }
-                            } catch (_: InterruptedException) {
-                                logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
-                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
-                            } catch (e: UserMistake) {
-                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
-                                computations.replace(request.id, FailedComputation(request.type, e.message
-                                        ?: "Unknown error"))
-                            } catch (e: Exception) {
-                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
-                                computations.replace(request.id, FailedComputation(request.type, "Unknown error"))
-                            } finally {
-                                timeoutFuture.get()?.cancel(false)
+                            is FailedComputation -> {
+                                logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
+                                val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                                add(FailureOp(id, computation.type, computation.errorMessage, signature.subjectID, signature.data).toOpData())
+                                bctx.addAfterCommitHook { computations.remove(id) }
                             }
                         }
-                        if (config.computeTimeoutSeconds > 0) {
-                            timeoutFuture.set(timeouter.schedule({
-                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
-                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
-                                future.cancel(true) // interrupt the compute thread
-                            }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
-                        }
-                    } catch (_: RejectedExecutionException) {
-                        computations.remove(request.id)
                     }
-                }
-            }
 
-            if (hasDistributedTimeout) {
-                for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<TakenComputeRequest>() }) {
-                    val takenTimestamp = request.takenTimestamp
-                    if (isComputeClusterTimeout(takenTimestamp, now.toEpochMilli())) {
-                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] not reported by back by computing node after ${config.computeClusterTimeoutSeconds} seconds")
-                        add(ClusterTimeoutOp(request.id, request.type).toOpData())
+                    if (hasDistributedTimeout) {
+                        for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<TakenComputeRequest>() }) {
+                            val takenTimestamp = request.takenTimestamp
+                            if (isComputeClusterTimeout(takenTimestamp, now.toEpochMilli())) {
+                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] not reported by back by computing node after ${config.computeClusterTimeoutSeconds} seconds")
+                                add(ClusterTimeoutOp(request.id, request.type).toOpData())
+                            }
+                        }
                     }
                 }
-            }
+
+            SpecialTransactionPosition.End ->
+                return buildList {
+                    var takenRequests = 0
+                    for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
+                        if (engine.name != request.type) {
+                            logger.warn("No engine found for request id [${request.id}] of type [${request.type}]")
+                            continue
+                        }
+
+                        val periodLength = containerRateLimits[request.type]?.periodLength ?: DEFAULT_PERIOD_LENGTH
+                        val rateLimit = containerRateLimits[request.type]?.rateLimit ?: Long.MAX_VALUE
+                        if (container != null) {
+                            val currentPoints = dbOperations.fetchPoints(
+                                    bctx, container = container!!, type = request.type, now = now, periodLength = periodLength)
+                            val estimatedPoints = try {
+                                engine.estimatePoints(request.input)
+                            } catch (e: UserMistake) {
+                                logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed, skipping it: ${e.message}")
+                                continue
+                            } catch (e: Exception) {
+                                logger.warn("Estimation of request id [${request.id}] of type [${request.type}] failed unexpectedly, skipping it: $e", e)
+                                continue
+                            }
+                            if (currentPoints + estimatedPoints > rateLimit) {
+                                logger.warn("Rate limit for container [$container] and type [${request.type}] exceeded, skipping request id [${request.id}]")
+                                continue
+                            }
+                        }
+
+                        if (takenRequests >= config.concurrency) continue
+
+                        if (computations.putIfAbsent(request.id, TakenComputation(request.type)) != null) continue
+
+                        val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
+                        add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
+                        takenRequests++
+
+                        bctx.addAfterCommitHook {
+                            try {
+                                val timeoutFuture = AtomicReference<ScheduledFuture<*>?>()
+                                val future = computer.submit {
+                                    computations.replace(request.id, StartedComputation(request.type))
+                                    logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
+                                    try {
+                                        val (outputPointsConsumed, duration) = measureTimedValue { engine.compute(request.input) }
+                                        val (output, pointsConsumed) = outputPointsConsumed
+                                        if (!Thread.currentThread().isInterrupted) {
+                                            logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
+                                            computations.replace(request.id, FinishedComputation(request.type, output))
+                                        } else {
+                                            logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
+                                            computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                        }
+                                        container?.let {
+                                            dbOperations.incrementPoints(bctx, container = it, type = request.type,
+                                                    containerCreationTime = containerCreationTime, now = now,
+                                                    periodLength = periodLength,
+                                                    pointsConsumed = pointsConsumed)
+                                        }
+                                    } catch (_: InterruptedException) {
+                                        logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
+                                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                    } catch (e: UserMistake) {
+                                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
+                                        computations.replace(request.id, FailedComputation(request.type, e.message
+                                                ?: "Unknown error"))
+                                    } catch (e: Exception) {
+                                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
+                                        computations.replace(request.id, FailedComputation(request.type, "Unknown error"))
+                                    } finally {
+                                        timeoutFuture.get()?.cancel(false)
+                                    }
+                                }
+                                if (config.computeTimeoutSeconds > 0) {
+                                    timeoutFuture.set(timeouter.schedule({
+                                        logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
+                                        computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                        future.cancel(true) // interrupt the compute thread
+                                    }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
+                                }
+                            } catch (_: RejectedExecutionException) {
+                                computations.remove(request.id)
+                            }
+                        }
+                    }
+                }
         }
     }
 

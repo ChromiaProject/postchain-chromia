@@ -8,6 +8,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -57,23 +58,6 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "timeout",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input1).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val takenRequests = query.fetchRequests()
-            assertThat(takenRequests).containsOnly(Computation(
-                    id = "timeout",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input1).wrap(),
@@ -81,14 +65,11 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = takenRequests[0].takenTimestamp,
-                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = -1,
+                    processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
             ))
             assertThat(query.fetchComputeResult("timeout")).isNull()
         }
-
-        // Make the next node primary
-        buildBlock(chainIid.toLong())
 
         // Wait until cluster compute times out
         Thread.sleep(6 * 1000)
@@ -99,8 +80,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
         val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
         assertThat(txRid).isNotNull()
         queryAllNodes(chainIid.toLong()) { query ->
-            val failedRequest = query.fetchRequests()
-            assertThat(failedRequest).containsOnly(Computation(
+            assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "timeout",
                     state = State.FAILED,
                     type = "test",
@@ -109,8 +89,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "Cluster timeout.",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = failedRequest[0].takenTimestamp,
-                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = -1,
+                    processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
             ))
         }
 
@@ -119,26 +99,10 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success", "test", input2)
         }
+        val lastBlockTime = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).contains(Computation(
-                    id = "success",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input2).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).contains(Computation(
                     id = "success",
                     state = State.TAKEN,
                     type = "test",
@@ -147,18 +111,18 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[1].takenTimestamp,
-                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = lastBlockTime,
+                    processedBy = nodes[2].pubKey.hexStringToWrappedByteArray(),
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
         }
+
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
             queryAllNodes(chainIid.toLong()) { query ->
-                val requests = query.fetchRequests()
-                assertThat(requests).contains(Computation(
+                assertThat(query.fetchRequests()).contains(Computation(
                         id = "success",
                         state = State.COMPUTED,
                         type = "test",
@@ -167,8 +131,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                         error = "",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = requests[1].takenTimestamp,
-                        processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
+                        takenTimestamp = lastBlockTime,
+                        processedBy = nodes[2].pubKey.hexStringToWrappedByteArray(),
                 ))
                 assertThat(query.fetchComputeResult("success")).isEqualTo(ComputeResult(
                         result = input2,
