@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit
 class HybridComputeIT : IntegrationTestSetup() {
 
     val chainIid = 1
-    lateinit var node1Pubkey: WrappedByteArray
+    lateinit var node0Pubkey: WrappedByteArray
     val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
@@ -41,7 +41,7 @@ class HybridComputeIT : IntegrationTestSetup() {
         Assertions.assertEquals(nodeCount, sysSetup.nodeMap.size, "We didn't get the nodes we expected, check BC config file")
 
         createNodesFromSystemSetup(sysSetup)
-        node1Pubkey = nodes[1].pubKey.hexStringToWrappedByteArray()
+        node0Pubkey = nodes[0].pubKey.hexStringToWrappedByteArray()
         return sysSetup
     }
 
@@ -59,23 +59,6 @@ class HybridComputeIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "success",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).containsOnly(Computation(
-                    id = "success",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
@@ -83,18 +66,18 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[0].takenTimestamp,
-                    processedBy = node1Pubkey,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
         }
+
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
             queryAllNodes(chainIid.toLong()) { query ->
-                val requests = query.fetchRequests()
-                assertThat(requests).containsOnly(Computation(
+                assertThat(query.fetchRequests()).containsOnly(Computation(
                         id = "success",
                         state = State.COMPUTED,
                         type = "test",
@@ -103,8 +86,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = requests[0].takenTimestamp,
-                        processedBy = node1Pubkey,
+                        takenTimestamp = -1,
+                        processedBy = node0Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("success")).isEqualTo(ComputeResult(
                         result = input,
@@ -130,23 +113,6 @@ class HybridComputeIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "fail",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).containsOnly(Computation(
-                    id = "fail",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
@@ -154,8 +120,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[0].takenTimestamp,
-                    processedBy = node1Pubkey,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("fail")).isNull()
         }
@@ -165,8 +131,7 @@ class HybridComputeIT : IntegrationTestSetup() {
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
             queryAllNodes(chainIid.toLong()) { query ->
-                val requests = query.fetchRequests()
-                assertThat(requests).containsOnly(Computation(
+                assertThat(query.fetchRequests()).containsOnly(Computation(
                         id = "fail",
                         state = State.FAILED,
                         type = "test",
@@ -175,8 +140,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Fail",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = requests[0].takenTimestamp,
-                        processedBy = node1Pubkey,
+                        takenTimestamp = -1,
+                        processedBy = node0Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("fail")).isEqualTo(ComputeResult(
                         result = null,
@@ -202,23 +167,6 @@ class HybridComputeIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "error",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).containsOnly(Computation(
-                    id = "error",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
@@ -226,8 +174,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[0].takenTimestamp,
-                    processedBy = node1Pubkey,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("error")).isNull()
         }
@@ -237,8 +185,7 @@ class HybridComputeIT : IntegrationTestSetup() {
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
             queryAllNodes(chainIid.toLong()) { query ->
-                val requests = query.fetchRequests()
-                assertThat(requests).containsOnly(Computation(
+                assertThat(query.fetchRequests()).containsOnly(Computation(
                         id = "error",
                         state = State.FAILED,
                         type = "test",
@@ -247,8 +194,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Unknown error",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = requests[0].takenTimestamp,
-                        processedBy = node1Pubkey,
+                        takenTimestamp = -1,
+                        processedBy = node0Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("error")).isEqualTo(ComputeResult(
                         result = null,
@@ -274,23 +221,6 @@ class HybridComputeIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "timeout",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).containsOnly(Computation(
-                    id = "timeout",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
@@ -298,19 +228,18 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[0].takenTimestamp,
-                    processedBy = node1Pubkey,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("timeout")).isNull()
         }
-        
+
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
             assertThat(txRid).isNotNull()
             queryAllNodes(chainIid.toLong()) { query ->
-                val requests = query.fetchRequests()
-                assertThat(requests).containsOnly(Computation(
+                assertThat(query.fetchRequests()).containsOnly(Computation(
                         id = "timeout",
                         state = State.FAILED,
                         type = "test",
@@ -319,8 +248,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Computation timed out after 5 seconds",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = requests[0].takenTimestamp,
-                        processedBy = node1Pubkey,
+                        takenTimestamp = -1,
+                        processedBy = node0Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("timeout")).isEqualTo(ComputeResult(
                         result = null,
@@ -346,23 +275,6 @@ class HybridComputeIT : IntegrationTestSetup() {
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "invalid",
-                    state = State.NEW,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = 0,
-                    processedBy = ByteArray(0).wrap(),
-            ))
-        }
-
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            val requests = query.fetchRequests()
-            assertThat(requests).containsOnly(Computation(
-                    id = "invalid",
                     state = State.TAKEN,
                     type = "test",
                     input = GtvEncoder.encodeGtv(input).wrap(),
@@ -370,12 +282,12 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = requests[0].takenTimestamp,
-                    processedBy = requests[0].processedBy,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("invalid")).isNull()
         }
-        
+
         // Wait until computation is finished
         Thread.sleep(2 * 1000)
 
@@ -385,8 +297,7 @@ class HybridComputeIT : IntegrationTestSetup() {
         buildBlock(chainIid.toLong())
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
-            val takenRequests = query.fetchRequests()
-            assertThat(takenRequests).containsOnly(Computation(
+            assertThat(query.fetchRequests()).containsOnly(Computation(
                     id = "invalid",
                     state = State.TAKEN,
                     type = "test",
@@ -395,8 +306,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = takenRequests[0].takenTimestamp,
-                    processedBy = node1Pubkey,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
             ))
             assertThat(query.fetchComputeResult("invalid")).isNull()
         }
