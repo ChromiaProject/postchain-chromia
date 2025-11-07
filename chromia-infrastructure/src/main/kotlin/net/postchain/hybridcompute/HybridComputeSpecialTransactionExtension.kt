@@ -8,6 +8,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
+import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
@@ -18,7 +19,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
-import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
 import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUEST
@@ -42,7 +43,8 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
-class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridComputeDatabaseOperations) : GTXSpecialTxExtension, Shutdownable {
+class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridComputeDatabaseOperations)
+    : GTXBlockBuildingAffectingSpecialTxExtension, Shutdownable {
     companion object : KLogging() {
         val DEFAULT_PERIOD_LENGTH = 7.days // 1 week
     }
@@ -121,6 +123,10 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
             position == SpecialTransactionPosition.Begin || position == SpecialTransactionPosition.End
+
+    override fun blockCommitted(blockData: BlockData) {}
+
+    override fun shouldBuildBlock(): Boolean = computations.any { it.value is FinishedComputation || it.value is FailedComputation }
 
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         if (!loaded.get()) {
@@ -259,9 +265,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         }
     }
 
-    fun isComputeClusterTimeout(takenTimestamp: Long, now: Long) =
-            takenTimestamp + config.computeClusterTimeoutSeconds * 1000 < now
-
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         val now = Instant.now()
         for (op in ops) {
@@ -343,21 +346,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         return true
     }
 
-    private fun isSignatureInvalid(opName: String, bctx: BlockEContext, id: String, signatureData: ByteArray): Boolean {
-        val request = getTakenRequestById(bctx, id)
-        if (!request.isNull()) {
-            val takenComputeRequest = request.toObject<TakenComputeRequest>()
-            if (!cs.verifyDigest(hash(id, blockchainRID.toHex(), bctx.height), Signature(takenComputeRequest.processedBy.data, signatureData))) {
-                logger.warn { "Validate $opName operation failed for request id [${takenComputeRequest.id}] of type [${takenComputeRequest.type}]. Invalid signature." }
-                return true
-            }
-        } else {
-            logger.warn { "Validate $opName operation failed. Taken request not found by id [${id}]." }
-            return true
-        }
-        return false
-    }
-
     override fun shutdown() {
         timeouter.shutdownNow()
         computer.shutdown()
@@ -392,6 +380,24 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
             }
         }
         logger.info("Shut down complete")
+    }
+
+    fun isComputeClusterTimeout(takenTimestamp: Long, now: Long) =
+            takenTimestamp + config.computeClusterTimeoutSeconds * 1000 < now
+
+    private fun isSignatureInvalid(opName: String, bctx: BlockEContext, id: String, signatureData: ByteArray): Boolean {
+        val request = getTakenRequestById(bctx, id)
+        if (!request.isNull()) {
+            val takenComputeRequest = request.toObject<TakenComputeRequest>()
+            if (!cs.verifyDigest(hash(id, blockchainRID.toHex(), bctx.height), Signature(takenComputeRequest.processedBy.data, signatureData))) {
+                logger.warn { "Validate $opName operation failed for request id [${takenComputeRequest.id}] of type [${takenComputeRequest.type}]. Invalid signature." }
+                return true
+            }
+        } else {
+            logger.warn { "Validate $opName operation failed. Taken request not found by id [${id}]." }
+            return true
+        }
+        return false
     }
 
     private fun hash(id: String, blockchainRID: String, height: Long) = gtv(gtv(id), gtv(blockchainRID), gtv(height)).merkleHash(GtvMerkleHashCalculatorV2(cs))
