@@ -15,7 +15,6 @@ import com.webauthn4j.data.attestation.authenticator.COSEKey
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.verifier.exception.VerificationException
-import com.webauthn4j.verifier.internal.CrossOriginFlagVerifier
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -102,7 +101,13 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
 
         verifyChallenge(ctxt, collectedClientData.challenge.value)
 
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+        val serverProperty = ServerProperty.builder()
+                .origins(conf.allowedOrigins.toSet())
+                .topOriginPredicate { conf.allowCrossOrigin }
+                .rpId( conf.relyingPartyIdentifier)
+                .challenge(collectedClientData.challenge)
+                .build()
+
         val registrationParameters = RegistrationParameters(
                 serverProperty,
                 listOf(
@@ -113,9 +118,6 @@ class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperat
                 conf.userPresence,
         )
         val verifiedRegistrationData = try {
-            // TODO WebAuthn: Remove this when https://github.com/webauthn4j/webauthn4j/issues/1170 is fixed
-            CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
-
             webAuthnManager.verify(registrationData, registrationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
@@ -243,7 +245,12 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
 
         val attestedCredentialData = AttestedCredentialData(AAGUID(credential.aaguid.data), id, coseKey)
 
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+        val serverProperty = ServerProperty.builder()
+                .origins(conf.allowedOrigins.toSet())
+                .topOriginPredicate { conf.allowCrossOrigin }
+                .rpId( conf.relyingPartyIdentifier)
+                .challenge(collectedClientData.challenge)
+                .build()
 
         val credentialRecord = CustomCredentialRecord(
                 uvInitialized = credential.uvInitialized,

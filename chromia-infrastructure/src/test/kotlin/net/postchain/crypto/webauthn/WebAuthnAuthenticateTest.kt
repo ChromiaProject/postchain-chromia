@@ -145,7 +145,7 @@ class WebAuthnAuthenticateTest {
     }
 
     @Test
-    fun `should throw UserMistake when crossOrigin does not match`() {
+    fun `should throw UserMistake when crossOrigin is set but not allowed`() {
         assertFailure {
             val args = arrayOf(
                     gtv(validId),
@@ -155,7 +155,21 @@ class WebAuthnAuthenticateTest {
             )
             val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
             WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), false, "example.org", userPresence = false, userVerification = false, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
-        }.isInstanceOf(UserMistake::class.java).messageContains("Cross-origin request is prohibited")
+        }.isInstanceOf(UserMistake::class.java).messageContains("doesn't match any of the preconfigured server topOrigin")
+    }
+
+    @Test
+    fun `should accept crossOrigin when it is allowed`() {
+        assertFailure {
+            val args = arrayOf(
+                    gtv(validId),
+                    gtv(validAuthenticatorData),
+                    gtv("""{"type":"webauthn.get","challenge":"0000000000000000000000000000000000000000000000","origin":"https://example.org","crossOrigin":true}"""),
+                    gtv(validSignature)
+            )
+            val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
+            WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://example.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
+        }.isInstanceOf(UserMistake::class.java).messageContains("Assertion signature is not valid") // if we get there, the crossOrigin check is already done
     }
 
     @Test
@@ -279,7 +293,7 @@ class WebAuthnAuthenticateTest {
                 )
                 val opData = ExtOpData(WebAuthnAuthenticate.OP_NAME, 0, args, BlockchainRid.ZERO_RID, arrayOf(), arrayOf())
                 WebAuthnAuthenticate(WebAuthnConfig(listOf(Origin("https://bogus.org"), Origin("https://webauthn.io")), true, "example.org", userPresence = false, userVerification = false, objectConverter, webAuthnManager, webAuthnManager, webAuthnRepository), opData).checkCorrectness(ctx)
-            }.isInstanceOf(UserMistake::class.java).messageContains("The collectedClientData 'https://example.org' origin doesn't match any of the preconfigured server origin")
+            }.isInstanceOf(UserMistake::class.java).messageContains("The collectedClientData origin 'https://example.org' doesn't match any of the preconfigured server origin")
         }
 
         @Test
