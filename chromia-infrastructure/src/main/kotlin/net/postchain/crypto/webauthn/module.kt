@@ -130,8 +130,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
             val (strictWebAuthnManager, nonStrictWebAuthnManager) = if (verifyAttestation) {
                 val certPathTrustworthinessVerifier = DefaultCertPathTrustworthinessVerifier(
                         MetadataBLOBBasedTrustAnchorRepository({ fidoMDSMetadataBLOB }))
-                val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier()
-                selfAttestationTrustworthinessVerifier.isSelfAttestationAllowed = false
+                val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier(false)
                 WebAuthnManager(
                         listOf(
                                 FIDOU2FAttestationStatementVerifier(),
