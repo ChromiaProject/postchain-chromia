@@ -83,7 +83,7 @@ class IccfGTXOperation(
         }
 
         when (args.size) {
-            3 -> verifyIntraClusterIccf(args)
+            3 -> verifyIntraClusterOrClusterAnchoringIccf(args)
             6 -> verifyIntraNetworkIccf(args, isSyncing)
             else -> {
                 throw GTXOpMistake("Wrong number of arguments", data)
@@ -91,10 +91,26 @@ class IccfGTXOperation(
         }
     }
 
-    private fun verifyIntraClusterIccf(args: Array<out Gtv>) {
-        val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid, sourceBlockHeaderData) = getSourceInfo(args)
-        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
+    private fun verifyIntraClusterOrClusterAnchoringIccf(args: Array<out Gtv>) {
+        val sourceInfo = getSourceInfo(args)
+        if (clusterManagement.getClusterAnchoringChains().contains(sourceInfo.sourceBlockchainRid)) {
+            verifyClusterAnchoringIccf(sourceInfo)
+        } else {
+            verifyIntraClusterIccf(sourceInfo)
+        }
+    }
 
+    private fun verifyClusterAnchoringIccf(sourceInfo: SourceInfo) {
+        val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid, sourceBlockHeaderData) = sourceInfo
+
+        verifyWitnessesAndMerkleProofTree(sourceTxConfirmationProof, sourceBlockchainRid, sourceBlockRid, sourceTxHash, sourceBlockHeaderData)
+        verifyClusterAnchoringBlockExistsInSystemAnchoringChain(sourceBlockchainRid, sourceBlockRid)
+    }
+
+    private fun verifyIntraClusterIccf(sourceInfo: SourceInfo) {
+        val (sourceBlockchainRid, sourceTxHash, sourceTxConfirmationProof, sourceBlockRid, sourceBlockHeaderData) = sourceInfo
+
+        val sourceIsRemoved = nodeManagement.getBlockchainState(sourceBlockchainRid) == BlockchainState.REMOVED
         // This can't be verified if chain is removed but anchoring check will fail anyway so that's fine
         // It's still worth doing this check if not removed (to save time and get a better error message)
         if (!sourceIsRemoved) {
@@ -136,7 +152,7 @@ class IccfGTXOperation(
         val clusterAnchoringBlockRid = clusterAnchoringBlockHeaderGtv.merkleHash(merkleHashCalculater)
 
         verifyWitnessesAndMerkleProofTree(clusterAnchoringTxConfirmationProof, clusterAnchoringTx.gtxBody.blockchainRid, clusterAnchoringBlockRid, clusterAnchoringTxHash, clusterAnchoringBlockHeaderData)
-        verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringTx, clusterAnchoringBlockRid)
+        verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringTx.gtxBody.blockchainRid, clusterAnchoringBlockRid)
     }
 
     private fun verifyWitnessesAndMerkleProofTree(confirmationProof: ConfirmationProof, blockchainRid: BlockchainRid, blockRid: Hash, txHash: ByteArray, blockHeaderData: BlockHeaderData) {
@@ -228,12 +244,14 @@ class IccfGTXOperation(
         }
     }
 
-    private fun verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringTx: Gtx, clusterAnchoringBlockRid: ByteArray) {
+    private fun verifyClusterAnchoringBlockExistsInSystemAnchoringChain(clusterAnchoringBlockchainRid: BlockchainRid, clusterAnchoringBlockRid: ByteArray) {
         val systemAnchoringQuery = queryProvider.getSystemAnchoringQuery()
         if (systemAnchoringQuery != null) {
-            if (!systemAnchoringQuery.isBlockAnchored(clusterAnchoringTx.gtxBody.blockchainRid, clusterAnchoringBlockRid)) {
+            if (!systemAnchoringQuery.isBlockAnchored(clusterAnchoringBlockchainRid, clusterAnchoringBlockRid)) {
                 throw UserMistake("Cluster anchoring block is not anchored in system anchoring chain")
             }
+        } else if (!nodeIsReplica) {
+            throw UserMistake("Unable to verify that cluster anchoring block is anchored by system anchoring chain")
         }
     }
 
