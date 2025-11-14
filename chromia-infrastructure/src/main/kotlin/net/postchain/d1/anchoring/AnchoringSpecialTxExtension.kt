@@ -12,6 +12,7 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.extension.getMerkleHashVersion
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -28,6 +29,7 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -113,6 +115,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         // Extract all packages from all pipes
         val specialTxBuilder = if (anchoringConfig.batchMode) BatchAnchoringSpecialTxBuilder() else MultiOpAnchoringSpecialTxBuilder()
         var currentSize = specialTxBuilder.getTxOverheadSize()
+        val peerCacheCopy = peerCache.toMutableMap()
         pipeIt@ for (pipe in pipes) {
             var opsCount = 0
             var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
@@ -122,6 +125,14 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                     break // Nothing more to find
                 } else {
                     for (anchorPacket in anchorPackets) {
+                        // Checking that we can fetch signers for block so we don't fail validation later
+                        // In case config has been corrupted by force in directory chain
+                        val headerData = BlockHeaderData.fromGtv(GtvDecoder.decodeGtv(anchorPacket.rawHeader))
+                        if (getCachedPeers(peerCacheCopy, headerData, blockchainConfigProvider) == null) {
+                            logger.warn("Unable to fetch signers for block at height ${headerData.getHeight()}, skipping anchoring of blockchain ${pipe.blockchainRid.toHex()}")
+                            break@pipePacketsIt
+                        }
+
                         val size = specialTxBuilder.calculateRequiredSize(anchorPacket)
                         if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
                             break@pipeIt

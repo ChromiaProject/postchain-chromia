@@ -20,6 +20,7 @@ import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_LEFT_MIB
 import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME
 import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_USAGE_MIB
 import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -35,13 +36,18 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
 
     @BeforeEach
     fun setUp() {
+        cleanUp()
+
+        Metrics.globalRegistry.add(SimpleMeterRegistry())
+    }
+
+    @AfterEach
+    fun cleanUp() {
         val registries = Metrics.globalRegistry.registries.toList()
         registries.forEach(Metrics.globalRegistry::remove)
 
         val meters = Metrics.globalRegistry.meters.toList()
         meters.forEach(Metrics.globalRegistry::remove)
-
-        Metrics.globalRegistry.add(SimpleMeterRegistry())
     }
 
     @Test

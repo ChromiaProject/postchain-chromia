@@ -4,9 +4,12 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.DynamicValueAnswer
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -77,7 +80,9 @@ class AnchoringSpecialTxExtensionTest {
         sut = AnchoringSpecialTxExtension(clock, anchoringPipeManagerFactory)
         sut.isSigner = { true }
         sut.clusterManagement = mock()
-        sut.blockchainConfigProvider = mock()
+        sut.blockchainConfigProvider = mock {
+            on { getRelevantPeers(any()) } doReturn listOf(PubKey(BlockchainRid.ZERO_RID.data))
+        }
         sut.anchoringConfig = AnchoringBlockchainConfigData(100, 1000, 100, false)
 
         sut.createPipeManager(blockchainRid0, mock())
@@ -96,11 +101,21 @@ class AnchoringSpecialTxExtensionTest {
     }
 
     private fun generatePackets(blocks: IntRange, brid: BlockchainRid) = blocks.map {
+        val blockRid = GtvEncoder.encodeGtv(gtv("blockRid - %010d".format(it)))
         AnchoringPacket(
                 it.toLong(),
-                GtvEncoder.encodeGtv(gtv("blockRid - %010d".format(it))),
-                GtvEncoder.encodeGtv(gtv("header - $brid - %010d".format(it))),
-                byteArrayOf())
+                GtvEncoder.encodeGtv(gtv(blockRid)),
+                GtvEncoder.encodeGtv(BlockHeaderData(
+                        gtv(brid),
+                        gtv(brid),
+                        gtv(brid),
+                        gtv(0),
+                        gtv(it.toLong()),
+                        GtvNull,
+                        gtv(mapOf())
+                ).toGtv()),
+                byteArrayOf()
+        )
     }
 
     @Test
