@@ -47,7 +47,7 @@ interface HybridComputeEngine {
      * This method should block until the computation is finished.
      *
      * @param input  input to the computation
-     * @return result of the computation, including enough information to validate it later (possibly the full input),
+     * @return result of the computation, including enough information to validate it later,
      *         and the actual number of rate limit points consumed by the computation
      * @throws net.postchain.common.exception.UserMistake if computation failed
      */
@@ -58,9 +58,10 @@ interface HybridComputeEngine {
      *
      * This method should block until the validation is finished.
      *
+     * @param input   input to the computation
      * @param output  the return value from a previous invocation of `compute`
      *
      * @throws net.postchain.common.exception.UserMistake if not valid
      */
-    fun validate(output: Gtv)
+    fun validate(input: Gtv, output: Gtv)
 }
