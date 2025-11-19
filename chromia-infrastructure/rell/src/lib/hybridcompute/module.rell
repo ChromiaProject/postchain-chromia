@@ -30,53 +30,56 @@ struct compute_request {
 struct taken_compute_request {
     id: text;
     type: text;
+    input: gtv;
     taken_timestamp: timestamp;
     processed_by: pubkey;
 }
 
 query get_requests(): list<compute_request> =
-        computation @* { .state == state.NEW } ( compute_request (id = $.id, type = $.type, input = gtv.from_bytes($.input)) );
+        computation @* { .state == state.NEW } ( compute_request (.id, .type, gtv.from_bytes(.input)) );
 
 query get_taken_requests(): list<taken_compute_request> =
-        computation @* { .state == state.TAKEN } ( taken_compute_request (.id , .type, .taken_timestamp, .processed_by) );
+        computation @* { .state == state.TAKEN } ( taken_compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by) );
 
 query get_taken_request(id: text): taken_compute_request? =
-        computation @? { .id == id, .state == state.TAKEN } ( taken_compute_request (.id , .type, .taken_timestamp, .processed_by) );
+        computation @? { .id == id, .state == state.TAKEN } ( taken_compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by) );
 
 query is_request_failed(id: text) = exists(computation @? { .id == id, .state == state.FAILED });
 
 @mount('__hc.')
-operation request_taken(id: text, processed_by: byte_array, signature_data: byte_array) {
-    request_taken_impl(id, processed_by);
+operation request_taken(id: text, type: text, processed_by: byte_array, signature_data: byte_array) {
+    request_taken_impl(id, type, processed_by);
 }
 
 @mount('__hc.')
-operation response(id: text, type: text, output: gtv, signature_subject_id: byte_array, signature_data: byte_array) {
-    response_impl(id, type, output);
+operation response(id: text, type: text, input: gtv, output: gtv, signature_subject_id: byte_array, signature_data: byte_array) {
+    response_impl(id, type, input, output);
 }
 
 @mount('__hc.')
-operation failure(id: text, type: text, error: text, signature_subject_id: byte_array, signature_data: byte_array) {
-    failure_impl(id, type, error);
+operation failure(id: text, type: text, input: gtv, error: text, signature_subject_id: byte_array, signature_data: byte_array) {
+    failure_impl(id, type, input, error);
 }
 
 @mount('__hc.')
-operation cluster_timeout(id: text, type: text) {
-    failure_impl(id, type, "Cluster timeout.");
+operation cluster_timeout(id: text, type: text, input: gtv) {
+    failure_impl(id, type, input, "Cluster timeout.");
 }
 
-function request_taken_impl(id: text, processed_by: byte_array) {
+function request_taken_impl(id: text, type: text, processed_by: byte_array) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     require(computation.state == state.NEW, "Computation <%s> must be NEW, but is %s".format(id, computation.state));
+    require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
     computation.state = state.TAKEN;
     computation.taken_timestamp = op_context.last_block_time;
     computation.processed_by = processed_by;
 }
 
-function response_impl(id: text, type: text, output: gtv) {
+function response_impl(id: text, type: text, input: gtv, output: gtv) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     require(computation.state == state.TAKEN, "Computation <%s> must be TAKEN, but is %s".format(id, computation.state));
     require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
+    require(computation.input == input.to_bytes(), "Computation <%s> input mismatch".format(id));
     computation.state = state.COMPUTED;
     computation.output = output.to_bytes();
     computation.result_tx_rid = op_context.transaction.tx_rid;
@@ -90,10 +93,11 @@ function response_impl(id: text, type: text, output: gtv) {
     ));
 }
 
-function failure_impl(id: text, type: text, error: text) {
+function failure_impl(id: text, type: text, input: gtv, error: text) {
     val computation = require(computation @? { id }, "No computation with id <%s>".format(id));
     require(computation.state == state.TAKEN, "Computation <%s> must be TAKEN, but is %s".format(id, computation.state));
     require(computation.type == type, "Computation <%s> must have type <%s>".format(id, computation.type));
+    require(computation.input == input.to_bytes(), "Computation <%s> input mismatch".format(id));
     computation.state = state.FAILED;
     computation.error = error;
     computation.result_tx_rid = op_context.transaction.tx_rid;

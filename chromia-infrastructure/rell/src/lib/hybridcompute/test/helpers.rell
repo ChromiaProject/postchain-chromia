@@ -6,16 +6,16 @@ operation submit_compute_request_op(id: text, type: text, input: gtv) {
     submit_compute_request(id, type, input);
 }
 
-operation request_taken_op(id: text, processed_by: byte_array) {
-    request_taken_impl(id, processed_by);
+operation request_taken_op(id: text, type: text, processed_by: byte_array) {
+    request_taken_impl(id, type, processed_by);
 }
 
-operation response_op(id: text, type: text, output: gtv) {
-    response_impl(id, type, output);
+operation response_op(id: text, type: text, input: gtv, output: gtv) {
+    response_impl(id, type, input, output);
 }
 
-operation failure_op(id: text, type: text, error: text) {
-    failure_impl(id, type, error);
+operation failure_op(id: text, type: text, input: gtv, error: text) {
+    failure_impl(id, type, input, error);
 }
 
 object result {

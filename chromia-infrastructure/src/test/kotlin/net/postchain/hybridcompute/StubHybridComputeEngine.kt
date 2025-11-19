@@ -30,7 +30,5 @@ class StubHybridComputeEngine : HybridComputeEngine, PostchainContextAware {
         return gtv("test") to 10L
     }
 
-    override fun validate(output: Gtv) {
-
-    }
+    override fun validate(input: Gtv, output: Gtv) {}
 }

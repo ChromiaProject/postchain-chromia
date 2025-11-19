@@ -15,7 +15,9 @@ sealed interface TestEngineBehavior {
     fun encode(): Gtv
 
     fun compute(input: Gtv): Gtv
-    fun validate(bytes: Gtv) {}
+    fun validate(input: Gtv, output: Gtv) {
+        if (input != output) throw UserMistake("output does not match input")
+    }
 
     companion object {
         fun decode(input: Gtv): TestEngineBehavior {
@@ -82,7 +84,7 @@ class InvalidComputation(val delaySeconds: Int) : TestEngineBehavior {
         return input
     }
 
-    override fun validate(bytes: Gtv) {
+    override fun validate(input: Gtv, output: Gtv) {
         throw UserMistake("Invalid")
     }
 }
@@ -136,12 +138,12 @@ class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shut
         return output to 10
     }
 
-    override fun validate(output: Gtv) {
+    override fun validate(input: Gtv, output: Gtv) {
         require(initialized) { "Not initialized" }
         require(loaded) { "Not loaded" }
         logger.info("Validate starting")
-        val behavior = TestEngineBehavior.decode(output)
-        behavior.validate(output)
+        val behavior = TestEngineBehavior.decode(input)
+        behavior.validate(input, output)
         logger.info("Validate finished")
     }
 

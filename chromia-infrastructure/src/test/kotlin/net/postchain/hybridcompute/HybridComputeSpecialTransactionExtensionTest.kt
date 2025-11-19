@@ -51,7 +51,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.init(module, 1L, mock(), mock())
 
-        val result = extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", "error message", ByteArray(0), ByteArray(0)).toOpData()))
+        val result = extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", ByteArray(0), ByteArray(0)).toOpData()))
 
         assertFalse(result)
     }
@@ -72,10 +72,10 @@ class HybridComputeSpecialTransactionExtensionTest {
         val signatureData = "4119C4ACCD4A8BF23447CC278A712EEF4AD01CB415248E052AF476A321629EDF7D3A5CFB06D731C7E272091CE73464736C872822C7156746359DBB7C571345DF".hexStringToByteArray()
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(gtv(Pair("id", gtv("fail")), Pair("type", gtv("test")), Pair("taken_timestamp", gtv(0L)), Pair("processed_by", gtv(node1Pubkey.hexStringToWrappedByteArray()))))
-        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(gtv(Pair("id", gtv("fail")), Pair("type", gtv("test")), Pair("taken_timestamp", gtv(0L)), Pair("processed_by", gtv(node0Pubkey.hexStringToWrappedByteArray()))))
-        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
     }
 
     @Test
@@ -93,8 +93,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.init(mock(), 1L, BlockchainRid("C9F360FA8B35A77EF0537C133DAEE629AFAB77873BD4A8DD6E5ED8B8D996B811".hexStringToByteArray()), cs)
         val signatureData = "BAC412C226C0245B623D6E805130A84DEA19CBC563A9FD690F38B877B44E45FC3BFE82C6E3ACFAFAB72AEE66CD7B2B213E7B4F47DB37E0256B2AACD4F042A5C1".hexStringToByteArray()
 
-        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
-        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", node0Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node0Pubkey.hexStringToByteArray(), signatureData).toOpData())))
     }
 
     @Test
@@ -114,9 +114,9 @@ class HybridComputeSpecialTransactionExtensionTest {
         val signatureData = "361E7D274BB51929052C60F2DC80815B9761A0839C0FE06EE31A2B407AFBE3E428517814EDD8EA3B6DF17606E9E1682DD0EDEE18F1DED3FF00435BD95872275B".hexStringToByteArray()
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("success"))))).thenReturn(gtv(Pair("id", gtv("success")), Pair("type", gtv("test")), Pair("taken_timestamp", gtv(0L)), Pair("processed_by", gtv(node1Pubkey.hexStringToWrappedByteArray()))))
-        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(ResponseOp("success", "test", gtv("success"), node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(ResponseOp("success", "test", gtv("input"), gtv("success"), node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("success"))))).thenReturn(gtv(Pair("id", gtv("success")), Pair("type", gtv("test")), Pair("taken_timestamp", gtv(0L)), Pair("processed_by", gtv(node0Pubkey.hexStringToWrappedByteArray()))))
-        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(ResponseOp("success", "test", gtv("success"), node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(ResponseOp("success", "test", gtv("input"), gtv("success"), node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
     }
 }

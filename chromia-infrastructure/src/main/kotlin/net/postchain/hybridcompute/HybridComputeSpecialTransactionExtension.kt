@@ -167,14 +167,14 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                             is FinishedComputation -> {
                                 logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
                                 val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
-                                add(ResponseOp(id, computation.type, computation.output, signature.subjectID, signature.data).toOpData())
+                                add(ResponseOp(id, computation.type, computation.input, computation.output, signature.subjectID, signature.data).toOpData())
                                 bctx.addAfterCommitHook { computations.remove(id) }
                             }
 
                             is FailedComputation -> {
                                 logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
                                 val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
-                                add(FailureOp(id, computation.type, computation.errorMessage, signature.subjectID, signature.data).toOpData())
+                                add(FailureOp(id, computation.type, computation.input, computation.errorMessage, signature.subjectID, signature.data).toOpData())
                                 bctx.addAfterCommitHook { computations.remove(id) }
                             }
                         }
@@ -185,7 +185,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                             val takenTimestamp = request.takenTimestamp
                             if (isComputeClusterTimeout(takenTimestamp, now.toEpochMilli())) {
                                 logger.warn("Computation of request id [${request.id}] of type [${request.type}] not reported by back by computing node after ${config.computeClusterTimeoutSeconds} seconds")
-                                add(ClusterTimeoutOp(request.id, request.type).toOpData())
+                                add(ClusterTimeoutOp(request.id, request.type, request.input).toOpData())
                             }
                         }
                     }
@@ -222,10 +222,10 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
 
                         if (takenRequests >= config.concurrency) continue
 
-                        if (computations.putIfAbsent(request.id, TakenComputation(request.type)) != null) continue
+                        if (computations.putIfAbsent(request.id, TakenComputation(request.type, request.input)) != null) continue
 
                         val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
-                        add(RequestTakenOp(request.id, nodePubkey, signature.data).toOpData())
+                        add(RequestTakenOp(request.id, request.type, nodePubkey, signature.data).toOpData())
                         takenRequests++
 
                         bctx.addAfterCommitHook {
@@ -236,17 +236,17 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                             CHAIN_IID_TAG to chainID.toString(),
                                             BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
                                     )) {
-                                        computations.replace(request.id, StartedComputation(request.type))
+                                        computations.replace(request.id, StartedComputation(request.type, request.input))
                                         logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
                                         try {
                                             val (outputPointsConsumed, duration) = measureTimedValue { engine.compute(request.input) }
                                             val (output, pointsConsumed) = outputPointsConsumed
                                             if (!Thread.currentThread().isInterrupted) {
                                                 logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
-                                                computations.replace(request.id, FinishedComputation(request.type, output))
+                                                computations.replace(request.id, FinishedComputation(request.type, request.input, output))
                                             } else {
                                                 logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
-                                                computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                                computations.replace(request.id, FailedComputation(request.type, request.input,"Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                             }
                                             container?.let {
                                                 dbOperations.incrementPoints(bctx, container = it, type = request.type,
@@ -256,14 +256,14 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                             }
                                         } catch (_: InterruptedException) {
                                             logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
-                                            computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                            computations.replace(request.id, FailedComputation(request.type, request.input, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                         } catch (e: UserMistake) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
-                                            computations.replace(request.id, FailedComputation(request.type, e.message
+                                            computations.replace(request.id, FailedComputation(request.type, request.input,e.message
                                                     ?: "Unknown error"))
                                         } catch (e: Exception) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
-                                            computations.replace(request.id, FailedComputation(request.type, "Unknown error"))
+                                            computations.replace(request.id, FailedComputation(request.type, request.input,"Unknown error"))
                                         } finally {
                                             timeoutFuture.get()?.cancel(false)
                                         }
@@ -276,7 +276,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                                 BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
                                         )) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after ${config.computeTimeoutSeconds} seconds")
-                                            computations.replace(request.id, FailedComputation(request.type, "Computation timed out after ${config.computeTimeoutSeconds} seconds"))
+                                            computations.replace(request.id, FailedComputation(request.type, request.input,"Computation timed out after ${config.computeTimeoutSeconds} seconds"))
                                             future.cancel(true) // interrupt the compute thread
                                         }
                                     }, config.computeTimeoutSeconds, TimeUnit.SECONDS))
@@ -314,7 +314,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                 logger.info("Starting validation for request id [${response.id}] of type [${response.type}]...")
                                 // TODO POS-1735 have timeout for the validation
                                 val duration = measureTime {
-                                    engine.validate(response.output)
+                                    engine.validate(response.input, response.output)
                                 }
                                 logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
                             } catch (e: UserMistake) {
