@@ -20,11 +20,13 @@ operation failure_op(id: text, type: text, input: gtv, error: text) {
 
 object result {
     mutable id: text = "";
+    mutable type: text = "";
     mutable error: text = "";
 }
 
 @extend(on_compute_result)
-function (id: text, compute_result) {
+function (id: text, type: text, compute_result) {
     result.id = id;
+    result.type = type;
     result.error = compute_result.error ?: "";
 }

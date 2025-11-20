@@ -85,7 +85,7 @@ function response_impl(id: text, type: text, input: gtv, output: gtv) {
     computation.result_tx_rid = op_context.transaction.tx_rid;
     computation.result_op_index = op_context.op_index;
 
-    on_compute_result(id, compute_result(
+    on_compute_result(id, type, compute_result(
         result = output,
         error = null,
         tx_rid = op_context.transaction.tx_rid,
@@ -103,7 +103,7 @@ function failure_impl(id: text, type: text, input: gtv, error: text) {
     computation.result_tx_rid = op_context.transaction.tx_rid;
     computation.result_op_index = op_context.op_index;
 
-    on_compute_result(id, compute_result(
+    on_compute_result(id, type, compute_result(
         result = null,
         error = error,
         tx_rid = op_context.transaction.tx_rid,
@@ -170,4 +170,4 @@ function fetch_compute_result(id: text): compute_result? {
  * @param id The identifier of the compute request
  * @param compute_result  The result
  */
-@extendable function on_compute_result(id: text, compute_result) {}
+@extendable function on_compute_result(id: text, type: text, compute_result) {}
