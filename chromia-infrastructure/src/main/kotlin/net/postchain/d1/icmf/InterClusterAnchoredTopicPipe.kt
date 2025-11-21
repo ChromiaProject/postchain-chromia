@@ -292,6 +292,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
+    override fun haveNewPacketsForSure(): Boolean = packets.isNotEmpty()
+
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? =
             packets.higherEntry(currentPointer)?.value?.first
 

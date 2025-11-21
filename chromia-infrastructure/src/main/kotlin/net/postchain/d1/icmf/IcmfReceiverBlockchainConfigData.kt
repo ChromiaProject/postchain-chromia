@@ -41,7 +41,11 @@ data class IcmfReceiverBlockchainConfigData(
 
         @Name("message-limit")
         @DefaultValue(1000)
-        val messageLimit: Long
+        val messageLimit: Long,
+
+        @Name("message-check-interval-ms")
+        @DefaultValue(defaultLong = 1000)
+        val messageCheckInterval: Long,
 ) {
     companion object {
         fun fromGtv(gtv: Gtv): IcmfReceiverBlockchainConfigData = gtv.toObject()

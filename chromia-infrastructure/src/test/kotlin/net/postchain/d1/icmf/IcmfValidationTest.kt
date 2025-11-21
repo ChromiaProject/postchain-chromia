@@ -27,6 +27,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.time.Clock
 
 class IcmfValidationTest {
     private val cluster = IcmfTestClusterManagement.senderCluster
@@ -41,7 +45,8 @@ class IcmfValidationTest {
     private val spilledMessage = gtv("hej")
     private val specialTxSizeMargin = 100 * 1024L
     private val messageLimit = 100L
-    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf(topic, secondTopic), null), null, null, null, null, null, null, specialTxSizeMargin, 10)
+    private val maxMessageDelay = 1000L
+    private val defaultIcmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf(topic, secondTopic), null), null, null, null, null, null, null, specialTxSizeMargin, 10, maxMessageDelay)
 
     private val mockModule: GTXModule = mock {}
     private val mockContext: BlockEContext = mock {}
@@ -329,7 +334,7 @@ class IcmfValidationTest {
 
     @Test
     fun successWithoutAnchoring() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 10))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 10, maxMessageDelay))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -345,7 +350,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredOrigin() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null, null, null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(), null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -361,7 +366,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredTopic() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf("another-topic"), null), null, null, null, null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(listOf("another-topic"), null), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -376,7 +381,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredSender() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -505,7 +510,7 @@ class IcmfValidationTest {
 
     @Test
     fun `Topics in header that we dont receive messages ops for should not impact validation for local receivers`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val relevantMessageBodies = listOf(gtv("hej"))
         val irrelevantMessageBodies = listOf(gtv("hej on another topic"))
@@ -531,7 +536,7 @@ class IcmfValidationTest {
 
     @Test
     fun `Messages before skipped height should be rejected`() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 1)), null, null, null, null, null, specialTxSizeMargin, messageLimit))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 1)), null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val messageBodies = listOf(gtv("hej"))
         val block = createBlockDetail(
@@ -548,7 +553,7 @@ class IcmfValidationTest {
     @Test
     fun `Messages can't exceed set message limit if signer`() {
 
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1, maxMessageDelay))
 
         val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
         val block = createBlockDetail(
@@ -565,7 +570,7 @@ class IcmfValidationTest {
     @Test
     fun `Messages can exceed set message limit if not signer`() {
 
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1), nodeIsSigner = false)
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0)), null, null, null, null, null, specialTxSizeMargin, 1, maxMessageDelay), nodeIsSigner = false)
 
         val messageBodies = listOf(gtv("hej1"), gtv("hej2"))
         val block = createBlockDetail(
@@ -616,11 +621,44 @@ class IcmfValidationTest {
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps))
     }
 
+    @Test
+    fun `trigger block building`() {
+        val clock: Clock = mock()
+        val icmfReceiverSpecialTxExtension = createTxExt(clock = clock)
+        val pipe: IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String> = mock {
+            on { route } doReturn TopicRoute("topic", listOf())
+            on { haveNewPacketsForSure() } doReturn false
+        }
+        val receiver: IcmfReceiver<TopicRoute, Long, IcmfAnchorPacket, String> = mock {
+            on { getRelevantPipes() } doReturn listOf(pipe)
+        }
+        icmfReceiverSpecialTxExtension.anchoredReceivers.add(receiver)
+
+        whenever(clock.millis()) doReturn 10000
+        icmfReceiverSpecialTxExtension.blockCommitted(mock())
+        assertFalse(icmfReceiverSpecialTxExtension.shouldBuildBlock())
+        verify(pipe, never()).haveNewPacketsForSure()
+        whenever(pipe.haveNewPacketsForSure()) doReturn true
+        whenever(clock.millis()) doReturn 10100
+        assertFalse(icmfReceiverSpecialTxExtension.shouldBuildBlock())
+        verify(pipe, never()).haveNewPacketsForSure()
+        whenever(clock.millis()) doReturn 11001
+        assertTrue(icmfReceiverSpecialTxExtension.shouldBuildBlock())
+        verify(pipe).haveNewPacketsForSure()
+        whenever(clock.millis()) doReturn 11021
+        assertTrue(icmfReceiverSpecialTxExtension.shouldBuildBlock())
+
+        whenever(clock.millis()) doReturn 12000
+        icmfReceiverSpecialTxExtension.blockCommitted(mock())
+        assertFalse(icmfReceiverSpecialTxExtension.shouldBuildBlock())
+    }
+
     private fun createTxExt(
             databaseOperations: IcmfReceiverDatabaseOperations = dbMock,
             icmfConfig: IcmfReceiverBlockchainConfigData = defaultIcmfConfig,
             nodeIsSigner: Boolean = true,
-    ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations).apply {
+            clock: Clock = Clock.systemUTC(),
+    ): IcmfReceiverSpecialTxExtension = IcmfReceiverSpecialTxExtension(databaseOperations, clock).apply {
         init(mockModule, chainID, blockchainRID, cryptoSystem)
         blockchainConfigProvider = BlockchainConfigProvider { _ -> listOf(IcmfTestClusterManagement.keyPair.pubKey) }
         icmfReceiverBlockchainConfigData = icmfConfig
@@ -727,7 +765,7 @@ class MockIcmfReceiverDatabaseOperations : IcmfReceiverDatabaseOperations {
 
     override fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long) {}
 
-    override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage? {
+    override fun loadOldestSpilledMessage(ctx: EContext, sender: BlockchainRid, topic: String): SpilledMessage {
         throw NotImplementedError("not used in mock")
     }
 
