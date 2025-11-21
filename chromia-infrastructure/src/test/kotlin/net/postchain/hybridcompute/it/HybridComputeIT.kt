@@ -1,6 +1,7 @@
 package net.postchain.hybridcompute.it
 
 import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
@@ -47,11 +48,11 @@ class HybridComputeIT : IntegrationTestSetup() {
 
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
-    fun `successful computation`() {
+    fun `successful computation of different types`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
 
-        val input = CompleteComputation(1).encode()
-
+        val input = CompleteComputation(1, 1L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success", "test", input)
         }
@@ -71,7 +72,6 @@ class HybridComputeIT : IntegrationTestSetup() {
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
         }
-
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
             buildBlock(chainIid.toLong())
             val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
@@ -97,15 +97,82 @@ class HybridComputeIT : IntegrationTestSetup() {
                 ))
             }
         }
+
+        val input2 = CompleteComputation(1, 1L).encode()
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success2", "test2", input2)
+        }
+        buildBlock(chainIid.toLong())
+        queryAllNodes(chainIid.toLong()) { query ->
+            assertThat(query.fetchComputeResult("success2")).isNull()
+        }
+        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+            buildBlock(chainIid.toLong())
+            queryAllNodes(chainIid.toLong()) { query ->
+                assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
+            }
+        }
+    }
+
+    @Test
+    @Timeout(1, unit = TimeUnit.MINUTES)
+    fun `concurrent computations`() {
+        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
+
+        val input = CompleteComputation(1, 1L).encode()
+        val input2 = CompleteComputation(1, 2L).encode()
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success", "test", input)
+        }
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success2", "test", input2)
+        }
+        buildBlock(chainIid.toLong())
+        queryAllNodes(chainIid.toLong()) { query ->
+            assertThat(query.fetchRequests()).containsExactlyInAnyOrder(Computation(
+                    id = "success",
+                    state = State.TAKEN,
+                    type = "test",
+                    input = GtvEncoder.encodeGtv(input).wrap(),
+                    output = ByteArray(0).wrap(),
+                    error = "",
+                    resultTxRid = ByteArray(0).wrap(),
+                    resultOpIndex = -1,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
+            ), Computation(
+                    id = "success2",
+                    state = State.TAKEN,
+                    type = "test",
+                    input = GtvEncoder.encodeGtv(input2).wrap(),
+                    output = ByteArray(0).wrap(),
+                    error = "",
+                    resultTxRid = ByteArray(0).wrap(),
+                    resultOpIndex = -1,
+                    takenTimestamp = -1,
+                    processedBy = node0Pubkey,
+            ))
+            assertThat(query.fetchComputeResult("success")).isNull()
+            assertThat(query.fetchComputeResult("success2")).isNull()
+        }
+
+        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+            buildBlock(chainIid.toLong())
+            queryAllNodes(chainIid.toLong()) { query ->
+                assertThat(query.fetchComputeResult("success")?.result).isEqualTo(input)
+                assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
+            }
+        }
     }
 
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
 
         val input = FailComputation(1).encode()
-
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("fail", "test", input)
         }
@@ -157,9 +224,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `unexpectedly failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
 
         val input = ErrorComputation(1).encode()
-
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("error", "test", input)
         }
@@ -211,9 +278,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `timed out computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
 
-        val input = CompleteComputation(8).encode()
-
+        val input = CompleteComputation(8, 1L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("timeout", "test", input)
         }
@@ -265,9 +332,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `invalid computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
+        Thread.sleep(3000) // wait for loading to finish
 
         val input = InvalidComputation(1).encode()
-
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("invalid", "test", input)
         }

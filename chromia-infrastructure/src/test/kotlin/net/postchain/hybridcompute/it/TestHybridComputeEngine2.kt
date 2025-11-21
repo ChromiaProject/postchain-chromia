@@ -11,10 +11,10 @@ import net.postchain.gtx.PostchainContextAware
 import net.postchain.hybridcompute.HybridComputeEngine
 
 @Suppress("unused")
-class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shutdownable {
+class TestHybridComputeEngine2 : HybridComputeEngine, PostchainContextAware, Shutdownable {
     companion object : KLogging()
 
-    override val name: String = "test"
+    override val name: String = "test2"
 
     private var initialized = false
     private var loaded = false

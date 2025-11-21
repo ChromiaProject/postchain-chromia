@@ -38,7 +38,7 @@ class HybridComputeLoadFailIT : IntegrationTestSetup() {
 
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertThat(appender.events.map { it.message.toString() })
-                    .contains("Loading engine failed: Load failed")
+                    .contains("Loading engine test failed: Load failed")
         }
     }
 }
