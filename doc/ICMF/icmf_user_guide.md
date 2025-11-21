@@ -144,3 +144,15 @@ config:
     receiver:
       message-limit: 100 # Default 100 messages per block
 ```
+
+### Trigger block building
+
+Block building will be triggered after some time if there are waiting messages. This will currently only work for 
+inter-cluster messages. 
+
+```
+config:
+  icmf:
+    receiver:
+      message-check-interval-ms: 1000 # Default 1 second
+```

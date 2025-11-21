@@ -25,6 +25,8 @@ class IntraClusterTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = true
 
+    override fun haveNewPacketsForSure(): Boolean = false
+
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? = try {
         fetchNextInternal(currentPointer)
     } catch (e: Exception) {

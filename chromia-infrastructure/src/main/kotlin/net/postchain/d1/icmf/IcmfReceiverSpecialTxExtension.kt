@@ -9,6 +9,7 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
+import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.d1.TopicHeaderData
@@ -30,12 +31,13 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.OperationMetadata
 import net.postchain.gtx.data.OpData
-import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
+import java.time.Clock
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatabaseOperations) : GTXSpecialTxExtension {
+class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatabaseOperations, private val clock: Clock = Clock.systemUTC()) : GTXBlockBuildingAffectingSpecialTxExtension {
 
     companion object : KLogging() {
         val BASE_SPECIAL_TX_OVERHEAD = Gtx(
@@ -753,6 +755,34 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
 
     fun blockPipe(topic: String) {
         blockedPipes += topic
+    }
+
+    private var shouldBuildBlockCheckTime = 0L
+    private var shouldBuildBlockNow = false
+
+    override fun blockCommitted(blockData: BlockData) {
+        shouldBuildBlockCheckTime = clock.millis()
+        shouldBuildBlockNow = false
+    }
+
+    override fun shouldBuildBlock(): Boolean {
+        if (!::icmfReceiverBlockchainConfigData.isInitialized) return false
+
+        if (shouldBuildBlockNow) return true
+
+        val now = clock.millis()
+        if (now - shouldBuildBlockCheckTime < icmfReceiverBlockchainConfigData.messageCheckInterval) return false
+        shouldBuildBlockCheckTime = clock.millis()
+
+        val hasMessages = (nonAnchoredReceivers.flatMap { it.getRelevantPipes() } + anchoredReceivers.flatMap { it.getRelevantPipes() })
+                .filterNot { it.route.topic in blockedPipes }
+                .any { it.haveNewPacketsForSure() }
+        if (hasMessages) {
+            shouldBuildBlockNow = true
+            return true
+        } else {
+            return false
+        }
     }
 
     data class AnchorHeaderValidationInfo(

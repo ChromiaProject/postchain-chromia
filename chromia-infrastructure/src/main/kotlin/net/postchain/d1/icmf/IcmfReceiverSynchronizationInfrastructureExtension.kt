@@ -242,6 +242,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                 directoryChainToMe = bcConfig.directoryChainToMe,
                 specialTxMarginBytes = bcConfig.specialTxMarginBytes,
                 messageLimit = bcConfig.messageLimit,
+                messageCheckInterval = bcConfig.messageCheckInterval,
         )
     }
 

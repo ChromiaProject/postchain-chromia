@@ -142,6 +142,8 @@ class InterClusterTopicPipe(
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
+    override fun haveNewPacketsForSure(): Boolean = packets.isNotEmpty()
+
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? =
             packets.higherEntry(currentPointer)?.value?.first
 
