@@ -95,8 +95,8 @@ deploy_library_chain:
     - cd chromia-infrastructure/rell
     - chr install
     - chr build
-    - ../../ci/library_chain/deploy.sh hybridcompute
-    - ../../ci/library_chain/deploy.sh webauthn 1.0.0 "Web Authentication support for Chromia."
+    - ../../ci/library_chain/deploy.sh -n hybridcompute --major 3 --minor 35 --library-description "Computational framework for Chromia, database operations and synchronization, special transaction extensions"
+    - ../../ci/library_chain/deploy.sh -n webauthn --major 1 --minor 0 --library-description "Web Authentication support for Chromia."
 
 build:
   extends:
