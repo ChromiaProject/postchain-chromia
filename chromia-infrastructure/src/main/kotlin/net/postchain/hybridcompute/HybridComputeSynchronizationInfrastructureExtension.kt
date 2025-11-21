@@ -26,6 +26,10 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 val config = configuration.rawConfig.asDict()["hybridcompute"]?.toObject<HybridComputeConfig>()
                         ?: throw UserMistake("hybridcompute configuration not found")
                 require(config.concurrency > 0) { "concurrency must be greater than 0" }
+                val engineNames = config.engines.ifEmpty {
+                    require(config.engine.isNotEmpty()) { "there must be at least one engine" }
+                    listOf(config.engine)
+                }
                 if (configuration is ManagedDataSourceAware) {
                     val dataSource = configuration.dataSource
                     if (dataSource is DirectoryDataSource) {
@@ -38,15 +42,18 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                         txExt.containerRateLimits = containerRateLimits
                     }
                 }
-                val engine = newInstanceOf<HybridComputeEngine>(config.engine)
-                if (engine is PostchainContextAware) {
+                val engines = engineNames.map { newInstanceOf<HybridComputeEngine>(it) }
+                engines.filterIsInstance<PostchainContextAware>().forEach {
                     withWriteConnection(postchainContext.blockBuilderStorage, configuration.chainID) { ctx ->
-                        engine.initializeContext(configuration, postchainContext, ctx)
+                        it.initializeContext(configuration, postchainContext, ctx)
                         true
                     }
                 }
-                txExt.config = config
-                txExt.engine = engine
+                txExt.concurrency = config.concurrency.toInt()
+                txExt.loadTimeoutSeconds = config.loadTimeoutSeconds
+                txExt.computeTimeoutSeconds = config.computeTimeoutSeconds
+                txExt.computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds
+                txExt.engines = engines.associateBy { it.name }
                 txExt.hasDistributedTimeout = GET_TAKEN_REQUESTS in configuration.module.getQueries() && config.computeClusterTimeoutSeconds > 0
                 txExt.load()
             }

@@ -49,7 +49,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
     fun `compute cluster timeout`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test_cluster_timeout.xml")
 
-        val input1 = CompleteComputation(6).encode()
+        val input1 = CompleteComputation(6, 1L).encode()
 
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("timeout", "test", input1)
@@ -94,7 +94,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
             ))
         }
 
-        val input2 = CompleteComputation(1).encode()
+        val input2 = CompleteComputation(1, 1L).encode()
 
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success", "test", input2)
