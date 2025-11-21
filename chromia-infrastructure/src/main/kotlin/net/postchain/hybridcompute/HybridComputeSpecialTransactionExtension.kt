@@ -319,6 +319,9 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 ResponseOp.OP_NAME -> {
                     val response = ResponseOp.fromOpData(op) ?: return false
                     val engine = getEngine(response.id, response.type) ?: return false
+                    if (isSignatureInvalid(op.opName, bctx, response.id, response.signatureData)) {
+                        return false
+                    }
                     if (!computations.containsKey(response.id)) {
                         try {
                             logger.info("Starting validation for request id [${response.id}] of type [${response.type}]...")
@@ -336,9 +339,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                         }
                     } else {
                         logger.debug { "Skipping validation for request id [${response.id}] of type [${response.type}] on block builder node" }
-                    }
-                    if (isSignatureInvalid(op.opName, bctx, response.id, response.signatureData)) {
-                        return false
                     }
                 }
 
