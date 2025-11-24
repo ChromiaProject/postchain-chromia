@@ -20,6 +20,10 @@ data class HybridComputeConfig(
         val computeTimeoutSeconds: Long,
 
         @DefaultValue(defaultLong = -1)
+        @Name("validation_timeout_seconds")
+        val validationTimeoutSeconds: Long,
+
+        @DefaultValue(defaultLong = -1)
         @Name("compute_cluster_timeout_seconds")
         val computeClusterTimeoutSeconds: Long,
 

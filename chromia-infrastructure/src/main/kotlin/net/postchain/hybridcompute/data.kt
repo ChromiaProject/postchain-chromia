@@ -131,10 +131,10 @@ sealed interface Computation {
     val input: Gtv
 }
 
-class TakenComputation(override val type: String, override val input: Gtv) : Computation
+data class TakenComputation(override val type: String, override val input: Gtv) : Computation
 
-class StartedComputation(override val type: String, override val input: Gtv) : Computation
+data class StartedComputation(override val type: String, override val input: Gtv) : Computation
 
-class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv) : Computation
+data class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv) : Computation
 
-class FailedComputation(override val type: String, override val input: Gtv, val errorMessage: String) : Computation
+data class FailedComputation(override val type: String, override val input: Gtv, val errorMessage: String) : Computation

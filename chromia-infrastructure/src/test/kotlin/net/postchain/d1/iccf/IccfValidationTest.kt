@@ -41,7 +41,9 @@ import net.postchain.gtx.GtxOp
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.data.OpData
-import org.assertj.core.api.Assertions.assertThat
+import assertk.assertThat
+import assertk.assertions.isNotNull
+import assertk.assertions.contains
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -734,7 +736,7 @@ class IccfValidationTest {
         val exception = assertThrows<TransactionIncorrect> {
             tx.checkCorrectness(MockEContext(1))
         }
-        assertThat(exception.message).contains("contains no normal operation")
+        assertThat(exception.message).isNotNull().contains("contains no normal operation")
     }
 
     @Test
@@ -861,7 +863,7 @@ class IccfValidationTest {
         val gtxOpMistake = assertThrows<GTXOpMistake> {
             iccfGTXOperation.checkCorrectness(MockEContext(1))
         }
-        assertThat(gtxOpMistake.message).contains("Duplicate iccf_proof operation")
+        assertThat(gtxOpMistake.message).isNotNull().contains("Duplicate iccf_proof operation")
 
         // Ignore duplicate while syncing
         assertDoesNotThrow {

@@ -10,6 +10,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUEST
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -44,13 +46,14 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
+        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.engines = mapOf("test" to StubHybridComputeEngine())
         val bctx = mock<BlockEContext>()
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertTrue(extension.loaded.get())
+            assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         assertFalse(extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", ByteArray(0), ByteArray(0)).toOpData())))
@@ -65,6 +68,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
+        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.engines = mapOf("test" to StubHybridComputeEngine())
         val bctx = mock<BlockEContext>()
@@ -72,7 +76,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertTrue(extension.loaded.get())
+            assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         whenever(bctx.height).thenReturn(5L)
@@ -94,6 +98,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
+        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.engines = mapOf("test" to StubHybridComputeEngine())
         val bctx = mock<BlockEContext>()
@@ -101,7 +106,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertTrue(extension.loaded.get())
+            assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         whenever(bctx.height).thenReturn(1L)
@@ -119,11 +124,12 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
+        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.engines = mapOf("test" to StubHybridComputeEngine())
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertTrue(extension.loaded.get())
+            assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         val bctx = mock<BlockEContext>()
