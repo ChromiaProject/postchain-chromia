@@ -20,6 +20,7 @@ sealed interface TestEngineBehavior {
                 FailComputation.TAG -> FailComputation(input[1].asInteger().toInt())
                 ErrorComputation.TAG -> ErrorComputation(input[1].asInteger().toInt())
                 InvalidComputation.TAG -> InvalidComputation(input[1].asInteger().toInt())
+                SlowValidationComputation.TAG -> SlowValidationComputation(input[1].asInteger().toInt())
                 else -> throw IllegalArgumentException("Unknown test engine behavior")
             }
         }
@@ -79,5 +80,21 @@ class InvalidComputation(val delaySeconds: Int) : TestEngineBehavior {
 
     override fun validate(input: Gtv, output: Gtv) {
         throw UserMistake("Invalid")
+    }
+}
+
+class SlowValidationComputation(val delaySeconds: Int) : TestEngineBehavior {
+    companion object {
+        const val TAG = 4
+    }
+
+    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
+
+    override fun compute(input: Gtv): Gtv {
+        return input
+    }
+
+    override fun validate(input: Gtv, output: Gtv) {
+        Thread.sleep(delaySeconds * 1000L)
     }
 }

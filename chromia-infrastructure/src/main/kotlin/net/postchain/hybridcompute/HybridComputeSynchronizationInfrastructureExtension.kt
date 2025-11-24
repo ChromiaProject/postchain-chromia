@@ -52,6 +52,7 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 txExt.concurrency = config.concurrency.toInt()
                 txExt.loadTimeoutSeconds = config.loadTimeoutSeconds
                 txExt.computeTimeoutSeconds = config.computeTimeoutSeconds
+                txExt.validationTimeoutSeconds = config.validationTimeoutSeconds
                 txExt.computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds
                 txExt.engines = engines.associateBy { it.name }
                 txExt.hasDistributedTimeout = GET_TAKEN_REQUESTS in configuration.module.getQueries() && config.computeClusterTimeoutSeconds > 0
