@@ -63,7 +63,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     internal var computeTimeoutSeconds: Long = -1
     internal var validationTimeoutSeconds: Long = -1
     internal var computeClusterTimeoutSeconds: Long = -1
-    internal lateinit var engines: Map<String, HybridComputeEngine>
+    private lateinit var engines: Map<String, Pair<HybridComputeEngine, ExecutorService>>
     internal var hasDistributedTimeout: Boolean = false
 
     private lateinit var module: GTXModule
@@ -83,16 +83,8 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         Executors.newFixedThreadPool(engines.size,
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-load-%d").build())
     }
-
-    private val computer: ExecutorService by lazy {
-        ThreadPoolExecutor(concurrency, concurrency,
-                0L, TimeUnit.SECONDS,
-                ArrayBlockingQueue(concurrency),
-                ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-%d").build()
-        )
-    }
     private val validator: ExecutorService by lazy {
-        Executors.newFixedThreadPool(concurrency,
+        Executors.newFixedThreadPool(engines.size,
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-validate-%d").build())
     }
     private val timeouter: ScheduledExecutorService by lazy {
@@ -112,8 +104,21 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         this.sigMaker = cs.buildSigMaker(KeyPair(nodePubkey, privKeyByteArray))
     }
 
+    internal fun setEngines(engineList: List<HybridComputeEngine>) {
+        engines = engineList.associate {
+            it.name to (it to
+                    ThreadPoolExecutor(
+                            1, 1,
+                            0L, TimeUnit.MILLISECONDS,
+                            ArrayBlockingQueue(concurrency),
+                            ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-${it.name}-%d").build(),
+                            ThreadPoolExecutor.AbortPolicy(),
+                    ))
+        }
+    }
+
     fun load() {
-        for (engine in engines.values) {
+        for ((engine, _) in engines.values) {
             loader.submit {
                 withLoggingContext(mapOf(
                         CHAIN_IID_TAG to chainID.toString(),
@@ -166,7 +171,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
 
     override fun blockCommitted(blockData: BlockData) {}
 
-    override fun shouldBuildBlock(): Boolean = computations.any { it.value is FinishedComputation || it.value is FailedComputation }
+    override fun shouldBuildBlock(): Boolean = (loaded.get() >= engines.size) && computations.any { it.value is FinishedComputation || it.value is FailedComputation }
 
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         if (loaded.get() < engines.size) {
@@ -219,7 +224,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 return buildList {
                     var takenRequests = 0
                     for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
-                        val engine = getEngine(request.id, request.type) ?: continue
+                        val (engine, computer) = getEngineAndComputer(request.id, request.type) ?: continue
 
                         val periodLength = containerRateLimits[request.type]?.periodLength ?: DEFAULT_PERIOD_LENGTH
                         val rateLimit = containerRateLimits[request.type]?.rateLimit ?: Long.MAX_VALUE
@@ -241,7 +246,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                             }
                         }
 
-                        if (takenRequests >= concurrency) continue
+                        if (takenRequests >= (concurrency * engines.size)) continue
 
                         if (computations.putIfAbsent(request.id, TakenComputation(request.type, request.input)) != null) continue
                         logger.info("Taking request id [${request.id}] of type [${request.type}]")
@@ -422,9 +427,11 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     override fun shutdown() {
         timeouter.shutdownNow()
         loader.shutdownNow()
-        computer.shutdown()
+        for ((_, computer) in engines.values) {
+            computer.shutdown()
+        }
         validator.shutdown()
-        for (engine in engines.values) {
+        for ((engine, _) in engines.values) {
             if (engine is Shutdownable) {
                 logger.info("Shutting down engine ${engine.name}...")
                 val duration = measureTime {
@@ -434,7 +441,9 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
             }
         }
         logger.info("Shutting down executors")
-        computer.shutdownNow()
+        for ((_, computer) in engines.values) {
+            computer.shutdownNow()
+        }
         validator.shutdownNow()
         if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
             logger.warn("Timeouter did not terminate in time")
@@ -442,8 +451,10 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         if (!loader.awaitTermination(1, TimeUnit.SECONDS)) {
             logger.warn("Loader did not terminate in time")
         }
-        if (!computer.awaitTermination(1, TimeUnit.SECONDS)) {
-            logger.warn("Computer did not terminate in time")
+        for ((engine, computer) in engines.values) {
+            if (!computer.awaitTermination(1, TimeUnit.SECONDS)) {
+                logger.warn("Computer ${engine.name} did not terminate in time")
+            }
         }
         if (!validator.awaitTermination(1, TimeUnit.SECONDS)) {
             logger.warn("Validator did not terminate in time")
@@ -464,12 +475,15 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     fun isComputeClusterTimeout(takenTimestamp: Long, now: Long) =
             takenTimestamp + computeClusterTimeoutSeconds * 1000 < now
 
-    private fun getEngine(id: String, type: String): HybridComputeEngine? {
-        val engine = engines[type]
-        if (engine == null) {
+    private fun getEngine(id: String, type: String): HybridComputeEngine? = getEngineAndComputer(id, type)?.first
+
+    private fun getEngineAndComputer(id: String, type: String): Pair<HybridComputeEngine, ExecutorService>? {
+        val engineAndComputer = engines[type]
+        if (engineAndComputer == null) {
             logger.warn("No engine found for request id [$id] of type [$type]")
+            return null
         }
-        return engine
+        return engineAndComputer
     }
 
     private fun isSignatureInvalid(opName: String, bctx: BlockEContext, id: String, signatureData: ByteArray): Boolean {

@@ -48,7 +48,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
-        extension.engines = mapOf("test" to StubHybridComputeEngine())
+        extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.load()
@@ -70,7 +70,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
-        extension.engines = mapOf("test" to StubHybridComputeEngine())
+        extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
@@ -100,7 +100,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
-        extension.engines = mapOf("test" to StubHybridComputeEngine())
+        extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
@@ -126,7 +126,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
-        extension.engines = mapOf("test" to StubHybridComputeEngine())
+        extension.setEngines(listOf(StubHybridComputeEngine()))
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
