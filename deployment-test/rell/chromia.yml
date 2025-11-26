@@ -191,11 +191,8 @@ blockchains:
         - "net.postchain.d1.dummy.DummySynchronizationInfrastructureExtension"
 
 libs:
-  ft4:
-    registry: https://gitlab.com/chromaway/ft4-lib.git
-    path: rell/src/lib/ft4
-    tagOrBranch: ${DEPLOYMENT_TEST_FT4_VERSION}
-    insecure: true
+  com.chromia.ft4:
+    version: ${DEPLOYMENT_TEST_FT4_VERSION}
   eif:
     registry: https://gitlab.com/chromaway/postchain-eif
     path: postchain-eif-rell/rell/src/eif
@@ -215,4 +212,4 @@ libs:
 compile:
   source: src
   target: target
-  rellVersion: 0.14.5
+  rellVersion: 0.14.15
