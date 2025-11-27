@@ -5,6 +5,15 @@ blockchains:
   webauthn:
     type: library
     module: lib.webauthn
+  iccf:
+    type: library
+    module: lib.iccf
+  iccf_test:
+    type: library
+    module: lib.iccf_test
+  icmf:
+    type: library
+    module: lib.icmf
 
   hybridcompute_test:
     type: blockchain
@@ -129,3 +138,4 @@ test:
   modules:
     - lib.hybridcompute.test.hc_test
     - lib.webauthn.test
+    - lib.iccf.test
