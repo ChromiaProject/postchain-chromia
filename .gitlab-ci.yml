@@ -97,6 +97,9 @@ deploy_library_chain:
     - chr build
     - ../../ci/library_chain/deploy.sh -n hybridcompute --major 3 --minor 35 --library-description "Computational framework for Chromia, database operations and synchronization, special transaction extensions"
     - ../../ci/library_chain/deploy.sh -n webauthn --major 1 --minor 0 --library-description "Web Authentication support for Chromia."
+    - ../../ci/library_chain/deploy.sh -n iccf --major 1 --minor 90 --library-description "Inter-chain Confirmation Facility"
+    - ../../ci/library_chain/deploy.sh -n iccf_test --major 1 --minor 90 --library-description "Inter-chain Confirmation Facility test library"
+    - ../../ci/library_chain/deploy.sh -n icmf --major 1 --minor 102 --library-description "Inter-chain Messaging Facility"
 
 build:
   extends:
