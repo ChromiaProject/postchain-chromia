@@ -28,7 +28,14 @@ config:
 ```
 
 ### Rell code
-See instructions on how to install the ICMF rell code library here: https://gitlab.com/chromaway/core/directory-chain
+
+To include the ICMF module in your rell project, specify in your config file:
+```yaml
+libs:
+  com.chromia.icmf:
+    version: 1.102.2
+```
+Then use `chr install` to install the ICMF library.
 
 Now you can import the `icmf` module and call the function `send_message(topic: text, body: gtv)` wherever you want to send a message.
 
@@ -49,7 +56,7 @@ config:
 ```
 
 ### Rell code
-You will need to implement the message receive operation in rell to receive messages. Example:
+You need to either implement the message receive operation in rell to receive messages. Example:
 
 ```
 operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
@@ -58,6 +65,32 @@ operation __icmf_message(sender: byte_array, topic: text, body: gtv) {
 ```
 
 The `sender` parameter here is the blockchain-rid of the sender chain.
+
+Or use the Rell library:
+
+```yaml
+import lib.icmf.receiver.*;
+```
+
+And then extend the following function:
+
+```
+@extendable function receive_icmf_message(sender: byte_array, topic: text, body: gtv) {}
+```
+
+If you need height and timestamp of the sent message you can use the metadata receiver module:
+
+```yaml
+import lib.icmf.metadata_receiver.*;
+```
+
+And then extend the following function:
+
+```
+@extendable function receive_icmf_message(sender: byte_array, sender_height: integer, sender_timestamp: integer, topic: text, body: gtv) {}
+```
+
+**Note:** Extracting the height and timestamp can incur a small performance penalty
 
 ### Rate-limit received messages
 
