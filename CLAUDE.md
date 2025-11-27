@@ -22,7 +22,6 @@ This is a Maven-based Kotlin project for Chromia blockchain infrastructure.
 
 ### Profile-Specific Commands
 - `mvn -Dlocal=true` - Use local directory-chain source (activates d1-local profile)
-- `mvn --activate-profiles coverage` - Generate code coverage reports
 
 ## Project Architecture
 
@@ -37,7 +36,6 @@ This is a multi-module Maven project with the following key modules:
 ### Additional Modules
 - **deployment-test**: Integration tests with Docker containers
 - **docker-images**: Docker image build configurations
-- **coverage-report-aggregate**: Aggregated code coverage reports
 
 ### Key Technologies and Dependencies
 - **Language**: Kotlin 2.0.0 targeting JVM 21
