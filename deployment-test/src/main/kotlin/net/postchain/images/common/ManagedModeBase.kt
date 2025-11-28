@@ -386,7 +386,7 @@ open class ManagedModeBase(private val logDir: String) {
             awaitQueryResult {
                 val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
                 assertThat(brid).isNotNull()
-                val currentHeight = node1.client(brid!!).currentBlockHeight()
+                val currentHeight = nodes.first().client(brid!!).currentBlockHeight()
                 val actual = node1.c0.cmGetPeerInfo(brid.data, currentHeight).map { PubKey(it) }.toSet()
                 val expected = nodes.map { it.pubkey }.toSet()
                 assertThat(actual).isEqualTo(expected)
