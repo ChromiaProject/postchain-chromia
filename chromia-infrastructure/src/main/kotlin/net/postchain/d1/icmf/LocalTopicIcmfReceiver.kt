@@ -1,12 +1,12 @@
 package net.postchain.d1.icmf
 
+import mu.KLogging
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.cluster.ClusterManagement
-import net.postchain.d1.icmf.GlobalTopicIcmfReceiver.Companion.logger
 import net.postchain.d1.query.ChromiaQueryProvider
 
 class LocalTopicIcmfReceiver(
@@ -19,6 +19,7 @@ class LocalTopicIcmfReceiver(
         private val storage: Storage,
         private val dbOperations: IcmfReceiverDatabaseOperations
 ) : IcmfReceiver<TopicRoute, Long, IcmfPacket, BlockchainRid>, Shutdownable {
+    companion object : KLogging()
 
     private val pipes: List<IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = run {
         val myCluster = clusterManagement.getClusterOfBlockchain(myBlockchainRid)
