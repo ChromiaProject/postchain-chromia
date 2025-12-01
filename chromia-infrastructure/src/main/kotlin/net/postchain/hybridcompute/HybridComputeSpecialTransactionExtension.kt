@@ -4,11 +4,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
+import net.postchain.core.Storage
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
@@ -66,6 +69,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     private lateinit var engines: Map<String, Pair<HybridComputeEngine, ExecutorService>>
     internal var hasDistributedTimeout: Boolean = false
 
+    internal lateinit var sharedStorage: Storage
     private lateinit var module: GTXModule
     internal val loaded = AtomicInteger(0)
 
@@ -128,7 +132,13 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                     logger.info("Loading engine ${engine.name}...")
                     try {
                         val duration = measureTime {
-                            engine.load()
+                            if (engine is DatabaseAwareHybridComputeEngine) {
+                                withReadConnection(sharedStorage, chainID) { ctx: EContext ->
+                                    engine.load(ctx)
+                                }
+                            } else {
+                                engine.load()
+                            }
                         }
                         if (!Thread.currentThread().isInterrupted) {
                             logger.info("Engine ${engine.name} loaded in $duration")
@@ -224,6 +234,8 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 return buildList {
                     var takenRequests = 0
                     for (request in module.query(bctx, GET_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
+                        if (takenRequests >= (concurrency * engines.size)) break
+
                         val (engine, computer) = getEngineAndComputer(request.id, request.type) ?: continue
 
                         val periodLength = containerRateLimits[request.type]?.periodLength ?: DEFAULT_PERIOD_LENGTH
@@ -246,8 +258,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                             }
                         }
 
-                        if (takenRequests >= (concurrency * engines.size)) continue
-
                         if (computations.putIfAbsent(request.id, TakenComputation(request.type, request.input)) != null) continue
                         logger.info("Taking request id [${request.id}] of type [${request.type}]")
 
@@ -265,7 +275,15 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                     )) {
                                         logger.info("Starting computation of request id [${request.id}] of type [${request.type}]...")
                                         try {
-                                            val (outputPointsConsumed, duration) = measureTimedValue { engine.compute(request.input) }
+                                            val (outputPointsConsumed, duration) = measureTimedValue {
+                                                if (engine is DatabaseAwareHybridComputeEngine) {
+                                                    withReadConnection(sharedStorage, chainID) { ctx: EContext ->
+                                                        engine.compute(ctx, request.input)
+                                                    }
+                                                } else {
+                                                    engine.compute(request.input)
+                                                }
+                                            }
                                             val (output, pointsConsumed) = outputPointsConsumed
                                             if (!Thread.currentThread().isInterrupted) {
                                                 if (computations.replace(request.id, FinishedComputation(request.type, request.input, output)) == null) {
@@ -348,35 +366,51 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                         return false
                     }
                     if (!computations.containsKey(response.id)) {
-                        tasks.add(Callable {
-                            withLoggingContext(mapOf(
-                                    CHAIN_IID_TAG to chainID.toString(),
-                                    BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
-                            )) {
-                                try {
-                                    logger.info("Starting validation for request id [${response.id}] of type [${response.type}]...")
-                                    val duration = measureTime {
-                                        engine.validate(response.input, response.output)
-                                    }
-                                    if (!Thread.currentThread().isInterrupted) {
-                                        logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
-                                        return@Callable true
-                                    } else {
-                                        logger.warn("Validation of request id [${response.id}] of type [${response.type}] timed out")
+                        if (engine is DatabaseAwareHybridComputeEngine) {
+                            try {
+                                logger.info("Starting DB aware validation for request id [${response.id}] of type [${response.type}]...")
+                                val duration = measureTime {
+                                    engine.validate(bctx, response.input, response.output)
+                                }
+                                logger.info("DB aware validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
+                            } catch (e: UserMistake) {
+                                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
+                                return false
+                            } catch (e: Exception) {
+                                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
+                                return false
+                            }
+                        } else {
+                            tasks.add(Callable {
+                                withLoggingContext(mapOf(
+                                        CHAIN_IID_TAG to chainID.toString(),
+                                        BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
+                                )) {
+                                    try {
+                                        logger.info("Starting validation for request id [${response.id}] of type [${response.type}]...")
+                                        val duration = measureTime {
+                                            engine.validate(response.input, response.output)
+                                        }
+                                        if (!Thread.currentThread().isInterrupted) {
+                                            logger.info("Validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
+                                            return@Callable true
+                                        } else {
+                                            logger.warn("Validation of request id [${response.id}] of type [${response.type}] timed out")
+                                            return@Callable false
+                                        }
+                                    } catch (_: InterruptedException) {
+                                        logger.warn("Validation of request id [${response.id}] of type [${response.type}] timed out with exception")
+                                        return@Callable false
+                                    } catch (e: UserMistake) {
+                                        logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
+                                        return@Callable false
+                                    } catch (e: Exception) {
+                                        logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
                                         return@Callable false
                                     }
-                                } catch (_: InterruptedException) {
-                                    logger.warn("Validation of request id [${response.id}] of type [${response.type}] timed out with exception")
-                                    return@Callable false
-                                } catch (e: UserMistake) {
-                                    logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
-                                    return@Callable false
-                                } catch (e: Exception) {
-                                    logger.warn("Validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
-                                    return@Callable false
                                 }
-                            }
-                        })
+                            })
+                        }
                     } else {
                         logger.debug { "Skipping validation for request id [${response.id}] of type [${response.type}] on block builder node" }
                     }
@@ -428,9 +462,9 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
         timeouter.shutdownNow()
         loader.shutdownNow()
         for ((_, computer) in engines.values) {
-            computer.shutdown()
+            computer.shutdownNow()
         }
-        validator.shutdown()
+        validator.shutdownNow()
         for ((engine, _) in engines.values) {
             if (engine is Shutdownable) {
                 logger.info("Shutting down engine ${engine.name}...")
@@ -441,10 +475,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
             }
         }
         logger.info("Shutting down executors")
-        for ((_, computer) in engines.values) {
-            computer.shutdownNow()
-        }
-        validator.shutdownNow()
         if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
             logger.warn("Timeouter did not terminate in time")
         }

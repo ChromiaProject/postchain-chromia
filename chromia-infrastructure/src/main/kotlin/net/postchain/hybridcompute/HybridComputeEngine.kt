@@ -24,8 +24,8 @@ interface HybridComputeEngine {
     /**
      * Will be invoked at some point after `initializeContext`, before any other method is invoked.
      *
-     * Any heavy or time-consuming initialization should be performed in this method,
-     * and it should block until the initialization is finished. Should honor
+     * Any heavy or time-consuming initialization should be performed in this method.
+     * This method is executed asynchronously and should block until the initialization is finished. Should honor
      * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
      */
     fun load()
@@ -45,7 +45,7 @@ interface HybridComputeEngine {
     /**
      * Performs a computation.
      *
-     * This method should block until the computation is finished. Should honor
+     * This method is executed asynchronously and should block until the computation is finished. Should honor
      * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
      *
      * @param input  input to the computation
@@ -58,7 +58,7 @@ interface HybridComputeEngine {
     /**
      * Validates a previously performed computation.
      *
-     * This method should block until the validation is finished. Should honor
+     * This method is executed asynchronously and should block until the computation is finished. Should honor
      * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
      *
      * @param input   input to the computation

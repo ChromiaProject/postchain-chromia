@@ -98,7 +98,7 @@ class HybridComputeIT : IntegrationTestSetup() {
             }
         }
 
-        val input2 = CompleteComputation(1, 1L).encode()
+        val input2 = CompleteComputation(1, 2L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success2", "test2", input2)
         }
@@ -110,6 +110,21 @@ class HybridComputeIT : IntegrationTestSetup() {
             buildBlock(chainIid.toLong())
             queryAllNodes(chainIid.toLong()) { query ->
                 assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
+            }
+        }
+
+        val input3 = CompleteComputation(1, 3L).encode()
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success3", "test3", input3)
+        }
+        buildBlock(chainIid.toLong())
+        queryAllNodes(chainIid.toLong()) { query ->
+            assertThat(query.fetchComputeResult("success3")).isNull()
+        }
+        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+            buildBlock(chainIid.toLong())
+            queryAllNodes(chainIid.toLong()) { query ->
+                assertThat(query.fetchComputeResult("success3")?.result).isEqualTo(input3)
             }
         }
     }
