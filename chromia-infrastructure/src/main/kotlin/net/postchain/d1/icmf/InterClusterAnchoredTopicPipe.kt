@@ -100,7 +100,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
         } catch (e: Exception) {
             when (e) {
                 is UserMistake, is IOException -> {
-                    logger.warn("Unable to query for messages on anchor chain: ${e.message}", e)
+                    logger.warn("Unable to query for messages on anchor chain for cluster $clusterName for topic ${route.topic}: ${e.message}", e)
                     return
                 }
 
@@ -122,7 +122,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {
-                        logger.warn("Unable to fetch block at height $anchorHeight on anchor chain: ${e.message}", e)
+                        logger.warn("Unable to fetch block at height $anchorHeight on anchor chain for cluster $clusterName for topic ${route.topic}: ${e.message}", e)
                         return
                     }
 
@@ -130,7 +130,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 }
             }
             if (anchorBlock == null) {
-                logger.warn("Anchor block at height $anchorHeight not found")
+                logger.warn("Anchor block at height $anchorHeight not found for topic ${route.topic}")
                 return
             }
 
@@ -262,7 +262,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                             return emptyList()
                         }
                         logger.warn(
-                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages: ${e.message}, will retry after $pollInterval",
+                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages for topic ${route.topic}: ${e.message}, will retry after $pollInterval",
                                 e
                         )
                         delay(pollInterval)
