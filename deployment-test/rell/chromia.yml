@@ -193,21 +193,12 @@ blockchains:
 libs:
   com.chromia.ft4:
     version: ${DEPLOYMENT_TEST_FT4_VERSION}
-  eif:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/eif
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
-  eif_event_receiver:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/eif_event_receiver
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
-  hbridge:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/hbridge
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
+  com.chromia.eif:
+    version: 1.0.0
+  com.chromia.eif_event_receiver:
+    version: 1.0.0
+  com.chromia.hbridge:
+    version: 1.0.0
 
 compile:
   source: src

@@ -122,7 +122,7 @@ blockchains:
             topics:
               - "L_blockchain_rid_topic"
     moduleArgs:
-      eif_event_receiver_dynamic_icmf_config:
+      lib.eif_event_receiver.dynamic_icmf_config:
         configuration_chain: "token_chain"
   transaction_submitter: *common_transaction_submitter_with_anchoring
   transaction_submitter_with_system_bridge:

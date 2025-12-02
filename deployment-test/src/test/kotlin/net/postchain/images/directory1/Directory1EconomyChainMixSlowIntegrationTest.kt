@@ -86,9 +86,9 @@ import net.postchain.eif.contracts.ChromiaTestToken
 import net.postchain.eif.contracts.ChromiaTokenBridge
 import net.postchain.eif.contracts.TokenMinterTest
 import net.postchain.eif.contracts.Validator
-import net.postchain.eif.hbridge.core.getEoaAddressesForAccount
-import net.postchain.eif.hbridge.getErc20WithdrawalByTx
-import net.postchain.eif.hbridge.core.linkEvmEoaAccountOperation
+import net.postchain.eif.lib.hbridge.core.getEoaAddressesForAccount
+import net.postchain.eif.lib.hbridge.getErc20WithdrawalByTx
+import net.postchain.eif.lib.hbridge.core.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
 import net.postchain.eif.lib.ft4.external.accounts.UPDATE_MAIN_AUTH_DESCRIPTOR
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance

@@ -39,8 +39,8 @@ import net.postchain.eif.contracts.Validator
 import net.postchain.eif.encodeBlockHeaderDataForEVM
 import net.postchain.eif.encodeSignatureWithV
 import net.postchain.eif.getEthereumAddress
-import net.postchain.eif.hbridge.core.getRecoveryContract
-import net.postchain.eif.hbridge.core.getStateSlotIdsForAddress
+import net.postchain.eif.lib.hbridge.core.getRecoveryContract
+import net.postchain.eif.lib.hbridge.core.getStateSlotIdsForAddress
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.assets.transferOperation
