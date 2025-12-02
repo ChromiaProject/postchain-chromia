@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.common.hexStringToWrappedByteArray
@@ -48,6 +49,9 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `compute cluster timeout`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test_cluster_timeout.xml")
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input1 = CompleteComputation(6, 1L).encode()
 
@@ -65,14 +69,15 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
             ))
             assertThat(query.fetchComputeResult("timeout")).isNull()
         }
 
         // Wait until cluster compute times out
         Thread.sleep(6 * 1000)
+        buildBlock(chainIid.toLong())
 
         // Creates a failed operation
         buildBlock(chainIid.toLong())
@@ -89,8 +94,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "Cluster timeout.",
                     resultTxRid = txRid!!.wrap(),
                     resultOpIndex = 0,
-                    takenTimestamp = -1,
-                    processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = nodes[1].pubKey.hexStringToWrappedByteArray(),
             ))
         }
 
@@ -99,7 +104,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success", "test", input2)
         }
-        val lastBlockTime = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        val lastBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
             assertThat(query.fetchRequests()).contains(Computation(
@@ -111,8 +116,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = lastBlockTime,
-                    processedBy = nodes[2].pubKey.hexStringToWrappedByteArray(),
+                    takenTimestamp = lastBlockTimestamp,
+                    processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
         }
@@ -131,8 +136,8 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
                         error = "",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = lastBlockTime,
-                        processedBy = nodes[2].pubKey.hexStringToWrappedByteArray(),
+                        takenTimestamp = lastBlockTimestamp,
+                        processedBy = nodes[0].pubKey.hexStringToWrappedByteArray(),
                 ))
                 assertThat(query.fetchComputeResult("success")).isEqualTo(ComputeResult(
                         result = input2,

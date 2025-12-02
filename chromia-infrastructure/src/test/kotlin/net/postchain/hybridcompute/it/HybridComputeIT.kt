@@ -4,11 +4,13 @@ import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -33,6 +35,7 @@ class HybridComputeIT : IntegrationTestSetup() {
 
     val chainIid = 1
     lateinit var node0Pubkey: WrappedByteArray
+    lateinit var node1Pubkey: WrappedByteArray
     val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
@@ -43,6 +46,7 @@ class HybridComputeIT : IntegrationTestSetup() {
 
         createNodesFromSystemSetup(sysSetup)
         node0Pubkey = nodes[0].pubKey.hexStringToWrappedByteArray()
+        node1Pubkey = nodes[1].pubKey.hexStringToWrappedByteArray()
         return sysSetup
     }
 
@@ -51,6 +55,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `successful computation of different types`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = CompleteComputation(1, 1L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -67,8 +74,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
         }
@@ -86,8 +93,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = -1,
-                        processedBy = node0Pubkey,
+                        takenTimestamp = firstBlockTimestamp,
+                        processedBy = node1Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("success")).isEqualTo(ComputeResult(
                         result = input,
@@ -134,14 +141,21 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `concurrent computations`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = CompleteComputation(1, 1L).encode()
         val input2 = CompleteComputation(1, 2L).encode()
+        val input3 = CompleteComputation(1, 3L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success", "test", input)
         }
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("success2", "test", input2)
+        }
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it.submitComputeRequestOperation("success3", "test", input3)
         }
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
@@ -154,8 +168,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ), Computation(
                     id = "success2",
                     state = State.TAKEN,
@@ -165,11 +179,23 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
+            ), Computation(
+                    id = "success3",
+                    state = State.NEW,
+                    type = "test",
+                    input = GtvEncoder.encodeGtv(input3).wrap(),
+                    output = ByteArray(0).wrap(),
+                    error = "",
+                    resultTxRid = ByteArray(0).wrap(),
+                    resultOpIndex = -1,
+                    takenTimestamp = 0,
+                    processedBy = ByteArray(0).wrap(),
             ))
             assertThat(query.fetchComputeResult("success")).isNull()
             assertThat(query.fetchComputeResult("success2")).isNull()
+            assertThat(query.fetchComputeResult("success3")).isNull()
         }
 
         Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
@@ -177,6 +203,7 @@ class HybridComputeIT : IntegrationTestSetup() {
             queryAllNodes(chainIid.toLong()) { query ->
                 assertThat(query.fetchComputeResult("success")?.result).isEqualTo(input)
                 assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
+                assertThat(query.fetchComputeResult("success3")?.result).isEqualTo(input3)
             }
         }
     }
@@ -186,6 +213,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = FailComputation(1).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -202,8 +232,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("fail")).isNull()
         }
@@ -222,8 +252,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Fail",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = -1,
-                        processedBy = node0Pubkey,
+                        takenTimestamp = firstBlockTimestamp,
+                        processedBy = node1Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("fail")).isEqualTo(ComputeResult(
                         result = null,
@@ -240,6 +270,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `unexpectedly failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = ErrorComputation(1).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -256,8 +289,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("error")).isNull()
         }
@@ -276,8 +309,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Unknown error",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = -1,
-                        processedBy = node0Pubkey,
+                        takenTimestamp = firstBlockTimestamp,
+                        processedBy = node1Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("error")).isEqualTo(ComputeResult(
                         result = null,
@@ -294,6 +327,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `timed out computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = CompleteComputation(8, 1L).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -310,8 +346,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("timeout")).isNull()
         }
@@ -330,8 +366,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                         error = "Computation timed out after 5 seconds",
                         resultTxRid = txRid!!.wrap(),
                         resultOpIndex = 0,
-                        takenTimestamp = -1,
-                        processedBy = node0Pubkey,
+                        takenTimestamp = firstBlockTimestamp,
+                        processedBy = node1Pubkey,
                 ))
                 assertThat(query.fetchComputeResult("timeout")).isEqualTo(ComputeResult(
                         result = null,
@@ -348,6 +384,9 @@ class HybridComputeIT : IntegrationTestSetup() {
     fun `invalid computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = InvalidComputation(1).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -364,8 +403,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("invalid")).isNull()
         }
@@ -388,8 +427,8 @@ class HybridComputeIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("invalid")).isNull()
         }
