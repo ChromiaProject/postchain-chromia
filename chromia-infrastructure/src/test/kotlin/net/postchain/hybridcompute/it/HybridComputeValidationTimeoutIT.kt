@@ -3,11 +3,13 @@ package net.postchain.hybridcompute.it
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsOnly
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNull
 import net.postchain.common.createLogCaptor
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -33,6 +35,7 @@ class HybridComputeValidationTimeoutIT : IntegrationTestSetup() {
 
     val chainIid = 1
     lateinit var node0Pubkey: WrappedByteArray
+    lateinit var node1Pubkey: WrappedByteArray
     val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
@@ -43,6 +46,7 @@ class HybridComputeValidationTimeoutIT : IntegrationTestSetup() {
 
         createNodesFromSystemSetup(sysSetup)
         node0Pubkey = nodes[0].pubKey.hexStringToWrappedByteArray()
+        node1Pubkey = nodes[1].pubKey.hexStringToWrappedByteArray()
         return sysSetup
     }
 
@@ -53,6 +57,9 @@ class HybridComputeValidationTimeoutIT : IntegrationTestSetup() {
 
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish
+        buildBlock(chainIid.toLong()) // produce positive block timestamp
+        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        assertThat(firstBlockTimestamp).isGreaterThan(0)
 
         val input = SlowValidationComputation(2).encode()
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
@@ -69,8 +76,8 @@ class HybridComputeValidationTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("validation_timeout")).isNull()
         }
@@ -93,8 +100,8 @@ class HybridComputeValidationTimeoutIT : IntegrationTestSetup() {
                     error = "",
                     resultTxRid = ByteArray(0).wrap(),
                     resultOpIndex = -1,
-                    takenTimestamp = -1,
-                    processedBy = node0Pubkey,
+                    takenTimestamp = firstBlockTimestamp,
+                    processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("validation_timeout")).isNull()
         }

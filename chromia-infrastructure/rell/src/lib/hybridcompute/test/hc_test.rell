@@ -13,8 +13,8 @@ function test_hc() {
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "one", type = "nn", input = "ABCD".to_gtv()),
-            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
+            compute_request(id = "one", type = "nn", input = "ABCD".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
         ]
     );
     assert_null(fetch_compute_result("one"));
@@ -29,7 +29,7 @@ function test_hc() {
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
         ]
     );
     rell.test.tx().op(

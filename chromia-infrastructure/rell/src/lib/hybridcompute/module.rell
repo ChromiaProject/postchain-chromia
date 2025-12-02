@@ -25,26 +25,22 @@ struct compute_request {
     id: text;
     type: text;
     input: gtv;
-}
-
-struct taken_compute_request {
-    id: text;
-    type: text;
-    input: gtv;
     taken_timestamp: timestamp;
     processed_by: pubkey;
+    state;
 }
 
 query get_requests(): list<compute_request> =
-        computation @* { .state == state.NEW } ( compute_request (.id, .type, gtv.from_bytes(.input)) );
+        computation @* { .state == state.NEW } ( compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by, .state) );
 
-query get_taken_requests(): list<taken_compute_request> =
-        computation @* { .state == state.TAKEN } ( taken_compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by) );
+query get_taken_requests(): list<compute_request> =
+        computation @* { .state == state.TAKEN } ( compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by, .state) );
 
-query get_taken_request(id: text): taken_compute_request? =
-        computation @? { .id == id, .state == state.TAKEN } ( taken_compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by) );
+query get_request(id: text): compute_request? =
+        computation @? { .id == id } ( compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by, .state) );
 
-query is_request_failed(id: text) = exists(computation @? { .id == id, .state == state.FAILED });
+query get_taken_request(id: text): compute_request? =
+        computation @? { .id == id, .state == state.TAKEN } ( compute_request (.id, .type, gtv.from_bytes(.input), .taken_timestamp, .processed_by, .state) );
 
 @mount('__hc.')
 operation request_taken(id: text, type: text, processed_by: byte_array, signature_data: byte_array) {

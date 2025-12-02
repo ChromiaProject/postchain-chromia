@@ -27,7 +27,7 @@ class StubHybridComputeEngine : HybridComputeEngine, PostchainContextAware {
     override fun estimatePoints(input: Gtv): Long = 10L
 
     override fun compute(input: Gtv): Pair<Gtv, Long> {
-        return gtv("test") to 10L
+        return gtv("output") to 10L
     }
 
     override fun validate(input: Gtv, output: Gtv) {}
