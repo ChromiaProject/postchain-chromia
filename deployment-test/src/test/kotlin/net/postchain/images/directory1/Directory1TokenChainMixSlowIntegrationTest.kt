@@ -45,7 +45,7 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
-import net.postchain.eif.hbridge.erc20.getBridgeContracts
+import net.postchain.eif.lib.hbridge.erc20.getBridgeContracts
 import net.postchain.eif.lib.ft4.external.accounts.getAccountById
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName

@@ -300,8 +300,8 @@
                             <target>${project.build.directory}/generated-sources/rell-client/eif</target>
                             <force>true</force>
                             <mainModules>
-                                <mainModule>eif_event_receiver</mainModule>
-                                <mainModule>hbridge</mainModule>
+                                <mainModule>lib.eif_event_receiver</mainModule>
+                                <mainModule>lib.hbridge</mainModule>
                                 <mainModule>transaction_submitter</mainModule>
                             </mainModules>
                         </configuration>
