@@ -466,6 +466,49 @@ class IcmfValidationTest {
     }
 
     @Test
+    fun `Messages in anchor header from chains that we dont receive messages ops for should not impact validation`() {
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
+
+        val relevantMessageBodies = listOf(gtv("hej"))
+        val block = createBlockDetail(relevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(relevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                )))
+        )
+
+        val irrelevantMessageBodies = listOf(gtv("hej2"))
+        val block2 = createBlockDetail(irrelevantMessageBodies, -1, IcmfTestClusterManagement.keyPair, senderBlockchainRid = BlockchainRid.buildRepeat(2), messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(irrelevantMessageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                )))
+        )
+
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
+                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(gtv(listOf(gtv(block.rid), gtv(block2.rid))).merkleHash(hashCalculator), -1).toGtv(),
+                        irrelevantTopic to TopicHeaderData(gtv(listOf(gtv(BlockchainRid.ZERO_RID.data))).merkleHash(hashCalculator), -1).toGtv()
+                ))
+        ))
+        val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
+        val rawAnchorWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
+        ).getRawData()
+
+        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageOps = createMessageOps(relevantMessageBodies)
+        val ops = listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
+    @Test
     fun `Can handle multiple identical anchor header ops in same tx`() {
         val icmfReceiverSpecialTxExtension = createTxExt(MockIcmfReceiverDatabaseOperations())
 
@@ -696,8 +739,9 @@ class IcmfValidationTest {
         return listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
     }
 
-    private fun createBlockDetail(messageBodies: List<Gtv>, previousMessageBlockHeight: Long, messageSigner: KeyPair, messageExtraDataOverride: Map<String, Gtv>? = null): BlockDetail {
-        val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, messageExtraDataOverride ?: mapOf(
+    private fun createBlockDetail(messageBodies: List<Gtv>, previousMessageBlockHeight: Long, messageSigner: KeyPair, messageExtraDataOverride: Map<String, Gtv>? = null, senderBlockchainRid: BlockchainRid = blockchainRID): BlockDetail {
+        val header = makeBlockHeader(senderBlockchainRid, BlockRid(senderBlockchainRid.data), 0, messageExtraDataOverride
+                ?: mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
                         topic to TopicHeaderData(
                                 gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
