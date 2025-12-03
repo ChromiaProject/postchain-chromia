@@ -163,10 +163,6 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             for (header in headers) {
                 val blockchainRid = BlockchainRid(header.decodedHeader.getBlockchainRid())
 
-                if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
-                    continue // we only read from specific chains
-                }
-
                 val topicPeers = getCachedPeers(peerCache, header.decodedHeader, blockchainConfigProvider) ?: return
                 val topicHeaderData = TopicHeaderData.extractTopicHeaderData(header.decodedHeader, header.blockHeader, header.witness, header.blockRid, cryptoSystem, topicPeers, ICMF_BLOCK_HEADER_EXTRA)
                         ?: return
