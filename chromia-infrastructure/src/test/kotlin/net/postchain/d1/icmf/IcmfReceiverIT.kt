@@ -36,6 +36,7 @@ import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChai
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid2
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.localSenderChainRid3
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.remoteSenderChainRid
+import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.remoteSenderChainRid2
 import net.postchain.d1.icmf.IcmfTestClusterManagement.Companion.systemAnchoringChainRid
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
@@ -370,8 +371,79 @@ class IcmfReceiverIT : IcmfBaseIT() {
     }
 
     @Test
-    fun interClusterSpecificChainReceiver() {
+    fun `global specific chain receiver`() {
         setupClientMocks()
+
+        startManagedSystem(3, 0)
+
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_specific_inter_cluster_1.xml")!!
+                        .readText()
+        )
+
+        val dappChain = startNewBlockchain(
+                setOf(0, 1, 2),
+                setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig)
+        )
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            buildBlock(dappChain)
+            for (node in getChainNodes(dappChain)) {
+                val messages = getTestMessages(node, dappChain)
+                assertThat(messages).hasSize(1)
+                val message = messages[0]
+                assertThat(message.sender).isEqualTo(remoteSenderChainRid)
+                assertThat(message.topic).isEqualTo("my-topic")
+                assertThat(message.body.data.contentEquals(remoteSenderEncodedMessageBody)).isTrue()
+            }
+        }
+
+        verifyPipesAreEmpty(dappChain)
+    }
+
+    @Test
+    fun `global specific chain receiver with messages from irrelevant chain present on same topic`() {
+        val clusterAnchoringChainClientMock: PostchainClient = mock<PostchainClient> {}
+        val senderOneChainClientMock: PostchainClient = mock<PostchainClient> {}
+        val senderTwoChainClientMock: PostchainClient = mock<PostchainClient> {}
+        val messageHeight = 0L
+        val response1 = createQueryResponseForMessage(remoteSenderChainRid, listOf(remoteSenderMessageBody))
+        val response2 = createQueryResponseForMessage(remoteSenderChainRid2, listOf(gtv("remote2")))
+
+        doReturn(buildAnchorHeader(listOf(response1["block_header"]!!.asByteArray(), response2["block_header"]!!.asByteArray()), messageHeight - 1))
+                .whenever(clusterAnchoringChainClientMock).blockAtHeight(messageHeight)
+
+        doReturn(gtv(listOf(response1, response2))).whenever(clusterAnchoringChainClientMock).query(
+                "icmf_get_headers_with_messages_after_height",
+                gtv(
+                        mapOf(
+                                "topic" to gtv("my-topic"),
+                                "from_anchor_height" to gtv(messageHeight - 1)
+                        )
+                )
+        )
+        doReturn(gtv(listOf(remoteSenderMessageBody))).whenever(senderOneChainClientMock).query(
+                QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                gtv(
+                        mapOf(
+                                "topic" to gtv("my-topic"),
+                                "height" to gtv(messageHeight)
+                        )
+                )
+        )
+        doReturn(gtv(listOf(gtv("remote2")))).whenever(senderTwoChainClientMock).query(
+                QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                gtv(
+                        mapOf(
+                                "topic" to gtv("my-topic"),
+                                "height" to gtv(messageHeight)
+                        )
+                )
+        )
+        MockPostchainRestApi.addMockClient(clusterAnchoringChainRid, 1, clusterAnchoringChainClientMock)
+        MockPostchainRestApi.addMockClient(remoteSenderChainRid, 100, senderOneChainClientMock)
+        MockPostchainRestApi.addMockClient(remoteSenderChainRid2, 100, senderTwoChainClientMock)
 
         startManagedSystem(3, 0)
 

@@ -14,6 +14,11 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.config.BlockchainConfigProvider
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.AnchorHeaderOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.AnchoredHeaderOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageHashOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -39,6 +44,7 @@ class IcmfValidationTest {
     private val irrelevantTopic = "irrelevant-topic"
     private val anchorBlockchainRID = BlockchainRid.buildRepeat(0)
     private val blockchainRID = BlockchainRid.buildRepeat(1)
+    private val irrelevantBlockchainRID = BlockchainRid.buildRepeat(2)
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     private val chainID: Long = 1
@@ -84,7 +90,7 @@ class IcmfValidationTest {
     fun invalidParameters() {
         val icmfReceiverSpecialTxExtension = createTxExt()
 
-        val anchoredHeaderOp = OpData(IcmfReceiverSpecialTxExtension.AnchoredHeaderOp.OP_NAME, arrayOf(
+        val anchoredHeaderOp = OpData(AnchoredHeaderOp.OP_NAME, arrayOf(
                 GtvNull,
                 GtvNull
         ))
@@ -228,8 +234,8 @@ class IcmfValidationTest {
         )
 
         val injectedMessageBody = gtv("hej2")
-        val injectedMessageHashOp = IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, topic, injectedMessageBody.merkleHash(hashCalculator)).toOpData()
-        val injectedMessageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
+        val injectedMessageHashOp = MessageHashOp(blockchainRID, topic, injectedMessageBody.merkleHash(hashCalculator)).toOpData()
+        val injectedMessageOp = MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageHashOp, injectedMessageOp)))
     }
@@ -304,7 +310,7 @@ class IcmfValidationTest {
     fun successWithSpilledMessages() {
         val icmfReceiverSpecialTxExtension = createTxExt()
 
-        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+        val messageOp = MessageOp(blockchainRID, topic, spilledMessage).toOpData()
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
     }
@@ -313,7 +319,7 @@ class IcmfValidationTest {
     fun incorrectSpilledMessageBody() {
         val icmfReceiverSpecialTxExtension = createTxExt()
 
-        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, gtv("fel")).toOpData()
+        val messageOp = MessageOp(blockchainRID, topic, gtv("fel")).toOpData()
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
     }
@@ -327,7 +333,7 @@ class IcmfValidationTest {
         }
         val icmfReceiverSpecialTxExtension = createTxExt(unexpectedDbMock)
 
-        val messageOp = IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, topic, spilledMessage).toOpData()
+        val messageOp = MessageOp(blockchainRID, topic, spilledMessage).toOpData()
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
     }
@@ -342,7 +348,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -358,7 +364,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -381,7 +387,7 @@ class IcmfValidationTest {
 
     @Test
     fun nonConfiguredSender() {
-        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(BlockchainRid.buildRepeat(2).data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(IcmfReceiverSpecificBlockChainConfig(irrelevantBlockchainRID.data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
 
         val ops = createOpData(
                 listOf(gtv("hej")),
@@ -424,8 +430,8 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
         ).getRawData()
 
-        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(relevantMessageBodies)
         val ops = listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
 
@@ -457,10 +463,57 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
         ).getRawData()
 
-        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(relevantMessageBodies)
         val ops = listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
+
+        assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+    }
+
+    @Test
+    fun `Messages in anchor header from chains that we dont receive messages ops for should not impact validation`() {
+        val icmfReceiverSpecialTxExtension = createTxExt(icmfConfig = IcmfReceiverBlockchainConfigData(
+                IcmfReceiverTopicsAndSpecificBlockchainConfig(null, listOf(
+                        IcmfReceiverSpecificBlockChainConfig(blockchainRID.data, topic, 0))), null, null, null, null, null, null, specialTxSizeMargin, messageLimit, maxMessageDelay))
+
+        val relevantMessageBody = gtv("hej")
+        val block = createBlockDetail(listOf(relevantMessageBody), -1, IcmfTestClusterManagement.keyPair, senderBlockchainRid = blockchainRID, messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(listOf(gtv(relevantMessageBody.merkleHash(hashCalculator)))).merkleHash(hashCalculator),
+                                -1
+                        ).toGtv()
+                )))
+        )
+
+        val irrelevantMessageBody = gtv("hej2")
+        val block2 = createBlockDetail(listOf(irrelevantMessageBody), -1, IcmfTestClusterManagement.keyPair, senderBlockchainRid = irrelevantBlockchainRID, messageExtraDataOverride = mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(
+                                gtv(listOf(gtv(irrelevantMessageBody.merkleHash(hashCalculator)))).merkleHash(hashCalculator),
+                                0
+                        ).toGtv()
+                )))
+        )
+
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
+                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(gtv(listOf(gtv(block.rid), gtv(block2.rid))).merkleHash(hashCalculator), -1).toGtv(),
+                ))
+        ))
+        val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
+        val rawAnchorWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
+        ).getRawData()
+
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val relevantAnchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val irrelevantAnchoredHeaderOp = AnchoredHeaderOp(block2.header.data, block2.witness.data).toOpData()
+        val relevantMessageHashOp = MessageHashOp(blockchainRID, topic, relevantMessageBody.merkleHash(hashCalculator)).toOpData()
+        val irrelevantMessageHashOp = MessageHashOp(irrelevantBlockchainRID, topic, irrelevantMessageBody.merkleHash(hashCalculator)).toOpData()
+        val relevantMessageOp = MessageOp(blockchainRID, topic, relevantMessageBody).toOpData()
+        val ops = listOf(anchorHeaderOp, relevantAnchoredHeaderOp, relevantMessageHashOp, relevantMessageOp, irrelevantAnchoredHeaderOp, irrelevantMessageHashOp)
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
@@ -498,9 +551,9 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
         ).getRawData()
 
-        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
-        val secondTopicAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(secondTopicBlock.header.data, secondTopicBlock.witness.data).toOpData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val secondTopicAnchoredHeaderOp = AnchoredHeaderOp(secondTopicBlock.header.data, secondTopicBlock.witness.data).toOpData()
         val messageOps = createMessageOps(relevantMessageBodies)
         val secondTopicMessageOps = createMessageOps(relevantMessageBodies, secondTopic)
         val ops = listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps + listOf(anchorHeaderOp, secondTopicAnchoredHeaderOp) + secondTopicMessageOps
@@ -527,7 +580,7 @@ class IcmfValidationTest {
                 )))
         )
 
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(relevantMessageBodies)
         val ops = listOf(nonAnchoredHeaderOp) + messageOps
 
@@ -544,10 +597,11 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
+        val ops = listOf(nonAnchoredHeaderOp) + messageOps
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
     @Test
@@ -561,7 +615,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -578,7 +632,7 @@ class IcmfValidationTest {
                 -1,
                 IcmfTestClusterManagement.keyPair
         )
-        val nonAnchoredHeaderOp = IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
@@ -612,9 +666,9 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
         ).getRawData()
 
-        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
 
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
 
         val messageOps = createMessageOps(relevantMessages)
 
@@ -687,24 +741,25 @@ class IcmfValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(anchorSigner).signDigest(anchorBlockRid))
         ).getRawData()
 
-        val anchorHeaderOp = IcmfReceiverSpecialTxExtension.AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
 
-        val anchoredHeaderOp = IcmfReceiverSpecialTxExtension.AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
 
         val messageOps = createMessageOps(messageBodies)
 
         return listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps
     }
 
-    private fun createBlockDetail(messageBodies: List<Gtv>, previousMessageBlockHeight: Long, messageSigner: KeyPair, messageExtraDataOverride: Map<String, Gtv>? = null): BlockDetail {
-        val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, messageExtraDataOverride ?: mapOf(
-                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(
-                                gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
-                                previousMessageBlockHeight
-                        ).toGtv()
+    private fun createBlockDetail(messageBodies: List<Gtv>, previousMessageBlockHeight: Long, messageSigner: KeyPair, messageExtraDataOverride: Map<String, Gtv>? = null, senderBlockchainRid: BlockchainRid = blockchainRID): BlockDetail {
+        val header = makeBlockHeader(senderBlockchainRid, BlockRid(senderBlockchainRid.data), 0, messageExtraDataOverride
+                ?: mapOf(
+                        ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                                topic to TopicHeaderData(
+                                        gtv(messageBodies.map { gtv(it.merkleHash(hashCalculator)) }).merkleHash(hashCalculator),
+                                        previousMessageBlockHeight
+                                ).toGtv()
+                        ))
                 ))
-        ))
 
         val gtvBlockHeader = header.toGtv()
         val blockRid = gtvBlockHeader.merkleHash(hashCalculator)
@@ -724,8 +779,8 @@ class IcmfValidationTest {
 
     private fun createMessageOps(messageBodies: List<Gtv>, messageTopic: String = topic) = messageBodies.flatMap {
         listOf(
-                IcmfReceiverSpecialTxExtension.MessageHashOp(blockchainRID, messageTopic, it.merkleHash(hashCalculator)).toOpData(),
-                IcmfReceiverSpecialTxExtension.MessageOp(blockchainRID, messageTopic, it).toOpData()
+                MessageHashOp(blockchainRID, messageTopic, it.merkleHash(hashCalculator)).toOpData(),
+                MessageOp(blockchainRID, messageTopic, it).toOpData()
         )
     }
 

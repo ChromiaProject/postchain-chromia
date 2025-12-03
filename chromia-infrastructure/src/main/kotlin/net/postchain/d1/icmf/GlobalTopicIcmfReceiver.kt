@@ -55,14 +55,7 @@ class GlobalTopicIcmfReceiver(
             val allClusters = clusterManagement.getClusterNames()
             for (route in routes) {
                 if (route.chains.isNotEmpty()) {
-                    route.chains.mapNotNull {
-                        try {
-                            clusterManagement.getClusterOfBlockchain(it)
-                        } catch (e: Exception) {
-                            logger.warn(e) { "Global topic for blockchain rid $it ignored since cluster name lookup failed: ${e.message}" }
-                            null
-                        }
-                    }.distinct().forEach { clusterName ->
+                    route.chains.mapNotNull { getClusterOfBlockchainOrNull(it) }.distinct().forEach { clusterName ->
                         pipes[clusterName to route] = createPipe(
                                 myCluster,
                                 clusterName,
@@ -86,13 +79,40 @@ class GlobalTopicIcmfReceiver(
                     logger.info("Updating set of clusters")
                     updateClusters(myCluster)
                     logger.info("Updated set of clusters")
-                } catch (e: CancellationException) {
+                } catch (_: CancellationException) {
                     break
                 } catch (e: Exception) {
                     logger.error("Clusters update failed: ${e.message}", e)
                 }
             }
         }
+    }
+
+    private fun updateClusters(myCluster: String) {
+        val currentClusters = pipes.keys.map { it.first }.toSet()
+        val updatedClusters = clusterManagement.getClusterNames().toSet()
+        val removedClusters = currentClusters - updatedClusters
+        val addedClusters = updatedClusters - currentClusters
+        for (clusterName in removedClusters) {
+            for (route in routes) {
+                pipes.remove(clusterName to route)?.shutdown()
+            }
+        }
+        for (clusterName in addedClusters) {
+            for (route in routes) {
+                if (route.chains.isEmpty()
+                        || route.chains.mapNotNull { getClusterOfBlockchainOrNull(it) }.any { it == clusterName }) {
+                    pipes[clusterName to route] = createPipe(myCluster, clusterName, route, listOf())
+                }
+            }
+        }
+    }
+
+    private fun getClusterOfBlockchainOrNull(rid: BlockchainRid): String? = try {
+        clusterManagement.getClusterOfBlockchain(rid)
+    } catch (e: Exception) {
+        logger.warn(e) { "Global topic for blockchain rid $rid ignored since cluster name lookup failed: ${e.message}" }
+        null
     }
 
     private fun createPipe(
@@ -117,23 +137,6 @@ class GlobalTopicIcmfReceiver(
                     route, clusterName, cryptoSystem, lastAnchorHeight, clientProvider,
                     clusterManagement, blockchainConfigProvider, lastMessageHeights
             )
-        }
-    }
-
-    private fun updateClusters(myCluster: String) {
-        val currentClusters = pipes.keys.map { it.first }.toSet()
-        val updatedClusters = clusterManagement.getClusterNames().toSet()
-        val removedClusters = currentClusters - updatedClusters
-        val addedClusters = updatedClusters - currentClusters
-        for (clusterName in removedClusters) {
-            for (route in routes) {
-                pipes.remove(clusterName to route)?.shutdown()
-            }
-        }
-        for (clusterName in addedClusters) {
-            for (route in routes) {
-                pipes[clusterName to route] = createPipe(myCluster, clusterName, route, listOf())
-            }
         }
     }
 

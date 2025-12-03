@@ -147,10 +147,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                                     isFull,
                                     currentMessageHeight,
                                     messageLimit,
-                                    { header, witness ->
-                                        NonAnchoredHeaderOp(header, witness).toOpData()
-                                    },
-                            )
+                                    anchored = false,
+                            ) { header, witness ->
+                                NonAnchoredHeaderOp(header, witness).toOpData()
+                            }
                             currentSize = newSize
                             isFull = filled
                         }
@@ -220,10 +220,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                                         isFull,
                                         currentPrevMessageBlockHeight,
                                         messageLimit,
-                                        { header, witness ->
-                                            AnchoredHeaderOp(header, witness).toOpData()
-                                        },
-                                )
+                                        anchored = true,
+                                ) { header, witness ->
+                                    AnchoredHeaderOp(header, witness).toOpData()
+                                }
                                 currentSize = newSize
                                 isFull = filled
                             }
@@ -256,20 +256,23 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
             isFull: Boolean,
             currentPrevMessageBlockHeight: Long,
             messageLimit: AtomicLong,
+            anchored: Boolean,
             headerOpCreator: (ByteArray, ByteArray) -> OpData,
     ): Pair<Int, Boolean> {
         var currentSize = initialSize
         var filled = isFull
         if (spilledCount > 0) {
             for (message in packet.messages.subList(packet.messages.size - spilledCount, packet.messages.size)) {
-                val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
-                val messageOpSize = messageOp.getEncodedSize()
-                if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
-                    allOps.add(messageOp)
-                    currentSize += messageOpSize
-                } else {
-                    filled = true
-                    break
+                if (isSenderAndTopicAllowed(anchored, packet.sender, packet.topic, packet.height)) {
+                    val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
+                    val messageOpSize = messageOp.getEncodedSize()
+                    if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
+                        allOps.add(messageOp)
+                        currentSize += messageOpSize
+                    } else {
+                        filled = true
+                        break
+                    }
                 }
             }
         } else if (packet.height > currentPrevMessageBlockHeight) {
@@ -288,13 +291,15 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                             ).toOpData()
                     )
 
-                    val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
-                    val messageOpSize = messageOp.getEncodedSize()
-                    if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
-                        allOps.add(messageOp)
-                        currentSize += messageOpSize
-                    } else {
-                        filled = true
+                    if (isSenderAndTopicAllowed(anchored, packet.sender, packet.topic, packet.height)) {
+                        val messageOp = MessageOp(packet.sender, packet.topic, message.body).toOpData()
+                        val messageOpSize = messageOp.getEncodedSize()
+                        if (!filled && currentSize + messageOpSize < maxTxSize - specialTxSizeMargin && messageLimit.getAndDecrement() > 0) {
+                            allOps.add(messageOp)
+                            currentSize += messageOpSize
+                        } else {
+                            filled = true
+                        }
                     }
                 }
             } else {
@@ -444,17 +449,6 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                         return false
                     }
 
-                    if (currentAnchorHeaderData != null) {
-                        if (!validateMessageSenderAndTopic(messageHashOp.sender, messageHashOp.topic)) return false
-                    } else {
-                        if (!validateNonAnchoredMessageSenderAndTopic(
-                                        messageHashOp.sender,
-                                        messageHashOp.topic,
-                                        currentHeaderData.height
-                                )
-                        ) return false
-                    }
-
                     val topicData = currentHeaderData.icmfHeaderData[messageHashOp.topic]
                     if (topicData == null) {
                         logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${messageHashOp.topic} for sender ${messageHashOp.sender.toHex()}")
@@ -484,6 +478,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                             return false
                         }
 
+                        if (!isSenderAndTopicAllowed(anchored = spilledMessage.cluster.isNotEmpty(), messageOp.sender, messageOp.topic, height = spilledMessage.anchorHeight)) {
+                            logger.warn("Blockchain ${messageOp.sender} is not allowed to send us messages on topic ${messageOp.topic}")
+                            return false
+                        }
+
                         val messageBodyHash =
                                 messageOp.body.merkleHash(makeMerkleHashCalculator(spilledMessage.merkleHashVersion))
                         if (!spilledMessage.hash.contentEquals(messageBodyHash)) {
@@ -509,6 +508,10 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                     } else { // no spill
                         if (currentHeaderData == null) {
                             logger.warn("got ${MessageOp.OP_NAME} before any ${AnchoredHeaderOp.OP_NAME} or ${NonAnchoredHeaderOp.OP_NAME} when there was no spill")
+                            return false
+                        }
+                        if (!isSenderAndTopicAllowed(currentAnchorHeaderData != null, messageOp.sender, messageOp.topic, currentHeaderData.height)) {
+                            logger.warn("Blockchain ${messageOp.sender} is not allowed to send us messages on topic ${messageOp.topic}")
                             return false
                         }
                         val messageBodyHash = messageOp.body.merkleHash(currentHeaderData.merkleHashCalculator)
@@ -585,37 +588,26 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         return true
     }
 
-    private fun validateNonAnchoredMessageSenderAndTopic(sender: BlockchainRid, topic: String, height: Long): Boolean {
-        if (icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic && height >= it.skipToHeight } == true
-                || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
-                || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
-                || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid)
-        ) {
-            return true
-        }
+    private fun isSenderAndTopicAllowed(anchored: Boolean, sender: BlockchainRid, topic: String, height: Long): Boolean =
+            if (anchored) isAnchoredSenderAndTopicAllowed(sender, topic) else isNonAnchoredSenderAndTopicAllowed(sender, topic, height)
 
-        logger.warn("Blockchain $sender is not allowed to send us local non-anchored messages on topic $topic at height $height")
-        return false
-    }
+    private fun isNonAnchoredSenderAndTopicAllowed(sender: BlockchainRid, topic: String, height: Long): Boolean =
+            (icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic && height >= it.skipToHeight } == true
+                    || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
+                    || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
+                    || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
+                    || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
+                    || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid))
 
-    private fun validateMessageSenderAndTopic(sender: BlockchainRid, topic: String): Boolean {
-        if (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
-                || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
-                || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
-                || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
-                || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
-                || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
-                || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid)
-        ) {
-            return true
-        }
-
-        logger.warn("Blockchain $sender is not allowed to send us messages on topic $topic")
-        return false
-    }
+    private fun isAnchoredSenderAndTopicAllowed(sender: BlockchainRid, topic: String): Boolean =
+            (icmfReceiverBlockchainConfigData.global?.topics?.contains(topic) == true
+                    || icmfReceiverBlockchainConfigData.global?.blockchains?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                    || icmfReceiverBlockchainConfigData.local?.any { BlockchainRid(it.blockchainRid) == sender && it.topic == topic } == true
+                    || icmfReceiverBlockchainConfigData.localToMe?.any { BlockchainRid(it.blockchainRid) == sender && topic == topicWithReceiver(it.topic, me) } == true
+                    || (icmfReceiverBlockchainConfigData.anchoring?.topics?.contains(topic) == true && isAnchoringChain(sender))
+                    || (icmfReceiverBlockchainConfigData.anchoringToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && isAnchoringChain(sender))
+                    || (icmfReceiverBlockchainConfigData.directoryChain?.topics?.contains(topic) == true && sender == directoryChainBrid)
+                    || (icmfReceiverBlockchainConfigData.directoryChainToMe?.topics?.any { topic == topicWithReceiver(it, me) } == true && sender == directoryChainBrid))
 
     private fun isAnchoringChain(sender: BlockchainRid): Boolean {
         if (systemAnchoringBrid == null) {
