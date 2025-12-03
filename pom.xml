@@ -46,6 +46,7 @@
         <mockito.kotlin.version>5.3.1</mockito.kotlin.version>
         <mockito.version>5.12.0</mockito.version>
         <mockito.inline.version>5.2.0</mockito.inline.version>
+        <testcontainers.version>2.0.2</testcontainers.version>
 
         <!--suppress UnresolvedMavenProperty -->
         <directory.source>directory-chain/target/directory1/src</directory.source>
@@ -137,15 +138,9 @@
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
-                <version>1.21.1</version>
+                <version>${testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-            <!-- Needed for testcontainers -->
-            <dependency>
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>1.16.1</version>
             </dependency>
 
             <dependency>
