@@ -206,6 +206,7 @@
                         <configuration>
                             <sources>
                                 <source>src/main/java</source>
+                                <source>target/generated-sources/eif</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -383,25 +384,6 @@
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <id>add-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>target/generated-sources/eif</source>
-                            </sources>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
