@@ -16,9 +16,9 @@ import net.postchain.d1.anchoring.cluster.ICMF_ANCHOR_HEADERS_EXTRA
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.AnchorHeaderOp
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.AnchoredHeaderOp
-import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageHashOp
 import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.MessageOp
+import net.postchain.d1.icmf.IcmfReceiverSpecialTxExtension.NonAnchoredHeaderOp
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -673,6 +673,32 @@ class IcmfValidationTest {
         val messageOps = createMessageOps(relevantMessages)
 
         assertTrue(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(anchorHeaderOp, anchoredHeaderOp) + messageOps))
+    }
+
+    @Test
+    fun `wrong sender in MessageHash op`() {
+        val icmfReceiverSpecialTxExtension = createTxExt()
+
+        val messageBody = gtv("hej")
+        val block = createBlockDetail(listOf(messageBody), -1, IcmfTestClusterManagement.keyPair, senderBlockchainRid = blockchainRID)
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, null
+                ?: mapOf(
+                        ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                                topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1
+                                ).toGtv()
+                        ))
+                ))
+        val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
+        val rawAnchorWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
+        ).getRawData()
+        val anchorHeaderOp = AnchorHeaderOp(cluster, GtvEncoder.encodeGtv(anchorHeader.toGtv()), rawAnchorWitness).toOpData()
+        val anchoredHeaderOp = AnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
+        val messageHashOp = MessageHashOp(irrelevantBlockchainRID, topic, messageBody.merkleHash(hashCalculator)).toOpData()
+        val messageOp = MessageOp(irrelevantBlockchainRID, topic, messageBody).toOpData()
+        val ops = listOf(anchorHeaderOp, anchoredHeaderOp, messageHashOp, messageOp)
+
+        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
     }
 
     @Test

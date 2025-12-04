@@ -449,6 +449,11 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
                         return false
                     }
 
+                    if (messageHashOp.sender != BlockchainRid(currentHeaderData.sender)) {
+                        logger.warn("Sender ${messageHashOp.sender} in ${MessageHashOp.OP_NAME} does not match header sender ${BlockchainRid(currentHeaderData.sender)}")
+                        return false
+                    }
+
                     val topicData = currentHeaderData.icmfHeaderData[messageHashOp.topic]
                     if (topicData == null) {
                         logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${messageHashOp.topic} for sender ${messageHashOp.sender.toHex()}")
