@@ -54,7 +54,6 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
-        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
@@ -86,7 +85,6 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
-        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val ctx = mock<EContext>()
@@ -131,7 +129,6 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
-        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
@@ -153,7 +150,6 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
-        extension.validationTimeoutSeconds = 4
         extension.computeClusterTimeoutSeconds = 10
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()

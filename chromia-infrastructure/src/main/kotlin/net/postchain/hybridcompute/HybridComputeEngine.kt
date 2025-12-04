@@ -58,8 +58,8 @@ interface HybridComputeEngine {
     /**
      * Validates a previously performed computation.
      *
-     * This method is executed asynchronously and should block until the computation is finished. Should honor
-     * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
+     * This method is executed asynchronously and should block until the computation is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely.
      *
      * @param input   input to the computation
      * @param output  the return value from a previous invocation of `compute`

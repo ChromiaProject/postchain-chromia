@@ -39,11 +39,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
 import kotlin.time.Duration.Companion.days
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
@@ -61,7 +63,6 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
     internal var concurrency: Int = -1
     internal var loadTimeoutSeconds: Long = -1
     internal var computeTimeoutSeconds: Long = -1
-    internal var validationTimeoutSeconds: Long = -1
     internal var computeClusterTimeoutSeconds: Long = -1
     private lateinit var engines: Map<String, Pair<HybridComputeEngine, ExecutorService>>
 
@@ -84,7 +85,8 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-load-%d").build())
     }
     private val validator: ExecutorService by lazy {
-        Executors.newFixedThreadPool(engines.size,
+        val size = (engines.values.filterNot { it.first is DatabaseAwareHybridComputeEngine }).size
+        Executors.newFixedThreadPool(max(size, 1), // cannot create a thread pool with size 0
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-validate-%d").build())
     }
     private val timeouter: ScheduledExecutorService by lazy {
@@ -352,7 +354,9 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
             logger.warn("Engine(s) not loaded yet, returning false from validateSpecialOperations")
             return false
         }
-        val tasks = mutableListOf<Callable<Boolean>>()
+
+        val nonDbAwareValidations = mutableListOf<Future<Boolean>>()
+        val dbAwareValidations = mutableListOf<Pair<ResponseOp, DatabaseAwareHybridComputeEngine>>()
         for (op in ops) {
             when (op.opName) {
                 RequestTakenOp.OP_NAME -> {
@@ -383,21 +387,9 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                         }
                     } else {
                         if (engine is DatabaseAwareHybridComputeEngine) {
-                            try {
-                                logger.info("Starting DB aware validation for request id [${response.id}] of type [${response.type}]...")
-                                val duration = measureTime {
-                                    engine.validate(bctx, response.input, response.output)
-                                }
-                                logger.info("DB aware validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
-                            } catch (e: UserMistake) {
-                                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
-                                return false
-                            } catch (e: Exception) {
-                                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
-                                return false
-                            }
+                            dbAwareValidations.add(response to engine)
                         } else {
-                            tasks.add(Callable {
+                            nonDbAwareValidations.add(validator.submit(Callable {
                                 withLoggingContext(mapOf(
                                         CHAIN_IID_TAG to chainID.toString(),
                                         BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
@@ -425,7 +417,7 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                                         return@Callable false
                                     }
                                 }
-                            })
+                            }))
                         }
                     }
                 }
@@ -453,13 +445,25 @@ class HybridComputeSpecialTransactionExtension(private val dbOperations: HybridC
                 }
             }
         }
-        val futures = if (validationTimeoutSeconds > 0) {
-            validator.invokeAll(tasks, validationTimeoutSeconds, TimeUnit.SECONDS)
-        } else {
-            validator.invokeAll(tasks)
+
+        for ((response, engine) in dbAwareValidations) {
+            try {
+                logger.info("Starting DB aware validation for request id [${response.id}] of type [${response.type}]...")
+                val duration = measureTime {
+                    engine.validate(bctx, response.input, response.output)
+                }
+                logger.info("DB aware validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
+            } catch (e: UserMistake) {
+                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
+                return false
+            } catch (e: Exception) {
+                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
+                return false
+            }
         }
-        return futures.all {
-            it.isDone && try {
+
+        return nonDbAwareValidations.all {
+            try {
                 it.get()
             } catch (_: CancellationException) {
                 false
