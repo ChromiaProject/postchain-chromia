@@ -10,7 +10,6 @@ import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.PostchainContextAware
-import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
 
@@ -53,6 +52,7 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 txExt.loadTimeoutSeconds = config.loadTimeoutSeconds
                 txExt.computeTimeoutSeconds = config.computeTimeoutSeconds
                 txExt.computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds
+                txExt.blockBuildingIntervalMillis = config.blockBuildingIntervalMillis
                 txExt.setEngines(engines)
                 txExt.sharedStorage = postchainContext.sharedStorage
                 txExt.load()

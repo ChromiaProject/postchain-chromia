@@ -25,8 +25,10 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
 import java.time.Instant
 
 class HybridComputeSpecialTransactionExtensionTest {
@@ -39,6 +41,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.init(module, 1, BlockchainRid.buildRepeat(1), cs)
         val computeClusterTimeoutSeconds = 10L
         extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 60 * 1000
 
         val now = Instant.now().toEpochMilli()
         assertFalse(extension.isComputeClusterTimeout(now - computeClusterTimeoutSeconds * 1000, now))
@@ -55,6 +58,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
@@ -86,6 +90,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
@@ -130,6 +135,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
@@ -151,6 +157,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()))
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
@@ -170,5 +177,48 @@ class HybridComputeSpecialTransactionExtensionTest {
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv("id" to gtv("fail")))).thenReturn(
                 GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node0Pubkey.hexStringToWrappedByteArray(), State.TAKEN)))
         assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+    }
+
+    @Test
+    fun `trigger block building`() {
+        val clock: Clock = mock()
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), clock = clock)
+        val module = mock<GTXModule>()
+        val cs = Secp256K1CryptoSystem()
+        extension.init(module, 1L, BlockchainRid("C9F360FA8B35A77EF0537C133DAEE629AFAB77873BD4A8DD6E5ED8B8D996B811".hexStringToByteArray()), cs)
+        extension.concurrency = 1
+        extension.loadTimeoutSeconds = 3
+        extension.computeTimeoutSeconds = 5
+        extension.computeClusterTimeoutSeconds = 10
+        extension.blockBuildingIntervalMillis = 1000
+        extension.setEngines(listOf(StubHybridComputeEngine()))
+
+        assertFalse(extension.shouldBuildBlock())
+        extension.load()
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
+            assertThat(extension.loaded.get()).isEqualTo(1)
+        }
+        assertFalse(extension.shouldBuildBlock())
+
+        extension.myComputations["mine"] = FinishedComputation("type", gtv("input"), gtv("output"))
+        assertTrue(extension.shouldBuildBlock())
+
+        extension.myComputations.clear()
+        assertFalse(extension.shouldBuildBlock())
+        
+        whenever(clock.millis()) doReturn 10000
+        extension.blockCommitted(mock())
+        assertFalse(extension.shouldBuildBlock())
+        extension.otherNodesPendingComputations.add("others")
+        whenever(clock.millis()) doReturn 10100
+        assertFalse(extension.shouldBuildBlock())
+        whenever(clock.millis()) doReturn 11001
+        assertTrue(extension.shouldBuildBlock())
+        whenever(clock.millis()) doReturn 11021
+        assertTrue(extension.shouldBuildBlock())
+
+        whenever(clock.millis()) doReturn 12000
+        extension.blockCommitted(mock())
+        assertFalse(extension.shouldBuildBlock())
     }
 }
