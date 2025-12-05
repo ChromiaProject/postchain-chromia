@@ -23,6 +23,10 @@ data class HybridComputeConfig(
         @Name("compute_cluster_timeout_seconds")
         val computeClusterTimeoutSeconds: Long,
 
+        @DefaultValue(defaultLong = 60 * 1000) // one minute
+        @Name("block_building_interval_millis")
+        val blockBuildingIntervalMillis: Long,
+
         @DefaultValue(defaultLong = 1)
         val concurrency: Long,
 )
