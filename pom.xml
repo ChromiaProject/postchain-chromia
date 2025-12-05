@@ -29,12 +29,12 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.47.1</postchain.version>
+        <postchain.version>3.47.2</postchain.version>
         <postchain.client.version>3.38.0</postchain.client.version>
         <directory.chain.version>1.102.4</directory.chain.version>
         <rell.version>0.14.15</rell.version>
         <rell.maven.plugin.version>0.16.1</rell.maven.plugin.version>
-        <eif.version>0.27.1</eif.version>
+        <eif.version>0.27.2</eif.version>
         <web3j.version>4.12.0</web3j.version>
         <web3j-plugin.version>4.11.3</web3j-plugin.version>
         <kotlin.version>2.0.0</kotlin.version>
@@ -46,6 +46,7 @@
         <mockito.kotlin.version>5.3.1</mockito.kotlin.version>
         <mockito.version>5.12.0</mockito.version>
         <mockito.inline.version>5.2.0</mockito.inline.version>
+        <testcontainers.version>2.0.2</testcontainers.version>
 
         <!--suppress UnresolvedMavenProperty -->
         <directory.source>directory-chain/target/directory1/src</directory.source>
@@ -137,7 +138,7 @@
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
-                <version>1.21.1</version>
+                <version>${testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
