@@ -5,7 +5,8 @@ import net.postchain.gtv.Gtv
 /**
  * Hybrid compute engine.
  *
- * Methods might be invoked on different threads.
+ * Methods might be invoked on different threads. All methods except `load()` might be invoked concurrently with others
+ * and themselves, so they need to be thread-safe.
  *
  * If the implementation also implements `net.postchain.gtx.PostchainContextAware`,
  * its `initializeContext` method will be invoked directly after instantiation, before any other method is invoked.

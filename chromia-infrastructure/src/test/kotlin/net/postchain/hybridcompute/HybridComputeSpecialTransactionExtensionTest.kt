@@ -59,7 +59,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
         extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()))
+        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
@@ -91,7 +91,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
         extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()))
+        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
         val signature1 = sigMaker1.signDigest(extension.hash("success", blockchainRID.toHex(), bctx.height))
@@ -118,7 +118,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         assertTrue(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
                 ResponseOp("success", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
         assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                ResponseOp("bogus", "test", gtv("input"), gtv("output"), ByteArray(0), ByteArray(0)).toOpData())))
+                ResponseOp("bogus", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
         assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
                 ResponseOp("success", "test", gtv("input"), gtv("output"), signature2.subjectID, signature2.data).toOpData())))
         assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
@@ -130,21 +130,26 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
-        extension.init(module, 1, BlockchainRid.buildRepeat(1), cs)
+        val node1 = cs.generateKeyPair()
+        val sigMaker = cs.buildSigMaker(node1)
+        val blockchainRID = BlockchainRid.buildRepeat(1)
+        extension.init(module, 1, blockchainRID, cs)
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
         extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()))
-        val bctx = mock<BlockEContext>()
+        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
+        val ctx = mock<EContext>()
+        val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
+        val signature = sigMaker.signDigest(extension.hash("success", blockchainRID.toHex(), bctx.height))
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
-        assertFalse(extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", ByteArray(0), ByteArray(0)).toOpData())))
+        assertFalse(extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", signature.subjectID, signature.data).toOpData())))
     }
 
     @Test
@@ -158,7 +163,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
         extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()))
+        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
         val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
         val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
@@ -191,7 +196,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.computeTimeoutSeconds = 5
         extension.computeClusterTimeoutSeconds = 10
         extension.blockBuildingIntervalMillis = 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()))
+        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
 
         assertFalse(extension.shouldBuildBlock())
         extension.load()
@@ -200,12 +205,12 @@ class HybridComputeSpecialTransactionExtensionTest {
         }
         assertFalse(extension.shouldBuildBlock())
 
-        extension.myComputations["mine"] = FinishedComputation("type", gtv("input"), gtv("output"))
+        extension.myComputations["mine"] = FinishedComputation("type", gtv("input"), gtv("output"), isFast = false)
         assertTrue(extension.shouldBuildBlock())
 
         extension.myComputations.clear()
         assertFalse(extension.shouldBuildBlock())
-        
+
         whenever(clock.millis()) doReturn 10000
         extension.blockCommitted(mock())
         assertFalse(extension.shouldBuildBlock())

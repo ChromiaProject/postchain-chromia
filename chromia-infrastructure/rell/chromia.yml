@@ -29,6 +29,7 @@ blockchains:
       hybridcompute:
         engines:
           - "net.postchain.hybridcompute.it.TestHybridComputeEngine"
+        fast_engines:
           - "net.postchain.hybridcompute.it.TestHybridComputeEngine2"
           - "net.postchain.hybridcompute.it.TestDatabaseAwareHybridComputeEngine"
         load_timeout_seconds: 5

@@ -754,8 +754,8 @@ class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfReceiverDatab
         blockedPipes += topic
     }
 
-    private var shouldBuildBlockCheckTime = 0L
-    private var shouldBuildBlockNow = false
+    @Volatile private var shouldBuildBlockCheckTime = 0L
+    @Volatile private var shouldBuildBlockNow = false
 
     override fun blockCommitted(blockData: BlockData) {
         shouldBuildBlockCheckTime = clock.millis()

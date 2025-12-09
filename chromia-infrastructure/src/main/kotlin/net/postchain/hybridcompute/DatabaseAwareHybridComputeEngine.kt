@@ -6,6 +6,9 @@ import net.postchain.gtv.Gtv
 
 /**
  * Database-aware hybrid compute engine.
+ *
+ * Methods might be invoked on different threads. All methods except `load()` and `validate()` might be invoked
+ * concurrently with others and themselves, so they need to be thread-safe.
  */
 interface DatabaseAwareHybridComputeEngine : HybridComputeEngine {
     /**

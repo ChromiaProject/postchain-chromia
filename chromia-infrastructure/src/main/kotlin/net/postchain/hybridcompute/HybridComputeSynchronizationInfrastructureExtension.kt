@@ -29,6 +29,7 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                     require(config.engine.isNotEmpty()) { "there must be at least one engine" }
                     listOf(config.engine)
                 }
+                val fastEngineNames = config.fastEngines
                 if (configuration is ManagedDataSourceAware) {
                     val dataSource = configuration.dataSource
                     if (dataSource is DirectoryDataSource) {
@@ -42,7 +43,8 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                     }
                 }
                 val engines = engineNames.map { newInstanceOf<HybridComputeEngine>(it) }
-                engines.filterIsInstance<PostchainContextAware>().forEach {
+                val fastEngines = fastEngineNames.map { newInstanceOf<HybridComputeEngine>(it) }
+                (engines + fastEngines).filterIsInstance<PostchainContextAware>().forEach {
                     withWriteConnection(postchainContext.blockBuilderStorage, configuration.chainID) { ctx ->
                         it.initializeContext(configuration, postchainContext, ctx)
                         true
@@ -53,7 +55,7 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                 txExt.computeTimeoutSeconds = config.computeTimeoutSeconds
                 txExt.computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds
                 txExt.blockBuildingIntervalMillis = config.blockBuildingIntervalMillis
-                txExt.setEngines(engines)
+                txExt.setEngines(engines, fastEngines)
                 txExt.sharedStorage = postchainContext.sharedStorage
                 txExt.load()
             }
