@@ -135,6 +135,6 @@ data class TakenComputation(override val type: String, override val input: Gtv) 
 
 data class StartedComputation(override val type: String, override val input: Gtv) : Computation
 
-data class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv) : Computation
+data class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv, val isFast: Boolean) : Computation
 
-data class FailedComputation(override val type: String, override val input: Gtv, val errorMessage: String) : Computation
+data class FailedComputation(override val type: String, override val input: Gtv, val errorMessage: String, val isFast: Boolean) : Computation

@@ -111,13 +111,7 @@ class HybridComputeIT : IntegrationTestSetup() {
         }
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
-            assertThat(query.fetchComputeResult("success2")).isNull()
-        }
-        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
-            buildBlock(chainIid.toLong())
-            queryAllNodes(chainIid.toLong()) { query ->
-                assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
-            }
+            assertThat(query.fetchComputeResult("success2")?.result).isEqualTo(input2)
         }
 
         val input3 = CompleteComputation(1, 3L).encode()
@@ -126,13 +120,7 @@ class HybridComputeIT : IntegrationTestSetup() {
         }
         buildBlock(chainIid.toLong())
         queryAllNodes(chainIid.toLong()) { query ->
-            assertThat(query.fetchComputeResult("success3")).isNull()
-        }
-        Awaitility.await().atMost(Duration.FIVE_SECONDS).untilAsserted {
-            buildBlock(chainIid.toLong())
-            queryAllNodes(chainIid.toLong()) { query ->
-                assertThat(query.fetchComputeResult("success3")?.result).isEqualTo(input3)
-            }
+            assertThat(query.fetchComputeResult("success3")?.result).isEqualTo(input3)
         }
     }
 

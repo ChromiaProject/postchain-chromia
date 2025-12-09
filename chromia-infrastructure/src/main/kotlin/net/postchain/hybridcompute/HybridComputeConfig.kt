@@ -11,6 +11,10 @@ data class HybridComputeConfig(
         @DefaultEmpty
         val engines: List<String> = listOf(),
 
+        @DefaultEmpty
+        @Name("fast_engines")
+        val fastEngines: List<String> = listOf(),
+
         @DefaultValue(defaultLong = -1)
         @Name("load_timeout_seconds")
         val loadTimeoutSeconds: Long,
