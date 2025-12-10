@@ -1,10 +1,14 @@
 package net.postchain.hybridcompute
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.wrap
@@ -71,7 +75,9 @@ class HybridComputeSpecialTransactionExtensionTest {
         whenever(bctx.height).thenReturn(1L)
         val signatureData = "BAC412C226C0245B623D6E805130A84DEA19CBC563A9FD690F38B877B44E45FC3BFE82C6E3ACFAFAB72AEE66CD7B2B213E7B4F47DB37E0256B2AACD4F042A5C1".hexStringToByteArray()
         assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
-        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node0Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertFailure {
+            extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node0Pubkey.hexStringToByteArray(), signatureData).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validate __hc.request_taken operation failed for request id [taken] of type [test]: Invalid signature")
     }
 
     @Test
@@ -110,19 +116,27 @@ class HybridComputeSpecialTransactionExtensionTest {
         whenever(module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf()))).thenReturn(
                 gtv(listOf(GtvObjectMapper.toGtvDictionary(ComputeRequest("success", "test", gtv("input"), 1L, node1.pubKey.wData, State.TAKEN)))))
         extension.createSpecialOperations(SpecialTransactionPosition.End, bctx)
-        assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                ResponseOp("success", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
+        assertFailure {
+            extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
+                    ResponseOp("success", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validation of response for id [success] of type [test] failed: local computation state is TakenComputation, expected FinishedComputation")
         bctx.blockWasCommitted()
         Thread.sleep(500)
         extension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
         assertTrue(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
                 ResponseOp("success", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
-        assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                ResponseOp("bogus", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
-        assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                ResponseOp("success", "test", gtv("input"), gtv("output"), signature2.subjectID, signature2.data).toOpData())))
-        assertFalse(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                ResponseOp("success", "test", gtv("input"), gtv("bogus"), signature1.subjectID, signature1.data).toOpData())))
+        assertFailure {
+            extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
+                    ResponseOp("bogus", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validate __hc.response operation failed for request id [bogus] of type [test]: Invalid signature")
+        assertFailure {
+            extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
+                    ResponseOp("success", "test", gtv("input"), gtv("output"), signature2.subjectID, signature2.data).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validation of response for id [success] of type [test] failed: unexpected signer:")
+        assertFailure {
+            extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
+                    ResponseOp("success", "test", gtv("input"), gtv("bogus"), signature1.subjectID, signature1.data).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validation of response for id [success] of type [test] failed: local output does not match operation output")
     }
 
     @Test
@@ -149,7 +163,9 @@ class HybridComputeSpecialTransactionExtensionTest {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
-        assertFalse(extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", signature.subjectID, signature.data).toOpData())))
+        assertFailure {
+            extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", signature.subjectID, signature.data).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validate __hc.response operation failed for request id [fail] of type [test]: Invalid signature")
     }
 
     @Test
@@ -181,7 +197,9 @@ class HybridComputeSpecialTransactionExtensionTest {
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv("id" to gtv("fail")))).thenReturn(
                 GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node0Pubkey.hexStringToWrappedByteArray(), State.TAKEN)))
-        assertFalse(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        assertFailure {
+            extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData()))
+        }.isInstanceOf<UserMistake>().messageContains("Validation of failure for id [fail] of type [test] failed: unexpected signer:")
     }
 
     @Test
