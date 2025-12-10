@@ -150,6 +150,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         const val EXTRA_STORAGE_GIB = 0L
         const val SCU_PRICE = 1L
         const val EXTRA_STORAGE_PRICE = 1L
+        const val EXTRA_COMPUTE_PRICE = 0L
         const val PROVIDER1_VS = "provider1_vs"
         const val PROVIDER2_VS = "provider2_vs"
         private const val DEPOSIT_NUMBER = 5
@@ -450,13 +451,13 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         testLogger.info("Adding tag")
         with(node1.ec) {
             transactionBuilder()
-                    .createTagOperation(node1.providerPubkey, APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .createTagOperation(node1.providerPubkey, APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE, EXTRA_COMPUTE_PRICE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
 
             makeVoteOnLatestProposal(node2)
 
             assertThat(getTagByName(APP_CLUSTER_TAG))
-                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
+                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE, EXTRA_COMPUTE_PRICE))
         }
     }
 
