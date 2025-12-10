@@ -1,10 +1,14 @@
 package net.postchain.d1.icmf
 
+import assertk.assertFailure
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.core.BlockDetail
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
@@ -95,7 +99,9 @@ class IcmfValidationTest {
                 GtvNull
         ))
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(anchoredHeaderOp)))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(anchoredHeaderOp))
+        }.isInstanceOf<UserMistake>().messageContains("Invalid operation")
     }
 
     @Test
@@ -110,7 +116,9 @@ class IcmfValidationTest {
                 -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(ops[0], ops[2], ops[1])))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(ops[0], ops[2], ops[1]))
+        }.isInstanceOf<UserMistake>().messageContains("got __anchored_icmf_message_hash before any __anchored_icmf_header or __non_anchored_icmf_header")
     }
 
     @Test
@@ -126,7 +134,9 @@ class IcmfValidationTest {
                 -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("Unable to extract TopicHeaderData")
     }
 
     @Test
@@ -142,7 +152,9 @@ class IcmfValidationTest {
                 messageExtraDataOverride = mapOf()
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("Unable to extract TopicHeaderData")
     }
 
     @Test
@@ -160,7 +172,9 @@ class IcmfValidationTest {
                 )
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("icmf_send header extra data missing topic")
     }
 
     @Test
@@ -186,7 +200,9 @@ class IcmfValidationTest {
                 )
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("invalid messages hash for topic")
     }
 
     @Test
@@ -202,7 +218,9 @@ class IcmfValidationTest {
         )
 
         val ops1 = ops.subList(0, ops.size - 2)
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1)
+        }.isInstanceOf<UserMistake>().messageContains("invalid messages hash for topic")
     }
 
     @Test
@@ -218,7 +236,9 @@ class IcmfValidationTest {
         )
 
         val ops1 = ops.subList(0, ops.size - 4)
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops1)
+        }.isInstanceOf<UserMistake>().messageContains("Received header ops but no message ops")
     }
 
     @Test
@@ -237,7 +257,9 @@ class IcmfValidationTest {
         val injectedMessageHashOp = MessageHashOp(blockchainRID, topic, injectedMessageBody.merkleHash(hashCalculator)).toOpData()
         val injectedMessageOp = MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageHashOp, injectedMessageOp)))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops + listOf(injectedMessageHashOp, injectedMessageOp))
+        }.isInstanceOf<UserMistake>().messageContains("invalid messages hash for topic")
     }
 
     @Test
@@ -252,7 +274,9 @@ class IcmfValidationTest {
                 previousAnchorHeight = -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("icmf_send header extra has incorrect previous message height")
     }
 
     @Test
@@ -268,7 +292,9 @@ class IcmfValidationTest {
                 -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("Unable to extract TopicHeaderData")
     }
 
     @Test
@@ -288,7 +314,9 @@ class IcmfValidationTest {
                 )
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("Invalid block-rid hash")
     }
 
     @Test
@@ -303,7 +331,9 @@ class IcmfValidationTest {
                 previousAnchorHeight = 0
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("icmf_anchor_headers header extra has incorrect previous message height")
     }
 
     @Test
@@ -321,7 +351,9 @@ class IcmfValidationTest {
 
         val messageOp = MessageOp(blockchainRID, topic, gtv("fel")).toOpData()
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp))
+        }.isInstanceOf<UserMistake>().messageContains("Hash of message body")
     }
 
     @Test
@@ -335,7 +367,9 @@ class IcmfValidationTest {
 
         val messageOp = MessageOp(blockchainRID, topic, spilledMessage).toOpData()
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp)))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(messageOp))
+        }.isInstanceOf<UserMistake>().messageContains("Received unexpected message op for sende")
     }
 
     @Test
@@ -367,7 +401,9 @@ class IcmfValidationTest {
         val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps)
+        }.isInstanceOf<UserMistake>().messageContains("is not allowed to send us messages on topic")
     }
 
     @Test
@@ -382,7 +418,9 @@ class IcmfValidationTest {
                 -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("is not allowed to send us messages on topic")
     }
 
     @Test
@@ -397,7 +435,9 @@ class IcmfValidationTest {
                 -1
         )
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("is not allowed to send us messages on topic")
     }
 
     @Test
@@ -601,7 +641,9 @@ class IcmfValidationTest {
         val messageOps = createMessageOps(messageBodies)
         val ops = listOf(nonAnchoredHeaderOp) + messageOps
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("is not allowed to send us messages on topic")
     }
 
     @Test
@@ -618,7 +660,9 @@ class IcmfValidationTest {
         val nonAnchoredHeaderOp = NonAnchoredHeaderOp(block.header.data, block.witness.data).toOpData()
         val messageOps = createMessageOps(messageBodies)
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(nonAnchoredHeaderOp) + messageOps)
+        }.isInstanceOf<UserMistake>().messageContains("Number of messages exceed limit")
     }
 
     @Test
@@ -681,13 +725,12 @@ class IcmfValidationTest {
 
         val messageBody = gtv("hej")
         val block = createBlockDetail(listOf(messageBody), -1, IcmfTestClusterManagement.keyPair, senderBlockchainRid = blockchainRID)
-        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, null
-                ?: mapOf(
-                        ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
-                                topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1
-                                ).toGtv()
-                        ))
+        val anchorHeader = makeBlockHeader(anchorBlockchainRID, BlockRid(anchorBlockchainRID.data), 0, mapOf(
+                ICMF_ANCHOR_HEADERS_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(gtv(listOf(gtv(block.rid))).merkleHash(hashCalculator), -1
+                        ).toGtv()
                 ))
+        ))
         val anchorBlockRid = anchorHeader.toGtv().merkleHash(hashCalculator)
         val rawAnchorWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.keyPair).signDigest(anchorBlockRid))
@@ -698,7 +741,9 @@ class IcmfValidationTest {
         val messageOp = MessageOp(irrelevantBlockchainRID, topic, messageBody).toOpData()
         val ops = listOf(anchorHeaderOp, anchoredHeaderOp, messageHashOp, messageOp)
 
-        assertFalse(icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops))
+        assertFailure {
+            icmfReceiverSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, ops)
+        }.isInstanceOf<UserMistake>().messageContains("in __anchored_icmf_message_hash does not match header sender")
     }
 
     @Test

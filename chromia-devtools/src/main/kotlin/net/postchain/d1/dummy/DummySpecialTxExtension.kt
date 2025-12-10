@@ -43,9 +43,9 @@ class DummySpecialTxExtension : GTXSpecialTxExtension {
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         var currentTick = module.query(bctx, TICK_QUERY_NAME, GtvDictionary.build(mapOf())).asInteger()
         for (op in ops) {
-            val tick = TickOp.fromOpData(op) ?: return false
+            val tick = TickOp.fromOpData(op) ?: throw UserMistake("Invalid operation")
             if (tick.tick <= currentTick) {
-                return false
+                throw UserMistake("${tick.tick} <= $currentTick")
             }
             currentTick = tick.tick
         }
