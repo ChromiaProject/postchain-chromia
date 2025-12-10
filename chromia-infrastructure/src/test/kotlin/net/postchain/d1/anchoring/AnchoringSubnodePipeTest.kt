@@ -76,8 +76,8 @@ class AnchoringSubnodePipeTest {
         }
 
         val blockQueries: BlockQueries = mock {
-            on { query(eq("get_last_anchored_block"), any()) } doReturn CompletableFuture.completedFuture(
-                    gtv(mapOf("block_height" to gtv(-1L)))
+            on { query(eq("get_last_anchored_block_height"), any()) } doReturn CompletableFuture.completedFuture(
+                    gtv(-1L)
             )
         }
 
@@ -118,8 +118,8 @@ class AnchoringSubnodePipeTest {
         }
 
         val blockQueries: BlockQueries = mock {
-            on { query(eq("get_last_anchored_block"), any()) } doReturn CompletableFuture.completedFuture(
-                    gtv(mapOf("block_height" to gtv(-1L)))
+            on { query(eq("get_last_anchored_block_height"), any()) } doReturn CompletableFuture.completedFuture(
+                    gtv(-1L)
             )
         }
 

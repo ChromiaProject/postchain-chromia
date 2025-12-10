@@ -11,7 +11,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.block.BlockQueries
 import net.postchain.d1.anchoring.AnchoringPipe.Companion.MAX_PACKETS_PER_REQUEST
 import net.postchain.d1.query.MasterClient
-import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -97,9 +96,9 @@ class AnchoringSubnodePipe(
     }
 
     private fun fetchLastAnchoredHeight(): Long = anchorBlockQueries
-            .query("get_last_anchored_block", gtv(mapOf("blockchain_rid" to gtv(blockchainRid))))
+            .query("get_last_anchored_block_height", gtv(mapOf("blockchain_rid" to gtv(blockchainRid))))
             .toCompletableFuture().get()
-            .let { v0 -> ((v0 as? GtvDictionary)?.dict?.get("block_height") as? GtvInteger)?.integer ?: -1 }
+            .let { (it as? GtvInteger)?.integer ?: -1 }
 
     private fun fetchBlocksFromHeight(fromHeight: Long) {
         val fetchedPackets = try {
