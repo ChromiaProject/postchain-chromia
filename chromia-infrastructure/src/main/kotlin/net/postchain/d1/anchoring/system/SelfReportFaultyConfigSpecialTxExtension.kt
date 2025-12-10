@@ -6,6 +6,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
@@ -36,25 +37,22 @@ class SelfReportFaultyConfigSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         if (ops.size != 1) {
-            logger.warn("Invalid amount of $SELF_REPORT_FAULTY_CONFIG_OP operations received: ${ops.size}, only expecting 1")
-            return false
+            throw UserMistake("Invalid amount of $SELF_REPORT_FAULTY_CONFIG_OP operations received: ${ops.size}, only expecting 1")
         }
 
         val faultyConfigOp = ops.first()
         if (faultyConfigOp.args.size != 1 || faultyConfigOp.args[0] !is GtvByteArray) {
-            logger.warn("Received $SELF_REPORT_FAULTY_CONFIG_OP operations with invalid args ${faultyConfigOp.args}, expecting one argument of byte array type")
-            return false
+            throw UserMistake("Received $SELF_REPORT_FAULTY_CONFIG_OP operations with invalid args ${faultyConfigOp.args}, expecting one argument of byte array type")
         }
 
         val receivedFaultyConfigHash = faultyConfigOp.args[0].asByteArray()
         val faultyConfigHash = getFailedConfigHashFromPreviousBlock(DatabaseAccess.of(bctx), bctx)
-        return if (faultyConfigHash == null) {
-            logger.warn("Received $SELF_REPORT_FAULTY_CONFIG_OP but previous block does not contain any faulty config hash extra header")
-            false
+        if (faultyConfigHash == null) {
+            throw UserMistake("Received $SELF_REPORT_FAULTY_CONFIG_OP but previous block does not contain any faulty config hash extra header")
         } else if (!faultyConfigHash.contentEquals(receivedFaultyConfigHash)) {
-            logger.warn("Received $SELF_REPORT_FAULTY_CONFIG_OP with faulty config hash ${receivedFaultyConfigHash.toHex()} but expected ${faultyConfigHash.toHex()}")
-            false
-        } else true
+            throw UserMistake("Received $SELF_REPORT_FAULTY_CONFIG_OP with faulty config hash ${receivedFaultyConfigHash.toHex()} but expected ${faultyConfigHash.toHex()}")
+        }
+        return true
     }
 
     private fun getFailedConfigHashFromPreviousBlock(dba: DatabaseAccess, bctx: BlockEContext): ByteArray? {

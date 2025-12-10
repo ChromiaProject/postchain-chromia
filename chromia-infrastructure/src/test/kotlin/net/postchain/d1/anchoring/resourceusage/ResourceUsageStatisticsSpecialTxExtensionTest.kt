@@ -1,12 +1,16 @@
 package net.postchain.d1.anchoring.resourceusage
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.containsOnly
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
+import assertk.assertions.messageContains
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.anchoring.resourceusage.ResourceUsageStatisticsSpecialTxExtension.ResourceType.FREE_SPACE_LEFT_MIB
@@ -22,7 +26,6 @@ import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_USAGE_MIB
 import net.postchain.metrics.SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -206,7 +209,9 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         val specialOperationsInvalidNodeSignature = listOf(
                 ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp(signature.subjectID, signature.data).toOpData(),
                 ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(differentNodeKeypair.pubKey.data, "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData())
-        assertFalse(resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperationsInvalidNodeSignature))
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperationsInvalidNodeSignature)
+        }.isInstanceOf<UserMistake>().messageContains("does not correspond to node pubkey")
     }
 
 
@@ -230,9 +235,9 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         `when`(bctx.height).thenReturn(10)
         val specialOperations = resourceUsageStatisticsSpecialTxExtension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
 
-        val validateSpecialOperations = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
-
-        assertFalse(validateSpecialOperations)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
+        }.isInstanceOf<UserMistake>().messageContains("Invalid value: -1 for free space left resource type")
     }
 
     @Test
@@ -255,9 +260,9 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         `when`(bctx.height).thenReturn(10)
         val specialOperations = resourceUsageStatisticsSpecialTxExtension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
 
-        val validateSpecialOperations = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
-
-        assertFalse(validateSpecialOperations)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
+        }.isInstanceOf<UserMistake>().messageContains("Invalid value: -1 for space usage mib resource type")
     }
 
     @Test
@@ -282,18 +287,18 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         `when`(bctx.height).thenReturn(10)
         val specialOperations = resourceUsageStatisticsSpecialTxExtension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
 
-        val validateSpecialOperations = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
-
-        assertFalse(validateSpecialOperations)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
+        }.isInstanceOf<UserMistake>().messageContains("Invalid value: -1 for space usage percentage resource type")
 
         spaceUpdateTime = 2
         spaceUsagePercentage = 101
 
         val specialOperations2 = resourceUsageStatisticsSpecialTxExtension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
 
-        val validateSpecialOperations2 = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations2)
-
-        assertFalse(validateSpecialOperations2)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations2)
+        }.isInstanceOf<UserMistake>().messageContains("Invalid value: 101 for space usage percentage resource type")
     }
 
     @Test
@@ -327,9 +332,9 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
                 ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(keyPair.pubKey.data, "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData(),
                 ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(keyPair.pubKey.data, "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData())
 
-        val validateSpecialOperations = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
-
-        assertFalse(validateSpecialOperations)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
+        }.isInstanceOf<UserMistake>().messageContains("Multiple __resource_usage_statistics operations of the same resource type detected for same container: FREE_SPACE_LEFT_MIB")
     }
 
     @Test
@@ -365,9 +370,9 @@ class ResourceUsageStatisticsSpecialTxExtensionTest {
         val specialOperations = listOf(ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp(keyPair.pubKey.data, ByteArray(0)).toOpData(),
                 ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(keyPair.pubKey.data, "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData())
 
-        val validateSpecialOperations = resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
-
-        assertFalse(validateSpecialOperations)
+        assertFailure {
+            resourceUsageStatisticsSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, specialOperations)
+        }.isInstanceOf<UserMistake>().messageContains("does not correspond to any known signers")
 
         val specialOperations2 = listOf(ResourceUsageStatisticsSpecialTxExtension.ValidateNodeSignatureOp(ByteArray(20), ByteArray(0)).toOpData(),
                 ResourceUsageStatisticsSpecialTxExtension.ResourceUsageStatisticsOp(ByteArray(20), "testContainer", 1, FREE_SPACE_LEFT_MIB, 1000).toOpData())
