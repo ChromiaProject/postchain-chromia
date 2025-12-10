@@ -6,6 +6,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GtxOpData
 import net.postchain.gtx.data.OpData
+import java.util.concurrent.Future
 
 class RequestTakenOp(
         val id: String,
@@ -125,7 +126,25 @@ sealed interface Computation {
 
 data class TakenComputation(override val type: String, override val input: Gtv) : Computation
 
-data class StartedComputation(override val type: String, override val input: Gtv) : Computation
+class StartedComputation(override val type: String, override val input: Gtv, val future: Future<*>) : Computation {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as StartedComputation
+
+        if (type != other.type) return false
+        if (input != other.input) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + input.hashCode()
+        return result
+    }
+}
 
 data class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv, val isFast: Boolean) : Computation
 
