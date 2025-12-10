@@ -17,18 +17,16 @@ class RequestTakenOp(
         // @mount('__hc.') operation request_taken(id: text, type: text, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.request_taken"
 
-        fun fromOpData(opData: GtxOpData): RequestTakenOp? {
-            if (opData.opName != OP_NAME) return null
+        fun fromOpData(opData: GtxOpData): RequestTakenOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
             if (opData.args.size != 4) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
                 RequestTakenOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2].asByteArray(), opData.args[3].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
@@ -48,18 +46,16 @@ class ResponseOp(
         // @mount('__hc.') operation response(id: text, type: text, input: gtv, output: gtv, signature_subject_id: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.response"
 
-        fun fromOpData(opData: GtxOpData): ResponseOp? {
-            if (opData.opName != OP_NAME) return null
+        fun fromOpData(opData: GtxOpData): ResponseOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
             if (opData.args.size != 6) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
                 ResponseOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2], opData.args[3], opData.args[4].asByteArray(), opData.args[5].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
@@ -79,18 +75,16 @@ class FailureOp(
         // @mount('__hc.') operation failure(id: text, type: text, input: gtv, error: text, signature_subject_id: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.failure"
 
-        fun fromOpData(opData: GtxOpData): FailureOp? {
-            if (opData.opName != OP_NAME) return null
+        fun fromOpData(opData: GtxOpData): FailureOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
             if (opData.args.size != 6) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
                 FailureOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2], opData.args[3].asString(), opData.args[4].asByteArray(), opData.args[5].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
@@ -107,18 +101,16 @@ class ClusterTimeoutOp(
         // @mount('__hc.') operation cluster_timeout(id: text, type: text, input: gtv)
         const val OP_NAME = "__hc.cluster_timeout"
 
-        fun fromOpData(opData: GtxOpData): ClusterTimeoutOp? {
-            if (opData.opName != OP_NAME) return null
+        fun fromOpData(opData: GtxOpData): ClusterTimeoutOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
             if (opData.args.size != 3) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
                 ClusterTimeoutOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2])
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }

@@ -422,8 +422,7 @@ class HybridComputeSpecialTransactionExtension(
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         if (!isFullyLoaded() && ops.isNotEmpty()) {
-            logger.warn("Engine(s) not loaded yet, returning false from validateSpecialOperations")
-            return false
+            throw UserMistake("Engine(s) not loaded yet, returning false from validateSpecialOperations")
         }
 
         val takenComputations = mutableSetOf<String>()
@@ -432,10 +431,8 @@ class HybridComputeSpecialTransactionExtension(
         for (op in ops) {
             when (op.opName) {
                 RequestTakenOp.OP_NAME -> {
-                    val request = RequestTakenOp.fromOpData(op) ?: return false
-                    if (!isSignatureValid(RequestTakenOp.OP_NAME, bctx, request.id, request.type, request.processedBy, request.signatureData)) {
-                        return false
-                    }
+                    val request = RequestTakenOp.fromOpData(op)
+                    validateSignature(RequestTakenOp.OP_NAME, bctx, request.id, request.type, request.processedBy, request.signatureData)
                     if (!myComputations.contains(request.id)) {
                         bctx.addAfterCommitHook {
                             otherNodesPendingComputations.add(request.id)
@@ -445,37 +442,31 @@ class HybridComputeSpecialTransactionExtension(
                 }
 
                 ResponseOp.OP_NAME -> {
-                    val response = ResponseOp.fromOpData(op) ?: return false
-                    if (!isSignatureValid(ResponseOp.OP_NAME, bctx, response.id, response.type, response.signatureSubjectId, response.signatureData)) {
-                        return false
-                    }
+                    val response = ResponseOp.fromOpData(op)
+                    validateSignature(ResponseOp.OP_NAME, bctx, response.id, response.type, response.signatureSubjectId, response.signatureData)
 
                     if (!takenComputations.contains(response.id)) {
                         val takenComputeRequest = getTakenRequestById(bctx, response.id)
                         if (takenComputeRequest != null) {
                             if (!response.signatureSubjectId.contentEquals(takenComputeRequest.processedBy.data)) {
-                                logger.warn("Validation of response for id [${response.id}] of type [${response.type}] failed: unexpected signer: ${response.signatureSubjectId.toHex()}")
-                                return false
+                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: unexpected signer: ${response.signatureSubjectId.toHex()}")
                             }
                         } else {
-                            logger.warn("Validate of response for id [${response.id}] of type [${response.type}] failed: Taken request not found")
-                            return false
+                            throw UserMistake("Validate of response for id [${response.id}] of type [${response.type}] failed: Taken request not found")
                         }
                     }
 
-                    val engine = getEngine(response.id, response.type) ?: return false
+                    val engine = getEngine(response.id, response.type)
 
                     if (myComputations.containsKey(response.id) && response.signatureSubjectId.contentEquals(nodePubkey)) {
                         val localComputation = myComputations[response.id]
                         if (localComputation is FinishedComputation) {
                             if (localComputation.output != response.output) {
-                                logger.warn("Validation of response for id [${response.id}] of type [${response.type}] failed: local output does not match operation output.")
-                                return false
+                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local output does not match operation output.")
                             }
                             logger.debug { "Skipping validation of response for id [${response.id}] of type [${response.type}] on block builder node" }
                         } else {
-                            logger.warn("Validation of response for id [${response.id}] of type [${response.type}] failed: local computation state is ${localComputation?.javaClass?.simpleName}, expected FinishedComputation.")
-                            return false
+                            throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local computation state is ${localComputation?.javaClass?.simpleName}, expected FinishedComputation.")
                         }
                     } else {
                         if (engine is DatabaseAwareHybridComputeEngine) {
@@ -495,18 +486,14 @@ class HybridComputeSpecialTransactionExtension(
                                             logger.info("Validation of response for id [${response.id}] of type [${response.type}] succeeded in $duration")
                                             return@Callable response.id
                                         } else {
-                                            logger.warn("Validation of response for id [${response.id}] of type [${response.type}] timed out")
-                                            return@Callable null
+                                            throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] timed out")
                                         }
                                     } catch (_: InterruptedException) {
-                                        logger.warn("Validation of response for id [${response.id}] of type [${response.type}] timed out with exception")
-                                        return@Callable null
+                                        throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] timed out with exception")
                                     } catch (e: UserMistake) {
-                                        logger.warn("Validation of response for id [${response.id}] of type [${response.type}] failed: ${e.message}")
-                                        return@Callable null
+                                        throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: ${e.message}")
                                     } catch (e: Exception) {
-                                        logger.warn("Validation of response for id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
-                                        return@Callable null
+                                        throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
                                     }
                                 }
                             }))
@@ -515,25 +502,21 @@ class HybridComputeSpecialTransactionExtension(
                 }
 
                 FailureOp.OP_NAME -> {
-                    val failure = FailureOp.fromOpData(op) ?: return false
-                    if (!isSignatureValid(ResponseOp.OP_NAME, bctx, failure.id, failure.type, failure.signatureSubjectId, failure.signatureData)) {
-                        return false
-                    }
+                    val failure = FailureOp.fromOpData(op)
+                    validateSignature(ResponseOp.OP_NAME, bctx, failure.id, failure.type, failure.signatureSubjectId, failure.signatureData)
 
                     if (!takenComputations.contains(failure.id)) {
                         val takenComputeRequest = getTakenRequestById(bctx, failure.id)
                         if (takenComputeRequest != null) {
                             if (!failure.signatureSubjectId.contentEquals(takenComputeRequest.processedBy.data)) {
-                                logger.warn("Validation of failure for id [${failure.id}] of type [${failure.type}] failed: unexpected signer: ${failure.signatureSubjectId.toHex()}")
-                                return false
+                                throw UserMistake("Validation of failure for id [${failure.id}] of type [${failure.type}] failed: unexpected signer: ${failure.signatureSubjectId.toHex()}")
                             }
                         } else {
-                            logger.warn("Validate of failure for id [${failure.id}] of type [${failure.type}] failed: Taken request not found")
-                            return false
+                            throw UserMistake("Validate of failure for id [${failure.id}] of type [${failure.type}] failed: Taken request not found")
                         }
                     }
 
-                    getEngine(failure.id, failure.type) ?: return false
+                    getEngine(failure.id, failure.type)
 
                     bctx.addAfterCommitHook {
                         otherNodesPendingComputations.remove(failure.id)
@@ -541,12 +524,11 @@ class HybridComputeSpecialTransactionExtension(
                 }
 
                 ClusterTimeoutOp.OP_NAME -> {
-                    val clusterTimeoutOp = ClusterTimeoutOp.fromOpData(op) ?: return false
-                    getEngine(clusterTimeoutOp.id, clusterTimeoutOp.type) ?: return false
+                    val clusterTimeoutOp = ClusterTimeoutOp.fromOpData(op)
+                    getEngine(clusterTimeoutOp.id, clusterTimeoutOp.type)
                     val request = getTakenRequestById(bctx, clusterTimeoutOp.id)
                     if (request == null || !isComputeClusterTimeout(request.takenTimestamp, bctx.timestamp)) {
-                        logger.warn("Validation of cluster timeout for id [${clusterTimeoutOp.id}] of type [${clusterTimeoutOp.type}] failed")
-                        return false
+                        throw UserMistake("Validation of cluster timeout for id [${clusterTimeoutOp.id}] of type [${clusterTimeoutOp.type}] failed")
                     }
                     bctx.addAfterCommitHook {
                         otherNodesPendingComputations.remove(clusterTimeoutOp.id)
@@ -554,8 +536,7 @@ class HybridComputeSpecialTransactionExtension(
                 }
 
                 else -> {
-                    logger.warn("Unexpected operation: ${op.opName}")
-                    return false
+                    throw UserMistake("Unexpected operation: ${op.opName}")
                 }
             }
         }
@@ -571,32 +552,30 @@ class HybridComputeSpecialTransactionExtension(
                     otherNodesPendingComputations.remove(response.id)
                 }
             } catch (e: UserMistake) {
-                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
-                return false
+                throw UserMistake("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
             } catch (e: Exception) {
-                logger.warn("DB aware validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
-                return false
+                throw UserMistake("DB aware validation for request id [${response.id}] of type [${response.type}] failed unexpectedly: $e", e)
             }
         }
 
         return nonDbAwareValidations.all {
             try {
                 val id = it.get()
-                if (id != null) {
-                    bctx.addAfterCommitHook {
-                        otherNodesPendingComputations.remove(id)
-                    }
-                    true
-                } else {
-                    false
+                bctx.addAfterCommitHook {
+                    otherNodesPendingComputations.remove(id)
                 }
-            } catch (_: CancellationException) {
-                false
-            } catch (_: InterruptedException) {
-                false
+                true
+            } catch (e: CancellationException) {
+                throw UserMistake("Validation cancelled unexpectedly: ${e.message}")
+            } catch (e: InterruptedException) {
+                throw UserMistake("Validation interrupted unexpectedly: ${e.message}")
             } catch (e: ExecutionException) {
-                logger.warn("Validation failed unexpectedly: $e", e)
-                false
+                val cause = e.cause
+                if (cause is UserMistake) {
+                    throw cause
+                } else {
+                    throw UserMistake("Validation failed unexpectedly: $e", e)
+                }
             }
         }
     }
@@ -652,7 +631,8 @@ class HybridComputeSpecialTransactionExtension(
     fun isComputeClusterTimeout(takenTimestamp: Long, now: Long) =
             (takenTimestamp > 0) && (takenTimestamp + computeClusterTimeoutSeconds * 1000 < now)
 
-    private fun getEngine(id: String, type: String): HybridComputeEngine? = getEngineAndComputer(id, type)?.first
+    private fun getEngine(id: String, type: String): HybridComputeEngine = getEngineAndComputer(id, type)?.first
+            ?: throw UserMistake("Unknown type: $type for id [$id]")
 
     private fun getEngineAndComputer(id: String, type: String): Pair<HybridComputeEngine, ExecutorService?>? {
         val engineAndComputer = engines[type]
@@ -663,12 +643,10 @@ class HybridComputeSpecialTransactionExtension(
         return engineAndComputer
     }
 
-    private fun isSignatureValid(opName: String, bctx: BlockEContext, id: String, type: String, subjectId: ByteArray, signatureData: ByteArray): Boolean {
+    private fun validateSignature(opName: String, bctx: BlockEContext, id: String, type: String, subjectId: ByteArray, signatureData: ByteArray) {
         if (!cs.verifyDigest(hash(id, blockchainRID.toHex(), bctx.height), Signature(subjectId, signatureData))) {
-            logger.warn("Validate $opName operation failed for request id [${id}] of type [${type}]: Invalid signature.")
-            return false
+            throw UserMistake("Validate $opName operation failed for request id [${id}] of type [${type}]: Invalid signature.")
         }
-        return true
     }
 
     internal fun hash(id: String, blockchainRID: String, height: Long) = gtv(gtv(id), gtv(blockchainRID), gtv(height)).merkleHash(GtvMerkleHashCalculatorV2(cs))
