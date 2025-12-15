@@ -18,6 +18,7 @@ import net.postchain.core.Storage
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
@@ -65,70 +66,90 @@ class HybridComputeSpecialTransactionExtension(
         val DEFAULT_PERIOD_LENGTH = 7.days // 1 week
     }
 
-    internal var container: String? = null
-    internal var containerCreationTime: Instant? = null
-    internal var containerRateLimits: Map<String, ContainerRateLimit> = mapOf()
-
-    internal var concurrency: Int = -1
-    internal var loadTimeoutSeconds: Long = -1
-    internal var computeTimeoutSeconds: Long = -1
-    internal var computeClusterTimeoutSeconds: Long = -1
-    internal var blockBuildingIntervalMillis: Long = -1
-    private lateinit var engines: Map<String, Pair<HybridComputeEngine, ExecutorService?>>
-
-    internal lateinit var sharedStorage: Storage
     private lateinit var module: GTXModule
-    internal val loaded = AtomicInteger(0)
-
-    private lateinit var nodePubkey: ByteArray
-    private lateinit var sigMaker: SigMaker
     private lateinit var cs: CryptoSystem
     private lateinit var merkleHashCalculator: GtvMerkleHashCalculatorBase
-
     private var chainID: Long = -1
     private lateinit var blockchainRID: BlockchainRid
+    private lateinit var nodePubKey: PubKey
+    private lateinit var sigMaker: SigMaker
+    private var container: String? = null
+    private var containerCreationTime: Instant? = null
+    private var containerRateLimits: Map<String, ContainerRateLimit> = mapOf()
+    private var concurrency: Int = -1
+    private var computeTimeoutSeconds: Long = -1
+    private var computeClusterTimeoutSeconds: Long = -1
+    private var blockBuildingIntervalMillis: Long = -1
+    private lateinit var sharedStorage: Storage
+    private lateinit var engines: Map<String, Pair<HybridComputeEngine, ExecutorService?>>
 
-    override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME, ClusterTimeoutOp.OP_NAME)
+    private lateinit var loader: ExecutorService
+    private lateinit var validator: ExecutorService
+    private lateinit var timeouter: ScheduledExecutorService
 
+    internal val loaded = AtomicInteger(0)
     internal val myComputations = ConcurrentHashMap<String, Computation>() // id -> computation
     internal val otherNodesPendingComputations = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
-    private val loader: ExecutorService by lazy {
-        Executors.newFixedThreadPool(engines.size,
-                ThreadFactoryBuilder().setNameFormat("hybridcompute-load-%d").build())
-    }
-    private val validator: ExecutorService by lazy {
-        val size = (engines.values.filterNot { it.first is DatabaseAwareHybridComputeEngine }).size
-        Executors.newFixedThreadPool(max(size, 1), // cannot create a thread pool with size 0
-                ThreadFactoryBuilder().setNameFormat("hybridcompute-validate-%d").build())
-    }
-    private val timeouter: ScheduledExecutorService by lazy {
-        Executors.newSingleThreadScheduledExecutor(
-                ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build())
-    }
+    @Volatile
+    private var shouldBuildBlockCheckTime = 0L
+
+    @Volatile
+    private var shouldBuildBlockNow = false
+
+    override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME, ClusterTimeoutOp.OP_NAME)
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+        // we initialize this in `load()`
+    }
+
+    fun load(
+            module: GTXModule,
+            chainID: Long,
+            blockchainRID: BlockchainRid,
+            cs: CryptoSystem,
+            nodeKey: KeyPair,
+            container: String?,
+            containerCreationTime: Instant?,
+            containerRateLimits: Map<String, ContainerRateLimit>,
+            concurrency: Int,
+            loadTimeoutSeconds: Long,
+            computeTimeoutSeconds: Long,
+            computeClusterTimeoutSeconds: Long,
+            blockBuildingIntervalMillis: Long,
+            sharedStorage: Storage,
+            engineList: List<HybridComputeEngine>,
+            fastEngineList: List<HybridComputeEngine>,
+    ) {
         this.module = module
         this.cs = cs
         this.merkleHashCalculator = GtvMerkleHashCalculatorV2(cs)
         this.chainID = chainID
         this.blockchainRID = blockchainRID
-    }
-
-    fun initSigMaker(pubKeyByteArray: ByteArray, privKeyByteArray: ByteArray) {
-        this.nodePubkey = pubKeyByteArray
-        this.sigMaker = cs.buildSigMaker(KeyPair(nodePubkey, privKeyByteArray))
-    }
-
-    internal fun setEngines(engineList: List<HybridComputeEngine>, fastEngineList: List<HybridComputeEngine>) {
-        engines = engineList.associate { engine ->
+        this.nodePubKey = nodeKey.pubKey
+        this.sigMaker = cs.buildSigMaker(nodeKey)
+        this.container = container
+        this.containerCreationTime = containerCreationTime
+        this.containerRateLimits = containerRateLimits
+        this.concurrency = concurrency
+        this.computeTimeoutSeconds = computeTimeoutSeconds
+        this.computeClusterTimeoutSeconds = computeClusterTimeoutSeconds
+        this.blockBuildingIntervalMillis = blockBuildingIntervalMillis
+        this.sharedStorage = sharedStorage
+        this.engines = engineList.associate { engine ->
             engine.name to (engine to Executors.newSingleThreadExecutor(
                     ThreadFactoryBuilder().setNameFormat("hybridcompute-compute-${engine.name}-%d").build(),
             ))
         } + fastEngineList.associate { engine -> engine.name to (engine to null) }
-    }
 
-    fun load() {
+        this.loader = Executors.newFixedThreadPool(engines.size,
+                ThreadFactoryBuilder().setNameFormat("hybridcompute-load-%d").build())
+        val validatorSize = (engines.values.filterNot { it.first is DatabaseAwareHybridComputeEngine }).size
+        this.validator = Executors.newFixedThreadPool(max(validatorSize, 1), // cannot create a thread pool with size 0
+                ThreadFactoryBuilder().setNameFormat("hybridcompute-validate-%d").build())
+        this.timeouter = Executors.newSingleThreadScheduledExecutor(
+                ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build())
+
         for ((engine, _) in engines.values) {
             loader.submit {
                 withLoggingContext(mapOf(
@@ -186,12 +207,6 @@ class HybridComputeSpecialTransactionExtension(
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
             position == SpecialTransactionPosition.Begin || position == SpecialTransactionPosition.End
 
-    @Volatile
-    private var shouldBuildBlockCheckTime = 0L
-
-    @Volatile
-    private var shouldBuildBlockNow = false
-
     override fun blockCommitted(blockData: BlockData) {
         shouldBuildBlockCheckTime = clock.millis()
         shouldBuildBlockNow = false
@@ -206,7 +221,7 @@ class HybridComputeSpecialTransactionExtension(
 
         val now = clock.millis()
         if (now - shouldBuildBlockCheckTime < blockBuildingIntervalMillis) return false
-        shouldBuildBlockCheckTime = clock.millis()
+        shouldBuildBlockCheckTime = now
 
         if (otherNodesPendingComputations.isNotEmpty()) {
             shouldBuildBlockNow = true
@@ -475,7 +490,7 @@ class HybridComputeSpecialTransactionExtension(
 
                     val engine = getEngine(response.id, response.type)
 
-                    if (myComputations.containsKey(response.id) && response.processedBy.contentEquals(nodePubkey)) {
+                    if (myComputations.containsKey(response.id) && response.processedBy.contentEquals(nodePubKey.data)) {
                         val localComputation = myComputations[response.id]
                         if (localComputation is FinishedComputation) {
                             if (localComputation.output != response.output) {
@@ -607,7 +622,7 @@ class HybridComputeSpecialTransactionExtension(
         return true
     }
 
-    private fun isFullyLoaded() = (loaded.get() >= engines.size)
+    private fun isFullyLoaded() = ::engines.isInitialized && (loaded.get() >= engines.size)
 
     override fun shutdown() {
         timeouter.shutdownNow()

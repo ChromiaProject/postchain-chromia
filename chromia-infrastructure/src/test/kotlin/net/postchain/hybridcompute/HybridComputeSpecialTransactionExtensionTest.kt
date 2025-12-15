@@ -40,10 +40,23 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
-        extension.init(module, 1, BlockchainRid.buildRepeat(1), cs)
+        val node = cs.generateKeyPair()
         val computeClusterTimeoutSeconds = 10L
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 60 * 1000
+        extension.load(
+                module, 1, BlockchainRid.buildRepeat(1), cs,
+                node,
+                null,
+                null,
+                mapOf(),
+                1,
+                -1,
+                -1,
+                computeClusterTimeoutSeconds,
+                blockBuildingIntervalMillis = 60 * 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
 
         val now = Instant.now().toEpochMilli()
         assertFalse(extension.isComputeClusterTimeout(now - computeClusterTimeoutSeconds * 1000, now))
@@ -56,18 +69,25 @@ class HybridComputeSpecialTransactionExtensionTest {
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val blockchainRID = BlockchainRid.buildRepeat(1)
-        extension.init(module, 1L, blockchainRID, cs)
-        extension.concurrency = 1
-        extension.loadTimeoutSeconds = 3
-        extension.computeTimeoutSeconds = 5
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
         val node1 = cs.generateKeyPair()
         val node2 = cs.generateKeyPair()
         val sigMaker1 = cs.buildSigMaker(node1)
-        extension.load()
+        extension.load(
+                module, 1L, blockchainRID, cs,
+                node1,
+                null,
+                null,
+                mapOf(),
+                concurrency = 1,
+                loadTimeoutSeconds = 3,
+                computeTimeoutSeconds = 5,
+                computeClusterTimeoutSeconds = 10,
+                blockBuildingIntervalMillis = 60 * 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
@@ -86,21 +106,27 @@ class HybridComputeSpecialTransactionExtensionTest {
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val blockchainRID = BlockchainRid.buildRepeat(1)
-        extension.init(module, 1, blockchainRID, cs)
         val node1 = cs.generateKeyPair()
         val node2 = cs.generateKeyPair()
         val sigMaker1 = cs.buildSigMaker(node1)
         val sigMaker2 = cs.buildSigMaker(node2)
-        extension.initSigMaker(node1.pubKey.data, node1.privKey.data)
-        extension.concurrency = 1
-        extension.loadTimeoutSeconds = 3
-        extension.computeTimeoutSeconds = 5
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
-        extension.load()
+        extension.load(
+                module, 1, blockchainRID, cs,
+                node1,
+                null,
+                null,
+                mapOf(),
+                concurrency = 1,
+                loadTimeoutSeconds = 3,
+                computeTimeoutSeconds = 5,
+                computeClusterTimeoutSeconds = 10,
+                blockBuildingIntervalMillis = 60 * 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
@@ -149,22 +175,29 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node1 = cs.generateKeyPair()
         val sigMaker = cs.buildSigMaker(node1)
         val blockchainRID = BlockchainRid.buildRepeat(1)
-        extension.init(module, 1, blockchainRID, cs)
-        extension.concurrency = 1
-        extension.loadTimeoutSeconds = 3
-        extension.computeTimeoutSeconds = 5
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
-        val signature = sigMaker.signDigest(extension.failureHash(blockchainRID, "success", "error message"))
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
-        extension.load()
+        extension.load(
+                module, 1, blockchainRID, cs,
+                node1,
+                null,
+                null,
+                mapOf(),
+                concurrency = 1,
+                loadTimeoutSeconds = 3,
+                computeTimeoutSeconds = 5,
+                computeClusterTimeoutSeconds = 10,
+                blockBuildingIntervalMillis = 60 * 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
+        val signature = sigMaker.signDigest(extension.failureHash(blockchainRID, "success", "error message"))
         assertFailure {
             extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", signature.subjectID, signature.data).toOpData()))
         }.isInstanceOf<UserMistake>().messageContains("Validate __hc.failure operation failed for request id [fail] of type [test]: Invalid signature")
@@ -179,15 +212,22 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node2 = cs.generateKeyPair()
         val sigMaker2 = cs.buildSigMaker(node2)
         val blockchainRID = BlockchainRid.buildRepeat(1)
-        extension.init(module, 1L, blockchainRID, cs)
-        extension.concurrency = 1
-        extension.loadTimeoutSeconds = 3
-        extension.computeTimeoutSeconds = 5
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 60 * 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
-        extension.load()
+        extension.load(
+                module, 1, blockchainRID, cs,
+                node1,
+                null,
+                null,
+                mapOf(),
+                concurrency = 1,
+                loadTimeoutSeconds = 3,
+                computeTimeoutSeconds = 5,
+                computeClusterTimeoutSeconds = 10,
+                blockBuildingIntervalMillis = 60 * 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
@@ -212,17 +252,24 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), clock = clock)
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
+        val node = cs.generateKeyPair()
         val blockchainRID = BlockchainRid.buildRepeat(1)
-        extension.init(module, 1L, blockchainRID, cs)
-        extension.concurrency = 1
-        extension.loadTimeoutSeconds = 3
-        extension.computeTimeoutSeconds = 5
-        extension.computeClusterTimeoutSeconds = 10
-        extension.blockBuildingIntervalMillis = 1000
-        extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
-
         assertFalse(extension.shouldBuildBlock())
-        extension.load()
+        extension.load(
+                module, 1, blockchainRID, cs,
+                node,
+                null,
+                null,
+                mapOf(),
+                concurrency = 1,
+                loadTimeoutSeconds = 3,
+                computeTimeoutSeconds = 5,
+                computeClusterTimeoutSeconds = 10,
+                blockBuildingIntervalMillis = 1000,
+                mock(),
+                listOf(StubHybridComputeEngine()),
+                listOf()
+        )
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }

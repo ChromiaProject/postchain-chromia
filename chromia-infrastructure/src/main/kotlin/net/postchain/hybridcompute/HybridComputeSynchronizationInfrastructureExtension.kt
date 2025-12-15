@@ -5,13 +5,16 @@ import net.postchain.PostchainContext
 import net.postchain.base.withWriteConnection
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
+import net.postchain.containers.ContainerRateLimit
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.crypto.KeyPair
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.PostchainContextAware
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.time.Instant
 
 @Suppress("unused")
 class HybridComputeSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) :
@@ -26,38 +29,50 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                         ?: throw UserMistake("hybridcompute configuration not found")
                 require(config.concurrency > 0) { "concurrency must be greater than 0" }
                 val engineNames = config.engines.ifEmpty {
-                    require(config.engine.isNotEmpty()) { "there must be at least one engine" }
-                    listOf(config.engine)
+                    if (config.engine.isNotEmpty()) listOf(config.engine) else listOf()
                 }
                 val fastEngineNames = config.fastEngines
+                var container: String? = null
+                var containerCreationTime: Instant? = null
+                var containerRateLimits: Map<String, ContainerRateLimit> = mapOf()
                 if (configuration is ManagedDataSourceAware) {
                     val dataSource = configuration.dataSource
                     if (dataSource is DirectoryDataSource) {
-                        val container = dataSource.getContainerForBlockchain(configuration.blockchainRid)
-                        val containerCreationTime = dataSource.getContainerCreationTime(container)
-                        val containerRateLimits = dataSource.getContainerRateLimits(container)
+                        container = dataSource.getContainerForBlockchain(configuration.blockchainRid)
+                        containerCreationTime = dataSource.getContainerCreationTime(container)
+                        containerRateLimits = dataSource.getContainerRateLimits(container)
                         logger.info("Running in container $container which was created at $containerCreationTime")
-                        txExt.container = container
-                        txExt.containerCreationTime = containerCreationTime
-                        txExt.containerRateLimits = containerRateLimits
                     }
                 }
                 val engines = engineNames.map { newInstanceOf<HybridComputeEngine>(it) }
                 val fastEngines = fastEngineNames.map { newInstanceOf<HybridComputeEngine>(it) }
-                (engines + fastEngines).filterIsInstance<PostchainContextAware>().forEach {
+                val allEngines = engines + fastEngines
+                require(allEngines.isNotEmpty()) { "there must be at least one engine" }
+                require(allEngines.size == allEngines.map { it.name }.toSet().size) { "all engines must have unique names" }
+                allEngines.filterIsInstance<PostchainContextAware>().forEach {
                     withWriteConnection(postchainContext.blockBuilderStorage, configuration.chainID) { ctx ->
                         it.initializeContext(configuration, postchainContext, ctx)
                         true
                     }
                 }
-                txExt.concurrency = config.concurrency.toInt()
-                txExt.loadTimeoutSeconds = config.loadTimeoutSeconds
-                txExt.computeTimeoutSeconds = config.computeTimeoutSeconds
-                txExt.computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds
-                txExt.blockBuildingIntervalMillis = config.blockBuildingIntervalMillis
-                txExt.setEngines(engines, fastEngines)
-                txExt.sharedStorage = postchainContext.sharedStorage
-                txExt.load()
+                txExt.load(
+                        configuration.module,
+                        configuration.chainID,
+                        configuration.effectiveBlockchainRID,
+                        postchainContext.cryptoSystem,
+                        KeyPair(postchainContext.appConfig.pubKeyByteArray, postchainContext.appConfig.privKeyByteArray),
+                        container,
+                        containerCreationTime,
+                        containerRateLimits,
+                        concurrency = config.concurrency.toInt(),
+                        loadTimeoutSeconds = config.loadTimeoutSeconds,
+                        computeTimeoutSeconds = config.computeTimeoutSeconds,
+                        computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds,
+                        blockBuildingIntervalMillis = config.blockBuildingIntervalMillis,
+                        sharedStorage = postchainContext.sharedStorage,
+                        engineList = engines,
+                        fastEngineList = fastEngines,
+                )
             }
         }
     }
