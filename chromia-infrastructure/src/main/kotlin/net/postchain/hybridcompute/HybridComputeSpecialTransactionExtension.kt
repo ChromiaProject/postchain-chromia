@@ -241,28 +241,30 @@ class HybridComputeSpecialTransactionExtension(
         when (position) {
             SpecialTransactionPosition.Begin -> {
                 if (GET_REQUEST in module.getQueries()) {
-                    myComputations.keys.removeIf { id -> getRequestById(bctx, id)?.state in setOf(State.COMPUTED, State.FAILED) }
-                    if (computeClusterTimeoutSeconds > 0) {
-                        for (id in myComputations.keys) {
-                            val request = getRequestById(bctx, id)
-                            if (request != null) {
-                                if (isComputeClusterTimeout(request.takenTimestamp, bctx.timestamp)) {
-                                    logger.warn("Request id [${request.id}] of type [${request.type}] stale after $computeClusterTimeoutSeconds seconds, removing")
-                                    val computation = myComputations.remove(id)
-                                    if (computation is StartedComputation) {
-                                        computation.future.cancel(true)
-                                    }
+                    val computationsToRemove = mutableSetOf<String>()
+                    for ((id, computation) in myComputations) {
+                        val request = getRequestById(bctx, id)
+                        if (request != null) {
+                            if (request.state in setOf(State.COMPUTED, State.FAILED)) {
+                                computationsToRemove.add(id)
+                            } else if (computeClusterTimeoutSeconds > 0 && isComputeClusterTimeout(request.takenTimestamp, bctx.timestamp)) {
+                                logger.warn("Request id [${request.id}] of type [${request.type}] stale after $computeClusterTimeoutSeconds seconds, removing")
+                                computationsToRemove.add(id)
+                                if (computation is StartedComputation) {
+                                    computation.future.cancel(true)
                                 }
                             }
                         }
                     }
+                    computationsToRemove.forEach { myComputations.remove(it) }
                 }
                 return buildList {
+                    val computationsToRemove = mutableSetOf<String>()
                     for ((id, computation) in myComputations) {
                         when (computation) {
                             is TakenComputation -> {
                                 logger.warn("Request id [$id] of type [${computation.type}] was taken but not started, removing")
-                                myComputations.remove(id)
+                                computationsToRemove.add(id)
                             }
 
                             is StartedComputation -> {} // nothing to do
@@ -270,7 +272,7 @@ class HybridComputeSpecialTransactionExtension(
                             is FinishedComputation -> {
                                 if (computation.isFast) {
                                     logger.warn("Request id [$id] of type [${computation.type}] was finished but not committed, removing")
-                                    myComputations.remove(id)
+                                    computationsToRemove.add(id)
                                 } else {
                                     logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
                                     val signature = sigMaker.signDigest(responseHash(blockchainRID, id, computation.output))
@@ -282,7 +284,7 @@ class HybridComputeSpecialTransactionExtension(
                             is FailedComputation -> {
                                 if (computation.isFast) {
                                     logger.warn("Request id [$id] of type [${computation.type}] was failed but not committed, removing")
-                                    myComputations.remove(id)
+                                    computationsToRemove.add(id)
                                 } else {
                                     logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
                                     val signature = sigMaker.signDigest(failureHash(blockchainRID, id, computation.errorMessage))
@@ -292,6 +294,7 @@ class HybridComputeSpecialTransactionExtension(
                             }
                         }
                     }
+                    computationsToRemove.forEach { myComputations.remove(it) }
 
                     if (computeClusterTimeoutSeconds > 0) {
                         for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
@@ -350,13 +353,13 @@ class HybridComputeSpecialTransactionExtension(
                                     }
                                 }
                                 val (output, pointsConsumed) = outputPointsConsumed
+                                logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration, submitting successful response")
                                 container?.let {
                                     dbOperations.incrementPoints(bctx, container = it, type = request.type,
                                             containerCreationTime = containerCreationTime, now = now,
                                             periodLength = periodLength,
                                             pointsConsumed = pointsConsumed)
                                 }
-                                logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration, submitting successful response")
                                 myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = true))
                                 val signature = sigMaker.signDigest(responseHash(blockchainRID, request.id, output))
                                 add(ResponseOp(request.id, request.type, request.input, output, signature.subjectID, signature.data).toOpData())
@@ -394,17 +397,17 @@ class HybridComputeSpecialTransactionExtension(
                                                 }
                                             }
                                             val (output, pointsConsumed) = outputPointsConsumed
-                                            container?.let {
-                                                withReadWriteConnection(sharedStorage, chainID) { ctx: EContext ->
-                                                    dbOperations.incrementPoints(ctx, container = it, type = request.type,
-                                                            containerCreationTime = containerCreationTime, now = now,
-                                                            periodLength = periodLength,
-                                                            pointsConsumed = pointsConsumed)
-                                                }
-                                            }
                                             if (!Thread.currentThread().isInterrupted) {
-                                                myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = false))
                                                 logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
+                                                container?.let {
+                                                    withReadWriteConnection(sharedStorage, chainID) { ctx: EContext ->
+                                                        dbOperations.incrementPoints(ctx, container = it, type = request.type,
+                                                                containerCreationTime = containerCreationTime, now = now,
+                                                                periodLength = periodLength,
+                                                                pointsConsumed = pointsConsumed)
+                                                    }
+                                                }
+                                                myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = false))
                                             } else {
                                                 logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
                                                 myComputations.replace(request.id, FailedComputation(request.type, request.input, "Computation timed out after $computeTimeoutSeconds seconds", isFast = false))
@@ -461,7 +464,7 @@ class HybridComputeSpecialTransactionExtension(
                 RequestTakenOp.OP_NAME -> {
                     val request = RequestTakenOp.fromOpData(op)
                     if (!cs.verifyDigest(requestTakenHash(blockchainRID, request.id), Signature(request.processedBy, request.signatureData))) {
-                        throw UserMistake("Validate ${RequestTakenOp.OP_NAME} operation failed for request id [${request.id}] of type [${request.type}]: Invalid signature.")
+                        throw UserMistake("Validate ${RequestTakenOp.OP_NAME} operation failed for request id [${request.id}] of type [${request.type}]: Invalid signature")
                     }
                     if (!myComputations.contains(request.id)) {
                         bctx.addAfterCommitHook {
@@ -474,7 +477,7 @@ class HybridComputeSpecialTransactionExtension(
                 ResponseOp.OP_NAME -> {
                     val response = ResponseOp.fromOpData(op)
                     if (!cs.verifyDigest(responseHash(blockchainRID, response.id, response.output), Signature(response.processedBy, response.signatureData))) {
-                        throw UserMistake("Validate ${ResponseOp.OP_NAME} operation failed for request id [${response.id}] of type [${response.type}]: Invalid signature.")
+                        throw UserMistake("Validate ${ResponseOp.OP_NAME} operation failed for request id [${response.id}] of type [${response.type}]: Invalid signature")
                     }
 
                     if (!takenComputations.contains(response.id)) {
@@ -490,15 +493,15 @@ class HybridComputeSpecialTransactionExtension(
 
                     val engine = getEngine(response.id, response.type)
 
-                    if (myComputations.containsKey(response.id) && response.processedBy.contentEquals(nodePubKey.data)) {
-                        val localComputation = myComputations[response.id]
+                    val localComputation = myComputations[response.id]
+                    if (localComputation != null && response.processedBy.contentEquals(nodePubKey.data)) {
                         if (localComputation is FinishedComputation) {
                             if (localComputation.output != response.output) {
-                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local output does not match operation output.")
+                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local output does not match operation output")
                             }
                             logger.debug { "Skipping validation of response for id [${response.id}] of type [${response.type}] on block builder node" }
                         } else {
-                            throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local computation state is ${localComputation?.javaClass?.simpleName}, expected FinishedComputation.")
+                            throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: local computation state is ${localComputation.javaClass.simpleName}, expected FinishedComputation")
                         }
                     } else {
                         if (engine is DatabaseAwareHybridComputeEngine) {
@@ -536,7 +539,7 @@ class HybridComputeSpecialTransactionExtension(
                 FailureOp.OP_NAME -> {
                     val failure = FailureOp.fromOpData(op)
                     if (!cs.verifyDigest(failureHash(blockchainRID, failure.id, failure.error), Signature(failure.processedBy, failure.signatureData))) {
-                        throw UserMistake("Validate ${FailureOp.OP_NAME} operation failed for request id [${failure.id}] of type [${failure.type}]: Invalid signature.")
+                        throw UserMistake("Validate ${FailureOp.OP_NAME} operation failed for request id [${failure.id}] of type [${failure.type}]: Invalid signature")
                     }
 
                     if (!takenComputations.contains(failure.id)) {
