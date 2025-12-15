@@ -40,11 +40,11 @@ class ResponseOp(
         val type: String,
         val input: Gtv,
         val output: Gtv,
-        val signatureSubjectId: ByteArray,
+        val processedBy: ByteArray,
         val signatureData: ByteArray,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation response(id: text, type: text, input: gtv, output: gtv, signature_subject_id: byte_array, signature_data: byte_array)
+        // @mount('__hc.') operation response(id: text, type: text, input: gtv, output: gtv, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.response"
 
         fun fromOpData(opData: GtxOpData): ResponseOp {
@@ -61,7 +61,7 @@ class ResponseOp(
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, output, gtv(signatureSubjectId), gtv(signatureData)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, output, gtv(processedBy), gtv(signatureData)))
 }
 
 class FailureOp(
@@ -69,11 +69,11 @@ class FailureOp(
         val type: String,
         val input: Gtv,
         val error: String,
-        val signatureSubjectId: ByteArray,
+        val processedBy: ByteArray,
         val signatureData: ByteArray,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation failure(id: text, type: text, input: gtv, error: text, signature_subject_id: byte_array, signature_data: byte_array)
+        // @mount('__hc.') operation failure(id: text, type: text, input: gtv, error: text, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.failure"
 
         fun fromOpData(opData: GtxOpData): FailureOp {
@@ -90,7 +90,7 @@ class FailureOp(
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, gtv(error), gtv(signatureSubjectId), gtv(signatureData)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, gtv(error), gtv(processedBy), gtv(signatureData)))
 }
 
 class ClusterTimeoutOp(

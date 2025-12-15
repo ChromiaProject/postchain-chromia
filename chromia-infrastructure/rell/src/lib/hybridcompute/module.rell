@@ -48,12 +48,12 @@ operation request_taken(id: text, type: text, processed_by: byte_array, signatur
 }
 
 @mount('__hc.')
-operation response(id: text, type: text, input: gtv, output: gtv, signature_subject_id: byte_array, signature_data: byte_array) {
+operation response(id: text, type: text, input: gtv, output: gtv, processed_by: byte_array, signature_data: byte_array) {
     response_impl(id, type, input, output);
 }
 
 @mount('__hc.')
-operation failure(id: text, type: text, input: gtv, error: text, signature_subject_id: byte_array, signature_data: byte_array) {
+operation failure(id: text, type: text, input: gtv, error: text, processed_by: byte_array, signature_data: byte_array) {
     failure_impl(id, type, input, error);
 }
 

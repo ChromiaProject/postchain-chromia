@@ -9,8 +9,6 @@ import net.postchain.base.BaseBlockEContext
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
-import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -57,7 +55,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
-        extension.init(module, 1L, BlockchainRid("C9F360FA8B35A77EF0537C133DAEE629AFAB77873BD4A8DD6E5ED8B8D996B811".hexStringToByteArray()), cs)
+        val blockchainRID = BlockchainRid.buildRepeat(1)
+        extension.init(module, 1L, blockchainRID, cs)
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
@@ -65,18 +64,19 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
-        val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
-        val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
+        val node1 = cs.generateKeyPair()
+        val node2 = cs.generateKeyPair()
+        val sigMaker1 = cs.buildSigMaker(node1)
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         whenever(bctx.height).thenReturn(1L)
-        val signatureData = "BAC412C226C0245B623D6E805130A84DEA19CBC563A9FD690F38B877B44E45FC3BFE82C6E3ACFAFAB72AEE66CD7B2B213E7B4F47DB37E0256B2AACD4F042A5C1".hexStringToByteArray()
-        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+        val signature = sigMaker1.signDigest(extension.requestTakenHash(blockchainRID, "taken"))
+        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node1.pubKey.data, signature.data).toOpData())))
         assertFailure {
-            extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node0Pubkey.hexStringToByteArray(), signatureData).toOpData()))
+            extension.validateSpecialOperations(mock(), bctx, listOf(RequestTakenOp("taken", "test", node2.pubKey.data, signature.data).toOpData()))
         }.isInstanceOf<UserMistake>().messageContains("Validate __hc.request_taken operation failed for request id [taken] of type [test]: Invalid signature")
     }
 
@@ -100,12 +100,14 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
-        val signature1 = sigMaker1.signDigest(extension.hash("success", blockchainRID.toHex(), bctx.height))
-        val signature2 = sigMaker2.signDigest(extension.hash("success", blockchainRID.toHex(), bctx.height))
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
+
+        val signature1 = sigMaker1.signDigest(extension.responseHash(blockchainRID, "success", gtv("output")))
+        val signature2 = sigMaker2.signDigest(extension.responseHash(blockchainRID, "success", gtv("output")))
+        val signatureBogus = sigMaker1.signDigest(extension.responseHash(blockchainRID, "success", gtv("bogus")))
 
         whenever(module.query(bctx, GET_REQUESTS, gtv(mapOf()))).thenReturn(
                 gtv(listOf(GtvObjectMapper.toGtvDictionary(ComputeRequest("success", "test", gtv("input"), 0, ByteArray(0).wrap(), State.NEW)))))
@@ -135,7 +137,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         }.isInstanceOf<UserMistake>().messageContains("Validation of response for id [success] of type [test] failed: unexpected signer:")
         assertFailure {
             extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
-                    ResponseOp("success", "test", gtv("input"), gtv("bogus"), signature1.subjectID, signature1.data).toOpData()))
+                    ResponseOp("success", "test", gtv("input"), gtv("bogus"), signatureBogus.subjectID, signatureBogus.data).toOpData()))
         }.isInstanceOf<UserMistake>().messageContains("Validation of response for id [success] of type [test] failed: local output does not match operation output")
     }
 
@@ -156,7 +158,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
-        val signature = sigMaker.signDigest(extension.hash("success", blockchainRID.toHex(), bctx.height))
+        val signature = sigMaker.signDigest(extension.failureHash(blockchainRID, "success", "error message"))
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
@@ -165,7 +167,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
         assertFailure {
             extension.validateSpecialOperations(mock<SpecialTransactionPosition>(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", signature.subjectID, signature.data).toOpData()))
-        }.isInstanceOf<UserMistake>().messageContains("Validate __hc.response operation failed for request id [fail] of type [test]: Invalid signature")
+        }.isInstanceOf<UserMistake>().messageContains("Validate __hc.failure operation failed for request id [fail] of type [test]: Invalid signature")
     }
 
     @Test
@@ -173,7 +175,11 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
-        extension.init(module, 1L, BlockchainRid("C9F360FA8B35A77EF0537C133DAEE629AFAB77873BD4A8DD6E5ED8B8D996B811".hexStringToByteArray()), cs)
+        val node1 = cs.generateKeyPair()
+        val node2 = cs.generateKeyPair()
+        val sigMaker2 = cs.buildSigMaker(node2)
+        val blockchainRID = BlockchainRid.buildRepeat(1)
+        extension.init(module, 1L, blockchainRID, cs)
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
@@ -181,24 +187,22 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.blockBuildingIntervalMillis = 60 * 1000
         extension.setEngines(listOf(StubHybridComputeEngine()), listOf())
         val bctx = mock<BlockEContext>()
-        val node0Pubkey = "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070"
-        val node1Pubkey = "031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
         extension.load()
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
             assertThat(extension.loaded.get()).isEqualTo(1)
         }
 
         whenever(bctx.height).thenReturn(5L)
-        val signatureData = "4119C4ACCD4A8BF23447CC278A712EEF4AD01CB415248E052AF476A321629EDF7D3A5CFB06D731C7E272091CE73464736C872822C7156746359DBB7C571345DF".hexStringToByteArray()
+        val signature = sigMaker2.signDigest(extension.failureHash(blockchainRID, "fail", "error message"))
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv("id" to gtv("fail")))).thenReturn(
-                GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node1Pubkey.hexStringToWrappedByteArray(), State.TAKEN)))
-        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData())))
+                GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node2.pubKey.wData, State.TAKEN)))
+        assertTrue(extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node2.pubKey.data, signature.data).toOpData())))
 
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv("id" to gtv("fail")))).thenReturn(
-                GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node0Pubkey.hexStringToWrappedByteArray(), State.TAKEN)))
+                GtvObjectMapper.toGtvDictionary(ComputeRequest("fail", "test", gtv("input"), 0L, node1.pubKey.wData, State.TAKEN)))
         assertFailure {
-            extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node1Pubkey.hexStringToByteArray(), signatureData).toOpData()))
+            extension.validateSpecialOperations(mock(), bctx, listOf(FailureOp("fail", "test", gtv("input"), "error message", node2.pubKey.data, signature.data).toOpData()))
         }.isInstanceOf<UserMistake>().messageContains("Validation of failure for id [fail] of type [test] failed: unexpected signer:")
     }
 
@@ -208,7 +212,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), clock = clock)
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
-        extension.init(module, 1L, BlockchainRid("C9F360FA8B35A77EF0537C133DAEE629AFAB77873BD4A8DD6E5ED8B8D996B811".hexStringToByteArray()), cs)
+        val blockchainRID = BlockchainRid.buildRepeat(1)
+        extension.init(module, 1L, blockchainRID, cs)
         extension.concurrency = 1
         extension.loadTimeoutSeconds = 3
         extension.computeTimeoutSeconds = 5
