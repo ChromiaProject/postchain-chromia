@@ -3,7 +3,6 @@ package net.postchain.hybridcompute
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.withWriteConnection
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.core.BlockchainProcess
@@ -26,8 +25,9 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
         if (configuration is GTXModuleAware) {
             configuration.module.getSpecialTxExtensions().filterIsInstance<HybridComputeSpecialTransactionExtension>().firstOrNull()?.let { txExt ->
                 val config = configuration.rawConfig.asDict()["hybridcompute"]?.toObject<HybridComputeConfig>()
-                        ?: throw UserMistake("hybridcompute configuration not found")
-                require(config.concurrency > 0) { "concurrency must be greater than 0" }
+                        ?: throw IllegalArgumentException("hybridcompute configuration not found")
+                require(config.concurrency in 1..Int.MAX_VALUE) { "concurrency must be greater than 0" }
+                require(config.blockBuildingIntervalMillis > 0) { "block_building_interval_millis must be greater than 0" }
                 val engineNames = config.engines.ifEmpty {
                     if (config.engine.isNotEmpty()) listOf(config.engine) else listOf()
                 }
