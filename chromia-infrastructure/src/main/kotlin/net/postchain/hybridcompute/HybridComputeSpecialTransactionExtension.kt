@@ -7,6 +7,7 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.containers.ContainerRateLimit
@@ -19,8 +20,10 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
@@ -80,6 +83,8 @@ class HybridComputeSpecialTransactionExtension(
     private lateinit var nodePubkey: ByteArray
     private lateinit var sigMaker: SigMaker
     private lateinit var cs: CryptoSystem
+    private lateinit var merkleHashCalculator: GtvMerkleHashCalculatorBase
+
     private var chainID: Long = -1
     private lateinit var blockchainRID: BlockchainRid
 
@@ -105,6 +110,7 @@ class HybridComputeSpecialTransactionExtension(
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         this.module = module
         this.cs = cs
+        this.merkleHashCalculator = GtvMerkleHashCalculatorV2(cs)
         this.chainID = chainID
         this.blockchainRID = blockchainRID
     }
@@ -252,7 +258,7 @@ class HybridComputeSpecialTransactionExtension(
                                     myComputations.remove(id)
                                 } else {
                                     logger.info("Submitting successful response for request id [$id] of type [${computation.type}]")
-                                    val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                                    val signature = sigMaker.signDigest(responseHash(blockchainRID, id, computation.output))
                                     add(ResponseOp(id, computation.type, computation.input, computation.output, signature.subjectID, signature.data).toOpData())
                                     bctx.addAfterCommitHook { myComputations.remove(id) }
                                 }
@@ -264,7 +270,7 @@ class HybridComputeSpecialTransactionExtension(
                                     myComputations.remove(id)
                                 } else {
                                     logger.info("Submitting failed response for request id [$id] of type [${computation.type}]")
-                                    val signature = sigMaker.signDigest(hash(id, blockchainRID.toHex(), bctx.height))
+                                    val signature = sigMaker.signDigest(failureHash(blockchainRID, id, computation.errorMessage))
                                     add(FailureOp(id, computation.type, computation.input, computation.errorMessage, signature.subjectID, signature.data).toOpData())
                                     bctx.addAfterCommitHook { myComputations.remove(id) }
                                 }
@@ -314,8 +320,8 @@ class HybridComputeSpecialTransactionExtension(
 
                         if (myComputations.putIfAbsent(request.id, TakenComputation(request.type, request.input)) != null) continue
                         logger.info("Taking request id [${request.id}] of type [${request.type}]${if (computer == null) " fast" else ""}")
-                        val signature = sigMaker.signDigest(hash(request.id, blockchainRID.toHex(), bctx.height))
-                        add(RequestTakenOp(request.id, request.type, nodePubkey, signature.data).toOpData())
+                        val takenSignature = sigMaker.signDigest(requestTakenHash(blockchainRID, request.id))
+                        add(RequestTakenOp(request.id, request.type, takenSignature.subjectID, takenSignature.data).toOpData())
                         takenRequests[request.type] = takenRequestsOfThisType + 1
 
                         if (computer == null) {
@@ -337,16 +343,19 @@ class HybridComputeSpecialTransactionExtension(
                                 }
                                 logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration, submitting successful response")
                                 myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = true))
+                                val signature = sigMaker.signDigest(responseHash(blockchainRID, request.id, output))
                                 add(ResponseOp(request.id, request.type, request.input, output, signature.subjectID, signature.data).toOpData())
                             } catch (e: UserMistake) {
                                 logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}, submitting failed response")
                                 val errorMessage = e.message ?: "Unknown error"
                                 myComputations.replace(request.id, FailedComputation(request.type, request.input, errorMessage, isFast = true))
+                                val signature = sigMaker.signDigest(failureHash(blockchainRID, request.id, errorMessage))
                                 add(FailureOp(request.id, request.type, request.input, errorMessage, signature.subjectID, signature.data).toOpData())
                             } catch (e: Exception) {
                                 logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly, submitting failed response: $e", e)
                                 val errorMessage = "Unknown error"
                                 myComputations.replace(request.id, FailedComputation(request.type, request.input, errorMessage, isFast = true))
+                                val signature = sigMaker.signDigest(failureHash(blockchainRID, request.id, errorMessage))
                                 add(FailureOp(request.id, request.type, request.input, errorMessage, signature.subjectID, signature.data).toOpData())
                             }
                             bctx.addAfterCommitHook { myComputations.remove(request.id) }
@@ -436,7 +445,9 @@ class HybridComputeSpecialTransactionExtension(
             when (op.opName) {
                 RequestTakenOp.OP_NAME -> {
                     val request = RequestTakenOp.fromOpData(op)
-                    validateSignature(RequestTakenOp.OP_NAME, bctx, request.id, request.type, request.processedBy, request.signatureData)
+                    if (!cs.verifyDigest(requestTakenHash(blockchainRID, request.id), Signature(request.processedBy, request.signatureData))) {
+                        throw UserMistake("Validate ${RequestTakenOp.OP_NAME} operation failed for request id [${request.id}] of type [${request.type}]: Invalid signature.")
+                    }
                     if (!myComputations.contains(request.id)) {
                         bctx.addAfterCommitHook {
                             otherNodesPendingComputations.add(request.id)
@@ -447,13 +458,15 @@ class HybridComputeSpecialTransactionExtension(
 
                 ResponseOp.OP_NAME -> {
                     val response = ResponseOp.fromOpData(op)
-                    validateSignature(ResponseOp.OP_NAME, bctx, response.id, response.type, response.signatureSubjectId, response.signatureData)
+                    if (!cs.verifyDigest(responseHash(blockchainRID, response.id, response.output), Signature(response.processedBy, response.signatureData))) {
+                        throw UserMistake("Validate ${ResponseOp.OP_NAME} operation failed for request id [${response.id}] of type [${response.type}]: Invalid signature.")
+                    }
 
                     if (!takenComputations.contains(response.id)) {
                         val takenComputeRequest = getTakenRequestById(bctx, response.id)
                         if (takenComputeRequest != null) {
-                            if (!response.signatureSubjectId.contentEquals(takenComputeRequest.processedBy.data)) {
-                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: unexpected signer: ${response.signatureSubjectId.toHex()}")
+                            if (!response.processedBy.contentEquals(takenComputeRequest.processedBy.data)) {
+                                throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: unexpected signer: ${response.processedBy.toHex()}")
                             }
                         } else {
                             throw UserMistake("Validate of response for id [${response.id}] of type [${response.type}] failed: Taken request not found")
@@ -462,7 +475,7 @@ class HybridComputeSpecialTransactionExtension(
 
                     val engine = getEngine(response.id, response.type)
 
-                    if (myComputations.containsKey(response.id) && response.signatureSubjectId.contentEquals(nodePubkey)) {
+                    if (myComputations.containsKey(response.id) && response.processedBy.contentEquals(nodePubkey)) {
                         val localComputation = myComputations[response.id]
                         if (localComputation is FinishedComputation) {
                             if (localComputation.output != response.output) {
@@ -507,13 +520,15 @@ class HybridComputeSpecialTransactionExtension(
 
                 FailureOp.OP_NAME -> {
                     val failure = FailureOp.fromOpData(op)
-                    validateSignature(ResponseOp.OP_NAME, bctx, failure.id, failure.type, failure.signatureSubjectId, failure.signatureData)
+                    if (!cs.verifyDigest(failureHash(blockchainRID, failure.id, failure.error), Signature(failure.processedBy, failure.signatureData))) {
+                        throw UserMistake("Validate ${FailureOp.OP_NAME} operation failed for request id [${failure.id}] of type [${failure.type}]: Invalid signature.")
+                    }
 
                     if (!takenComputations.contains(failure.id)) {
                         val takenComputeRequest = getTakenRequestById(bctx, failure.id)
                         if (takenComputeRequest != null) {
-                            if (!failure.signatureSubjectId.contentEquals(takenComputeRequest.processedBy.data)) {
-                                throw UserMistake("Validation of failure for id [${failure.id}] of type [${failure.type}] failed: unexpected signer: ${failure.signatureSubjectId.toHex()}")
+                            if (!failure.processedBy.contentEquals(takenComputeRequest.processedBy.data)) {
+                                throw UserMistake("Validation of failure for id [${failure.id}] of type [${failure.type}] failed: unexpected signer: ${failure.processedBy.toHex()}")
                             }
                         } else {
                             throw UserMistake("Validate of failure for id [${failure.id}] of type [${failure.type}] failed: Taken request not found")
@@ -655,13 +670,14 @@ class HybridComputeSpecialTransactionExtension(
         return engineAndComputer
     }
 
-    private fun validateSignature(opName: String, bctx: BlockEContext, id: String, type: String, subjectId: ByteArray, signatureData: ByteArray) {
-        if (!cs.verifyDigest(hash(id, blockchainRID.toHex(), bctx.height), Signature(subjectId, signatureData))) {
-            throw UserMistake("Validate $opName operation failed for request id [${id}] of type [${type}]: Invalid signature.")
-        }
-    }
+    internal fun requestTakenHash(blockchainRID: BlockchainRid, id: String): Hash =
+            gtv(gtv(RequestTakenOp.OP_NAME), gtv(blockchainRID), gtv(id)).merkleHash(merkleHashCalculator)
 
-    internal fun hash(id: String, blockchainRID: String, height: Long) = gtv(gtv(id), gtv(blockchainRID), gtv(height)).merkleHash(GtvMerkleHashCalculatorV2(cs))
+    internal fun responseHash(blockchainRID: BlockchainRid, id: String, output: Gtv): Hash =
+            gtv(gtv(ResponseOp.OP_NAME), gtv(blockchainRID), gtv(id), output).merkleHash(merkleHashCalculator)
+
+    internal fun failureHash(blockchainRID: BlockchainRid, id: String, error: String): Hash =
+            gtv(gtv(FailureOp.OP_NAME), gtv(blockchainRID), gtv(id), gtv(error)).merkleHash(merkleHashCalculator)
 
     private fun getTakenRequestById(ctx: EContext, id: String): ComputeRequest? {
         val request = module.query(ctx, GET_TAKEN_REQUEST, gtv("id" to gtv(id)))
