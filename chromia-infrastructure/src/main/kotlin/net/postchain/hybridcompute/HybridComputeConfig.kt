@@ -16,14 +16,6 @@ data class HybridComputeConfig(
         val fastEngines: List<String> = listOf(),
 
         @DefaultValue(defaultLong = -1)
-        @Name("load_timeout_seconds")
-        val loadTimeoutSeconds: Long,
-
-        @DefaultValue(defaultLong = -1)
-        @Name("compute_timeout_seconds")
-        val computeTimeoutSeconds: Long,
-
-        @DefaultValue(defaultLong = -1)
         @Name("compute_cluster_timeout_seconds")
         val computeClusterTimeoutSeconds: Long,
 

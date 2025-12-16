@@ -312,63 +312,6 @@ class HybridComputeIT : IntegrationTestSetup() {
 
     @Test
     @Timeout(1, unit = TimeUnit.MINUTES)
-    fun `timed out computation`() {
-        doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
-        buildBlock(chainIid.toLong()) // produce positive block timestamp
-        val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
-        assertThat(firstBlockTimestamp).isGreaterThan(0)
-
-        val input = CompleteComputation(8, 1L).encode()
-        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
-            it.submitComputeRequestOperation("timeout", "test", input)
-        }
-        buildBlock(chainIid.toLong())
-        queryAllNodes(chainIid.toLong()) { query ->
-            assertThat(query.fetchRequests()).containsOnly(Computation(
-                    id = "timeout",
-                    state = State.TAKEN,
-                    type = "test",
-                    input = GtvEncoder.encodeGtv(input).wrap(),
-                    output = ByteArray(0).wrap(),
-                    error = "",
-                    resultTxRid = ByteArray(0).wrap(),
-                    resultOpIndex = -1,
-                    takenTimestamp = firstBlockTimestamp,
-                    processedBy = node1Pubkey,
-            ))
-            assertThat(query.fetchComputeResult("timeout")).isNull()
-        }
-
-        Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            buildBlock(chainIid.toLong())
-            val txRid = getTxRidsAtHeight(nodes.first(), getLastHeight(nodes.first())).firstOrNull()
-            assertThat(txRid).isNotNull()
-            queryAllNodes(chainIid.toLong()) { query ->
-                assertThat(query.fetchRequests()).containsOnly(Computation(
-                        id = "timeout",
-                        state = State.FAILED,
-                        type = "test",
-                        input = GtvEncoder.encodeGtv(input).wrap(),
-                        output = ByteArray(0).wrap(),
-                        error = "Computation timed out after 5 seconds",
-                        resultTxRid = txRid!!.wrap(),
-                        resultOpIndex = 0,
-                        takenTimestamp = firstBlockTimestamp,
-                        processedBy = node1Pubkey,
-                ))
-                assertThat(query.fetchComputeResult("timeout")).isEqualTo(ComputeResult(
-                        result = null,
-                        error = "Computation timed out after 5 seconds",
-                        txRid = txRid.wrap(),
-                        opIndex = 0,
-                ))
-            }
-        }
-    }
-
-    @Test
-    @Timeout(1, unit = TimeUnit.MINUTES)
     fun `invalid computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
         Thread.sleep(3000) // wait for loading to finish

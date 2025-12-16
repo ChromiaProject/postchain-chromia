@@ -65,8 +65,6 @@ class HybridComputeSynchronizationInfrastructureExtension(private val postchainC
                         containerCreationTime,
                         containerRateLimits,
                         concurrency = config.concurrency.toInt(),
-                        loadTimeoutSeconds = config.loadTimeoutSeconds,
-                        computeTimeoutSeconds = config.computeTimeoutSeconds,
                         computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds,
                         blockBuildingIntervalMillis = config.blockBuildingIntervalMillis,
                         sharedStorage = postchainContext.sharedStorage,

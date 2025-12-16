@@ -17,16 +17,18 @@ interface DatabaseAwareHybridComputeEngine : HybridComputeEngine {
      * @param ctx    read-only database connection
      *
      * Any heavy or time-consuming initialization should be performed in this method.
-     * This method is executed asynchronously and should block until the initialization is finished. Should honor
-     * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
+     * This method is executed asynchronously and should block until the initialization is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely.
      */
     fun load(ctx: EContext)
 
     /**
      * Performs a computation with database access.
      *
-     * This method is executed asynchronously and should block until the computation is finished. Should honor
+     * This method is executed asynchronously and should block until the computation is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely. Should honor
      * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
+     * if possible.
      *
      * @param ctx    read-only database connection
      * @param input  input to the computation
