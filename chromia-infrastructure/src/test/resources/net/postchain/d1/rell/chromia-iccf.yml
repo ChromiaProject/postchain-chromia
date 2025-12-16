@@ -17,4 +17,4 @@ blockchains:
           - "net.postchain.d1.iccf.IccfTestGTXModule"
 
 compile:
-  rellVersion: 0.14.15
+  rellVersion: 0.15.0

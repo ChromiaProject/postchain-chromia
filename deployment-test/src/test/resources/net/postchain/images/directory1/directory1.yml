@@ -375,4 +375,4 @@ blockchains:
             issuing_blockchain_rid: x"00"
 
 compile:
-  rellVersion: 0.14.15
+  rellVersion: 0.15.0
