@@ -152,4 +152,4 @@ blockchains:
                 network_id: 1337
 
 compile:
-  rellVersion: 0.14.15
+  rellVersion: 0.15.0

@@ -1,0 +1,25 @@
+module;
+
+struct signature {
+    subjectID: byte_array;
+    data: byte_array;
+}
+
+/**
+ * Encode Postchain block witness data.
+ *
+ * @param signatures  the signatures
+ * @return encoded block witness
+ */
+function encode(signatures: list<signature>): byte_array = encode0(signatures.to_gtv_pretty());
+
+/**
+ * Decode Postchain block witness data.
+ *
+ * @param data  block witness data
+ * @return signatures
+ */
+function decode(data: byte_array): list<signature> = list<signature>.from_gtv_pretty(decode0(data));
+
+@native function encode0(witness: gtv): byte_array;
+@native function decode0(data: byte_array): gtv;

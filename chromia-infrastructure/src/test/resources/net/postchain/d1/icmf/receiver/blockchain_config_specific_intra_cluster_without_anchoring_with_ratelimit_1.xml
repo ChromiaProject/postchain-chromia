@@ -62,7 +62,7 @@
             <entry key="rell">
                 <dict>
                     <entry key="compilerVersion">
-                        <string>0.14.15</string>
+                        <string>0.15.0</string>
                     </entry>
                     <entry key="modules">
                         <array>
@@ -93,7 +93,7 @@
                         <int>1</int>
                     </entry>
                     <entry key="version">
-                        <string>0.14.15</string>
+                        <string>0.15.0</string>
                     </entry>
                 </dict>
             </entry>

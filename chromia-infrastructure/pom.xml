@@ -35,7 +35,10 @@
             <groupId>net.postchain.client</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rell-api-native</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>chromia-core</artifactId>

@@ -32,8 +32,8 @@
         <postchain.version>3.47.4</postchain.version>
         <postchain.client.version>3.38.0</postchain.client.version>
         <directory.chain.version>1.107.3</directory.chain.version>
-        <rell.version>0.14.15</rell.version>
-        <rell.maven.plugin.version>0.16.1</rell.maven.plugin.version>
+        <rell.version>0.15.0</rell.version>
+        <rell.maven.plugin.version>0.16.3</rell.maven.plugin.version>
         <eif.version>0.27.3</eif.version>
         <web3j.version>4.12.0</web3j.version>
         <web3j-plugin.version>4.11.3</web3j-plugin.version>
@@ -102,6 +102,11 @@
             <dependency>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-gtx</artifactId>
+                <version>${rell.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-api-native</artifactId>
                 <version>${rell.version}</version>
             </dependency>
             <dependency>
