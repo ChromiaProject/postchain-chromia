@@ -48,11 +48,8 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
 import kotlin.time.Duration.Companion.days
 import kotlin.time.measureTime
@@ -77,7 +74,6 @@ class HybridComputeSpecialTransactionExtension(
     private var containerCreationTime: Instant? = null
     private var containerRateLimits: Map<String, ContainerRateLimit> = mapOf()
     private var concurrency: Int = -1
-    private var computeTimeoutSeconds: Long = -1
     private var computeClusterTimeoutSeconds: Long = -1
     private var blockBuildingIntervalMillis: Long = -1
     private lateinit var sharedStorage: Storage
@@ -85,7 +81,6 @@ class HybridComputeSpecialTransactionExtension(
 
     private lateinit var loader: ExecutorService
     private lateinit var validator: ExecutorService
-    private lateinit var timeouter: ScheduledExecutorService
 
     internal val loaded = AtomicInteger(0)
     internal val myComputations = ConcurrentHashMap<String, Computation>() // id -> computation
@@ -113,8 +108,6 @@ class HybridComputeSpecialTransactionExtension(
             containerCreationTime: Instant?,
             containerRateLimits: Map<String, ContainerRateLimit>,
             concurrency: Int,
-            loadTimeoutSeconds: Long,
-            computeTimeoutSeconds: Long,
             computeClusterTimeoutSeconds: Long,
             blockBuildingIntervalMillis: Long,
             sharedStorage: Storage,
@@ -132,7 +125,6 @@ class HybridComputeSpecialTransactionExtension(
         this.containerCreationTime = containerCreationTime
         this.containerRateLimits = containerRateLimits
         this.concurrency = concurrency
-        this.computeTimeoutSeconds = computeTimeoutSeconds
         this.computeClusterTimeoutSeconds = computeClusterTimeoutSeconds
         this.blockBuildingIntervalMillis = blockBuildingIntervalMillis
         this.sharedStorage = sharedStorage
@@ -147,8 +139,6 @@ class HybridComputeSpecialTransactionExtension(
         val validatorSize = (engines.values.filterNot { it.first is DatabaseAwareHybridComputeEngine }).size
         this.validator = Executors.newFixedThreadPool(max(validatorSize, 1), // cannot create a thread pool with size 0
                 ThreadFactoryBuilder().setNameFormat("hybridcompute-validate-%d").build())
-        this.timeouter = Executors.newSingleThreadScheduledExecutor(
-                ThreadFactoryBuilder().setNameFormat("hybridcompute-timeout-%d").setDaemon(true).build())
 
         for ((engine, _) in engines.values) {
             loader.submit {
@@ -168,17 +158,9 @@ class HybridComputeSpecialTransactionExtension(
                                 engine.load()
                             }
                         }
-                        if (!Thread.currentThread().isInterrupted) {
-                            logger.info("Engine ${engine.name} loaded in $duration")
-                        } else {
-                            logger.debug { "Loading engine ${engine.name} interrupted" }
-                            failed = true
-                        }
+                        logger.info("Engine ${engine.name} loaded in $duration")
                     } catch (e: UserMistake) {
                         logger.warn("Loading engine ${engine.name} failed: ${e.message}")
-                        failed = true
-                    } catch (_: InterruptedException) {
-                        logger.debug { "Loading engine ${engine.name} interrupted with exception" }
                         failed = true
                     } catch (e: Exception) {
                         logger.warn("Loading engine ${engine.name} failed unexpectedly: $e", e)
@@ -189,19 +171,6 @@ class HybridComputeSpecialTransactionExtension(
             }
         }
         loader.shutdown()
-        if (loadTimeoutSeconds > 0) {
-            timeouter.schedule({
-                withLoggingContext(mapOf(
-                        CHAIN_IID_TAG to chainID.toString(),
-                        BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
-                )) {
-                    if (!loader.isTerminated) {
-                        logger.warn("Loading timed out after $loadTimeoutSeconds seconds, interrupting it")
-                        loader.shutdownNow()
-                    }
-                }
-            }, loadTimeoutSeconds, TimeUnit.SECONDS)
-        }
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean =
@@ -379,7 +348,6 @@ class HybridComputeSpecialTransactionExtension(
                             bctx.addAfterCommitHook { myComputations.remove(request.id) }
                         } else {
                             bctx.addAfterCommitHook {
-                                val timeoutFuture = AtomicReference<ScheduledFuture<*>?>()
                                 val future = computer.submit {
                                     withLoggingContext(mapOf(
                                             CHAIN_IID_TAG to chainID.toString(),
@@ -397,24 +365,16 @@ class HybridComputeSpecialTransactionExtension(
                                                 }
                                             }
                                             val (output, pointsConsumed) = outputPointsConsumed
-                                            if (!Thread.currentThread().isInterrupted) {
-                                                logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
-                                                container?.let {
-                                                    withReadWriteConnection(sharedStorage, chainID) { ctx: EContext ->
-                                                        dbOperations.incrementPoints(ctx, container = it, type = request.type,
-                                                                containerCreationTime = containerCreationTime, now = now,
-                                                                periodLength = periodLength,
-                                                                pointsConsumed = pointsConsumed)
-                                                    }
+                                            logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
+                                            container?.let {
+                                                withReadWriteConnection(sharedStorage, chainID) { ctx: EContext ->
+                                                    dbOperations.incrementPoints(ctx, container = it, type = request.type,
+                                                            containerCreationTime = containerCreationTime, now = now,
+                                                            periodLength = periodLength,
+                                                            pointsConsumed = pointsConsumed)
                                                 }
-                                                myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = false))
-                                            } else {
-                                                logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted" }
-                                                myComputations.replace(request.id, FailedComputation(request.type, request.input, "Computation timed out after $computeTimeoutSeconds seconds", isFast = false))
                                             }
-                                        } catch (_: InterruptedException) {
-                                            logger.debug { "Computation of request id [${request.id}] of type [${request.type}] interrupted with exception" }
-                                            myComputations.replace(request.id, FailedComputation(request.type, request.input, "Computation timed out after $computeTimeoutSeconds seconds", isFast = false))
+                                            myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = false))
                                         } catch (e: UserMistake) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
                                             myComputations.replace(request.id, FailedComputation(request.type, request.input, e.message
@@ -422,27 +382,12 @@ class HybridComputeSpecialTransactionExtension(
                                         } catch (e: Exception) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
                                             myComputations.replace(request.id, FailedComputation(request.type, request.input, "Unknown error", isFast = false))
-                                        } finally {
-                                            timeoutFuture.get()?.cancel(false)
                                         }
                                     }
                                 }
                                 val startedComputation = StartedComputation(request.type, request.input, future)
-                                myComputations.replace(request.id, TakenComputation(request.type, request.input), startedComputation)
-                                if (computeTimeoutSeconds > 0 && !future.isDone) {
-                                    timeoutFuture.set(timeouter.schedule({
-                                        withLoggingContext(mapOf(
-                                                CHAIN_IID_TAG to chainID.toString(),
-                                                BLOCKCHAIN_RID_TAG to blockchainRID.toHex()
-                                        )) {
-                                            if (myComputations.replace(request.id,
-                                                            startedComputation,
-                                                            FailedComputation(request.type, request.input, "Computation timed out after $computeTimeoutSeconds seconds", isFast = false))) {
-                                                logger.warn("Computation of request id [${request.id}] of type [${request.type}] timed out after $computeTimeoutSeconds seconds")
-                                            }
-                                            future.cancel(true) // interrupt the compute thread
-                                        }
-                                    }, computeTimeoutSeconds, TimeUnit.SECONDS))
+                                if (!myComputations.replace(request.id, TakenComputation(request.type, request.input), startedComputation)) {
+                                    logger.warn("Unable to mark request id [${request.id}] of type [${request.type}] as started: inconsistent state")
                                 }
                             }
                         }
@@ -517,14 +462,8 @@ class HybridComputeSpecialTransactionExtension(
                                         val duration = measureTime {
                                             engine.validate(response.input, response.output)
                                         }
-                                        if (!Thread.currentThread().isInterrupted) {
-                                            logger.info("Validation of response for id [${response.id}] of type [${response.type}] succeeded in $duration")
-                                            return@Callable response.id
-                                        } else {
-                                            throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] timed out")
-                                        }
-                                    } catch (_: InterruptedException) {
-                                        throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] timed out with exception")
+                                        logger.info("Validation of response for id [${response.id}] of type [${response.type}] succeeded in $duration")
+                                        return@Callable response.id
                                     } catch (e: UserMistake) {
                                         throw UserMistake("Validation of response for id [${response.id}] of type [${response.type}] failed: ${e.message}")
                                     } catch (e: Exception) {
@@ -628,7 +567,6 @@ class HybridComputeSpecialTransactionExtension(
     private fun isFullyLoaded() = ::engines.isInitialized && (loaded.get() >= engines.size)
 
     override fun shutdown() {
-        timeouter.shutdownNow()
         loader.shutdownNow()
         for ((_, computer) in engines.values) {
             computer?.shutdownNow()
@@ -644,9 +582,6 @@ class HybridComputeSpecialTransactionExtension(
             }
         }
         logger.info("Shutting down executors")
-        if (!timeouter.awaitTermination(1, TimeUnit.SECONDS)) {
-            logger.warn("Timeouter did not terminate in time")
-        }
         if (!loader.awaitTermination(1, TimeUnit.SECONDS)) {
             logger.warn("Loader did not terminate in time")
         }
