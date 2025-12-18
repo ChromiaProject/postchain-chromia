@@ -65,3 +65,4 @@ function extract_op(name): gtx_operation {
     require(false,"no %s operation before me in transaction".format(name));
     return op_context.get_current_operation(); // unreachable
 }
+
