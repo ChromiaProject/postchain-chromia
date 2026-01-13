@@ -45,6 +45,8 @@ blockchains:
           - "merkle_hash_version"
         required_blockchain_features: [ ]
         require_min_merkle_hash_version: 2
+        allowed_dapp_chain_native_functions:
+          - "net.postchain.d1.BlockWitnessRellNative"
       auth_service:
         pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
         include_system_cluster: true
@@ -193,6 +195,8 @@ blockchains:
           - "merkle_hash_version"
         required_blockchain_features: []
         require_min_merkle_hash_version: 2
+        allowed_dapp_chain_native_functions:
+          - "net.postchain.d1.BlockWitnessRellNative"
       node_software_version:
         node_image:
           url: registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server
