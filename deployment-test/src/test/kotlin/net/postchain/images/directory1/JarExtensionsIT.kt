@@ -93,7 +93,7 @@ class JarExtensionsIT : ManagedModeBase("jar_extensions") {
             transactionBuilder().proposeSubnodeJarExtensionOperation(
                     node1.providerPubkey, JAR_EXTENSION_NAME, chromiaDevtoolsJarFile.toFile().readBytes(),
                     SubnodeJarExtensionType.COMMON, "Dummy", "net.postchain.d1.dummy.DummyExtensionGTXModule",
-                    "net.postchain.d1.dummy.DummySynchronizationInfrastructureExtension", "", null)
+                    "net.postchain.d1.dummy.DummySynchronizationInfrastructureExtension", "", null, "")
                     .postTransactionUntilConfirmed("$JAR_EXTENSION_NAME extension proposed")
 
             awaitQueryResult {
