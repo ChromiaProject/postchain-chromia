@@ -27,6 +27,8 @@ import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.BroadcastAware
+import net.postchain.gtx.BroadcastContext
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
@@ -40,7 +42,8 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.time.Clock
 import java.time.Instant
-import java.util.Collections
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentHashMap
@@ -58,7 +61,7 @@ import kotlin.time.measureTimedValue
 class HybridComputeSpecialTransactionExtension(
         private val dbOperations: HybridComputeDatabaseOperations,
         private val clock: Clock = Clock.systemUTC()
-) : GTXBlockBuildingAffectingSpecialTxExtension, Shutdownable {
+) : GTXBlockBuildingAffectingSpecialTxExtension, Shutdownable, BroadcastAware {
     companion object : KLogging() {
         val DEFAULT_PERIOD_LENGTH = 7.days // 1 week
     }
@@ -68,6 +71,8 @@ class HybridComputeSpecialTransactionExtension(
     private lateinit var merkleHashCalculator: GtvMerkleHashCalculatorBase
     private var chainID: Long = -1
     private lateinit var blockchainRID: BlockchainRid
+    private var broadcastContext: BroadcastContext? = null
+    private val broadcasts: BlockingQueue<Gtv> = ArrayBlockingQueue(100)
     private lateinit var nodePubKey: PubKey
     private lateinit var sigMaker: SigMaker
     private var container: String? = null
@@ -84,7 +89,6 @@ class HybridComputeSpecialTransactionExtension(
 
     internal val loaded = AtomicInteger(0)
     internal val myComputations = ConcurrentHashMap<String, Computation>() // id -> computation
-    internal val otherNodesPendingComputations = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     @Volatile
     private var shouldBuildBlockCheckTime = 0L
@@ -96,6 +100,16 @@ class HybridComputeSpecialTransactionExtension(
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         // we initialize this in `load()`
+    }
+
+    override fun initializeBroadcastContext(context: BroadcastContext) {
+        broadcastContext = context
+    }
+
+    override fun receiveBroadcast(data: Gtv) {
+        if (!broadcasts.offer(data)) {
+            logger.warn("Broadcast queue is full, dropping received broadcast")
+        }
     }
 
     fun load(
@@ -192,7 +206,7 @@ class HybridComputeSpecialTransactionExtension(
         if (now - shouldBuildBlockCheckTime < blockBuildingIntervalMillis) return false
         shouldBuildBlockCheckTime = now
 
-        if (otherNodesPendingComputations.isNotEmpty()) {
+        if (broadcasts.peek() != null) {
             shouldBuildBlockNow = true
             return true
         } else {
@@ -264,6 +278,47 @@ class HybridComputeSpecialTransactionExtension(
                         }
                     }
                     computationsToRemove.forEach { myComputations.remove(it) }
+
+                    val broadcastList = mutableListOf<Gtv>()
+                    broadcasts.drainTo(broadcastList)
+                    for (broadcast in broadcastList) {
+                        try {
+                            val op = OpData(broadcast.asArray()[0].asString(), broadcast.asArray()[1].asArray())
+                            when (op.opName) {
+                                ResponseOp.OP_NAME -> {
+                                    val response = ResponseOp.fromOpData(op)
+                                    getEngine(response.id, response.type)
+                                    if (!cs.verifyDigest(responseHash(blockchainRID, response.id, response.output), Signature(response.processedBy, response.signatureData))) {
+                                        throw UserMistake("Validate ${ResponseOp.OP_NAME} operation failed for request id [${response.id}] of type [${response.type}]: Invalid signature")
+                                    }
+                                    if (getTakenRequestById(bctx, response.id) != null) {
+                                        logger.info("Received broadcasted response operation with id [${response.id}] with type [${response.type}], including it")
+                                        add(op)
+                                    } else {
+                                        logger.debug { "Received stale broadcasted response operation with id [${response.id}] with type [${response.type}], ignoring it" }
+                                    }
+                                }
+
+                                FailureOp.OP_NAME -> {
+                                    val failure = FailureOp.fromOpData(op)
+                                    getEngine(failure.id, failure.type)
+                                    if (!cs.verifyDigest(failureHash(blockchainRID, failure.id, failure.error), Signature(failure.processedBy, failure.signatureData))) {
+                                        throw UserMistake("Validate ${FailureOp.OP_NAME} operation failed for request id [${failure.id}] of type [${failure.type}]: Invalid signature")
+                                    }
+                                    if (getTakenRequestById(bctx, failure.id) != null) {
+                                        logger.info("Received broadcasted failure operation with id [${failure.id}] with type [${failure.type}], including it")
+                                        add(op)
+                                    } else {
+                                        logger.debug { "Received stale broadcasted failure operation with id [${failure.id}] with type [${failure.type}], ignoring it" }
+                                    }
+                                }
+
+                                else -> logger.warn("Received unexpected broadcasted operation: ${op.opName}, discarding it")
+                            }
+                        } catch (e: Exception) {
+                            logger.warn("Received invalid broadcast, discarding it: ${e.toString()}")
+                        }
+                    }
 
                     if (computeClusterTimeoutSeconds > 0) {
                         for (request in module.query(bctx, GET_TAKEN_REQUESTS, gtv(mapOf())).asArray().map { it.toObject<ComputeRequest>() }) {
@@ -365,7 +420,7 @@ class HybridComputeSpecialTransactionExtension(
                                                 }
                                             }
                                             val (output, pointsConsumed) = outputPointsConsumed
-                                            logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration")
+                                            logger.info("Computation of request id [${request.id}] of type [${request.type}] finished in $duration, broadcasting result")
                                             container?.let {
                                                 withReadWriteConnection(sharedStorage, chainID) { ctx: EContext ->
                                                     dbOperations.incrementPoints(ctx, container = it, type = request.type,
@@ -375,10 +430,16 @@ class HybridComputeSpecialTransactionExtension(
                                                 }
                                             }
                                             myComputations.replace(request.id, FinishedComputation(request.type, request.input, output, isFast = false))
+                                            val signature = sigMaker.signDigest(responseHash(blockchainRID, request.id, output))
+                                            val op = ResponseOp(request.id, request.type, request.input, output, signature.subjectID, signature.data).toOpData()
+                                            broadcastContext?.broadcast(gtv(gtv(op.opName), gtv(op.args.toList())))
                                         } catch (e: UserMistake) {
-                                            logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}")
-                                            myComputations.replace(request.id, FailedComputation(request.type, request.input, e.message
-                                                    ?: "Unknown error", isFast = false))
+                                            logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed: ${e.message}, broadcasting result")
+                                            val errorMessage = e.message ?: "Unknown error"
+                                            myComputations.replace(request.id, FailedComputation(request.type, request.input, errorMessage, isFast = false))
+                                            val signature = sigMaker.signDigest(failureHash(blockchainRID, request.id, errorMessage))
+                                            val op = FailureOp(request.id, request.type, request.input, errorMessage, signature.subjectID, signature.data).toOpData()
+                                            broadcastContext?.broadcast(gtv(gtv(op.opName), gtv(op.args.toList())))
                                         } catch (e: Exception) {
                                             logger.warn("Computation of request id [${request.id}] of type [${request.type}] failed unexpectedly: $e", e)
                                             myComputations.replace(request.id, FailedComputation(request.type, request.input, "Unknown error", isFast = false))
@@ -411,20 +472,15 @@ class HybridComputeSpecialTransactionExtension(
                     if (!cs.verifyDigest(requestTakenHash(blockchainRID, request.id), Signature(request.processedBy, request.signatureData))) {
                         throw UserMistake("Validate ${RequestTakenOp.OP_NAME} operation failed for request id [${request.id}] of type [${request.type}]: Invalid signature")
                     }
-                    if (!myComputations.contains(request.id)) {
-                        bctx.addAfterCommitHook {
-                            otherNodesPendingComputations.add(request.id)
-                        }
-                    }
                     takenComputations.add(request.id)
                 }
 
                 ResponseOp.OP_NAME -> {
                     val response = ResponseOp.fromOpData(op)
+                    val engine = getEngine(response.id, response.type)
                     if (!cs.verifyDigest(responseHash(blockchainRID, response.id, response.output), Signature(response.processedBy, response.signatureData))) {
                         throw UserMistake("Validate ${ResponseOp.OP_NAME} operation failed for request id [${response.id}] of type [${response.type}]: Invalid signature")
                     }
-
                     if (!takenComputations.contains(response.id)) {
                         val takenComputeRequest = getTakenRequestById(bctx, response.id)
                         if (takenComputeRequest != null) {
@@ -436,7 +492,6 @@ class HybridComputeSpecialTransactionExtension(
                         }
                     }
 
-                    val engine = getEngine(response.id, response.type)
 
                     val localComputation = myComputations[response.id]
                     if (localComputation != null && response.processedBy.contentEquals(nodePubKey.data)) {
@@ -477,6 +532,7 @@ class HybridComputeSpecialTransactionExtension(
 
                 FailureOp.OP_NAME -> {
                     val failure = FailureOp.fromOpData(op)
+                    getEngine(failure.id, failure.type)
                     if (!cs.verifyDigest(failureHash(blockchainRID, failure.id, failure.error), Signature(failure.processedBy, failure.signatureData))) {
                         throw UserMistake("Validate ${FailureOp.OP_NAME} operation failed for request id [${failure.id}] of type [${failure.type}]: Invalid signature")
                     }
@@ -491,12 +547,6 @@ class HybridComputeSpecialTransactionExtension(
                             throw UserMistake("Validate of failure for id [${failure.id}] of type [${failure.type}] failed: Taken request not found")
                         }
                     }
-
-                    getEngine(failure.id, failure.type)
-
-                    bctx.addAfterCommitHook {
-                        otherNodesPendingComputations.remove(failure.id)
-                    }
                 }
 
                 ClusterTimeoutOp.OP_NAME -> {
@@ -505,9 +555,6 @@ class HybridComputeSpecialTransactionExtension(
                     val request = getTakenRequestById(bctx, clusterTimeoutOp.id)
                     if (request == null || !isComputeClusterTimeout(request.takenTimestamp, bctx.timestamp)) {
                         throw UserMistake("Validation of cluster timeout for id [${clusterTimeoutOp.id}] of type [${clusterTimeoutOp.type}] failed")
-                    }
-                    bctx.addAfterCommitHook {
-                        otherNodesPendingComputations.remove(clusterTimeoutOp.id)
                     }
                 }
 
@@ -524,9 +571,6 @@ class HybridComputeSpecialTransactionExtension(
                     engine.validate(bctx, response.input, response.output)
                 }
                 logger.info("DB aware validation for request id [${response.id}] of type [${response.type}] succeeded in $duration")
-                bctx.addAfterCommitHook {
-                    otherNodesPendingComputations.remove(response.id)
-                }
             } catch (e: UserMistake) {
                 throw UserMistake("DB aware validation for request id [${response.id}] of type [${response.type}] failed: ${e.message}")
             } catch (e: Exception) {
@@ -537,10 +581,7 @@ class HybridComputeSpecialTransactionExtension(
         try {
             for (task in nonDbAwareValidations) {
                 try {
-                    val id = task.get()
-                    bctx.addAfterCommitHook {
-                        otherNodesPendingComputations.remove(id)
-                    }
+                    task.get()
                 } catch (e: CancellationException) {
                     throw UserMistake("Validation cancelled unexpectedly: ${e.message}")
                 } catch (e: InterruptedException) {
