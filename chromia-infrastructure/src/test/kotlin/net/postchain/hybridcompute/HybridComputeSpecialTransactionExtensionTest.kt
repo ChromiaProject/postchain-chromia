@@ -16,6 +16,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtx.BroadcastContext
 import net.postchain.gtx.GTXModule
 import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
 import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_REQUESTS
@@ -27,8 +28,10 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
 import java.time.Instant
@@ -42,6 +45,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val cs = Secp256K1CryptoSystem()
         val node = cs.generateKeyPair()
         val computeClusterTimeoutSeconds = 10L
+        extension.initializeBroadcastContext { }
         extension.load(
                 module, 1, BlockchainRid.buildRepeat(1), cs,
                 node,
@@ -71,6 +75,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node1 = cs.generateKeyPair()
         val node2 = cs.generateKeyPair()
         val sigMaker1 = cs.buildSigMaker(node1)
+        extension.initializeBroadcastContext { }
         extension.load(
                 module, 1L, blockchainRID, cs,
                 node1,
@@ -108,6 +113,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val sigMaker2 = cs.buildSigMaker(node2)
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
+        val broadcastContext = mock<BroadcastContext>()
+        extension.initializeBroadcastContext(broadcastContext)
         extension.load(
                 module, 1, blockchainRID, cs,
                 node1,
@@ -147,6 +154,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         extension.createSpecialOperations(SpecialTransactionPosition.Begin, bctx)
         assertTrue(extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
                 ResponseOp("success", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData())))
+        verify(broadcastContext).broadcast(any())
         assertFailure {
             extension.validateSpecialOperations(SpecialTransactionPosition.Begin, bctx, listOf(
                     ResponseOp("bogus", "test", gtv("input"), gtv("output"), signature1.subjectID, signature1.data).toOpData()))
@@ -172,6 +180,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val ctx = mock<EContext>()
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
+        extension.initializeBroadcastContext { }
         extension.load(
                 module, 1, blockchainRID, cs,
                 node1,
@@ -205,6 +214,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val sigMaker2 = cs.buildSigMaker(node2)
         val blockchainRID = BlockchainRid.buildRepeat(1)
         val bctx = mock<BlockEContext>()
+        extension.initializeBroadcastContext { }
         extension.load(
                 module, 1, blockchainRID, cs,
                 node1,
@@ -245,6 +255,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node = cs.generateKeyPair()
         val blockchainRID = BlockchainRid.buildRepeat(1)
         assertFalse(extension.shouldBuildBlock())
+        extension.initializeBroadcastContext { }
         extension.load(
                 module, 1, blockchainRID, cs,
                 node,
@@ -272,7 +283,7 @@ class HybridComputeSpecialTransactionExtensionTest {
         whenever(clock.millis()) doReturn 10000
         extension.blockCommitted(mock())
         assertFalse(extension.shouldBuildBlock())
-        extension.otherNodesPendingComputations.add("others")
+        extension.receiveBroadcast(gtv("test"))
         whenever(clock.millis()) doReturn 10100
         assertFalse(extension.shouldBuildBlock())
         whenever(clock.millis()) doReturn 11001

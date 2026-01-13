@@ -53,7 +53,7 @@ class HybridComputeClusterTimeoutIT : IntegrationTestSetup() {
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
 
-        val input1 = CompleteComputation(6, 1L).encode()
+        val input1 = CompleteComputation(8, 1L).encode()
 
         enqueueTx(chainIid.toLong(), merkleHashCalculator) {
             it.submitComputeRequestOperation("timeout", "test", input1)
