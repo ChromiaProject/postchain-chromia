@@ -102,6 +102,8 @@ deploy_library_chain:
       --library-description "Inter-chain Confirmation Facility test library"
     - ../../ci/library_chain/deploy.sh -n icmf --major 1 --minor 102
       --library-description "Inter-chain Messaging Facility"
+    - ../../ci/library_chain/deploy.sh -n hybridcompute_query --major 1 --minor 0
+      --library-description "Query computation engine for the Hybrid Compute framework"
   artifacts:
     reports:
       dotenv: .library_chain_releases.env
