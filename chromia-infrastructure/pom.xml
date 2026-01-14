@@ -277,6 +277,7 @@
                             <packageName>net.postchain.hybridcompute.rell</packageName>
                             <mainModules>
                                 <mainModule>lib.hybridcompute.test</mainModule>
+                                <mainModule>lib.hybridcompute_query.test</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
