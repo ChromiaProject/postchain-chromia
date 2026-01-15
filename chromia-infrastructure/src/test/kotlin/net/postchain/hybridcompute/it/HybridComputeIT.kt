@@ -1,8 +1,10 @@
 package net.postchain.hybridcompute.it
 
 import assertk.assertThat
+import assertk.assertions.containsAll
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.containsOnly
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
@@ -36,6 +38,8 @@ class HybridComputeIT : IntegrationTestSetup() {
     val chainIid = 1
     lateinit var node0Pubkey: WrappedByteArray
     lateinit var node1Pubkey: WrappedByteArray
+    lateinit var node2Pubkey: WrappedByteArray
+    lateinit var node3Pubkey: WrappedByteArray
     val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
@@ -47,6 +51,8 @@ class HybridComputeIT : IntegrationTestSetup() {
         createNodesFromSystemSetup(sysSetup)
         node0Pubkey = nodes[0].pubKey.hexStringToWrappedByteArray()
         node1Pubkey = nodes[1].pubKey.hexStringToWrappedByteArray()
+        node2Pubkey = nodes[2].pubKey.hexStringToWrappedByteArray()
+        node3Pubkey = nodes[3].pubKey.hexStringToWrappedByteArray()
         return sysSetup
     }
 
@@ -54,7 +60,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `successful computation of different types`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
+        Thread.sleep(3 * 1000) // wait for loading to finish
         buildBlock(chainIid.toLong()) // produce positive block timestamp
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
@@ -127,7 +133,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `concurrent computations`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
+        Thread.sleep(3 * 1000) // wait for loading to finish
         buildBlock(chainIid.toLong()) // produce positive block timestamp
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
@@ -199,7 +205,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
+        Thread.sleep(3 * 1000) // wait for loading to finish
         buildBlock(chainIid.toLong()) // produce positive block timestamp
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
@@ -255,7 +261,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `unexpectedly failed computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
+        Thread.sleep(3 * 1000) // wait for loading to finish
         buildBlock(chainIid.toLong()) // produce positive block timestamp
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
@@ -312,7 +318,7 @@ class HybridComputeIT : IntegrationTestSetup() {
     @Timeout(1, unit = TimeUnit.MINUTES)
     fun `invalid computation`() {
         doSystemSetup(nodeCount = 4, "/infra-libs/hybridcompute_test.xml")
-        Thread.sleep(3000) // wait for loading to finish
+        Thread.sleep(3 * 1000) // wait for loading to finish
         buildBlock(chainIid.toLong()) // produce positive block timestamp
         val firstBlockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
         assertThat(firstBlockTimestamp).isGreaterThan(0)
@@ -360,6 +366,43 @@ class HybridComputeIT : IntegrationTestSetup() {
                     processedBy = node1Pubkey,
             ))
             assertThat(query.fetchComputeResult("invalid")).isNull()
+        }
+
+        // Ensure that the chain is not stuck
+        val blockTimestamp = getChainNodes(chainIid.toLong()).first().blockQueries(chainIid.toLong()).getLastBlockTimestamp().get()
+        val input2 = CompleteComputation(1, 1L).encode()
+        enqueueTx(chainIid.toLong(), merkleHashCalculator) {
+            it. submitComputeRequestOperation("success", "test", input2)
+        }
+
+        buildBlock(chainIid.toLong())
+        queryAllNodes(chainIid.toLong()) { query ->
+            assertThat(query.fetchRequests()).containsAll(Computation(
+                    id = "success",
+                    state = State.TAKEN,
+                    type = "test",
+                    input = GtvEncoder.encodeGtv(input2).wrap(),
+                    output = ByteArray(0).wrap(),
+                    error = "",
+                    resultTxRid = ByteArray(0).wrap(),
+                    resultOpIndex = -1,
+                    takenTimestamp = blockTimestamp,
+                    processedBy = node2Pubkey,
+            ))
+            assertThat(query.fetchComputeResult("success")).isNull()
+        }
+
+        // Wait until computation is finished
+        Thread.sleep(2 * 1000)
+
+        // Build four blocks to let the node who took the computation be primary again
+        buildBlock(chainIid.toLong())
+        buildBlock(chainIid.toLong())
+        buildBlock(chainIid.toLong())
+        buildBlock(chainIid.toLong())
+        queryAllNodes(chainIid.toLong()) { query ->
+            assertThat(query.fetchRequests()).hasSize(2)
+            assertThat(query.fetchComputeResult("success")).isNotNull()
         }
     }
 }
