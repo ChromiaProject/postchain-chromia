@@ -67,6 +67,13 @@ Configuration:
         - ref: ConsoleAppender
         - ref: FileAppender
 
+      - name: net.postchain.base
+        level: info
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
+        - ref: FileAppender
+
       - name: net.postchain.ebft.syncmanager.common
         level: error
 
