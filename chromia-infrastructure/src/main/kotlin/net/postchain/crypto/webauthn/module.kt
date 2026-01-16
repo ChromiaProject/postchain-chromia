@@ -101,7 +101,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
         }
 
         // TODO WebAuthn: refresh this FIDO MDS3 blob monthly: https://fidoalliance.org/metadata/
-        //                next update 2026-01-01
+        //                next update 2026-02-01
         val fidoMDSMetadataBLOB = loadMetadataBLOB(ObjectConverter(), "/net/postchain/crypto/webauthn/fido-mds3.blob", setOf(fidoMDSTrustAnchor))
 
         internal fun loadMetadataBLOB(objectConverter: ObjectConverter, resourcePath: String, trustAnchors: Set<TrustAnchor>): MetadataBLOB {
