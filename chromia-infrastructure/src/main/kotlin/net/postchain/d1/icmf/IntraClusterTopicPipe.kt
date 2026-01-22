@@ -6,6 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.query.ChromiaQueryProvider
 import net.postchain.gtv.GtvEncoder
@@ -37,20 +38,25 @@ class IntraClusterTopicPipe(
     private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? {
         val query = queryProvider.getQuery(blockchainRid)
         if (query == null) {
-            logger.warn("Unable to query blockchain-rid: ${blockchainRid.toHex()}")
+            logger.info("Unable to query blockchain-rid: ${blockchainRid.toHex()}, will retry later")
             return null
         }
 
         val heightToQueryFrom = max(currentPointer, skipToHeight - 1)
-        val allMessages = query.query(
-                QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
-                gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(heightToQueryFrom)))
-        ).asArray().map {
-            val body = it["body"]!!
-            val size = GtvEncoder.encodeGtv(body).size
-            if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
-            it["height"]!!.asInteger() to IcmfMessage(body, size)
-        }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
+        val allMessages = try {
+            query.query(
+                    QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
+                    gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(heightToQueryFrom)))
+            ).asArray().map {
+                val body = it["body"]!!
+                val size = GtvEncoder.encodeGtv(body).size
+                if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
+                it["height"]!!.asInteger() to IcmfMessage(body, size)
+            }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
+        } catch (e: PmEngineIsAlreadyClosed) {
+            logger.info { "Unable to fetch messages for route $route since the sender blockchain $blockchainRid ${e.message}, will retry later" }
+            return null
+        }
 
         val packets = mutableListOf<IcmfPacket>()
         for ((height, messages) in allMessages) {
