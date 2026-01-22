@@ -7,6 +7,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Shutdownable
 import net.postchain.d1.TopicHeaderData
 import net.postchain.d1.cluster.ClusterManagement
@@ -41,14 +42,19 @@ class IntraClusterAnchoredTopicPipe(
     private fun fetchNextInternal(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? {
         val anchorQuery = queryProvider.getClusterAnchoringQuery()
         if (anchorQuery == null) {
-            logger.warn("Anchor chain does not exist!")
+            logger.warn("Anchor chain for cluster $clusterName does not exist!")
             return null
         }
 
-        val signedBlockHeaderWithAnchorHeights = anchorQuery.icmfGetHeadersWithMessagesAfterHeight(
-                route.topic,
-                currentPointer
-        )
+        val signedBlockHeaderWithAnchorHeights = try {
+            anchorQuery.icmfGetHeadersWithMessagesAfterHeight(
+                    route.topic,
+                    currentPointer
+            )
+        } catch (e: PmEngineIsAlreadyClosed) {
+            logger.info { "Unable to fetch anchored headers for route $route since the anchor chain ${e.message}" }
+            return null
+        }
 
         val anchorPackets = mutableListOf<IcmfAnchorPacket>()
         var maxAnchorHeight = currentPointer
@@ -75,18 +81,23 @@ class IntraClusterAnchoredTopicPipe(
                     if (!clusterManagement.getActiveBlockchains(clusterName).contains(blockchainRid)) {
                         logger.info("Blockchain with blockchain-rid: ${blockchainRid.toHex()} is permanently stopped")
                     } else {
-                        logger.warn("Cannot find blockchain with blockchain-rid: ${blockchainRid.toHex()}, will retry later")
+                        logger.info("Cannot find blockchain with blockchain-rid: ${blockchainRid.toHex()}, will retry later")
                     }
                     continue
                 }
 
-                val messages = query.query(
-                        QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
-                        GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(decodedHeader.getHeight())))
-                ).asArray().map {
-                    val size = GtvEncoder.encodeGtv(it).size
-                    if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
-                    IcmfMessage(it, size)
+                val messages = try {
+                    query.query(
+                            QUERY_ICMF_GET_MESSAGES_AT_HEIGHT,
+                            GtvFactory.gtv(mapOf("topic" to GtvFactory.gtv(route.topic), "height" to GtvFactory.gtv(decodedHeader.getHeight())))
+                    ).asArray().map {
+                        val size = GtvEncoder.encodeGtv(it).size
+                        if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
+                        IcmfMessage(it, size)
+                    }
+                } catch (e: PmEngineIsAlreadyClosed) {
+                    logger.info { "Unable to fetch messages for route $route since the sender blockchain $blockchainRid ${e.message}, will retry later" }
+                    continue
                 }
 
                 val merkleHashCalculator = makeMerkleHashCalculator(decodedHeader.getMerkleHashVersion())
