@@ -9,22 +9,22 @@ import net.postchain.gtv.mapper.Nullable
 data class IcmfReceiverEventMessage(
         val replace: Boolean,
 
-        @DefaultValue(defaultBoolean = false)
+        @param:DefaultValue(defaultBoolean = false)
         val remove: Boolean = false,
 
-        @Nullable
+        @param:Nullable
         val topics: List<IcmfReceiverEventTopic>?
 )
 
 data class IcmfReceiverEventTopic(
         val topic: String,
 
-        @Nullable
-        @Name("bc_rid")
+        @param:Nullable
+        @param:Name("bc_rid")
         val bcRid: ByteArray?,
 
-        @Name("skip_to_height")
-        @DefaultValue(0)
+        @param:Name("skip_to_height")
+        @param:DefaultValue(0)
         val skipToHeight: Long
 ) {
     companion object {
