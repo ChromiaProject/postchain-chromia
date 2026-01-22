@@ -5,6 +5,7 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.chain0.common.init.initOperation
@@ -12,6 +13,8 @@ import net.postchain.chain0.common.operations.registerNodeWithUnitsOperation
 import net.postchain.chain0.common.queries.getBlockchains
 import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
+import net.postchain.chain0.common_proposal.getRelevantCommonProposals
+import net.postchain.chain0.common_proposal.makeCommonVoteOperation
 import net.postchain.chain0.economy_chain.getBalance
 import net.postchain.chain0.economy_chain.initOperation
 import net.postchain.chain0.economy_chain_in_directory_chain.initEconomyChainOperation
@@ -19,7 +22,10 @@ import net.postchain.chain0.lib.ft4.core.accounts.AuthDescriptor
 import net.postchain.chain0.lib.ft4.core.accounts.AuthType
 import net.postchain.chain0.lib.ft4.core.accounts.strategies.transfer.open.rasTransferOpenOperation
 import net.postchain.chain0.lib.ft4.external.accounts.strategies.registerAccountOperation
+import net.postchain.chain0.lib.ft4.external.crosschain.APPLY_TRANSFER
+import net.postchain.chain0.lib.ft4.external.crosschain.initTransferOperation
 import net.postchain.chain0.lib.hbridge.BridgeMode
+import net.postchain.chain0.lib.hbridge.bridgeFtAssetToEvmOperation
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
@@ -29,14 +35,18 @@ import net.postchain.chain0.token_chain.BridgeConfiguration
 import net.postchain.chain0.token_chain.MintingPolicy
 import net.postchain.chain0.token_chain.initTokenChainOperation
 import net.postchain.chain0.token_chain.mintTokenOperation
+import net.postchain.chain0.token_chain.pauseTokenChainOperation
 import net.postchain.chain0.token_chain.proposeTokenBridgeOperation
 import net.postchain.chain0.token_chain.proposeTokenOperation
+import net.postchain.chain0.token_chain.proposeUnpauseTokenChainOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initEvmEventReceiverTokenChainOperation
 import net.postchain.chain0.token_chain_in_directory_chain.initTokenChainOperation
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.EndpointPool
 import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.d1.client.ChromiaClientProvider
@@ -45,10 +55,12 @@ import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridge
 import net.postchain.eif.contracts.Validator
+import net.postchain.eif.lib.eif_event_receiver.queries.shouldProcessEvmEvents
 import net.postchain.eif.lib.hbridge.erc20.getBridgeContracts
 import net.postchain.eif.lib.ft4.external.accounts.getAccountById
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
+import net.postchain.eif.lib.hbridge.isPaused
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -98,6 +110,7 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("tc") {
     // EIF / balances
     private val initialSupply = BigInteger.valueOf(1_000_000_000L)
     private val depositAmount = BigInteger.valueOf(1000)
+    private val withdrawAmount = BigInteger.valueOf(500)
     private lateinit var chrAssetId: ByteArray
 
     // EIF / users
@@ -485,5 +498,117 @@ class Directory1TokenChainMixSlowIntegrationTest : EvmTestBase("tc") {
         assertThat(node1.tc.getAccountById(gtv(newUser.pubKey.data).merkleHash(hashCalculator))).isNotNull()
             assertThat(node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, chrAssetId)!!.amount)
                 .isEqualTo(initialBalance.amount.subtract(BigInteger("10000000")))
+    }
+
+    @Test
+    @Order(13)
+    fun `Pause token chain`() {
+        node1.tc.transactionBuilder(listOf(node1.provider)) // Bob is TC governor
+                .pauseTokenChainOperation(node1.providerPubkey)
+                .postTransactionUntilConfirmed("Pausing token chain")
+
+        awaitQueryResult {
+            // Assert TC hbridge is paused
+            assertThat(node1.tc.isPaused()).isTrue()
+            // Assert TC EVM event receiver is paused
+            assertThat(node1.client(eventReceiverBrid).shouldProcessEvmEvents()).isFalse()
+        }
+
+        // Assert withdrawals are rejected when bridge is paused
+        val result = aliceTcAuthenticator.transactionBuilder()
+                .bridgeFtAssetToEvmOperation(
+                        testTokenAssetId,
+                        withdrawAmount,
+                        evmContainerNetworkId,
+                        aliceEvmAddress,
+                        bridgeAddress.substring(2).hexStringToByteArray()
+                ).postAwaitConfirmation()
+        assertThat(result.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(result.rejectReason!!.contains("Withdrawals are not allowed when bridge is paused.")).isTrue()
+
+        // Assert crosschain transfers to and from TC are rejected when bridge is paused
+
+        // Outgoing
+        val outgoingXChainTransferResult = aliceTcAuthenticator.transactionBuilder()
+                .initTransferOperation(aliceTcAuthenticator.accountId, chrAssetId, BigInteger.TEN, listOf(ecBrid.data), Long.MAX_VALUE)
+                .postAwaitConfirmation()
+
+        assertThat(outgoingXChainTransferResult.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(outgoingXChainTransferResult.rejectReason!!.contains("Crosschain transfers are not allowed when token chain is paused")).isTrue()
+
+        // Incoming
+        val chromiaClientProvider = ChromiaClientProvider(
+                ContainerClusterManagement(
+                        ClusterManagementImpl(node1.c0),
+                        mapOf(
+                                systemCluster to listOf(node1.peerInfo(), node2.peerInfo(), node3.peerInfo())
+                        )
+                ),
+                PostchainClientConfig(BlockchainRid.ZERO_RID, EndpointPool.singleUrl(""), merkleHashVersion = 2)
+        )
+        val iccfProofTxMaterialBuilder = IccfProofTxMaterialBuilder(chromiaClientProvider)
+
+        val initTx = aliceAuthenticator.transactionBuilder()
+                .initTransferOperation(aliceAuthenticator.accountId, chrAssetId, BigInteger.TEN, listOf(tcBrid.data), Long.MAX_VALUE)
+                .postAwaitConfirmation()
+
+        val initTransferTx = GtvDecoder.decodeGtv(node1.ec.getTransaction(initTx.txRid))
+
+        val initTxProof = awaitQueryResult {
+            iccfProofTxMaterialBuilder.build(
+                    initTx.txRid,
+                    initTransferTx.merkleHash(hashCalculator),
+                    ecBrid,
+                    tcBrid,
+                    forceIntraNetworkIccfOperation = true
+            )
+        }!!
+
+        val incomingXChainTransferResult = initTxProof.txBuilder
+                .addOperation(APPLY_TRANSFER, initTransferTx, gtv(1), initTransferTx, gtv(1), gtv(0))
+                .postAwaitConfirmation()
+
+        assertThat(incomingXChainTransferResult.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(incomingXChainTransferResult.rejectReason!!.contains("Crosschain transfers are not allowed when token chain is paused")).isTrue()
+    }
+
+    @Test
+    @Order(14)
+    fun `Unpause token chain`() {
+        node1.tc.transactionBuilder(listOf(node1.provider)) // Bob is TC governor
+                .proposeUnpauseTokenChainOperation(node1.providerPubkey)
+                .postTransactionUntilConfirmed("Unpausing token chain")
+
+        val proposal = awaitQueryResult {
+            val proposals = node1.tc.getRelevantCommonProposals(0, Long.MAX_VALUE, true, node2.providerPubkey)
+            assertThat(proposals).hasSize(1)
+            proposals.first()
+        }
+
+        node1.tc.transactionBuilder(listOf(node2.provider, node3.provider))
+                .makeCommonVoteOperation(node2.providerPubkey, proposal!!.rowid, true)
+                .makeCommonVoteOperation(node3.providerPubkey, proposal.rowid, true)
+                .postTransactionUntilConfirmed("Voting to unpause token chain")
+
+        awaitQueryResult {
+            // Assert TC hbridge is unpaused
+            assertThat(node1.tc.isPaused()).isFalse()
+            // Assert TC EVM event receiver is unpaused
+            assertThat(node1.client(eventReceiverBrid).shouldProcessEvmEvents()).isTrue()
+        }
+
+        aliceTcAuthenticator.transactionBuilder()
+                .bridgeFtAssetToEvmOperation(
+                        testTokenAssetId,
+                        withdrawAmount,
+                        evmContainerNetworkId,
+                        aliceEvmAddress,
+                        bridgeAddress.substring(2).hexStringToByteArray()
+                ).postTransactionUntilConfirmed("Withdrawing after unpausing")
+
+        awaitQueryResult {
+            val balance = node1.tc.getAssetBalance(aliceTcAuthenticator.accountId, testTokenAssetId)
+            assertThat(balance?.amount).isEqualTo(BigInteger.TEN.plus(depositAmount).minus(withdrawAmount))
+        }
     }
 }
