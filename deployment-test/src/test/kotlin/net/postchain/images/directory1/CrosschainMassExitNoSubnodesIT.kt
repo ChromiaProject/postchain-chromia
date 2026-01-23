@@ -39,12 +39,12 @@ import net.postchain.eif.contracts.Validator
 import net.postchain.eif.encodeBlockHeaderDataForEVM
 import net.postchain.eif.encodeSignatureWithV
 import net.postchain.eif.getEthereumAddress
-import net.postchain.eif.lib.hbridge.core.getRecoveryContract
-import net.postchain.eif.lib.hbridge.core.getStateSlotIdsForAddress
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
 import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.assets.transferOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
+import net.postchain.eif.lib.hbridge.core.getRecoveryContract
+import net.postchain.eif.lib.hbridge.core.getStateSlotIdsForAddress
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -81,7 +81,7 @@ import java.math.BigInteger
 @Testcontainers
 @DisableIfTestFails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class CrosschainMassExitNoSubnodesTest : EvmTestBase("crosschain_massexit") {
+class CrosschainMassExitNoSubnodesIT : EvmTestBase("crosschain_massexit") {
 
     private val adminKeyPair = KeyPair.of(
             "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070",
