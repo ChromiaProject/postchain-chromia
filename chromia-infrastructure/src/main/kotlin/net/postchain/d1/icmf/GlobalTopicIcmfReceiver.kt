@@ -41,7 +41,7 @@ class GlobalTopicIcmfReceiver(
 
     private val routes = topics.map { TopicRoute(it.key, it.value) }
     private val pipes: ConcurrentMap<Pair<String, TopicRoute>, IcmfPipe<TopicRoute, Long, IcmfAnchorPacket, String>> = ConcurrentHashMap()
-    private val jobSynchronizer = Object()
+    private val jobSynchronizer = Any()
     private var job: Job? = null
 
     private fun start(): Job {

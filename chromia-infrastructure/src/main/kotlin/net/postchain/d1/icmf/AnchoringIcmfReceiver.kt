@@ -29,7 +29,7 @@ class AnchoringIcmfReceiver(
 
     private val systemAnchoringPipes: ConcurrentMap<String, IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = ConcurrentHashMap()
     private val clusterAnchoringPipes: ConcurrentMap<Pair<String, String>, IcmfPipe<TopicRoute, Long, IcmfPacket, BlockchainRid>> = ConcurrentHashMap()
-    private val jobSynchronizer = Object()
+    private val jobSynchronizer = Any()
     private var job: Job? = null
     private var systemAnchoringPipesCreated = false
 
