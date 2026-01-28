@@ -14,8 +14,7 @@
     <properties>
         <slow.it.forks>3</slow.it.forks>
         <!-- deployment tests vars -->
-        <DEPLOYMENT_TEST_FT4_VERSION>1.1.1</DEPLOYMENT_TEST_FT4_VERSION>
-        <DEPLOYMENT_TEST_EIF_VERSION>${eif.version}</DEPLOYMENT_TEST_EIF_VERSION>
+        <DEPLOYMENT_TEST_FT4_VERSION>1.2.0</DEPLOYMENT_TEST_FT4_VERSION>
     </properties>
 
     <dependencies>
