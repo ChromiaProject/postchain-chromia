@@ -194,11 +194,11 @@ libs:
   com.chromia.ft4:
     version: ${DEPLOYMENT_TEST_FT4_VERSION}
   com.chromia.eif:
-    version: 1.0.1
+    version: 1.3.0
   com.chromia.eif_event_receiver:
     version: 1.1.0
   com.chromia.hbridge:
-    version: 1.0.0
+    version: 1.3.0
 
 compile:
   source: src
