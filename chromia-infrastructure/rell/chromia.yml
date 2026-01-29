@@ -27,8 +27,6 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
@@ -53,8 +51,6 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
@@ -75,8 +71,6 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
@@ -97,8 +91,6 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
