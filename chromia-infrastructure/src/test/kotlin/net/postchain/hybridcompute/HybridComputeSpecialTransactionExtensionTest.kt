@@ -40,14 +40,14 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun isComputeClusterTimeout() {
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val node = cs.generateKeyPair()
         val computeClusterTimeoutSeconds = 10L
         extension.initializeBroadcastContext { }
+        extension.init(module, 1, BlockchainRid.buildRepeat(1), cs)
         extension.load(
-                module, 1, BlockchainRid.buildRepeat(1), cs,
                 node,
                 null,
                 null,
@@ -67,7 +67,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `RequestTakenOp Invalid signature`() {
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val blockchainRID = BlockchainRid.buildRepeat(1)
@@ -76,8 +76,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val node2 = cs.generateKeyPair()
         val sigMaker1 = cs.buildSigMaker(node1)
         extension.initializeBroadcastContext { }
+        extension.init(module, 1, blockchainRID, cs)
         extension.load(
-                module, 1L, blockchainRID, cs,
                 node1,
                 null,
                 null,
@@ -103,7 +103,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `ResponseOp validation`() {
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val blockchainRID = BlockchainRid.buildRepeat(1)
@@ -115,8 +115,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
         val broadcastContext = mock<BroadcastContext>()
         extension.initializeBroadcastContext(broadcastContext)
+        extension.init(module, 1, blockchainRID, cs)
         extension.load(
-                module, 1, blockchainRID, cs,
                 node1,
                 null,
                 null,
@@ -171,7 +171,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `FailureOp Taken request not found by id`() {
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val node1 = cs.generateKeyPair()
@@ -181,8 +181,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val bctx = BaseBlockEContext(ctx, 1, 1, 1, mapOf(), mock())
         whenever(module.query(bctx, GET_TAKEN_REQUEST, gtv(Pair("id", gtv("fail"))))).thenReturn(GtvNull)
         extension.initializeBroadcastContext { }
+        extension.init(module, 1, blockchainRID, cs)
         extension.load(
-                module, 1, blockchainRID, cs,
                 node1,
                 null,
                 null,
@@ -206,7 +206,7 @@ class HybridComputeSpecialTransactionExtensionTest {
 
     @Test
     fun `FailureOp Invalid signature`() {
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations())
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock())
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val node1 = cs.generateKeyPair()
@@ -215,8 +215,8 @@ class HybridComputeSpecialTransactionExtensionTest {
         val blockchainRID = BlockchainRid.buildRepeat(1)
         val bctx = mock<BlockEContext>()
         extension.initializeBroadcastContext { }
+        extension.init(module, 1, blockchainRID, cs)
         extension.load(
-                module, 1, blockchainRID, cs,
                 node1,
                 null,
                 null,
@@ -249,15 +249,15 @@ class HybridComputeSpecialTransactionExtensionTest {
     @Test
     fun `trigger block building`() {
         val clock: Clock = mock()
-        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), clock = clock)
+        val extension = HybridComputeSpecialTransactionExtension(MockDatabaseOperations(), mock(), clock = clock)
         val module = mock<GTXModule>()
         val cs = Secp256K1CryptoSystem()
         val node = cs.generateKeyPair()
         val blockchainRID = BlockchainRid.buildRepeat(1)
         assertFalse(extension.shouldBuildBlock())
         extension.initializeBroadcastContext { }
+        extension.init(module, 1, blockchainRID, cs)
         extension.load(
-                module, 1, blockchainRID, cs,
                 node,
                 null,
                 null,

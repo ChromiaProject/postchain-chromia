@@ -3,15 +3,20 @@ package net.postchain.hybridcompute
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.PostchainContext
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.toHex
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessConnectable
 import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
@@ -30,6 +35,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.BroadcastAware
 import net.postchain.gtx.BroadcastContext
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.PostchainContextAware
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXBlockBuildingAffectingSpecialTxExtension
 import net.postchain.hybridcompute.rell.lib.hybridcompute.ComputeRequest
@@ -40,6 +46,8 @@ import net.postchain.hybridcompute.rell.lib.hybridcompute.GET_TAKEN_REQUESTS
 import net.postchain.hybridcompute.rell.lib.hybridcompute.State
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.config.ManagedDataSourceAware
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
@@ -60,8 +68,9 @@ import kotlin.time.measureTimedValue
 
 class HybridComputeSpecialTransactionExtension(
         private val dbOperations: HybridComputeDatabaseOperations,
+        private val postchainContext: PostchainContext,
         private val clock: Clock = Clock.systemUTC()
-) : GTXBlockBuildingAffectingSpecialTxExtension, Shutdownable, BroadcastAware {
+) : GTXBlockBuildingAffectingSpecialTxExtension, BroadcastAware, BlockchainProcessConnectable {
     companion object : KLogging() {
         val DEFAULT_PERIOD_LENGTH = 7.days // 1 week
     }
@@ -99,7 +108,10 @@ class HybridComputeSpecialTransactionExtension(
     override fun getRelevantOps(): Set<String> = setOf(RequestTakenOp.OP_NAME, ResponseOp.OP_NAME, FailureOp.OP_NAME, ClusterTimeoutOp.OP_NAME)
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
-        // we initialize this in `load()`
+        this.module = module
+        this.chainID = chainID
+        this.blockchainRID = blockchainRID
+        this.cs = cs
     }
 
     override fun initializeBroadcastContext(context: BroadcastContext) {
@@ -112,11 +124,54 @@ class HybridComputeSpecialTransactionExtension(
         }
     }
 
-    fun load(
-            module: GTXModule,
-            chainID: Long,
-            blockchainRID: BlockchainRid,
-            cs: CryptoSystem,
+    override fun connectProcess(process: BlockchainProcess) {
+        val configuration = process.blockchainEngine.getConfiguration()
+        val config = configuration.rawConfig.asDict()["hybridcompute"]?.toObject<HybridComputeConfig>()
+                ?: throw IllegalArgumentException("hybridcompute configuration not found")
+        require(config.concurrency in 1..Int.MAX_VALUE) { "concurrency must be greater than 0" }
+        require(config.blockBuildingIntervalMillis > 0) { "block_building_interval_millis must be greater than 0" }
+        val engineNames = config.engines.ifEmpty {
+            if (config.engine.isNotEmpty()) listOf(config.engine) else listOf()
+        }
+        val fastEngineNames = config.fastEngines
+        var container: String? = null
+        var containerCreationTime: Instant? = null
+        var containerRateLimits: Map<String, ContainerRateLimit> = mapOf()
+        if (configuration is ManagedDataSourceAware) {
+            val dataSource = configuration.dataSource
+            if (dataSource is DirectoryDataSource) {
+                container = dataSource.getContainerForBlockchain(configuration.blockchainRid)
+                containerCreationTime = dataSource.getContainerCreationTime(container)
+                containerRateLimits = dataSource.getContainerRateLimits(container)
+                logger.info("Running in container $container which was created at $containerCreationTime")
+            }
+        }
+        val engines = engineNames.map { newInstanceOf<HybridComputeEngine>(it) }
+        val fastEngines = fastEngineNames.map { newInstanceOf<HybridComputeEngine>(it) }
+        val allEngines = engines + fastEngines
+        require(allEngines.isNotEmpty()) { "there must be at least one engine" }
+        require(allEngines.size == allEngines.map { it.name }.toSet().size) { "all engines must have unique names" }
+        allEngines.filterIsInstance<PostchainContextAware>().forEach {
+            withWriteConnection(postchainContext.blockBuilderStorage, configuration.chainID) { ctx ->
+                it.initializeContext(configuration, postchainContext, ctx)
+                true
+            }
+        }
+        load(
+                KeyPair(postchainContext.appConfig.pubKeyByteArray, postchainContext.appConfig.privKeyByteArray),
+                container,
+                containerCreationTime,
+                containerRateLimits,
+                concurrency = config.concurrency.toInt(),
+                computeClusterTimeoutSeconds = config.computeClusterTimeoutSeconds,
+                blockBuildingIntervalMillis = config.blockBuildingIntervalMillis,
+                sharedStorage = postchainContext.sharedStorage,
+                engineList = engines,
+                fastEngineList = fastEngines,
+        )
+    }
+
+    internal fun load(
             nodeKey: KeyPair,
             container: String?,
             containerCreationTime: Instant?,
@@ -128,11 +183,7 @@ class HybridComputeSpecialTransactionExtension(
             engineList: List<HybridComputeEngine>,
             fastEngineList: List<HybridComputeEngine>,
     ) {
-        this.module = module
-        this.cs = cs
         this.merkleHashCalculator = GtvMerkleHashCalculatorV2(cs)
-        this.chainID = chainID
-        this.blockchainRID = blockchainRID
         this.nodePubKey = nodeKey.pubKey
         this.sigMaker = cs.buildSigMaker(nodeKey)
         this.container = container
@@ -607,7 +658,11 @@ class HybridComputeSpecialTransactionExtension(
 
     private fun isFullyLoaded() = ::engines.isInitialized && (loaded.get() >= engines.size)
 
-    override fun shutdown() {
+    override fun disconnectProcess(process: BlockchainProcess) {
+        shutdown()
+    }
+
+    internal fun shutdown() {
         loader.shutdownNow()
         for ((_, computer) in engines.values) {
             computer?.shutdownNow()
