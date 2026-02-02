@@ -90,11 +90,11 @@ deploy_library_chain:
     - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n webauthn --major 1 --minor 0
       --library-description "Web Authentication support for Chromia."
     - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n iccf --major 1 --minor 90
-      --library-description "Inter-chain Confirmation Facility"
+      --library-description "Inter-Chain Confirmation Facility is a client-driven protocol for cross-chain transaction verification within the Chromia network"
     - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n iccf_test --major 1 --minor 90 
       --library-description "Inter-chain Confirmation Facility test library"
     - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n icmf --major 1 --minor 102
-      --library-description "Inter-chain Messaging Facility"
+      --library-description "The Inter-chain Messaging Facility (ICMF) facilitates communication between blockchains within a single dapp cluster. It serves as an event-based service that enables blockchains to read data from each other and act accordingly"
     - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n hybridcompute_query --major 1 --minor 0
       --library-description "Query computation engine for the Hybrid Compute framework"
 
