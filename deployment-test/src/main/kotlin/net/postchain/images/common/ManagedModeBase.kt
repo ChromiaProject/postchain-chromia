@@ -355,7 +355,7 @@ open class ManagedModeBase(private val logDir: String) {
                 node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
             }
 
-            if (pendingProposals != null && pendingProposals.isNotEmpty()) {
+            if (!pendingProposals.isNullOrEmpty()) {
                 val client = node1.client(chain0Brid, listOf(provider)).transactionBuilder()
                 pendingProposals.forEach { proposal ->
                     client.makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
