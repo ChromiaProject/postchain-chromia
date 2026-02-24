@@ -32,7 +32,7 @@
         <postchain.version>3.49.2</postchain.version>
         <postchain.client.version>3.38.0</postchain.client.version>
         <directory.chain.version>1.109.9</directory.chain.version>
-        <rell.version>0.15.0</rell.version>
+        <rell.version>0.15.2</rell.version>
         <rell.maven.plugin.version>0.16.5</rell.maven.plugin.version>
         <eif.version>0.31.2</eif.version>
         <web3j.version>4.12.0</web3j.version>
