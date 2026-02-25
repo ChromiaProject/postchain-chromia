@@ -127,7 +127,7 @@ class IcmfReceiverSpecialTxExtension(val receiverRepository: IcmfReceiverReposit
 
             if (pipe.mightHaveNewPackets() && !isFull && pipe.route.topic !in blockedPipes && !delayPipe(bctx, blockchainRid, pipe.route.topic)) {
                 var currentMessageHeight: Long =
-                        dbOperations.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
+                        receiverRepository.loadLastMessageHeight(bctx, blockchainRid, pipe.route.topic)
 
                 // Clean up packets that are no longer relevant
                 pipe.markTaken(currentMessageHeight, bctx)
@@ -656,7 +656,7 @@ class IcmfReceiverSpecialTxExtension(val receiverRepository: IcmfReceiverReposit
         val skipToHeight =
                 icmfReceiverBlockchainConfigData.local?.find { it.blockchainRid.contentEquals(sender) && it.topic == topic }
                         ?.skipToHeight ?: 0
-        val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
+        val currentPrevMessageBlockHeight = receiverRepository.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
         if ((skipToHeight == 0L || prevMessageBlockHeight >= skipToHeight) && prevMessageBlockHeight != currentPrevMessageBlockHeight) {
             throw UserMistake("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $currentPrevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")

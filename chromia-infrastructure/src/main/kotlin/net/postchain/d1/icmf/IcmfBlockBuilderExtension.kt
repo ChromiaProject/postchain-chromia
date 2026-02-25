@@ -9,6 +9,7 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
@@ -56,7 +57,7 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
 
         logger.info("ICMF message sent in topic ${message.topic}${if (message.receiver != null) " to ${message.receiver}" else ""}")
         val topic = message.receiver?.let { topicWithReceiver(message.topic, it) } ?: message.topic
-        icmfSenderRepository.saveSentMessage(ctxt, ctxt.txIID, topic, ctxt.height, encodedBody)
+        icmfSenderRepository.persistMessage(ctxt, topic, message.body, encodedBody)
         val previousMessageBlockHeight = icmfSenderRepository.getPreviousSentMessageBlockHeight(ctxt, topic, ctxt.height)
         ctxt.addAfterAppendHook {
             queuedEvents.add(SentIcmfMessageItem(topic, message.body, previousMessageBlockHeight))
