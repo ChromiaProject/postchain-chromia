@@ -28,6 +28,7 @@ class IcmfReceiverBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink
         this.blockEContext = blockEContext
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_RECEIVER_TOPICS_EVENT_TYPE, this)
+        firstUpdate = true
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
