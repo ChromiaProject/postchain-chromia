@@ -13,59 +13,70 @@ function test_hc() {
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "one", type = "nn", input = "ABCD".to_gtv()),
-            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
+            compute_request(id = "one", type = "nn", input = "ABCD".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
         ]
     );
     assert_null(fetch_compute_result("one"));
 
     rell.test.tx().op(
-        request_taken_op("one", rell.test.keypairs.alice.pub)
+        request_taken_op(id = "one", type = "xx", processed_by = rell.test.keypairs.alice.pub)
+    ).run_must_fail("Computation <one> must have type <nn>");
+
+    rell.test.tx().op(
+        request_taken_op(id = "one", type = "nn", processed_by = rell.test.keypairs.alice.pub)
     ).run();
     assert_equals(
         get_requests(),
         [
-            compute_request(id = "two", type = "nn", input = "1234".to_gtv()),
+            compute_request(id = "two", type = "nn", input = "1234".to_gtv(), taken_timestamp = 0, processed_by = x"", state = state.NEW),
         ]
     );
     rell.test.tx().op(
-        request_taken_op("one", rell.test.keypairs.alice.pub)
+        request_taken_op(id = "one", type = "nn", processed_by = rell.test.keypairs.alice.pub)
     ).nop().run_must_fail("Computation <one> must be NEW, but is TAKEN");
     assert_null(fetch_compute_result("one"));
     assert_equals(result.id, "");
+    assert_equals(result.type, "");
 
     rell.test.tx().op(
-        response_op("two", "nn", "0000".to_gtv())
+        response_op("two", "nn", "1234".to_gtv(), "0000".to_gtv())
     ).run_must_fail("Computation <two> must be TAKEN, but is NEW");
 
     rell.test.tx().op(
-        response_op("one", "xx", "00".to_gtv())
+        response_op("one", "xx", "1234".to_gtv(), "00".to_gtv())
     ).run_must_fail("Computation <one> must have type <nn>");
 
     rell.test.tx().op(
-        response_op("one", "nn", "AABBCCDD".to_gtv())
+        response_op("one", "nn", "1234".to_gtv(), "00".to_gtv())
+    ).run_must_fail("Computation <one> input mismatch");
+
+    rell.test.tx().op(
+        response_op("one", "nn", "ABCD".to_gtv(), "AABBCCDD".to_gtv())
     ).run();
     assert_equals(fetch_compute_result("one"), compute_result(result="AABBCCDD".to_gtv(), error=null,
         tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
     assert_equals(result.id, "one");
+    assert_equals(result.type, "nn");
     assert_equals(result.error, "");
 
     rell.test.tx().op(
-        response_op("one", "nn", "00".to_gtv())
+        response_op("one", "nn", "1234".to_gtv(), "00".to_gtv())
     ).run_must_fail("Computation <one> must be TAKEN, but is COMPUTED");
 
     rell.test.tx().op(
-        request_taken_op("two", rell.test.keypairs.alice.pub)
+        request_taken_op("two", "nn", rell.test.keypairs.alice.pub)
     ).run();
     assert_equals(get_requests(), list<compute_request>());
     assert_null(fetch_compute_result("two"));
 
     rell.test.tx().op(
-        failure_op("two", "nn", "Some error")
+        failure_op("two", "nn", "1234".to_gtv(), "Some error")
     ).run();
     assert_equals(fetch_compute_result("two"), compute_result(result=null, error="Some error",
         tx_rid=transaction @ { } (@omit @sort_desc .rowid, .tx_rid) limit 1, op_index=0));
     assert_equals(result.id, "two");
+    assert_equals(result.type, "nn");
     assert_equals(result.error, "Some error");
 }
 
@@ -73,10 +84,10 @@ function test_computation_not_found() {
     assert_fails("No computation with id <bogus>", fetch_compute_result("bogus", *));
 
     rell.test.tx().op(
-        request_taken_op("bogus", rell.test.keypairs.alice.pub)
+        request_taken_op(id = "bogus", type = "nn", processed_by = rell.test.keypairs.alice.pub)
     ).run_must_fail("No computation with id <bogus>");
 
     rell.test.tx().op(
-        response_op("bogus", "nn", "00".to_gtv())
+        response_op("bogus", "nn", null.to_gtv(), "00".to_gtv())
     ).run_must_fail("No computation with id <bogus>");
 }

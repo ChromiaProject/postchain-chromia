@@ -5,7 +5,8 @@ import net.postchain.gtv.Gtv
 /**
  * Hybrid compute engine.
  *
- * Methods might be invoked on different threads.
+ * Methods might be invoked on different threads. All methods except `load()` might be invoked concurrently with others
+ * and themselves, so they need to be thread-safe.
  *
  * If the implementation also implements `net.postchain.gtx.PostchainContextAware`,
  * its `initializeContext` method will be invoked directly after instantiation, before any other method is invoked.
@@ -24,8 +25,9 @@ interface HybridComputeEngine {
     /**
      * Will be invoked at some point after `initializeContext`, before any other method is invoked.
      *
-     * Any heavy or time-consuming initialization should be performed in this method,
-     * and it should block until the initialization is finished.
+     * Any heavy or time-consuming initialization should be performed in this method.
+     * This method is executed asynchronously and should block until the initialization is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely.
      */
     fun load()
 
@@ -44,10 +46,13 @@ interface HybridComputeEngine {
     /**
      * Performs a computation.
      *
-     * This method should block until the computation is finished.
+     * This method is executed asynchronously and should block until the computation is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely. Should honor
+     * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
+     * if possible.
      *
      * @param input  input to the computation
-     * @return result of the computation, including enough information to validate it later (possibly the full input),
+     * @return result of the computation, including enough information to validate it later,
      *         and the actual number of rate limit points consumed by the computation
      * @throws net.postchain.common.exception.UserMistake if computation failed
      */
@@ -56,11 +61,15 @@ interface HybridComputeEngine {
     /**
      * Validates a previously performed computation.
      *
-     * This method should block until the validation is finished.
+     * This method is executed asynchronously and should block until the validation is finished.
+     * Should have some kind of timeout or other safeguard to avoid blocking indefinitely. Should honor
+     * [thread interruption](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html#interrupt()).
+     * if possible.
      *
+     * @param input   input to the computation
      * @param output  the return value from a previous invocation of `compute`
      *
      * @throws net.postchain.common.exception.UserMistake if not valid
      */
-    fun validate(output: Gtv)
+    fun validate(input: Gtv, output: Gtv)
 }

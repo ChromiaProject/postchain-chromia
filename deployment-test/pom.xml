@@ -14,8 +14,7 @@
     <properties>
         <slow.it.forks>3</slow.it.forks>
         <!-- deployment tests vars -->
-        <DEPLOYMENT_TEST_FT4_VERSION>v1.1.0r</DEPLOYMENT_TEST_FT4_VERSION>
-        <DEPLOYMENT_TEST_EIF_VERSION>${eif.version}</DEPLOYMENT_TEST_EIF_VERSION>
+        <DEPLOYMENT_TEST_FT4_VERSION>1.2.0</DEPLOYMENT_TEST_FT4_VERSION>
     </properties>
 
     <dependencies>
@@ -72,21 +71,16 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>jdbc</artifactId>
+            <artifactId>testcontainers</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-jdbc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>toxiproxy</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
-        </dependency>
-        <!-- Needed for testcontainers -->
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -300,8 +294,8 @@
                             <target>${project.build.directory}/generated-sources/rell-client/eif</target>
                             <force>true</force>
                             <mainModules>
-                                <mainModule>eif_event_receiver</mainModule>
-                                <mainModule>hbridge</mainModule>
+                                <mainModule>lib.eif_event_receiver</mainModule>
+                                <mainModule>lib.hbridge</mainModule>
                                 <mainModule>transaction_submitter</mainModule>
                             </mainModules>
                         </configuration>

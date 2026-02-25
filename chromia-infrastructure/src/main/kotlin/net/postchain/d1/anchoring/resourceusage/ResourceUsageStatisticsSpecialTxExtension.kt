@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
@@ -114,8 +115,7 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         if (ops.count { it.opName == ValidateNodeSignatureOp.OP_NAME } > 1) {
-            logger.warn("Multiple ${ValidateNodeSignatureOp.OP_NAME} found!")
-            return false
+            throw UserMistake("Multiple ${ValidateNodeSignatureOp.OP_NAME} found!")
         }
         val processedResourceUsageStatisticsOpResourceType = mutableMapOf<String, MutableSet<ResourceType>>()
         var subjectID = ByteArray(0)
@@ -123,57 +123,49 @@ class ResourceUsageStatisticsSpecialTxExtension : GTXSpecialTxExtension {
             when (op.opName) {
                 ValidateNodeSignatureOp.OP_NAME -> {
                     val validateNodeSignature = ValidateNodeSignatureOp.fromOpData(op)
-                            ?: return false
+                            ?: throw UserMistake("Invalid operation")
                     subjectID = validateNodeSignature.subjectID
                     if (!cs.verifyDigest(hash(bctx.height), Signature(subjectID, validateNodeSignature.data))) {
-                        logger.warn { "Validation failed. Invalid signature" }
-                        return false
+                        throw UserMistake("Validation failed. Invalid signature")
                     }
                 }
 
                 ResourceUsageStatisticsOp.OP_NAME -> {
-                    val opData = ResourceUsageStatisticsOp.fromOpData(op) ?: return false
+                    val opData = ResourceUsageStatisticsOp.fromOpData(op) ?: throw UserMistake("Invalid operation")
                     val nodePubkey = opData.nodePubkey
                     val resourceType = opData.resourceType
                     val value = opData.metricValue
                     if (resourceType == ResourceType.FREE_SPACE_LEFT_MIB) {
                         if (value < 0) {
-                            logger.warn("Invalid value: $value for free space left resource type!")
-                            return false
+                            throw UserMistake("Invalid value: $value for free space left resource type!")
                         }
                     }
                     if (resourceType == ResourceType.SPACE_USAGE_MIB) {
                         if (value < 0) {
-                            logger.warn("Invalid value: $value for space usage mib resource type!")
-                            return false
+                            throw UserMistake("Invalid value: $value for space usage mib resource type!")
                         }
                     }
                     if (resourceType == ResourceType.SPACE_USAGE_PERCENTAGE) {
-                        if (value < 0 || value > 100) {
-                            logger.warn("Invalid value: $value for space usage percentage resource type!")
-                            return false
+                        if (value !in 0..100) {
+                            throw UserMistake("Invalid value: $value for space usage percentage resource type!")
                         }
                     }
                     if (!nodePubkey.contentEquals(subjectID)) {
-                        logger.warn("Signature pubkey: $subjectID does not correspond to node pubkey: $nodePubkey assigned to free space left resource measurement.")
-                        return false
+                        throw UserMistake("Signature pubkey: ${subjectID.wrap()} does not correspond to node pubkey: ${nodePubkey.wrap()} assigned to free space left resource measurement.")
                     }
                     if (!processedResourceUsageStatisticsOpResourceType.getOrPut(opData.containerName) { mutableSetOf() }.add(resourceType)) {
-                        logger.warn("Multiple ${ResourceUsageStatisticsOp.OP_NAME} operations of the same resource type detected for same container: $resourceType")
-                        return false
+                        throw UserMistake("Multiple ${ResourceUsageStatisticsOp.OP_NAME} operations of the same resource type detected for same container: $resourceType")
                     }
                 }
 
                 else -> {
-                    logger.warn("Got unexpected special operation: ${op.opName}")
-                    return false
+                    throw UserMistake("Got unexpected special operation: ${op.opName}")
                 }
             }
         }
         if (::signers.isInitialized) {
             if (signers.none { it.contentEquals(subjectID) }) {
-                logger.warn("Signature pubkey: $subjectID does not correspond to any known signers: $signers ")
-                return false
+                throw UserMistake("Signature pubkey: ${subjectID.wrap()} does not correspond to any known signers: ${signers.map { it.wrap() }}")
             }
         }
         return true

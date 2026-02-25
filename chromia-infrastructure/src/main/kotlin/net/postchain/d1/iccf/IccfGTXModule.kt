@@ -32,7 +32,7 @@ open class IccfGTXModule : SimpleGTXModule<IccfGTXModuleContext>(
 
     override fun initializeDB(ctx: EContext) {}
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         conf.apply {
             cryptoSystem = postchainContext.cryptoSystem
             clusterManagement = createClusterManagement(configuration, postchainContext.connectionManager)

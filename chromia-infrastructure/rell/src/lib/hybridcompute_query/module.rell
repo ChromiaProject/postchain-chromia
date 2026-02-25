@@ -1,0 +1,79 @@
+module;
+
+import hc: lib.hybridcompute.*;
+
+val my_type = "query";
+
+/** Input for query to compute. */
+struct query_request {
+    /** The name of the query to run */
+    name: text;
+
+    /** Arguments for the query */
+    args: map<text, gtv>;
+}
+
+struct query_result {
+    /** The result of the query, or null if an error occurred. */
+    result: gtv?;
+
+    /** An error message if the query request failed, or null if no error occurred. */
+    error: text?;
+
+    /** RID of the transaction where the result was reported. */
+    tx_rid: byte_array;
+
+    /** Index of the operation where the result was reported. */
+    op_index: integer;
+}
+
+// Force generation of code for the structs
+query hcq_bogus(query_request) = query_result(result = null, error = null, x"", 0);
+
+/**
+ * Submits a query computation request to be processed asynchronously. Extend `on_query_result` to get the result when it is ready.
+ *
+ * @param id Unique ID for this query compute request.
+ * @param name The name of the query to run.
+ * @param args Arguments for the query.
+ */
+function submit_query_request(id: text, name: text, args: map<text, gtv>) {
+    hc.submit_compute_request(id, my_type, query_request(name, args).to_gtv_pretty());
+}
+
+@extend(hc.on_compute_result)
+function (id: text, type: text, result: hc.compute_result) {
+    if (type != my_type) return;
+
+    on_query_result(id, query_result(
+            result = result.result,
+            error = result.error,
+            tx_rid = result.tx_rid,
+            op_index = result.op_index
+        ));
+}
+
+/**
+ * Called when an query is finished, successfully or failed.
+ *
+ * @param id The identifier of the inference request
+ * @param query_result The result
+ */
+@extendable function on_query_result(id: text, result: query_result) {}
+
+/**
+ * Fetches the result of a previously submitted query request.
+ *
+ * @param id The identifier of the query request for which the result is being fetched.
+ * @return The result, or `null` if not ready yet
+ */
+function fetch_query_result(id: text): query_result? {
+    val result = hc.fetch_compute_result(id);
+    if (result == null) return null;
+    return query_result(
+        result = result.result,
+        error = result.error,
+        tx_rid = result.tx_rid,
+        op_index = result.op_index
+    );
+}

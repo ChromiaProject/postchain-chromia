@@ -100,7 +100,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
         } catch (e: Exception) {
             when (e) {
                 is UserMistake, is IOException -> {
-                    logger.warn("Unable to query for messages on anchor chain: ${e.message}", e)
+                    logger.warn("Unable to query for messages on anchor chain for cluster $clusterName for topic ${route.topic}: ${e.message}", e)
                     return
                 }
 
@@ -122,7 +122,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {
-                        logger.warn("Unable to fetch block at height $anchorHeight on anchor chain: ${e.message}", e)
+                        logger.warn("Unable to fetch block at height $anchorHeight on anchor chain for cluster $clusterName for topic ${route.topic}: ${e.message}", e)
                         return
                     }
 
@@ -130,7 +130,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                 }
             }
             if (anchorBlock == null) {
-                logger.warn("Anchor block at height $anchorHeight not found")
+                logger.warn("Anchor block at height $anchorHeight not found for topic ${route.topic}")
                 return
             }
 
@@ -162,10 +162,6 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
             val icmfPackets = mutableListOf<IcmfPacket>()
             for (header in headers) {
                 val blockchainRid = BlockchainRid(header.decodedHeader.getBlockchainRid())
-
-                if (route.chains.isNotEmpty() && !route.chains.contains(blockchainRid)) {
-                    continue // we only read from specific chains
-                }
 
                 val topicPeers = getCachedPeers(peerCache, header.decodedHeader, blockchainConfigProvider) ?: return
                 val topicHeaderData = TopicHeaderData.extractTopicHeaderData(header.decodedHeader, header.blockHeader, header.witness, header.blockRid, cryptoSystem, topicPeers, ICMF_BLOCK_HEADER_EXTRA)
@@ -262,7 +258,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
                             return emptyList()
                         }
                         logger.warn(
-                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages: ${e.message}, will retry after $pollInterval",
+                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages for topic ${route.topic}: ${e.message}, will retry after $pollInterval",
                                 e
                         )
                         delay(pollInterval)
@@ -275,7 +271,7 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
 
             val messages = bodies.map {
                 val size = GtvEncoder.encodeGtv(it).size
-                if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
+                if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
                 IcmfMessage(it, size)
             }
 
@@ -291,6 +287,8 @@ class InterClusterAnchoredTopicPipe(override val route: TopicRoute,
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
+
+    override fun haveNewPacketsForSure(): Boolean = packets.isNotEmpty()
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfAnchorPacket>? =
             packets.higherEntry(currentPointer)?.value?.first

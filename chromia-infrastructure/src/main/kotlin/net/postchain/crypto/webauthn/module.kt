@@ -9,6 +9,7 @@ import com.webauthn4j.metadata.anchor.MetadataBLOBBasedTrustAnchorRepository
 import com.webauthn4j.metadata.data.MetadataBLOB
 import com.webauthn4j.metadata.data.MetadataBLOBFactory
 import com.webauthn4j.metadata.exception.MDSException
+import com.webauthn4j.verifier.CoreAuthenticationObject
 import com.webauthn4j.verifier.attestation.statement.androidkey.AndroidKeyAttestationStatementVerifier
 import com.webauthn4j.verifier.attestation.statement.androidsafetynet.AndroidSafetyNetAttestationStatementVerifier
 import com.webauthn4j.verifier.attestation.statement.apple.AppleAnonymousAttestationStatementVerifier
@@ -21,20 +22,28 @@ import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
+import net.postchain.crypto.webauthn.webauthn4j.CustomCredentialRecord
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.DefaultValue
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXModuleFactory
 import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.MetadataProvider
+import net.postchain.gtx.QueryMetadata
+import net.postchain.gtx.ReturnMetadata
 import net.postchain.gtx.SimpleGTXModule
-import net.postchain.gtx.SnapshotAware
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.time.LocalDate
+
+const val QUERY_WEBAUTHN_GET_CREDENTIAL = "gtxc.webauthn_get_credential"
 
 data class WebAuthnConfigData(
         @param:Name("allowed-origins")
@@ -92,7 +101,7 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
         }
 
         // TODO WebAuthn: refresh this FIDO MDS3 blob monthly: https://fidoalliance.org/metadata/
-        //                next update 2025-11-01
+        //                next update 2026-02-01
         val fidoMDSMetadataBLOB = loadMetadataBLOB(ObjectConverter(), "/net/postchain/crypto/webauthn/fido-mds3.blob", setOf(fidoMDSTrustAnchor))
 
         internal fun loadMetadataBLOB(objectConverter: ObjectConverter, resourcePath: String, trustAnchors: Set<TrustAnchor>): MetadataBLOB {
@@ -117,29 +126,40 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
             DefaultCertPathChecker().check(CertPathCheckContext(certPath, trustAnchors, true))
         }
 
-        internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): Pair<WebAuthnManager, WebAuthnManager> = if (verifyAttestation) {
-            val certPathTrustworthinessVerifier = DefaultCertPathTrustworthinessVerifier(
-                    MetadataBLOBBasedTrustAnchorRepository({ fidoMDSMetadataBLOB }))
-            val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier()
-            selfAttestationTrustworthinessVerifier.isSelfAttestationAllowed = false
-            WebAuthnManager(
-                    listOf(
-                            FIDOU2FAttestationStatementVerifier(),
-                            PackedAttestationStatementVerifier(),
-                            TPMAttestationStatementVerifier(),
-                            AndroidKeyAttestationStatementVerifier(),
-                            AndroidSafetyNetAttestationStatementVerifier(),
-                            AppleAnonymousAttestationStatementVerifier(),
-                    ),
-                    certPathTrustworthinessVerifier,
-                    selfAttestationTrustworthinessVerifier,
-                    listOf(),
-                    listOf(),
-                    objectConverter,
-            ) to WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
-        } else {
-            val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
-            webAuthnManager to webAuthnManager
+        internal fun createWebAuthnManager(objectConverter: ObjectConverter, verifyAttestation: Boolean): Pair<WebAuthnManager, WebAuthnManager> {
+            val (strictWebAuthnManager, nonStrictWebAuthnManager) = if (verifyAttestation) {
+                val certPathTrustworthinessVerifier = DefaultCertPathTrustworthinessVerifier(
+                        MetadataBLOBBasedTrustAnchorRepository({ fidoMDSMetadataBLOB }))
+                val selfAttestationTrustworthinessVerifier = DefaultSelfAttestationTrustworthinessVerifier(false)
+                WebAuthnManager(
+                        listOf(
+                                FIDOU2FAttestationStatementVerifier(),
+                                PackedAttestationStatementVerifier(),
+                                TPMAttestationStatementVerifier(),
+                                AndroidKeyAttestationStatementVerifier(),
+                                AndroidSafetyNetAttestationStatementVerifier(),
+                                AppleAnonymousAttestationStatementVerifier(),
+                        ),
+                        certPathTrustworthinessVerifier,
+                        selfAttestationTrustworthinessVerifier,
+                        listOf(),
+                        listOf(),
+                        objectConverter,
+                ) to WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+            } else {
+                val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager(objectConverter)
+                webAuthnManager to webAuthnManager
+            }
+
+            val maliciousCounterValueHandler = { authenticationObject: CoreAuthenticationObject ->
+                val presentedSignCount = authenticationObject.authenticatorData.signCount
+                val storedSignCount = authenticationObject.authenticator.counter
+                (authenticationObject.authenticator as? CustomCredentialRecord)?.suspiciousSignCount = presentedSignCount to storedSignCount
+            }
+            strictWebAuthnManager.authenticationDataVerifier.setMaliciousCounterValueHandler(maliciousCounterValueHandler)
+            nonStrictWebAuthnManager.authenticationDataVerifier.setMaliciousCounterValueHandler(maliciousCounterValueHandler)
+
+            return strictWebAuthnManager to nonStrictWebAuthnManager
         }
     }
 
@@ -179,14 +199,25 @@ class WebAuthnGTXModule(conf: WebAuthnConfig) : SimpleGTXModule<WebAuthnConfig>(
                 WebAuthnRegister.OP_NAME to ::WebAuthnRegister,
                 WebAuthnAuthenticate.OP_NAME to ::WebAuthnAuthenticate,
         ),
-        mapOf()
-), MetadataProvider, SnapshotAware by conf.repository {
+        mapOf(
+                QUERY_WEBAUTHN_GET_CREDENTIAL to { conf, ctxt, args ->
+                    val dict = args as GtvDictionary
+                    val id = dict["id"]?.asByteArray() ?: throw UserMistake("No id argument supplied")
+                    val credential = conf.repository.fetchCredential(ctxt, id)
+                    if (credential?.deleted ?: true) GtvNull else credential.toGtv()
+                },
+        )
+), MetadataProvider /* TODO enable snapshots , SnapshotAware by conf.repository */ {
     override fun getMetadata() = GTXModuleMetadata(
             operations = mapOf(
                     WebAuthnRegister.OP_NAME to WebAuthnRegister.metadata,
                     WebAuthnAuthenticate.OP_NAME to WebAuthnAuthenticate.metadata,
             ),
-            queries = mapOf())
+            queries = mapOf(
+                    QUERY_WEBAUTHN_GET_CREDENTIAL to QueryMetadata(args = listOf(
+                            ArgumentMetadata(name = "id", gtvTypes = setOf(GtvType.BYTEARRAY)),
+                    ), returnType = ReturnMetadata(gtvTypes = setOf(GtvType.DICT, GtvType.NULL))),
+            ))
 
     override fun initializeDB(ctx: EContext) {
         conf.repository.initializeDB(ctx)

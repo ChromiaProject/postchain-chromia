@@ -12,6 +12,7 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.extension.getMerkleHashVersion
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -28,6 +29,7 @@ import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.config.BlockchainConfigProvider
 import net.postchain.d1.getCachedPeers
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -113,6 +115,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
         // Extract all packages from all pipes
         val specialTxBuilder = if (anchoringConfig.batchMode) BatchAnchoringSpecialTxBuilder() else MultiOpAnchoringSpecialTxBuilder()
         var currentSize = specialTxBuilder.getTxOverheadSize()
+        val peerCacheCopy = peerCache.toMutableMap()
         pipeIt@ for (pipe in pipes) {
             var opsCount = 0
             var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
@@ -122,6 +125,14 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                     break // Nothing more to find
                 } else {
                     for (anchorPacket in anchorPackets) {
+                        // Checking that we can fetch signers for block so we don't fail validation later
+                        // In case config has been corrupted by force in directory chain
+                        val headerData = BlockHeaderData.fromGtv(GtvDecoder.decodeGtv(anchorPacket.rawHeader))
+                        if (getCachedPeers(peerCacheCopy, headerData, blockchainConfigProvider) == null) {
+                            logger.warn("Unable to fetch signers for block at height ${headerData.getHeight()}, skipping anchoring of blockchain ${pipe.blockchainRid.toHex()}")
+                            break@pipePacketsIt
+                        }
+
                         val size = specialTxBuilder.calculateRequiredSize(anchorPacket)
                         if (currentSize + size > maxTxSize - TX_SIZE_MARGIN) {
                             break@pipeIt
@@ -161,15 +172,14 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
 
         val validatedAnchoringOps = if (anchoringConfig.batchMode) {
             if (ops.size != 1) {
-                logger.warn("Only one operation allowed when batching")
-                return false
+                throw UserMistake("Only one operation allowed when batching")
             }
 
-            AnchoringOpData.validateAndDecodeBatchOpData(ops[0]) ?: return false
+            AnchoringOpData.validateAndDecodeBatchOpData(ops[0]) ?: throw UserMistake("Invalid operation")
         } else {
             val validatedOps = mutableListOf<AnchoringOpData>()
             for (op in ops) {
-                val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: return false
+                val anchorOpData = AnchoringOpData.validateAndDecodeOpData(op) ?: throw UserMistake("Invalid operation")
                 validatedOps.add(anchorOpData)
             }
             validatedOps
@@ -180,18 +190,16 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             val headerData = anchorOpData.headerData
             val bcRid = BlockchainRid(headerData.getBlockchainRid())
             if (isSigner() && bcRid !in relevantChains) {
-                logger.warn("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
-                return false
+                throw UserMistake("Blocks from blockchain $bcRid are not allowed to be anchored in this chain")
             }
 
             val hashCalculator = makeMerkleHashCalculator(headerData.getMerkleHashVersion())
             val blockRid = headerData.toGtv().merkleHash(hashCalculator)
             if (!blockRid.contentEquals(anchorOpData.blockRid)) {
-                logger.warn("Invalid block-rid: ${anchorOpData.blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}, expected: ${blockRid.toHex()}")
-                return false
+                throw UserMistake("Invalid block-rid: ${anchorOpData.blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}, expected: ${blockRid.toHex()}")
             }
 
-            val peers = getCachedPeers(peerCache, headerData, blockchainConfigProvider) ?: return false
+            val peers = getCachedPeers(peerCache, headerData, blockchainConfigProvider) ?: throw UserMistake("no peers")
             signatureVerificationJobs.add(peers to anchorOpData)
 
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
@@ -200,8 +208,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
                 headers.add(newInfo)
             } else {
-                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
-                return false
+                throw UserMistake("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
             }
         }
 
@@ -224,7 +231,7 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
                 }.all { it.await() }
             }
         }
-        if (!allSignaturesValid) return false
+        if (!allSignaturesValid) throw UserMistake("Invalid signatures")
 
         val relevantPipes = anchoringPipeManager.getRelevantPipes()
         // Go through it chain by chain
@@ -233,10 +240,9 @@ open class AnchoringSpecialTxExtension(private val clock: Clock = Clock.systemUT
             // and we pass that task to the [GenericBlockHeaderValidator]
             val validationResult = chainValidation(bctx, bcRid, minimalHeaders)
             if (validationResult.result != ValidationResult.Result.OK) {
-                logger.warn(
+                throw UserMistake(
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
                 )
-                return false
             }
             // Clear matching pipe (if we have one)
             relevantPipes.find { it.blockchainRid == bcRid }?.let { pipe ->

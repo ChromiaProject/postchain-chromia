@@ -134,6 +134,49 @@ class IccfIT : ManagedModeTest() {
         assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "/anchoring/cluster_anchoring.xml",
+        "/anchoring/cluster_anchoring_batch.xml"
+    ])
+    fun cacProof(clusterAnchoringConfig: String) {
+        startManagedSystem(4, 0)
+
+        val systemAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource("/anchoring/system_anchoring.xml")!!.readText())))
+        val clusterAnchoringChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(GtvMLParser.parseGtvML(javaClass.getResource(clusterAnchoringConfig)!!.readText())))
+
+        // We need some dummyu chain to produce an anchoring tx
+        val dummyChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(sourceDappGtvConfig))
+        startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
+        // Target chain will get chain id == 5 and will be considered to be in another cluster
+        val targetChain = startNewBlockchain(signers, setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(targetDappGtvConfig))
+        buildBlock(dummyChain, 0)
+        buildBlock(clusterAnchoringChain, 0)
+        buildBlock(systemAnchoringChain, 0)
+
+        val dummyChainBlockQueries = getChainNodes(dummyChain)[0].blockQueries(dummyChain) as BaseBlockQueries
+
+        val dummyBlockRid = dummyChainBlockQueries.getBlockRid(0).get()!!
+        val clusterAnchoringBlockQueries = getChainNodes(clusterAnchoringChain)[0].blockQueries(clusterAnchoringChain) as BaseBlockQueries
+        val clusterAnchoringTx = (PostchainQuery { name, args -> clusterAnchoringBlockQueries.query(name, args).get() })
+                .getAnchoringTransactionForBlockRid(ChainUtil.ridOf(dummyChain), dummyBlockRid)!!
+        val clusterAnchoringProof = clusterAnchoringBlockQueries.getConfirmationProof(clusterAnchoringTx.txRid.data).get()!!
+
+        val iccfTx = enqueueTxWithOps(targetChain, listOf(
+                OpData(ICCF_OP_NAME, arrayOf(
+                        gtv(ChainUtil.ridOf(clusterAnchoringChain)),
+                        gtv(clusterAnchoringProof.hash),
+                        gtv(
+                                GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(clusterAnchoringProof)),
+                        ))),
+                OpData("iccf_test", arrayOf(GtvDecoder.decodeGtv(clusterAnchoringTx.txData.data), gtv(false)))
+        ))
+        buildBlock(targetChain, 0)
+        val targetChainBlockQueries = getChainNodes(targetChain)[0].blockQueries(targetChain)
+        val blockRid = targetChainBlockQueries.getBlockRid(0).get()!!
+        assertThat(targetChainBlockQueries.getBlockTransactionRids(blockRid).get().map { it.toHex() }).containsExactly(iccfTx.getRID().toHex())
+    }
+
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
         nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", D1TestInfrastructureFactory::class.qualifiedName)

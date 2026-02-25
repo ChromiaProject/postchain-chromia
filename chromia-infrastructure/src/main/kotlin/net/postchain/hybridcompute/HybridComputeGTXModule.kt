@@ -14,15 +14,16 @@ class HybridComputeGTXModule : SimpleGTXModule<Unit>(
         mapOf()
 ), PostchainContextAware {
     private val dbOperations = HybridComputeDatabaseOperationsImpl()
-    private val specialTransactionExtension = HybridComputeSpecialTransactionExtension(dbOperations)
+    private lateinit var postchainContext: PostchainContext
+    private val specialTransactionExtension by lazy { HybridComputeSpecialTransactionExtension(dbOperations, postchainContext) }
 
     override fun initializeDB(ctx: EContext) {
         dbOperations.initialize(ctx)
     }
 
-    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf(specialTransactionExtension)
-
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
-        specialTransactionExtension.initSigMaker(postchainContext.appConfig.pubKeyByteArray, postchainContext.appConfig.privKeyByteArray)
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
+        this.postchainContext = postchainContext
     }
+    
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf(specialTransactionExtension)
 }

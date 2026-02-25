@@ -58,27 +58,6 @@ function test_no_register_op_before() {
     ).run_must_fail("no gtxc.webauthn_register operation before me in transaction");
 }
 
-function test_register_duplicate_challenge(){
-    rell.test.tx().op(
-        webauthn_register(
-            id,
-            x"",
-            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            ["nfc", "usb"],
-        ),
-        check_register(id, ["nfc", "usb"]),
-    ).nop().run();
-    rell.test.tx().op(
-        webauthn_register(
-            id,
-            x"",
-            "{\"type\":\"webauthn.create\",\"challenge\":\"%s\"}".format(challenge),
-            ["nfc", "usb"],
-        ),
-        check_register(id, ["nfc", "usb"]),
-    ).nop().run_must_fail("challenge is not unique");
-}
-
 function test_register_wrong_id(){
     rell.test.tx().op(
         webauthn_register(

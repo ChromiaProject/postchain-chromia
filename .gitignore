@@ -19,3 +19,7 @@ postchain-node
 bc-target
 build
 .flattened-pom.xml
+
+# Claude Code local files
+*CLAUDE.local*
+.claude/*.local.*

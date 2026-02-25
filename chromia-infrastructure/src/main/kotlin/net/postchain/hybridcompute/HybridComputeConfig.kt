@@ -1,23 +1,28 @@
 package net.postchain.hybridcompute
 
+import net.postchain.gtv.mapper.DefaultEmpty
 import net.postchain.gtv.mapper.DefaultValue
 import net.postchain.gtv.mapper.Name
 
 data class HybridComputeConfig(
-        val engine: String,
+        @param:DefaultValue(defaultString = "")
+        val engine: String = "",
 
-        @DefaultValue(defaultLong = -1)
-        @Name("load_timeout_seconds")
-        val loadTimeoutSeconds: Long,
+        @param:DefaultEmpty
+        val engines: List<String> = listOf(),
 
-        @DefaultValue(defaultLong = -1)
-        @Name("compute_timeout_seconds")
-        val computeTimeoutSeconds: Long,
+        @param:DefaultEmpty
+        @param:Name("fast_engines")
+        val fastEngines: List<String> = listOf(),
 
-        @DefaultValue(defaultLong = -1)
-        @Name("compute_cluster_timeout_seconds")
+        @param:DefaultValue(defaultLong = -1)
+        @param:Name("compute_cluster_timeout_seconds")
         val computeClusterTimeoutSeconds: Long,
 
-        @DefaultValue(defaultLong = 1)
+        @param:DefaultValue(defaultLong = 60 * 1000) // one minute
+        @param:Name("block_building_interval_millis")
+        val blockBuildingIntervalMillis: Long,
+
+        @param:DefaultValue(defaultLong = 1)
         val concurrency: Long,
 )

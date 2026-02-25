@@ -2,9 +2,24 @@ blockchains:
   hybridcompute:
     type: library
     module: lib.hybridcompute
+  hybridcompute_query:
+    type: library
+    module: lib.hybridcompute_query
   webauthn:
     type: library
     module: lib.webauthn
+  iccf:
+    type: library
+    module: lib.iccf
+  iccf_test:
+    type: library
+    module: lib.iccf_test
+  icmf:
+    type: library
+    module: lib.icmf
+  block_witness:
+    type: library
+    module: lib.block_witness
 
   hybridcompute_test:
     type: blockchain
@@ -12,15 +27,38 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
       hybridcompute:
-        engine: "net.postchain.hybridcompute.it.TestHybridComputeEngine"
+        engines:
+          - "net.postchain.hybridcompute.it.TestHybridComputeEngine"
+        fast_engines:
+          - "net.postchain.hybridcompute.it.TestHybridComputeEngine2"
+          - "net.postchain.hybridcompute.it.TestDatabaseAwareHybridComputeEngine"
         load_timeout_seconds: 5
         compute_timeout_seconds: 5
+        concurrency: 2
+      signers:
+        - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
+        - x"031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
+        - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
+        - x"0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D"
+
+  hybridcompute_query_test:
+    type: blockchain
+    module: lib.hybridcompute_query.test
+    config:
+      blockstrategy:
+        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+      gtx:
+        modules:
+          - "net.postchain.hybridcompute.HybridComputeGTXModule"
+      hybridcompute:
+        engines:
+          - "net.postchain.hybridcompute.engine.QueryComputeEngine"
+      hybridcompute_query:
+        timeout_seconds: 3
       signers:
         - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
         - x"031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
@@ -33,8 +71,6 @@ blockchains:
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
@@ -49,36 +85,12 @@ blockchains:
         - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
         - x"0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D"
 
-  hybridcompute_test_load_timeout:
-    type: blockchain
-    module: lib.hybridcompute.test
-    config:
-      blockstrategy:
-        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
-      gtx:
-        modules:
-          - "net.postchain.hybridcompute.HybridComputeGTXModule"
-      hybridcompute:
-        engine: "net.postchain.hybridcompute.it.TestHybridComputeEngine"
-        load_timeout_seconds: 2
-        compute_timeout_seconds: 5
-        load_timeout: true
-      signers:
-        - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
-        - x"031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
-        - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
-        - x"0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D"
-
   hybridcompute_test_cluster_timeout:
     type: blockchain
     module: lib.hybridcompute.test
     config:
       blockstrategy:
         name: net.postchain.devtools.OnDemandBlockBuildingStrategy
-      sync_ext:
-        - "net.postchain.hybridcompute.HybridComputeSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.hybridcompute.HybridComputeGTXModule"
@@ -93,10 +105,52 @@ blockchains:
         - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
         - x"0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D"
 
+  webauthn_test:
+    type: blockchain
+    module: lib.webauthn.test
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+      configurationfactory: NOT_USED
+      signers:
+        - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
+        - x"031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F"
+        - x"03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94"
+      gtx:
+        modules:
+          - "net.postchain.crypto.webauthn.WebAuthnGTXModuleFactory"
+      webauthn:
+        allowed-origins:
+          - "https://webauthn.io"
+        allow-cross-origin: false # https://w3c.github.io/webauthn/#dom-collectedclientdata-crossorigin
+        relying-party-identifier: "webauthn.io" # https://w3c.github.io/webauthn/#rp-id
+        user-presence: true # https://w3c.github.io/webauthn/#concept-user-present
+        user-verification: false # https://w3c.github.io/webauthn/#user-verification
+        verify-attestation: false
+
+  block_witness_test:
+    type: blockchain
+    module: lib.block_witness.test
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        name: net.postchain.devtools.OnDemandBlockBuildingStrategy
+      signers:
+        - x"03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070"
+      gtx:
+        rell:
+          native:
+            lib.block_witness: "net.postchain.d1.BlockWitnessRellNative"
+
 compile:
-  rellVersion: 0.14.12
+  rellVersion: 0.15.0
 
 test:
   modules:
     - lib.hybridcompute.test.hc_test
     - lib.webauthn.test
+    - lib.iccf.test
+#    - lib.block_witness.test

@@ -23,22 +23,21 @@
         <module>chromia-core</module>
         <module>chromia-infrastructure</module>
         <module>docker-images</module>
-        <module>coverage-report-aggregate</module>
         <module>chromia-devtools</module>
     </modules>
     <packaging>pom</packaging>
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.45.2</postchain.version>
-        <postchain.client.version>3.34.2</postchain.client.version>
-        <directory.chain.version>1.101.0</directory.chain.version>
-        <rell.version>0.14.15</rell.version>
-        <rell.maven.plugin.version>0.14.9</rell.maven.plugin.version>
-        <eif.version>0.19.0</eif.version>
+        <postchain.version>3.49.2</postchain.version>
+        <postchain.client.version>3.38.0</postchain.client.version>
+        <directory.chain.version>1.109.9</directory.chain.version>
+        <rell.version>0.15.2</rell.version>
+        <rell.maven.plugin.version>0.16.5</rell.maven.plugin.version>
+        <eif.version>0.31.2</eif.version>
         <web3j.version>4.12.0</web3j.version>
         <web3j-plugin.version>4.11.3</web3j-plugin.version>
-        <kotlin.version>2.0.0</kotlin.version>
+        <kotlin.version>2.3.0</kotlin.version>
         <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
@@ -47,6 +46,7 @@
         <mockito.kotlin.version>5.3.1</mockito.kotlin.version>
         <mockito.version>5.12.0</mockito.version>
         <mockito.inline.version>5.2.0</mockito.inline.version>
+        <testcontainers.version>2.0.2</testcontainers.version>
 
         <!--suppress UnresolvedMavenProperty -->
         <directory.source>directory-chain/target/directory1/src</directory.source>
@@ -75,6 +75,16 @@
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>${kotlin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-reflect</artifactId>
+                <version>${kotlin.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>net.postchain</groupId>
@@ -102,6 +112,11 @@
             <dependency>
                 <groupId>net.postchain.rell</groupId>
                 <artifactId>rell-gtx</artifactId>
+                <version>${rell.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain.rell</groupId>
+                <artifactId>rell-api-native</artifactId>
                 <version>${rell.version}</version>
             </dependency>
             <dependency>
@@ -138,7 +153,7 @@
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
-                <version>1.21.1</version>
+                <version>${testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -239,6 +254,7 @@
                     <version>${rell.maven.plugin.version}</version>
                     <configuration>
                         <source>${maven.multiModuleProjectDirectory}/${directory.source}</source>
+                        <hideLibWarnings>true</hideLibWarnings>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -349,46 +365,6 @@
                 <!--suppress UnresolvedMavenProperty -->
                 <directory.source>../directory-chain/src</directory.source>
             </properties>
-        </profile>
-        <profile>
-            <id>coverage</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.10</version>
-                        <executions>
-                            <execution>
-                                <id>default-prepare-agent</id>
-                                <goals>
-                                    <goal>prepare-agent</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>default-prepare-agent-integration</id>
-                                <goals>
-                                    <goal>prepare-agent-integration</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>default-report</id>
-                                <phase>prepare-package</phase>
-                                <goals>
-                                    <goal>report</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>default-report-integration</id>
-                                <phase>prepare-package</phase>
-                                <goals>
-                                    <goal>report-integration</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
     </profiles>
 

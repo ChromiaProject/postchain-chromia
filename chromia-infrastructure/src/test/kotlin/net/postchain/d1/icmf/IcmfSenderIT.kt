@@ -59,7 +59,7 @@ class IcmfSenderIT : IcmfBaseIT() {
     }
 
     @Test
-    fun icmfTooBigMessage() {
+    fun `too big message`() {
         startManagedSystem(3, 0)
         val topic = "L_my-topic"
         val dappChain = deployDappChain()
@@ -73,6 +73,20 @@ class IcmfSenderIT : IcmfBaseIT() {
             val txRejectReasons = getChainNodes(dappChain).mapNotNull { it.transactionQueue().getRejectionReason(tx.getRID().wrap())?.first?.message }
             assertThat(txRejectReasons.any { it.contains("Message body too big") }).isTrue()
         }
+    }
+
+    @Test
+    fun `too long topic name`() {
+        startManagedSystem(3, 0)
+        val topic = "L_" + "imtoolong".repeat(1024)
+        val dappChain = deployDappChain()
+
+        val block0Messages = listOf("test0", "test1")
+        val block0Txs = block0Messages.map {
+            makeTransaction(getChainNodes(dappChain)[0], dappChain, GtxOp("test_message", gtv(topic), gtv(it)))
+        }
+        buildBlock(dappChain, 0, *block0Txs.toTypedArray())
+        verifyMessagesMissing(dappChain, 0)
     }
 
     @Test

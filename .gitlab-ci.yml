@@ -1,12 +1,11 @@
-image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.0.10@sha256:43b02d847ec3824a0d045f9edc244e6467dde253df4effa01edb1aaabba12d2f
+image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.0.11@sha256:a985644b469b4d01dcbd726176d69e238d8c7012c077a429beb65f86905d0bd1
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.3.1
+    ref: 1.3.7
     file:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
       - templates/container-dependency-scanning.yml
-      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -34,7 +33,6 @@ include:
     when: always
     paths:
       - "**/*.log"
-      - $JACOCO_REPORT_DIR/*
     reports:
       junit:
         - "**/target/surefire-reports/TEST-*.xml"
@@ -44,7 +42,6 @@ include:
 
 stages:
   - build
-  - code-coverage
   - slow-integration-tests
   - deploy
   - dependency-check
@@ -83,24 +80,27 @@ deploy:
       clean source:jar deploy
 
 deploy_library_chain:
-  image: registry.gitlab.com/chromaway/core-tools/chromia-cli/chr:0.27.10
-  stage: deploy
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/
-  variables:
-    POSTCHAIN_CLIENT_PUBKEY: "${LIBRARY_CHAIN_PUBLIC_KEY}"
-    POSTCHAIN_CLIENT_PRIVKEY: ${LIBRARY_CHAIN_PRIVATE_KEY}
+  extends: .deploy_library_chain
   script:
-    - apk add curl jq libxml2-utils
     - cd chromia-infrastructure/rell
     - chr install
     - chr build
-    - ../../ci/library_chain/deploy.sh hybridcompute
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n hybridcompute --major 3 --minor 35
+      --library-description "Computational framework for Chromia, database operations and synchronization, special transaction extensions"
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n webauthn --major 1 --minor 0
+      --library-description "Web Authentication support for Chromia."
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n iccf --major 1 --minor 90
+      --library-description "Inter-Chain Confirmation Facility is a client-driven protocol for cross-chain transaction verification within the Chromia network"
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n iccf_test --major 1 --minor 90 
+      --library-description "Inter-chain Confirmation Facility test library"
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n icmf --major 1 --minor 102
+      --library-description "The Inter-chain Messaging Facility (ICMF) facilitates communication between blockchains within a single dapp cluster. It serves as an event-based service that enables blockchains to read data from each other and act accordingly"
+    - ${CI_PROJECT_DIR}/ci/library_chain/deploy.sh -n hybridcompute_query --major 1 --minor 0
+      --library-description "Query computation engine for the Hybrid Compute framework"
 
 build:
   extends:
     - .setup
-    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
@@ -110,7 +110,7 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,coverage
+      --activate-profiles ci
       verify
 
 gitlab-release:
@@ -148,8 +148,8 @@ gitlab-release:
         }
         include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "Postchain" "postchain.version" 32294340
         include_dependency_changelog $PREV_CI_COMMIT_TAG $CI_COMMIT_TAG "EIF" "eif.version" 36768178
-        
-        cat release_notes.md
+      
+        include_library_chain_releases
       else
         echo "Skipping sub changelogs"
       fi
@@ -157,15 +157,6 @@ gitlab-release:
     name: 'Postchain Chromia $CI_COMMIT_TAG'
     description: release_notes.md
     tag_name: '$CI_COMMIT_TAG'
-
-test-coverage-report:
-  stage: code-coverage
-  except:
-    refs:
-      - dev
-      - tags
-  dependencies:
-    - build
 
 slow-integration-tests:
   extends: .setup
@@ -216,7 +207,6 @@ variables:
   TEST_MOUNT_DIRECTORY: /builds/$CI_PROJECT_PATH/mnt
   # The test Directory1DeploymentIT (postchain-images/managed-mode/directory1/) often consume more disk so we don't have 2GiB free, therefore we remove the check to avoid failing.
   TESTCONTAINERS_CHECKS_DISABLE: "true"
-  JACOCO_REPORT_DIR: coverage-report-aggregate/target/site/jacoco-aggregate
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'

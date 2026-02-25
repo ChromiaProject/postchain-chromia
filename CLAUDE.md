@@ -22,7 +22,6 @@ This is a Maven-based Kotlin project for Chromia blockchain infrastructure.
 
 ### Profile-Specific Commands
 - `mvn -Dlocal=true` - Use local directory-chain source (activates d1-local profile)
-- `mvn --activate-profiles coverage` - Generate code coverage reports
 
 ## Project Architecture
 
@@ -37,12 +36,11 @@ This is a multi-module Maven project with the following key modules:
 ### Additional Modules
 - **deployment-test**: Integration tests with Docker containers
 - **docker-images**: Docker image build configurations
-- **coverage-report-aggregate**: Aggregated code coverage reports
 
 ### Key Technologies and Dependencies
 - **Language**: Kotlin 2.0.0 targeting JVM 21
 - **Postchain**: Version 3.41.0 - the underlying blockchain framework
-- **Rell**: Version 0.14.12 - smart contract language for Chromia
+- **Rell**: Version 0.15.0 - smart contract language for Chromia
 - **Client**: Postchain client 3.34.2
 - **Web3j**: 4.12.0 for Ethereum integration
 - **Testing**: JUnit 5, AssertK, Mockito Kotlin, Testcontainers

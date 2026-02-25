@@ -1,0 +1,43 @@
+module;
+
+import webauthn: ^;
+
+entity user {
+    key credential_id: byte_array;
+    user_name: text;
+}
+
+entity book {
+    key name;
+    author: user;
+}
+
+operation register_user(user_name: text) {
+    val credential_record = webauthn.require_register();
+
+    create user (
+        credential_id = credential_record.id,
+        user_name = user_name,
+    );
+}
+
+operation create_book(name) {
+    val auth_data = webauthn.require_auth();
+    val user = user @ { .credential_id == auth_data.id };
+    create book (
+        name = name,
+        author = user,
+    );
+}
+
+query get_user(user_name: text) {
+    return user @ { user_name } (
+        $.to_struct()
+    );
+}
+
+query get_book(name) {
+    return book @ { name } (
+        name=.name, user_name=.author.user_name,
+    );
+}

@@ -6,7 +6,6 @@ import com.webauthn4j.data.AuthenticatorTransport
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
 import com.webauthn4j.data.client.CollectedClientData
 
-// TODO WebAuthn: Remove this and use CredentialRecordImpl when https://github.com/webauthn4j/webauthn4j/issues/1175 is fixed
 class CustomCredentialRecord(
         uvInitialized: Boolean,
         backupEligible: Boolean,
@@ -25,4 +24,6 @@ class CustomCredentialRecord(
 ), CredentialRecord {
     override fun getClientData(): CollectedClientData? = null
     override fun getTransports(): Set<AuthenticatorTransport?> = authenticatorTransports
+
+    var suspiciousSignCount: Pair<Long, Long>? = null
 }

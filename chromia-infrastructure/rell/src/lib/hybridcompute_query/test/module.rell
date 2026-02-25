@@ -1,0 +1,13 @@
+module;
+
+import hcq: ^;
+
+operation submit_query_compute_request(id: text, name: text, args: map<text, gtv>) {
+    hcq.submit_query_request(id, name, args);
+}
+
+query fetch_query_compute_result(id: text): hcq.query_result? = hcq.fetch_query_result(id);
+
+query test_query(input: text) {
+    return "%s-out".format(input);
+}

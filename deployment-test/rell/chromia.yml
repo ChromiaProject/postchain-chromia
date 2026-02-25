@@ -176,29 +176,31 @@ blockchains:
       async_query_queue_capacity: 10
       async_query_timeout_seconds: 5
 
+  test_ticker_jar_extension:
+    module: test_ticker_jar_extension
+    config:
+      features:
+        merkle_hash_version: 2
+      blockstrategy:
+        maxblocktime: 1000
+        maxblocktransactions: 500
+      gtx:
+        modules:
+          - "net.postchain.d1.dummy.DummyExtensionGTXModule"
+      sync_ext:
+        - "net.postchain.d1.dummy.DummySynchronizationInfrastructureExtension"
+
 libs:
-  ft4:
-    registry: https://gitlab.com/chromaway/ft4-lib.git
-    path: rell/src/lib/ft4
-    tagOrBranch: ${DEPLOYMENT_TEST_FT4_VERSION}
-    insecure: true
-  eif:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/eif
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
-  eif_event_receiver:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/eif_event_receiver
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
-  hbridge:
-    registry: https://gitlab.com/chromaway/postchain-eif
-    path: postchain-eif-rell/rell/src/hbridge
-    tagOrBranch: ${DEPLOYMENT_TEST_EIF_VERSION}
-    insecure: true
+  com.chromia.ft4:
+    version: ${DEPLOYMENT_TEST_FT4_VERSION}
+  com.chromia.eif:
+    version: 1.3.0
+  com.chromia.eif_event_receiver:
+    version: 1.1.0
+  com.chromia.hbridge:
+    version: 1.3.0
 
 compile:
   source: src
   target: target
-  rellVersion: 0.14.5
+  rellVersion: 0.15.0

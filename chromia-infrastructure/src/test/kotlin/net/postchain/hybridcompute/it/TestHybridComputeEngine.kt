@@ -4,87 +4,11 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.PostchainContextAware
 import net.postchain.hybridcompute.HybridComputeEngine
-
-sealed interface TestEngineBehavior {
-    fun encode(): Gtv
-
-    fun compute(input: Gtv): Gtv
-    fun validate(bytes: Gtv) {}
-
-    companion object {
-        fun decode(input: Gtv): TestEngineBehavior {
-            val inputArray = input.asArray()
-            return when(inputArray[0].asInteger().toInt()) {
-                CompleteComputation.TAG -> CompleteComputation(input[1].asInteger().toInt())
-                FailComputation.TAG -> FailComputation(input[1].asInteger().toInt())
-                ErrorComputation.TAG -> ErrorComputation(input[1].asInteger().toInt())
-                InvalidComputation.TAG -> InvalidComputation(input[1].asInteger().toInt())
-                else -> throw IllegalArgumentException("Unknown test engine behavior")
-            }
-        }
-    }
-}
-
-class CompleteComputation(val delaySeconds: Int) : TestEngineBehavior {
-    companion object {
-        const val TAG = 0
-    }
-
-    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
-
-    override fun compute(input: Gtv): Gtv {
-        Thread.sleep(delaySeconds * 1000L)
-        return input
-    }
-}
-
-class FailComputation(val delaySeconds: Int) : TestEngineBehavior {
-    companion object {
-        const val TAG = 1
-    }
-
-    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
-
-    override fun compute(input: Gtv): Gtv {
-        Thread.sleep(delaySeconds * 1000L)
-        throw UserMistake("Fail")
-    }
-}
-
-class ErrorComputation(val delaySeconds: Int) : TestEngineBehavior {
-    companion object {
-        const val TAG = 2
-    }
-
-    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
-
-    override fun compute(input: Gtv): Gtv {
-        Thread.sleep(delaySeconds * 1000L)
-        throw RuntimeException("Error")
-    }
-}
-
-class InvalidComputation(val delaySeconds: Int) : TestEngineBehavior {
-    companion object {
-        const val TAG = 3
-    }
-
-    override fun encode(): Gtv = gtv(gtv(TAG.toLong()), gtv(delaySeconds.toLong()))
-
-    override fun compute(input: Gtv): Gtv {
-        Thread.sleep(delaySeconds * 1000L)
-        return input
-    }
-
-    override fun validate(bytes: Gtv) {
-        throw UserMistake("Invalid")
-    }
-}
 
 @Suppress("unused")
 class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shutdownable {
@@ -98,7 +22,7 @@ class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shut
     private var loadFail = false
     private var loadTimeout = false
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         logger.info("init")
         if (configuration.rawConfig["hybridcompute"]!!.asDict()["load_fail"]?.asBoolean() == true) {
             loadFail = true
@@ -135,12 +59,12 @@ class TestHybridComputeEngine : HybridComputeEngine, PostchainContextAware, Shut
         return output to 10
     }
 
-    override fun validate(output: Gtv) {
+    override fun validate(input: Gtv, output: Gtv) {
         require(initialized) { "Not initialized" }
         require(loaded) { "Not loaded" }
         logger.info("Validate starting")
-        val behavior = TestEngineBehavior.decode(output)
-        behavior.validate(output)
+        val behavior = TestEngineBehavior.decode(input)
+        behavior.validate(input, output)
         logger.info("Validate finished")
     }
 

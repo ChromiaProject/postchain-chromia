@@ -46,6 +46,7 @@ operation init(
         asset,
         hbridge.bridge_mode.foreign,
         use_snapshots = true,
-        bridge_address = bridge_address
+        bridge_address = bridge_address,
+        skip_to_height = 0
     );
 }
