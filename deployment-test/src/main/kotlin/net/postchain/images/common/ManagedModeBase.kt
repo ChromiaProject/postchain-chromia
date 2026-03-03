@@ -70,6 +70,7 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
+import org.awaitility.Duration.FIVE_MINUTES
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
@@ -405,13 +406,20 @@ open class ManagedModeBase(private val logDir: String) {
             dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid,
             height: Long = -1L
     ) {
-        awaitQueryResult {
-            val blockRid = if (height == -1L) {
-                srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
-            } else {
-                srcNode.client(srcAnchoringChain).getAnchoredBlockAtHeight(brid, height)!!.blockRid
-            }
-            assertThat(dstNode.client(dstAnchoringChain).isBlockAnchored(brid, blockRid.data)).isTrue()
+        val srcAnchoringClient = srcNode.client(srcAnchoringChain)
+        val dstAnchoringClient = dstNode.client(dstAnchoringChain)
+
+        // Fetch src block rid to reanchor on the dst cluster
+        val srcBlockRidToReanchor = awaitQueryResult(FIVE_MINUTES) {
+            val block = if (height == -1L) srcAnchoringClient.getLastAnchoredBlock(brid)
+                        else srcAnchoringClient.getAnchoredBlockAtHeight(brid, height)
+            assertThat(block).isNotNull()
+            block
+        }!!
+
+        // Verify the src block is reanchored on the dst cluster
+        awaitQueryResult(FIVE_MINUTES) {
+            assertThat(dstAnchoringClient.isBlockAnchored(brid, srcBlockRidToReanchor.blockRid.data)).isTrue()
         }
     }
 
