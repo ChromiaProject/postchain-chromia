@@ -45,8 +45,6 @@ import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
-import net.postchain.images.directory1.awaitQueryResult
-import org.awaitility.Duration
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -60,6 +58,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.DiskHelper
+import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getMasterContainerUserAndGroups
 import net.postchain.images.directory1.getResolvedDockerHost
@@ -71,7 +70,9 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
+import org.awaitility.Duration
 import org.awaitility.Duration.FIVE_MINUTES
+import org.awaitility.Duration.TWO_MINUTES
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
@@ -165,12 +166,12 @@ open class ManagedModeBase(private val logDir: String) {
         dockerClient.listSubContainersCmd(network)
                 .withStatusFilter(listOf("running"))
                 .exec().forEach {
-            dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
-        }
+                    dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
+                }
         dockerClient.listSubContainersCmd(network)
                 .exec().forEach {
-            dockerClient.removeContainerCmd(it.id).exec()
-        }
+                    dockerClient.removeContainerCmd(it.id).exec()
+                }
     }
 
     // Create a Postchain server for concurrent testing. Use `postchainServerWithSubnodes` if you want to setup a
@@ -413,7 +414,7 @@ open class ManagedModeBase(private val logDir: String) {
         // Fetch src block rid to reanchor on the dst cluster
         val srcBlockRidToReanchor = awaitQueryResult(TWO_MINUTES) {
             val block = if (height == -1L) srcAnchoringClient.getLastAnchoredBlock(brid)
-                        else srcAnchoringClient.getAnchoredBlockAtHeight(brid, height)
+            else srcAnchoringClient.getAnchoredBlockAtHeight(brid, height)
             assertThat(block).isNotNull()
             block
         }!!
