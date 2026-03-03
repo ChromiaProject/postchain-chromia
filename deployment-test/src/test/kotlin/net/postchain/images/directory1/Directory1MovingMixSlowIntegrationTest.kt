@@ -27,7 +27,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
-import net.postchain.dapp.awaitQueryResult
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser

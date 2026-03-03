@@ -45,7 +45,6 @@ import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.awaitQueryResult
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -59,6 +58,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.images.directory1.DiskHelper
+import net.postchain.images.directory1.awaitQueryResult
 import net.postchain.images.directory1.awaitUntilAsserted
 import net.postchain.images.directory1.getMasterContainerUserAndGroups
 import net.postchain.images.directory1.getResolvedDockerHost
@@ -70,7 +70,9 @@ import net.postchain.postgres.ChromaWayPostgresContainer
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartBlockchainRequest
+import org.awaitility.Duration
 import org.awaitility.Duration.FIVE_MINUTES
+import org.awaitility.Duration.TWO_MINUTES
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
@@ -164,12 +166,12 @@ open class ManagedModeBase(private val logDir: String) {
         dockerClient.listSubContainersCmd(network)
                 .withStatusFilter(listOf("running"))
                 .exec().forEach {
-            dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
-        }
+                    dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
+                }
         dockerClient.listSubContainersCmd(network)
                 .exec().forEach {
-            dockerClient.removeContainerCmd(it.id).exec()
-        }
+                    dockerClient.removeContainerCmd(it.id).exec()
+                }
     }
 
     // Create a Postchain server for concurrent testing. Use `postchainServerWithSubnodes` if you want to setup a
@@ -352,7 +354,7 @@ open class ManagedModeBase(private val logDir: String) {
 
         providers.forEach { provider ->
 
-            val pendingProposals = awaitQueryResult {
+            val pendingProposals = awaitQueryResult(Duration.TWO_MINUTES) {
                 node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
             }
 
@@ -367,7 +369,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertNumberOfChainSigners(blockchainRid: BlockchainRid, expected: Int) {
-        awaitQueryResult {
+        awaitQueryResult(Duration.TWO_MINUTES) {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).size
             assertThat(actual).isEqualTo(expected)
@@ -375,7 +377,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
-        awaitQueryResult {
+        awaitQueryResult(Duration.TWO_MINUTES) {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
             val expected = nodes.map { it.pubkey }.toSet()
@@ -384,7 +386,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertChainSigners(txRid: TxRid, vararg nodes: PostchainContainer): BlockchainRid =
-            awaitQueryResult {
+            awaitQueryResult(Duration.TWO_MINUTES) {
                 val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
                 assertThat(brid).isNotNull()
                 val currentHeight = nodes.first().client(brid!!).currentBlockHeight()
@@ -410,9 +412,9 @@ open class ManagedModeBase(private val logDir: String) {
         val dstAnchoringClient = dstNode.client(dstAnchoringChain)
 
         // Fetch src block rid to reanchor on the dst cluster
-        val srcBlockRidToReanchor = awaitQueryResult(FIVE_MINUTES) {
+        val srcBlockRidToReanchor = awaitQueryResult(TWO_MINUTES) {
             val block = if (height == -1L) srcAnchoringClient.getLastAnchoredBlock(brid)
-                        else srcAnchoringClient.getAnchoredBlockAtHeight(brid, height)
+            else srcAnchoringClient.getAnchoredBlockAtHeight(brid, height)
             assertThat(block).isNotNull()
             block
         }!!
@@ -432,7 +434,7 @@ open class ManagedModeBase(private val logDir: String) {
     protected fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String, nodes: Array<PostchainContainer> = nodes()) {
         awaitUntilAsserted {
             nodes.forEach { node ->
-                val cities = awaitQueryResult { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
+                val cities = awaitQueryResult(Duration.TWO_MINUTES) { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assertThat(cities).contains(expectedResult)
             }

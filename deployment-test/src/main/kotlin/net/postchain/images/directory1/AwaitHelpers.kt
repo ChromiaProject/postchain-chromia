@@ -4,10 +4,18 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvNull
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Assertions.fail
 import java.lang.Thread.sleep
+
+class AwaitingClient(val client: PostchainClient) : PostchainClient by client {
+    override fun query(name: String, args: Gtv): Gtv {
+        return awaitQueryResult(Duration.TWO_MINUTES) { client.query(name, args) } ?: GtvNull
+    }
+}
 
 fun <T> awaitQueryResult(atMost: Duration = Duration.FIVE_MINUTES, assertion: () -> T): T? {
     var result: T? = null
