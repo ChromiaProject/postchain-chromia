@@ -3,6 +3,7 @@ package net.postchain.images.directory1
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
+import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import net.postchain.chain0.cm_api.cmGetClusterInfo
 import net.postchain.chain0.common.init.initOperation
@@ -14,11 +15,8 @@ import net.postchain.chain0.common.queries.getNodeData
 import net.postchain.chain0.common.queries.getSummary
 import net.postchain.chain0.direct_cluster.createClusterOperation
 import net.postchain.chain0.direct_container.createContainerOperation
-import net.postchain.chain0.model.BlockchainState
 import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
-import net.postchain.chain0.proposal_blockchain.BlockchainAction
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveFinishOperation
 import net.postchain.chain0.proposal_blockchain_move.proposeBlockchainMoveOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
@@ -28,6 +26,8 @@ import net.postchain.cm.cm_api.ClusterManagementImpl
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
+import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
+import net.postchain.dapp.awaitQueryResult
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -35,6 +35,7 @@ import net.postchain.images.common.ManagedModeBase
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider1KeyPair
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider2KeyPair
 import net.postchain.images.directory1.Directory1TestBase.Companion.provider3KeyPair
+import org.awaitility.Duration.FIVE_MINUTES
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -47,6 +48,11 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @DisableIfTestFails // Will abort test execution if any test case fails
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class Directory1MovingMixSlowIntegrationTest : ManagedModeBase("moving-mix") {
+
+    companion object {
+        // Since PCU is not available, there needs to be a margin of ~ 10 blocks (10 sec)
+        private const val HEIGHT_MARGIN = 10L
+    }
 
     lateinit var dappBrid: BlockchainRid
     lateinit var s1CAC: BlockchainRid
@@ -161,9 +167,10 @@ class Directory1MovingMixSlowIntegrationTest : ManagedModeBase("moving-mix") {
             assertThat(lastAnchoredBlock!!.blockHeight).isGreaterThan(3)
         }
 
+        // Update dapp config
         updateDapp("test_dapp", maxBlockTransactions = 1000)
 
-        testLogger.info("Making sure 1 more block of dapp is anchored")
+        testLogger.info("Making sure more blocks of dapp are anchored")
         awaitUntilAsserted {
             val lastAnchoredBlock = awaitQueryResult {
                 node1.client(s1CAC).getLastAnchoredBlock(dappBrid)
@@ -179,45 +186,38 @@ class Directory1MovingMixSlowIntegrationTest : ManagedModeBase("moving-mix") {
 
         // build 3 more blocks
         testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
-        val dappClient = node1.client(dappBrid)
-        val height = dappClient.currentBlockHeight()
+        val dappClient1 = node1.client(dappBrid)
+        var height1 = dappClient1.currentBlockHeight()
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
+            assertThat(dappClient1.currentBlockHeight()).isGreaterThan(height1 + 2)
         }
-
-        // pausing blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
-                .postTransactionUntilConfirmed("test_dapp paused")
-        // verify blockchain is PAUSED and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // initiating moving
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3a", "")
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3a", "", false)
                 .postTransactionUntilConfirmed("test_dapp moving to c3a/subnode started")
 
+        // make sure node3 syncs blocks from node1
+        val dappClient3a = node3.client(dappBrid)
+        height1 = dappClient1.currentBlockHeight()
+        awaitQueryResult(FIVE_MINUTES) {
+            assertThat(dappClient3a.currentBlockHeight("c3a")).isGreaterThan(height1)
+        }
+
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight() - 1
+        val finalHeight = dappClient1.currentBlockHeight() + HEIGHT_MARGIN
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, finalHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c3a/subnode finalized")
 
-        // resuming blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
-                .postTransactionUntilConfirmed("test_dapp resumed")
-        // verify blockchain is RUNNING and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-
-        // Asserting that all blocks (some of them) are anchored on s3CAC chain
+        // Asserting that all blocks are re-anchored on s3CAC chain
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
         assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
 
         // Asserting that new blocks are built and anchored on s3CAC chain
         awaitUntilAsserted {
             val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
+            assertThat(s3LastAnchoredHeight).isGreaterThan(finalHeight + 2)
         }
     }
 
@@ -228,45 +228,42 @@ class Directory1MovingMixSlowIntegrationTest : ManagedModeBase("moving-mix") {
 
         // build 3 more blocks
         testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
-        val dappClient = node3.client(dappBrid)
-        val height = dappClient.currentBlockHeight()
+        val dappClient3a = node3.client(dappBrid)
+        var height3a = dappClient3a.currentBlockHeight("c3a")
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
+            assertThat(dappClient3a.currentBlockHeight("c3a")).isGreaterThan(height3a + 2)
         }
-
-        // pausing blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
-                .postTransactionUntilConfirmed("test_dapp paused")
-        // verify blockchain is PAUSED and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // initiating moving
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3b", "")
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c3b", "", false)
                 .postTransactionUntilConfirmed("test_dapp moving to c3b/subnode started")
 
+        // make sure node3/c3b syncs blocks from node3/c3a
+        val dappClient3b = node3.client(dappBrid)
+        height3a = dappClient3a.currentBlockHeight("c3a")
+        awaitQueryResult(FIVE_MINUTES) {
+            assertThat(dappClient3b.currentBlockHeight("c3b")).isGreaterThan(height3a)
+        }
+
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight() - 1
+        val finalHeight = dappClient3a.currentBlockHeight() + HEIGHT_MARGIN
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, finalHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c3b/subnode finalized")
 
-        // resuming blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
-                .postTransactionUntilConfirmed("test_dapp resumed")
-        // verify blockchain is RUNNING and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-
-        // Asserting that all blocks (some of them) are anchored on s3CAC chain
-        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC, 0)
-        assertBlockReanchored(dappBrid, node1, s1CAC, node3, s3CAC)
+        // Since both c3a and c3b belong to the same cluster, it is enough to check whether the `finalHeight` block is anchored
+        val dstAnchoringClient = node3.client(s3CAC)
+        awaitQueryResult(FIVE_MINUTES) {
+            val blockToVerify = dappClient3a.blockAtHeight(finalHeight)
+            assertThat(blockToVerify).isNotNull()
+            assertThat(dstAnchoringClient.isBlockAnchored(dappBrid, blockToVerify!!.rid.data)).isTrue()
+        }
 
         // Asserting that new blocks are built and anchored on s3CAC chain
         awaitUntilAsserted {
             val s3LastAnchoredHeight = node3.client(s3CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(s3LastAnchoredHeight).isGreaterThan(lastHeight)
+            assertThat(s3LastAnchoredHeight).isGreaterThan(finalHeight + 2)
         }
     }
 
@@ -277,45 +274,38 @@ class Directory1MovingMixSlowIntegrationTest : ManagedModeBase("moving-mix") {
 
         // build 3 more blocks
         testLogger.info("Making sure next 3 blocks of dapp are built and anchored")
-        val dappClient = node3.client(dappBrid)
-        val height = dappClient.currentBlockHeight()
+        val dappClient3b = node3.client(dappBrid)
+        var height3b = dappClient3b.currentBlockHeight("c3b")
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
+            assertThat(dappClient3b.currentBlockHeight("c3b")).isGreaterThan(height3b + 2)
         }
-
-        // pausing blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
-                .postTransactionUntilConfirmed("test_dapp paused")
-        // verify blockchain is PAUSED and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
 
         // initiating moving
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c2", "")
+                .proposeBlockchainMoveOperation(node1.providerPubkey, dappBrid, "c2", "", false)
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master started")
 
+        // make sure node2 syncs blocks from node3
+        val dappClient2 = node2.client(dappBrid)
+        height3b = dappClient3b.currentBlockHeight("c3b")
+        awaitQueryResult(FIVE_MINUTES) {
+            assertThat(dappClient2.currentBlockHeight()).isGreaterThan(height3b)
+        }
+
         // finalizing moving
-        val lastHeight = dappClient.currentBlockHeight() - 1
+        val finalHeight = dappClient3b.currentBlockHeight() + HEIGHT_MARGIN
         node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, lastHeight, "")
+                .proposeBlockchainMoveFinishOperation(node1.providerPubkey, dappBrid, finalHeight, "")
                 .postTransactionUntilConfirmed("test_dapp moving to c2/master finalized")
 
-        // resuming blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
-                .postTransactionUntilConfirmed("test_dapp resumed")
-        // verify blockchain is RUNNING and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
-
-        // Asserting that all blocks (some of them) are anchored on s2CAC chain
+        // Asserting that all blocks are re-anchored on s2CAC chain
         assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC, 0)
         assertBlockReanchored(dappBrid, node3, s3CAC, node2, s2CAC)
 
         // Asserting that new blocks are anchored on s2CAC chain
         awaitUntilAsserted {
             val s2LastAnchoredHeight = node2.client(s2CAC).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(s2LastAnchoredHeight).isGreaterThan(lastHeight)
+            assertThat(s2LastAnchoredHeight).isGreaterThan(finalHeight + 2)
         }
     }
 
