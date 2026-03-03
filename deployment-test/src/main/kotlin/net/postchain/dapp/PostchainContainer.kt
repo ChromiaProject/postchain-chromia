@@ -4,6 +4,7 @@ import com.github.dockerjava.api.model.ExposedPort
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.images.directory1.AwaitingClient
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.impl.PostchainClientImpl

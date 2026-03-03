@@ -45,7 +45,8 @@ import net.postchain.d1.rell.anchoring_chain_common.getAnchoredBlockAtHeight
 import net.postchain.d1.rell.anchoring_chain_common.getLastAnchoredBlock
 import net.postchain.d1.rell.anchoring_chain_common.isBlockAnchored
 import net.postchain.dapp.PostchainContainer
-import net.postchain.dapp.awaitQueryResult
+import net.postchain.images.directory1.awaitQueryResult
+import org.awaitility.Duration
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.dapp.startContainers
 import net.postchain.dapp.stopContainers
@@ -351,7 +352,7 @@ open class ManagedModeBase(private val logDir: String) {
 
         providers.forEach { provider ->
 
-            val pendingProposals = awaitQueryResult {
+            val pendingProposals = awaitQueryResult(Duration.TWO_MINUTES) {
                 node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
             }
 
@@ -366,7 +367,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertNumberOfChainSigners(blockchainRid: BlockchainRid, expected: Int) {
-        awaitQueryResult {
+        awaitQueryResult(Duration.TWO_MINUTES) {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).size
             assertThat(actual).isEqualTo(expected)
@@ -374,7 +375,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertChainSigners(blockchainRid: BlockchainRid, vararg nodes: PostchainContainer) {
-        awaitQueryResult {
+        awaitQueryResult(Duration.TWO_MINUTES) {
             val currentHeight = node1.client(blockchainRid).currentBlockHeight()
             val actual = node1.c0.cmGetPeerInfo(blockchainRid.data, currentHeight).map { PubKey(it) }.toSet()
             val expected = nodes.map { it.pubkey }.toSet()
@@ -383,7 +384,7 @@ open class ManagedModeBase(private val logDir: String) {
     }
 
     protected fun assertChainSigners(txRid: TxRid, vararg nodes: PostchainContainer): BlockchainRid =
-            awaitQueryResult {
+            awaitQueryResult(Duration.TWO_MINUTES) {
                 val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
                 assertThat(brid).isNotNull()
                 val currentHeight = nodes.first().client(brid!!).currentBlockHeight()
@@ -405,7 +406,7 @@ open class ManagedModeBase(private val logDir: String) {
             dstNode: PostchainContainer, dstAnchoringChain: BlockchainRid,
             height: Long = -1L
     ) {
-        awaitQueryResult {
+        awaitQueryResult(Duration.TWO_MINUTES) {
             val blockRid = if (height == -1L) {
                 srcNode.client(srcAnchoringChain).getLastAnchoredBlock(brid)!!.blockRid
             } else {
@@ -424,7 +425,7 @@ open class ManagedModeBase(private val logDir: String) {
     protected fun assertDappQuery(brid: BlockchainRid, query: String, expectedResult: String, nodes: Array<PostchainContainer> = nodes()) {
         awaitUntilAsserted {
             nodes.forEach { node ->
-                val cities = awaitQueryResult { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
+                val cities = awaitQueryResult(Duration.TWO_MINUTES) { node.client(brid).query(query, GtvFactory.gtv(mapOf())) }!!
                         .asArray().map { it.asString() }
                 assertThat(cities).contains(expectedResult)
             }
