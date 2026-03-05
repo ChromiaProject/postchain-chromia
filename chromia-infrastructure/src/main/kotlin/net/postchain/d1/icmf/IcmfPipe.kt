@@ -10,6 +10,7 @@ interface IcmfPipe<out RT : Route, PtrT, PktT, IdT> : Shutdownable {
     val id: IdT
 
     fun mightHaveNewPackets(): Boolean
+    fun haveNewPacketsForSure(): Boolean
 
     /**
      * Fetches next packets with pointer greater than currentPointer

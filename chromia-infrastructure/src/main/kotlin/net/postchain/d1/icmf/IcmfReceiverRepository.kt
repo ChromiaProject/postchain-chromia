@@ -121,7 +121,11 @@ class IcmfReceiverRepository(
             dbOperations.deleteDappProvidedReceiverTopics(bctx)
         }
         if (!update.topics.isNullOrEmpty()) {
-            dbOperations.saveDappProvidedReceiverTopics(bctx, update.topics)
+            if (update.remove) {
+                dbOperations.deleteDappProvidedReceiverTopics(bctx, update.topics)
+            } else { // add
+                dbOperations.saveDappProvidedReceiverTopics(bctx, update.topics)
+            }
         }
 
         val allTopics = dbOperations.loadDappProvidedReceiverTopics(bctx)

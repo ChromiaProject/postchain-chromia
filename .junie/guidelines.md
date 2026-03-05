@@ -32,7 +32,7 @@ mvn clean compile -pl chromia-infrastructure
 
 ### Key Dependencies
 - **Postchain 3.41.0**: Core blockchain framework
-- **Rell 0.14.12**: Rell programming language support
+- **Rell 0.15.0**: Rell programming language support
 - **JOOQ**: Database access layer
 - **Web3j**: Ethereum integration
 - **EIF (Ethereum Integration Framework)**: Cross-chain functionality
@@ -141,7 +141,7 @@ open class YourGTXModule : SimpleGTXModule<YourModuleContext>(
         queries = mapOf(/* query metadata */)
     )
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         // Initialize module-specific context
     }
 }

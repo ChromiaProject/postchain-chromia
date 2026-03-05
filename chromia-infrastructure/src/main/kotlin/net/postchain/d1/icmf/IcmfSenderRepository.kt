@@ -13,9 +13,9 @@ class IcmfSenderRepository(
         private val icmfSenderGTXModuleContext: IcmfSenderGTXModuleContext
 ) {
 
-    fun persistMessage(ctxt: TxEContext, topic: String, body: Gtv) {
+    fun persistMessage(ctxt: TxEContext, topic: String, body: Gtv, rawBody: ByteArray) {
         val datumId = icmfSenderGTXModuleContext.dbOperations
-                .saveSentMessage(ctxt, ctxt.txIID, topic, ctxt.height, GtvEncoder.encodeGtv(body))
+                .saveSentMessage(ctxt, ctxt.txIID, topic, ctxt.height, rawBody)
 
         icmfSenderGTXModuleContext.snapshotContext?.emitDatum(
                 ctxt,

@@ -8,8 +8,8 @@ import net.postchain.gtv.mapper.toObject
 const val DEFAULT_MESSAGE_QUERY_LIMIT = 100
 
 data class IcmfSenderBlockchainConfigData(
-        @Name("message_query_limit")
-        @DefaultValue(DEFAULT_MESSAGE_QUERY_LIMIT.toLong())
+        @param:Name("message_query_limit")
+        @param:DefaultValue(DEFAULT_MESSAGE_QUERY_LIMIT.toLong())
         val messageQueryLimit: Long
 ) {
     companion object {

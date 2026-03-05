@@ -60,7 +60,7 @@ class ClusterAnchoringGTXModule : SimpleGTXModule<Unit>(
      */
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = _specialTxExtensions
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         resourceUsageStatisticsSpecialTxExtension.nodePubkey = postchainContext.appConfig.pubKeyByteArray
         resourceUsageStatisticsSpecialTxExtension.nodePrivkey = postchainContext.appConfig.privKeyByteArray
         resourceUsageStatisticsSpecialTxExtension.signers = configuration.signers

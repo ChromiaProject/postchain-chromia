@@ -20,6 +20,7 @@ import net.postchain.d1.client.ChromiaClientProvider
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
+import java.io.IOException
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -75,21 +76,50 @@ class InterClusterTopicPipe(
         val client = clientProvider.blockchain(blockchainRid)
 
         val heightToQueryFrom = max(lastMessageHeight.get(), skipToHeight - 1)
-        val allMessages = client.query(
-                QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
-                gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(heightToQueryFrom)))
-        ).asArray().map {
-            val size = GtvEncoder.encodeGtv(it["body"]!!).size
-            if (size > MAX_MESSAGE_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $MAX_MESSAGE_SIZE bytes")
-            it["height"]!!.asInteger() to IcmfMessage(it["body"]!!, size)
-        }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
+        val allMessages = try {
+            client.query(
+                    QUERY_ICMF_GET_MESSAGES_AFTER_HEIGHT,
+                    gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(heightToQueryFrom)))
+            ).asArray().map {
+                val body = it["body"]!!
+                val size = GtvEncoder.encodeGtv(body).size
+                if (size > ICMF_MESSAGE_MAX_SIZE) throw UserMistake("Message with size $size bytes exceeds maximum size: $ICMF_MESSAGE_MAX_SIZE bytes")
+                it["height"]!!.asInteger() to IcmfMessage(body, size)
+            }.groupBy { it.first }.mapValues { messages -> messages.value.map { it.second } }
+        } catch (e: Exception) {
+            when (e) {
+                is UserMistake, is IOException -> {
+                    logger.warn(
+                            "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages for topic ${route.topic}: ${e.message}, will retry after $pollInterval",
+                            e
+                    )
+                    return
+                }
+
+                else -> throw e
+            }
+        }
         logger.debug { "Fetched ${allMessages.size} messages from height $heightToQueryFrom" }
 
         val currentPackets = mutableListOf<Pair<IcmfPacket, Int>>()
         for ((height, messages) in allMessages) {
-            val block = client.blockAtHeight(height)
+            val block = try {
+                client.blockAtHeight(height)
+            } catch (e: Exception) {
+                when (e) {
+                    is UserMistake, is IOException -> {
+                        logger.warn(
+                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for block for topic ${route.topic}: ${e.message}, will retry after $pollInterval",
+                                e
+                        )
+                        return
+                    }
+
+                    else -> throw e
+                }
+            }
             if (block == null) {
-                logger.warn("Unable to fetch block at height: $height from blockchain-rid: ${blockchainRid.toHex()}")
+                logger.warn("Unable to fetch block at height: $height from blockchain-rid: ${blockchainRid.toHex()} for topic ${route.topic}")
                 return
             }
 
@@ -140,6 +170,8 @@ class InterClusterTopicPipe(
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
+
+    override fun haveNewPacketsForSure(): Boolean = packets.isNotEmpty()
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long, IcmfPacket>? =
             packets.higherEntry(currentPointer)?.value?.first

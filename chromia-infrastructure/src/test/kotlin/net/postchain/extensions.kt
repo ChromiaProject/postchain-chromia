@@ -7,8 +7,9 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import org.mockito.kotlin.mock
 
-fun IntegrationTestSetup.query(chainId: Long): PostchainQuery =
-        PostchainQuery { name, args -> getChainNodes(chainId).first().blockQueries(chainId).query(name, args).get() }
+fun IntegrationTestSetup.queryAllNodes(chainId: Long, f: (PostchainQuery) -> Unit) {
+    getChainNodes(chainId).forEach { f(PostchainQuery { name, args -> it.blockQueries(chainId).query(name, args).get() }) }
+}
 
 fun IntegrationTestSetup.enqueueTx(
         chainId: Long,

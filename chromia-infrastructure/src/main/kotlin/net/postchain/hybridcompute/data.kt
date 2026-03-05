@@ -6,128 +6,146 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GtxOpData
 import net.postchain.gtx.data.OpData
+import java.util.concurrent.Future
 
 class RequestTakenOp(
         val id: String,
+        val type: String,
         val processedBy: ByteArray,
         val signatureData: ByteArray,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation request_taken(id: text, processed_by: byte_array, signature_data: byte_array)
+        // @mount('__hc.') operation request_taken(id: text, type: text, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.request_taken"
 
-        fun fromOpData(opData: GtxOpData): RequestTakenOp? {
-            if (opData.opName != OP_NAME) return null
-            if (opData.args.size != 3) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+        fun fromOpData(opData: GtxOpData): RequestTakenOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
+            if (opData.args.size != 4) {
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
-                RequestTakenOp(opData.args[0].asString(), opData.args[1].asByteArray(), opData.args[2].asByteArray())
+                RequestTakenOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2].asByteArray(), opData.args[3].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(processedBy), gtv(signatureData)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), gtv(processedBy), gtv(signatureData)))
 }
 
 class ResponseOp(
         val id: String,
         val type: String,
+        val input: Gtv,
         val output: Gtv,
-        val signatureSubjectId: ByteArray,
+        val processedBy: ByteArray,
         val signatureData: ByteArray,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation response(id: text, type: text, output: gtv, signature_subject_id: byte_array, signature_data: byte_array)
+        // @mount('__hc.') operation response(id: text, type: text, input: gtv, output: gtv, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.response"
 
-        fun fromOpData(opData: GtxOpData): ResponseOp? {
-            if (opData.opName != OP_NAME) return null
-            if (opData.args.size != 5) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+        fun fromOpData(opData: GtxOpData): ResponseOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
+            if (opData.args.size != 6) {
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
-                ResponseOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2], opData.args[3].asByteArray(), opData.args[4].asByteArray())
+                ResponseOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2], opData.args[3], opData.args[4].asByteArray(), opData.args[5].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), output, gtv(signatureSubjectId), gtv(signatureData)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, output, gtv(processedBy), gtv(signatureData)))
 }
 
 class FailureOp(
         val id: String,
         val type: String,
+        val input: Gtv,
         val error: String,
-        val signatureSubjectId: ByteArray,
+        val processedBy: ByteArray,
         val signatureData: ByteArray,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation failure(id: text, type: text, error: text, signature_subject_id: byte_array, signature_data: byte_array)
+        // @mount('__hc.') operation failure(id: text, type: text, input: gtv, error: text, processed_by: byte_array, signature_data: byte_array)
         const val OP_NAME = "__hc.failure"
 
-        fun fromOpData(opData: GtxOpData): FailureOp? {
-            if (opData.opName != OP_NAME) return null
-            if (opData.args.size != 5) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+        fun fromOpData(opData: GtxOpData): FailureOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
+            if (opData.args.size != 6) {
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
-                FailureOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2].asString(), opData.args[3].asByteArray(), opData.args[4].asByteArray())
+                FailureOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2], opData.args[3].asString(), opData.args[4].asByteArray(), opData.args[5].asByteArray())
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), gtv(error), gtv(signatureSubjectId), gtv(signatureData)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input, gtv(error), gtv(processedBy), gtv(signatureData)))
 }
 
 class ClusterTimeoutOp(
         val id: String,
-        val type: String
+        val type: String,
+        val input: Gtv,
 ) {
     companion object : KLogging() {
-        // @mount('__hc.') operation cluster_timeout(id: text, type: text, error: text)
+        // @mount('__hc.') operation cluster_timeout(id: text, type: text, input: gtv)
         const val OP_NAME = "__hc.cluster_timeout"
 
-        fun fromOpData(opData: GtxOpData): ClusterTimeoutOp? {
-            if (opData.opName != OP_NAME) return null
-            if (opData.args.size != 2) {
-                logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
-                return null
+        fun fromOpData(opData: GtxOpData): ClusterTimeoutOp {
+            if (opData.opName != OP_NAME) throw UserMistake("Unexpected op: ${opData.opName}")
+            if (opData.args.size != 3) {
+                throw UserMistake("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
             }
 
             return try {
-                ClusterTimeoutOp(opData.args[0].asString(), opData.args[1].asString())
+                ClusterTimeoutOp(opData.args[0].asString(), opData.args[1].asString(), opData.args[2])
             } catch (e: UserMistake) {
-                logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
-                null
+                throw UserMistake("Got $OP_NAME operation with invalid argument types: ${e.message}")
             }
         }
     }
 
-    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type)))
+    fun toOpData() = OpData(OP_NAME, arrayOf(gtv(id), gtv(type), input))
 }
 
 sealed interface Computation {
     val type: String
+    val input: Gtv
 }
 
-class StartedComputation(override val type: String) : Computation
+data class TakenComputation(override val type: String, override val input: Gtv) : Computation
 
-class FinishedComputation(override val type: String, val output: Gtv) : Computation
+class StartedComputation(override val type: String, override val input: Gtv, val future: Future<*>) : Computation {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-class FailedComputation(override val type: String, val errorMessage: String) : Computation
+        other as StartedComputation
+
+        if (type != other.type) return false
+        if (input != other.input) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + input.hashCode()
+        return result
+    }
+}
+
+data class FinishedComputation(override val type: String, override val input: Gtv, val output: Gtv, val isFast: Boolean) : Computation
+
+data class FailedComputation(override val type: String, override val input: Gtv, val errorMessage: String, val isFast: Boolean) : Computation

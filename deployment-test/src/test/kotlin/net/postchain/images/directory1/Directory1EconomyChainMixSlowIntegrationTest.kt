@@ -62,8 +62,7 @@ import net.postchain.chain0.model.ProviderInfo
 import net.postchain.chain0.model.ProviderTier
 import net.postchain.chain0.nm_api.nmGetContainerLimits
 import net.postchain.chain0.proposal.voting.createVoterSetOperation
-import net.postchain.chain0.proposal_blockchain.BlockchainAction
-import net.postchain.chain0.proposal_blockchain.proposeBlockchainActionOperation
+import net.postchain.chain0.proposal_cluster.proposeClusterProviderOperation
 import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.chain0.provider_auth.model.ProviderKeyRole
 import net.postchain.client.config.PostchainClientConfig
@@ -86,9 +85,6 @@ import net.postchain.eif.contracts.ChromiaTestToken
 import net.postchain.eif.contracts.ChromiaTokenBridge
 import net.postchain.eif.contracts.TokenMinterTest
 import net.postchain.eif.contracts.Validator
-import net.postchain.eif.hbridge.core.getEoaAddressesForAccount
-import net.postchain.eif.hbridge.getErc20WithdrawalByTx
-import net.postchain.eif.hbridge.core.linkEvmEoaAccountOperation
 import net.postchain.eif.lib.ft4.core.auth.Signature
 import net.postchain.eif.lib.ft4.external.accounts.UPDATE_MAIN_AUTH_DESCRIPTOR
 import net.postchain.eif.lib.ft4.external.assets.getAssetBalance
@@ -96,6 +92,9 @@ import net.postchain.eif.lib.ft4.external.assets.getAssetsByName
 import net.postchain.eif.lib.ft4.external.auth.evmSignaturesOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.ft4.external.auth.getAuthMessageTemplate
+import net.postchain.eif.lib.hbridge.core.getEoaAddressesForAccount
+import net.postchain.eif.lib.hbridge.core.linkEvmEoaAccountOperation
+import net.postchain.eif.lib.hbridge.getErc20WithdrawalByTx
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -143,13 +142,13 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         const val ASSET_NAME = "tCHR"
 
         const val APP_CLUSTER1 = "appCluster1"
-        const val APP_CLUSTER2 = "appCluster2"
         const val APP_CLUSTER_TAG = "appClusterTag"
         const val CONTAINER_UNITS = 2L
         const val DURATION_WEEKS = 1L
         const val EXTRA_STORAGE_GIB = 0L
         const val SCU_PRICE = 1L
         const val EXTRA_STORAGE_PRICE = 1L
+        const val EXTRA_COMPUTE_PRICE = 0L
         const val PROVIDER1_VS = "provider1_vs"
         const val PROVIDER2_VS = "provider2_vs"
         private const val DEPOSIT_NUMBER = 5
@@ -158,7 +157,6 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
     lateinit var containerName: String
     lateinit var dappBrid: BlockchainRid
     lateinit var CAC1: BlockchainRid
-    lateinit var CAC2: BlockchainRid
 
     // EIF
     private lateinit var validator: Validator
@@ -197,7 +195,8 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
 
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
-                "config-mix")
+                "config-mix"
+        )
                 .withGenesisNode(node1)
                 .withEifEnv()
 
@@ -234,9 +233,9 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
 
         // Creating voter sets for provider1 and provider2
         node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
-                .createVoterSetOperation(node1.providerPubkey, "provider1_vs", 0, listOf(node1.providerPubkey), null)
-                .createVoterSetOperation(node2.providerPubkey, "provider2_vs", 0, listOf(node2.providerPubkey), null)
-                .postTransactionUntilConfirmed("Voter sets provider1_vs and provider2_vs created")
+                .createVoterSetOperation(node1.providerPubkey, PROVIDER1_VS, 0, listOf(node1.providerPubkey), null)
+                .createVoterSetOperation(node2.providerPubkey, PROVIDER2_VS, 0, listOf(node2.providerPubkey), null)
+                .postTransactionUntilConfirmed("Voter sets $PROVIDER1_VS and $PROVIDER2_VS created")
         awaitQueryResult {
             assertThat(node1.c0.getVoterSets().map { it.name }).containsAll(PROVIDER1_VS, PROVIDER2_VS)
         }
@@ -450,53 +449,55 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
         testLogger.info("Adding tag")
         with(node1.ec) {
             transactionBuilder()
-                    .createTagOperation(node1.providerPubkey, APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE)
+                    .createTagOperation(node1.providerPubkey, APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE, EXTRA_COMPUTE_PRICE)
                     .postTransactionUntilConfirmed("$APP_CLUSTER_TAG tag created")
 
             makeVoteOnLatestProposal(node2)
 
             assertThat(getTagByName(APP_CLUSTER_TAG))
-                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE))
+                    .isEqualTo(TagData(APP_CLUSTER_TAG, SCU_PRICE, EXTRA_STORAGE_PRICE, EXTRA_COMPUTE_PRICE))
         }
     }
 
     @Test
     @Order(10)
-    fun `Add clusters`() {
-        testLogger.info("Adding clusters")
+    fun `Add cluster`() {
+        testLogger.info("Adding cluster")
 
         with(node1.ec) {
             transactionBuilder()
                     .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", PROVIDER1_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4, Long.MAX_VALUE)
-                    .createClusterOperation(node1.providerPubkey, APP_CLUSTER2, "SYSTEM_P", PROVIDER2_VS, CONTAINER_UNITS, EXTRA_STORAGE_GIB, APP_CLUSTER_TAG, 50, 2048, 25, 20, 16384, 4, Long.MAX_VALUE)
-                    .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
+                    .postTransactionUntilConfirmed("$APP_CLUSTER1 cluster created")
 
-            // Approve both APP_CLUSTER1 and APP_CLUSTER2
-            makeVoteOnLatestProposal(node2)
+            // Approve APP_CLUSTER1
             makeVoteOnLatestProposal(node2)
 
             awaitQueryResult {
-                assertThat(getClusterCreationStatus(APP_CLUSTER1))
-                        .isEqualTo(ClusterCreationStatus.SUCCESS)
-            }
-            awaitQueryResult {
-                assertThat(getClusters().first { it.name == APP_CLUSTER1 })
-                        .isNotNull()
+                assertThat(getClusters().map { it.name }).contains(APP_CLUSTER1)
+                assertThat(getClusterCreationStatus(APP_CLUSTER1)).isEqualTo(ClusterCreationStatus.SUCCESS)
             }
         }
 
-        node1.client(chain0Brid, listOf(node1.provider, node2.provider)).transactionBuilder().addNop()
-                // APP_CLUSTER1 / node1
-//                .createClusterOperation(node1.providerPubkey, APP_CLUSTER1, "SYSTEM_P", listOf(node1.providerPubkey))
+        // Add node1 to appCluster1
+        node1.client(chain0Brid, listOf(node1.provider)).transactionBuilder().addNop()
                 .updateNodeWithUnitsOperation(node1.providerPubkey, node1.pubkey.data, null, null, null, 3)
                 .addNodeToClusterOperation(node1.providerPubkey, node1.pubkey.data, APP_CLUSTER1)
-                // APP_CLUSTER2 / node2
-//                .createClusterOperation(node2.providerPubkey, APP_CLUSTER2, "SYSTEM_P", listOf(node2.providerPubkey))
+                .postTransactionUntilConfirmed("$APP_CLUSTER1 cluster created")
+
+        // Add provider2 and node2 to appCluster1
+        node1.client(chain0Brid, listOf(node1.provider)).transactionBuilder().addNop()
+                .proposeClusterProviderOperation(node1.providerPubkey, APP_CLUSTER1, node2.providerPubkey, true, "")
+                .postTransactionUntilConfirmed("provider2 added to $APP_CLUSTER1")
+        voteOnAllProposals(listOf(node2.provider))
+        node1.client(chain0Brid, listOf(node2.provider)).transactionBuilder().addNop()
                 .updateNodeWithUnitsOperation(node2.providerPubkey, node2.pubkey.data, null, null, null, 3)
-                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, APP_CLUSTER2)
-                .postTransactionUntilConfirmed("$APP_CLUSTER1, $APP_CLUSTER2 clusters created")
-        CAC1 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER1).anchoringChain)
-        CAC2 = BlockchainRid(node1.c0.cmGetClusterInfo(APP_CLUSTER2).anchoringChain)
+                .addNodeToClusterOperation(node2.providerPubkey, node2.pubkey.data, APP_CLUSTER1)
+                .postTransactionUntilConfirmed("Add node2 to $APP_CLUSTER1 proposal submitted")
+
+        // Verify cluster info
+        val clusterInfo = node1.c0.cmGetClusterInfo(APP_CLUSTER1)
+        assertThat(clusterInfo.peers.map { it.pubkey }.toSet()).isEqualTo(setOf(node1.pubkey.wData, node2.pubkey.wData))
+        CAC1 = BlockchainRid(clusterInfo.anchoringChain)
     }
 
     @Test
@@ -540,7 +541,7 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
     @Order(12)
     fun `Deploy dapp`() {
         testLogger.info("Deploying dapp to c1")
-        deployDapp("test_crosschain_transfer", containerName, assertSigners = arrayOf(node1))
+        deployDapp("test_crosschain_transfer", containerName, assertSigners = arrayOf(node1, node2))
         dappBrid = dapps["test_crosschain_transfer"]!!
     }
 
@@ -607,23 +608,25 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
 
     @Test
     @Order(15)
-    fun `Upgrade container`() {
-        testLogger.info("Upgrade container")
+    fun `Upgrade container resources`() {
+        // Test upgrades container by increasing resources within the same cluster.
+        // Note: Cluster changes are no longer supported by upgradeContainerOperation.
+        testLogger.info("Upgrade container resources")
 
-        // Container upgrade will cause container migration (all blockchains will be moved to a new container),
-        // so we need to pause all blockchains.
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.pause, "")
-                .postTransactionUntilConfirmed("test_dapp paused")
-        // Verify blockchain is PAUSED and all blocks are anchored
-        verifyBlockchainState(node1, dappBrid, BlockchainState.PAUSED)
-        val lastHeightBeforeMoving = node1.client(dappBrid).currentBlockHeight()
+        // Verify that attempting to change clusters fails
+        aliceAuthenticator.verifyOperationAuthFlags("upgrade_container")
+        val failedTx = aliceAuthenticator.transactionBuilder()
+                .upgradeContainerOperation(
+                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, "nonExistentCluster", 1, 0)
+                .postTransactionUntilConfirmed("Attempt cluster change")
+        assertThat(failedTx.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(failedTx.rejectReason ?: "").contains("Container migration is not supported")
 
-        // Upgrading the container in a way that all blockchains to be moved to APP_CLUSTER_2
+        // Upgrading the container within the same cluster
         aliceAuthenticator.verifyOperationAuthFlags("upgrade_container")
         val tcRid = aliceAuthenticator.transactionBuilder()
                 .upgradeContainerOperation(
-                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER2, 1, 0)
+                        containerName, CONTAINER_UNITS + 1, EXTRA_STORAGE_GIB, APP_CLUSTER1, 1, 0)
                 .postTransactionUntilConfirmed("Upgrade Container")
                 .txRid
 
@@ -633,49 +636,40 @@ class Directory1EconomyChainMixSlowIntegrationTest : EvmTestBase("ec") {
             assertThat(ticket!!.state).isEqualTo(TicketState.SUCCESS)
         }
 
+        // Verify lease data
         val leaseDataList = aliceAuthenticator.client.getLeasesByAccount(aliceAuthenticator.accountId)
         assertThat(leaseDataList.size).isEqualTo(1)
-        val leaseData = leaseDataList[0]
-        assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER2)
+        val leaseData = leaseDataList.first()
+        assertThat(leaseData.containerName).isEqualTo(containerName)
+        assertThat(leaseData.clusterName).isEqualTo(APP_CLUSTER1)
         assertThat(leaseData.containerUnits).isEqualTo(CONTAINER_UNITS + 1)
 
-        val newContainerName = containerName + "_m1"
-        assertThat(leaseData.containerName).isEqualTo(newContainerName)
+        // Verify container data
         val containerData = node1.c0.getContainerData(leaseData.containerName)
         assertThat(containerData).isNotNull()
-        assertThat(containerData.cluster).isEqualTo(APP_CLUSTER2)
-        assertThat(containerData.proposedByPubkey).isEqualTo(provider1KeyPair.pubKey.wData)
+        assertThat(containerData.cluster).isEqualTo(APP_CLUSTER1)
         assertThat(containerData.state).isEqualTo(ContainerState.RUNNING)
-
         val containerLimits = node1.c0.nmGetContainerLimits(leaseData.containerName)
-        assertThat(containerLimits["container_units"]).isEqualTo(3)
+        assertThat(containerLimits["container_units"]).isEqualTo(CONTAINER_UNITS + 1L)
 
-        // Resuming blockchain
-        node1.c0.transactionBuilder().addNop()
-                .proposeBlockchainActionOperation(node1.providerPubkey, dappBrid, BlockchainAction.resume, "")
-                .postTransactionUntilConfirmed("test_dapp resumed")
-
-        // Verify blockchain is RUNNING and all blocks are anchored
+        // Verify blockchain remains RUNNING in the same cluster/container (no pause/migration needed)
         verifyBlockchainState(node1, dappBrid, BlockchainState.RUNNING)
         val bcInfo = node2.c0.getBlockchainInfo(dappBrid.data)
-        assertThat(bcInfo?.cluster).isEqualTo(APP_CLUSTER2)
-        assertThat(bcInfo?.container).isEqualTo(newContainerName)
+        assertThat(bcInfo?.cluster).isEqualTo(APP_CLUSTER1)
+        assertThat(bcInfo?.container).isEqualTo(containerName)
 
-        // Asserting that all blocks (some of them) are re-anchored on appCluster2's CAC chain
-        assertBlockReanchored(dappBrid, node1, CAC1, node2, CAC2, 0)
-        assertBlockReanchored(dappBrid, node1, CAC1, node2, CAC2)
-
-        // Making sure a few new blocks of dapp are built
+        // Verify new dapp blocks are being built
         val dappClient = node2.client(dappBrid)
         val height = dappClient.currentBlockHeight()
         awaitUntilAsserted {
-            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2)
+            assertThat(dappClient.currentBlockHeight()).isGreaterThan(height + 2L)
         }
 
-        // Asserting that new blocks are anchored on s2CAC chain
+        // Verify new blocks continue to be anchored on the same CAC after upgrade
         awaitUntilAsserted {
-            val lastAnchoredHeight2 = node2.client(CAC2).getLastAnchoredBlock(dappBrid)!!.blockHeight
-            assertThat(lastAnchoredHeight2).isGreaterThan(lastHeightBeforeMoving)
+            assertThat(
+                    node2.client(CAC1).getLastAnchoredBlock(dappBrid)!!.blockHeight
+            ).isGreaterThan(height + 2L)
         }
     }
 

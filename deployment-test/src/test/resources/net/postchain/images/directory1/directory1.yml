@@ -44,6 +44,9 @@ blockchains:
         allowed_blockchain_features:
           - "merkle_hash_version"
         required_blockchain_features: [ ]
+        require_min_merkle_hash_version: 2
+        allowed_dapp_chain_native_functions:
+          - "net.postchain.d1.BlockWitnessRellNative"
       auth_service:
         pubkey: x"02B6F2967CF9AFC4D289EF475A2C2DDEC9EAB79AC60C1C99683E3134074619E635"
         include_system_cluster: true
@@ -191,6 +194,9 @@ blockchains:
         allowed_blockchain_features:
           - "merkle_hash_version"
         required_blockchain_features: []
+        require_min_merkle_hash_version: 2
+        allowed_dapp_chain_native_functions:
+          - "net.postchain.d1.BlockWitnessRellNative"
       node_software_version:
         node_image:
           url: registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server
@@ -277,6 +283,7 @@ blockchains:
           - network_id: 11155111
             asset_address: "Aa1ae68ABcd32804132370B9f73c3160dbbfC593"
             bridge_address: "B2ee8499B5e73795F28287A0603d66db6843AAAA"
+            skip_to_height: 0
         asset_name: "tCHR"
         asset_symbol: "tCHR"
         asset_decimals: 6
@@ -322,6 +329,10 @@ blockchains:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       icmf:
         receiver:
+          directory-chain:
+            topics:
+              - L_provider_update # To sync system providers
+              - L_provider_auth_update
           local:
             - topic: L_evm_block_events
               bc-rid: EIF_TC_EVENT_RECEIVER_BRID_PLACEHOLDER
@@ -372,4 +383,4 @@ blockchains:
             issuing_blockchain_rid: x"00"
 
 compile:
-  rellVersion: 0.14.5
+  rellVersion: 0.15.0

@@ -1,5 +1,8 @@
 package net.postchain.d1.anchoring
 
+import assertk.assertFailure
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
@@ -22,7 +25,6 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -83,11 +85,13 @@ class AnchoringValidationTest {
         val blockRid = BlockRid.buildRepeat(2)
         val rawWitness = ByteArray(0)
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(OpData(OP_BLOCK_HEADER, arrayOf(
-                        gtv(blockRid.data),
-                        GtvNull,
-                        gtv(rawWitness))))))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(OpData(OP_BLOCK_HEADER, arrayOf(
+                            gtv(blockRid.data),
+                            GtvNull,
+                            gtv(rawWitness)))))
+        }.isInstanceOf<UserMistake>().messageContains("Invalid operation")
     }
 
     @Test
@@ -100,17 +104,19 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness))),
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness))),
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Adding the same header twice")
     }
 
     @Test
@@ -123,13 +129,15 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Invalid operation")
     }
 
     @Test
@@ -148,17 +156,19 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid0),
-                                blockHeader0,
-                                gtv(rawWitness0))),
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid1),
-                                blockHeader1,
-                                gtv(rawWitness1)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid0),
+                                    blockHeader0,
+                                    gtv(rawWitness0))),
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid1),
+                                    blockHeader1,
+                                    gtv(rawWitness1)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("header.prevBlockRID != expected previous BlockRID")
     }
 
     @Test
@@ -177,17 +187,19 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid0),
-                                blockHeader0,
-                                gtv(rawWitness0))),
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid1),
-                                blockHeader1,
-                                gtv(rawWitness1)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid0),
+                                    blockHeader0,
+                                    gtv(rawWitness0))),
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid1),
+                                    blockHeader1,
+                                    gtv(rawWitness1)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Expected height: 1, got: 2")
     }
 
     @Test
@@ -200,13 +212,15 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Invalid block-rid:")
     }
 
     @Test
@@ -223,13 +237,15 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("no peers")
     }
 
     @Test
@@ -243,13 +259,15 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(invalidSigner).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Invalid signatures")
     }
 
     @Test
@@ -263,13 +281,15 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BLOCK_HEADER, arrayOf(
-                                gtv(blockRid),
-                                blockHeader,
-                                gtv(rawWitness)))
-                )))
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BLOCK_HEADER, arrayOf(
+                                    gtv(blockRid),
+                                    blockHeader,
+                                    gtv(rawWitness)))
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("are not allowed to be anchored in this chain")
     }
 
     @Test
@@ -358,24 +378,25 @@ class AnchoringValidationTest {
                 arrayOf(cryptoSystem.buildSigMaker(signer).signDigest(blockRid1))
         ).getRawData()
 
-        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
-                listOf(
-                        OpData(OP_BATCH_BLOCK_HEADER, arrayOf(gtv(
-                                gtv(listOf(
-                                        gtv(blockRid0),
-                                        blockHeader0,
-                                        gtv(rawWitness0)
-                                )),
-                        ))),
-                        OpData(OP_BATCH_BLOCK_HEADER, arrayOf(gtv(
-                                gtv(listOf(
-                                        gtv(blockRid1),
-                                        blockHeader1,
-                                        gtv(rawWitness1)
-                                ))
-                        ))),
-                ))
-        )
+        assertFailure {
+            txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                    listOf(
+                            OpData(OP_BATCH_BLOCK_HEADER, arrayOf(gtv(
+                                    gtv(listOf(
+                                            gtv(blockRid0),
+                                            blockHeader0,
+                                            gtv(rawWitness0)
+                                    )),
+                            ))),
+                            OpData(OP_BATCH_BLOCK_HEADER, arrayOf(gtv(
+                                    gtv(listOf(
+                                            gtv(blockRid1),
+                                            blockHeader1,
+                                            gtv(rawWitness1)
+                                    ))
+                            ))),
+                    ))
+        }.isInstanceOf<UserMistake>().messageContains("Only one operation allowed when batching")
     }
 
     private fun createAnchorSpecialTxExtension(

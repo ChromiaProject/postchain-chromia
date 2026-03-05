@@ -35,7 +35,10 @@
             <groupId>net.postchain.client</groupId>
             <artifactId>postchain-client</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rell-api-native</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>chromia-core</artifactId>
@@ -118,12 +121,12 @@
         <dependency>
           <groupId>com.webauthn4j</groupId>
           <artifactId>webauthn4j-core</artifactId>
-          <version>0.29.6.RELEASE</version>
+          <version>0.30.2.RELEASE</version>
         </dependency>
         <dependency>
           <groupId>com.webauthn4j</groupId>
           <artifactId>webauthn4j-metadata</artifactId>
-          <version>0.29.6.RELEASE</version>
+          <version>0.30.2.RELEASE</version>
         </dependency>
 
         <!-- We want access to integration test setup classes -->
@@ -206,6 +209,7 @@
                         <configuration>
                             <sources>
                                 <source>src/main/java</source>
+                                <source>target/generated-sources/eif</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -273,6 +277,7 @@
                             <packageName>net.postchain.hybridcompute.rell</packageName>
                             <mainModules>
                                 <mainModule>lib.hybridcompute.test</mainModule>
+                                <mainModule>lib.hybridcompute_query.test</mainModule>
                             </mainModules>
                         </configuration>
                     </execution>
@@ -383,25 +388,6 @@
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <id>add-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>target/generated-sources/eif</source>
-                            </sources>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

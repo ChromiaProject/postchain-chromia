@@ -9,6 +9,7 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.TopicHeaderData
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
@@ -33,17 +34,33 @@ class IcmfBlockBuilderExtension(private val isSystemChain: Boolean, private val 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         val message = SentIcmfMessage.fromGtv(data)
 
-        if (!message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
-            logger.info("ICMF message with invalid topic ${message.topic} will not be sent")
-        } else if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
+        if (!isValidTopicName(message.topic)) {
+            logger.info("ICMF message with invalid topic will not be sent")
+            return
+        }
+
+        if (message.topic.startsWith(ICMF_TOPIC_GLOBAL_PREFIX) && !isSystemChain) {
             logger.info("ICMF message with topic ${message.topic} will not be sent from non-system chain")
-        } else {
-            logger.info("ICMF message sent in topic ${message.topic}")
-            icmfSenderRepository.persistMessage(ctxt, message.topic, message.body)
-            val previousMessageBlockHeight = icmfSenderRepository.getPreviousSentMessageBlockHeight(ctxt, message.topic, ctxt.height)
-            ctxt.addAfterAppendHook {
-                queuedEvents.add(SentIcmfMessageItem(message.topic, message.body, previousMessageBlockHeight))
-            }
+            return
+        }
+
+        if (message.receiver != null && !message.topic.startsWith(ICMF_TOPIC_LOCAL_PREFIX)) {
+            logger.info("ICMF message to specific receiver must have local topic")
+            return
+        }
+
+        val encodedBody = GtvEncoder.encodeGtv(message.body)
+        if (encodedBody.size > ICMF_MESSAGE_MAX_SIZE) {
+            logger.info("ICMF message with topic ${message.topic} and too big body will not be sent")
+            return
+        }
+
+        logger.info("ICMF message sent in topic ${message.topic}${if (message.receiver != null) " to ${message.receiver}" else ""}")
+        val topic = message.receiver?.let { topicWithReceiver(message.topic, it) } ?: message.topic
+        icmfSenderRepository.persistMessage(ctxt, topic, message.body, encodedBody)
+        val previousMessageBlockHeight = icmfSenderRepository.getPreviousSentMessageBlockHeight(ctxt, topic, ctxt.height)
+        ctxt.addAfterAppendHook {
+            queuedEvents.add(SentIcmfMessageItem(topic, message.body, previousMessageBlockHeight))
         }
     }
 

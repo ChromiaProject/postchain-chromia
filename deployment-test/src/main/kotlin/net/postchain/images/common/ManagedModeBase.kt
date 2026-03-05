@@ -36,7 +36,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -98,8 +97,9 @@ open class ManagedModeBase(private val logDir: String) {
     lateinit var node4: PostchainContainer
     lateinit var node5: PostchainContainer
 
+    val dockerHost = net.postchain.containers.bpm.docker.DockerClientFactory.dockerHost()
     val resolvedDockerHost = getResolvedDockerHost()
-    protected val dockerClient: DockerClient = DockerClientFactory.create()
+    protected val dockerClient: DockerClient = org.testcontainers.DockerClientFactory.lazyClient()
     protected val dapps = mutableMapOf<String, BlockchainRid>()
     lateinit var clusterAnchoringBrid: BlockchainRid
     lateinit var systemAnchoringBrid: BlockchainRid
@@ -117,9 +117,6 @@ open class ManagedModeBase(private val logDir: String) {
     protected val PostchainContainer.ec get() = client(ecBrid)
     protected val PostchainContainer.tc get() = client(tcBrid)
     protected val PostchainContainer.providerPubkey get() = provider.pubKey.data
-
-    // Install location of docker socket
-    private val dockerSocket = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
 
     fun nodes() = buildList {
         if (::node1.isInitialized && node1.isRunning) add(node1)
@@ -217,10 +214,11 @@ open class ManagedModeBase(private val logDir: String) {
                 .withEnv("POSTCHAIN_SUBNODE_NETWORK", network.id)
                 .withFileSystemBind(tmpNodeConfigFile.pathString, "/config/node-config.properties", BindMode.READ_ONLY)
                 .withEnv("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", this::class.java.getResource("/log/log4j2.yml")!!.path)
-                .withEnv("DOCKER_HOST", resolvedDockerHost?.toString())
+                .withEnv("POSTCHAIN_DOCKER_HOST", resolvedDockerHost?.toString())
                 .apply {
-                    if (System.getenv("DOCKER_HOST") == null) {
+                    if (dockerHost.startsWith("unix://")) {
                         // Mount host machines docker socket into master container
+                        val dockerSocket = dockerHost.substring("unix://".length)
                         addFileSystemBind(dockerSocket, dockerSocket, BindMode.READ_ONLY, SelinuxContext.SHARED)
                     }
 
@@ -357,7 +355,7 @@ open class ManagedModeBase(private val logDir: String) {
                 node1.c0.getRelevantProposals(0, Long.MAX_VALUE, true, provider.pubKey.data)
             }
 
-            if (pendingProposals != null && pendingProposals.isNotEmpty()) {
+            if (!pendingProposals.isNullOrEmpty()) {
                 val client = node1.client(chain0Brid, listOf(provider)).transactionBuilder()
                 pendingProposals.forEach { proposal ->
                     client.makeVoteOperation(provider.pubKey.data, proposal.rowid.id, true)
@@ -388,7 +386,7 @@ open class ManagedModeBase(private val logDir: String) {
             awaitQueryResult {
                 val brid = node1.c0.findBlockchainRid(txRid.rid.hexStringToByteArray())?.let { BlockchainRid(it) }
                 assertThat(brid).isNotNull()
-                val currentHeight = node1.client(brid!!).currentBlockHeight()
+                val currentHeight = nodes.first().client(brid!!).currentBlockHeight()
                 val actual = node1.c0.cmGetPeerInfo(brid.data, currentHeight).map { PubKey(it) }.toSet()
                 val expected = nodes.map { it.pubkey }.toSet()
                 assertThat(actual).isEqualTo(expected)

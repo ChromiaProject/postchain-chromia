@@ -13,14 +13,13 @@ import com.webauthn4j.data.attestation.authenticator.AAGUID
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
 import com.webauthn4j.data.attestation.authenticator.COSEKey
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
-import com.webauthn4j.data.client.CollectedClientData
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.verifier.exception.VerificationException
-import com.webauthn4j.verifier.internal.CrossOriginFlagVerifier
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.wrap
+import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.webauthn.webauthn4j.CustomCredentialRecord
@@ -35,7 +34,7 @@ import net.postchain.gtx.data.ExtOpData
  * WebAuthn register.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#creating_a_key_pair_and_registering_a_user
  */
-class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+class WebAuthnRegister(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_register"
 
@@ -53,9 +52,6 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
                 ArgumentMetadata("transports", setOf(GtvType.ARRAY)),
         ))
     }
-
-    @Volatile
-    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
@@ -82,6 +78,12 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
                                  isSyncing: Boolean) {
         verifyCredentialId(id)
 
+        verifyAttestationObject(attestationObjectBytes)
+
+        verifyClientData(clientDataJSON)
+
+        verifyTransports(transports)
+
         val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val registrationRequest = RegistrationRequest(
@@ -97,9 +99,15 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
         }
         val collectedClientData = registrationData.collectedClientData ?: throw UserMistake("invalid client data")
 
-        verifyChallenge(collectedClientData)
+        verifyChallenge(ctxt, collectedClientData.challenge.value)
 
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+        val serverProperty = ServerProperty.builder()
+                .origins(conf.allowedOrigins.toSet())
+                .topOriginPredicate { conf.allowCrossOrigin }
+                .rpId( conf.relyingPartyIdentifier)
+                .challenge(collectedClientData.challenge)
+                .build()
+
         val registrationParameters = RegistrationParameters(
                 serverProperty,
                 listOf(
@@ -110,9 +118,6 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
                 conf.userPresence,
         )
         val verifiedRegistrationData = try {
-            // TODO WebAuthn: Remove this when https://github.com/webauthn4j/webauthn4j/issues/1170 is fixed
-            CrossOriginFlagVerifier.verify(collectedClientData, conf.allowCrossOrigin)
-
             webAuthnManager.verify(registrationData, registrationParameters)
         } catch (e: VerificationException) {
             throw UserMistake(e.message ?: "verification failed")
@@ -120,12 +125,11 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
 
         val attestationObject = verifiedRegistrationData.attestationObject
                 ?: throw UserMistake("invalid attestationObject")
-        val (coseKey, credentialId) = attestationObject.authenticatorData.attestedCredentialData?.let {
-            it.coseKey to it.credentialId
-        } ?: throw UserMistake("invalid attestedCredentialData")
-        val publicKey = conf.objectConverter.cborConverter.writeValueAsBytes(coseKey)
+        val attestedCredentialData = attestationObject.authenticatorData.attestedCredentialData
+                ?: throw UserMistake("invalid attestedCredentialData")
+        val publicKey = conf.objectConverter.cborConverter.writeValueAsBytes(attestedCredentialData.coseKey)
 
-        if (!credentialId.contentEquals(id)) {
+        if (!attestedCredentialData.credentialId.contentEquals(id)) {
             throw UserMistake("credentialId mismatch")
         }
 
@@ -135,26 +139,33 @@ class WebAuthnRegister(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperati
 
         credential = CredentialData(
                 id = id.wrap(),
+                aaguid = (attestedCredentialData.aaguid.bytes ?: AAGUID.ZERO.bytes!!).wrap(),
                 publicKey = publicKey.wrap(),
                 signCount = attestationObject.authenticatorData.signCount,
                 transports = transports.joinToString(separator = ","),
                 uvInitialized = attestationObject.authenticatorData.isFlagUV,
                 backupEligible = attestationObject.authenticatorData.isFlagBE,
                 backupState = attestationObject.authenticatorData.isFlagBS,
+                suspiciousSignCountStored = null,
+                suspiciousSignCountPresented = null,
         )
     }
 
-    override fun apply(ctx: TxEContext): Boolean = credential?.let {
-        conf.repository.persistCredential(ctx, data.opIndex, it)
-        true
-    } ?: false
+    override fun apply(ctx: TxEContext): Boolean {
+        persistChallenge(ctx)
+
+        return credential?.let {
+            conf.repository.persistCredential(ctx, data.opIndex, it)
+            true
+        } ?: false
+    }
 }
 
 /**
  * WebAuthn authenticate.
  * https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticating_a_user
  */
-class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOperation(conf, opData) {
     companion object : KLogging() {
         const val OP_NAME = "gtxc.webauthn_authenticate"
 
@@ -172,9 +183,6 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
                 ArgumentMetadata("signature", setOf(GtvType.BYTEARRAY)),
         ))
     }
-
-    @Volatile
-    private var credential: CredentialData? = null
 
     override fun isCompound() = true
 
@@ -201,6 +209,10 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
                                      isSyncing: Boolean) {
         verifyCredentialId(id)
 
+        verifyAuthenticatorData(authenticatorDataBytes)
+
+        verifyClientData(clientDataJSON)
+
         val webAuthnManager = if (isSyncing) conf.nonStrictWebAuthnManager else conf.strictWebAuthnManager
 
         val authenticationRequest = AuthenticationRequest(
@@ -219,7 +231,7 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
         }
         val collectedClientData = authenticationData.collectedClientData ?: throw UserMistake("invalid client data")
 
-        verifyChallenge(collectedClientData)
+        verifyChallenge(ctxt, collectedClientData.challenge.value)
 
         val credential = conf.repository.fetchCredential(ctxt, id)
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
@@ -231,9 +243,14 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
             throw UserMistake(e.message ?: "verification failed")
         }
 
-        val attestedCredentialData = AttestedCredentialData(AAGUID.NULL, id, coseKey)
+        val attestedCredentialData = AttestedCredentialData(AAGUID(credential.aaguid.data), id, coseKey)
 
-        val serverProperty = ServerProperty(conf.allowedOrigins.toSet(), conf.relyingPartyIdentifier, collectedClientData.challenge)
+        val serverProperty = ServerProperty.builder()
+                .origins(conf.allowedOrigins.toSet())
+                .topOriginPredicate { conf.allowCrossOrigin }
+                .rpId( conf.relyingPartyIdentifier)
+                .challenge(collectedClientData.challenge)
+                .build()
 
         val credentialRecord = CustomCredentialRecord(
                 uvInitialized = credential.uvInitialized,
@@ -258,36 +275,117 @@ class WebAuthnAuthenticate(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOpe
             throw UserMistake(e.message ?: "verification failed")
         }
 
+        credentialRecord.suspiciousSignCount?.let { (presentedSignCount, storedSignCount) ->
+            logger.info("Suspicious signCount value detected for credentialId=${id.toHex()}: authData.signCount=${presentedSignCount}, credentialRecord.signCount=${storedSignCount}")
+        }
+
         this.credential = credential.copy(
                 signCount = credentialRecord.counter,
                 uvInitialized = credentialRecord.isUvInitialized!!,
-                backupState = credentialRecord.isBackedUp!!
+                backupState = credentialRecord.isBackedUp!!,
+                suspiciousSignCountPresented = credentialRecord.suspiciousSignCount?.first,
+                suspiciousSignCountStored = credentialRecord.suspiciousSignCount?.second,
         )
     }
 
-    override fun apply(ctx: TxEContext): Boolean = credential?.let {
-        conf.repository.updateCredential(ctx, it.id.data, it.signCount, uvInitialized = it.uvInitialized, backupState = it.backupState)
-        true
-    } ?: false
+    override fun apply(ctx: TxEContext): Boolean {
+        persistChallenge(ctx)
+
+        return credential?.let {
+            conf.repository.updateCredential(
+                    ctx,
+                    it.id.data,
+                    it.signCount,
+                    uvInitialized = it.uvInitialized,
+                    backupState = it.backupState,
+                    suspiciousSignCountPresented = it.suspiciousSignCountPresented,
+                    suspiciousSignCountStored = it.suspiciousSignCountStored,
+            )
+            true
+        } ?: false
+    }
 }
 
-// https://w3c.github.io/webauthn/#credential-id
-const val CREDENTIAL_ID_MAX_SIZE = 1023
+abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
+    companion object {
+        // https://w3c.github.io/webauthn/#credential-id
+        const val MAX_CREDENTIAL_ID_SIZE = 1023
 
-fun verifyCredentialId(id: ByteArray) {
-    if (id.isEmpty()) {
-        throw UserMistake("empty id")
+        // https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
+        const val CHALLENGE_MIN_SIZE = 16
+        const val CHALLENGE_MAX_SIZE = 64
+
+        const val MAX_ATTESTATION_OBJECT_SIZE = 4096
+        const val MAX_AUTHENTICATOR_DATA_SIZE = 1024
+
+        const val CLIENT_DATA_MAX_SIZE = 512
+
+        const val MAX_TRANSPORTS = 6
+        const val MAX_TRANSPORT_SIZE = 16
     }
-    if (id.size > CREDENTIAL_ID_MAX_SIZE) {
-        throw UserMistake("id too long, can be at most $CREDENTIAL_ID_MAX_SIZE bytes")
+
+    @Volatile
+    protected var credential: CredentialData? = null
+
+    @Volatile
+    protected var challenge: ByteArray? = null
+
+    fun verifyCredentialId(id: ByteArray) {
+        if (id.isEmpty()) {
+            throw UserMistake("empty id")
+        }
+        if (id.size > MAX_CREDENTIAL_ID_SIZE) {
+            throw UserMistake("id too long, can be at most $MAX_CREDENTIAL_ID_SIZE bytes")
+        }
     }
-}
 
-// https://w3c.github.io/webauthn/#sctn-cryptographic-challenges
-const val CHALLENGE_MIN_SIZE = 16
+    fun verifyChallenge(ctxt: EContext, givenChallenge: ByteArray) {
+        if (givenChallenge.size < CHALLENGE_MIN_SIZE) {
+            throw UserMistake("challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
+        }
 
-fun verifyChallenge(clientData: CollectedClientData) {
-    if (clientData.challenge.value.size < CHALLENGE_MIN_SIZE) {
-        throw UserMistake("clientData.challenge is too short, needs to be at least $CHALLENGE_MIN_SIZE bytes")
+        if (givenChallenge.size > CHALLENGE_MAX_SIZE) {
+            throw UserMistake("challenge is too long")
+        }
+
+        if (conf.repository.challengeExists(ctxt, givenChallenge)) {
+            throw UserMistake("challenge is not unique")
+        }
+
+        challenge = givenChallenge
+    }
+
+    fun verifyAttestationObject(attestationObjectBytes: ByteArray) {
+        if (attestationObjectBytes.size > MAX_ATTESTATION_OBJECT_SIZE) {
+            throw UserMistake("attestationObject is too large")
+        }
+    }
+
+    fun verifyAuthenticatorData(authenticatorDataBytes: ByteArray) {
+        if (authenticatorDataBytes.size > MAX_AUTHENTICATOR_DATA_SIZE) {
+            throw UserMistake("authenticatorData is too large")
+        }
+    }
+
+    fun verifyClientData(clientDataJSON: String) {
+        if (clientDataJSON.length > CLIENT_DATA_MAX_SIZE) {
+            throw UserMistake("clientData is too large")
+        }
+    }
+
+    fun verifyTransports(transports: List<String>) {
+        if (transports.size > MAX_TRANSPORTS) {
+            throw UserMistake("too many transports, only $MAX_TRANSPORTS allowed")
+        }
+
+        for (transport in transports) {
+            if (transport.length > MAX_TRANSPORT_SIZE) {
+                throw UserMistake("too long transport, only $MAX_TRANSPORT_SIZE allowed")
+            }
+        }
+    }
+
+    fun persistChallenge(ctxt: BlockEContext) {
+        challenge?.let { conf.repository.persistChallenge(ctxt, it) }
     }
 }

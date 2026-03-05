@@ -23,6 +23,7 @@ class IcmfTestClusterManagement : ClusterManagement {
         val receiverClusterAnchoringChainRid = BlockchainRid.buildRepeat(4)
         val localSenderChainRid2 = BlockchainRid.buildRepeat(5)
         val localSenderChainRid3 = BlockchainRid.buildRepeat(6)
+        val remoteSenderChainRid2 = BlockchainRid.buildRepeat(7)
     }
 
     private val peers = listOf(
