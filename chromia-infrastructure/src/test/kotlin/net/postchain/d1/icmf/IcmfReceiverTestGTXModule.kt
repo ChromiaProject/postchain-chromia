@@ -27,7 +27,7 @@ class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
 ) {
 
     companion object {
-        const val testMessageTable = "test_messages"
+        const val testMessageTable = "sys.x.test_messages"
 
         val COLUMN_ID: Field<Long> = DSL.field("id", SQLDataType.BIGINT.nullable(false).identity(true))
         val COLUMN_SENDER: Field<ByteArray> = DSL.field("sender", SQLDataType.BLOB.nullable(false))

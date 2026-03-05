@@ -1708,10 +1708,18 @@ class IcmfReceiverIT : IcmfBaseIT() {
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             val bc = replicaNode.retrieveBlockchain(dappChain1)
             assertThat(bc).isNotNull()
-            assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(1)
 
-            assertThat(bc.blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(1).get().values.filterNotNull())
-                    .isEqualTo(listOf(SPILLED_MESSAGES_DATUM_ID))
+            val blockQueries = bc!!.blockchainEngine.getBlockQueries()
+            assertThat(blockQueries.getLastBlockHeight().get()).isEqualTo(1)
+
+            val icmfMaxId = blockQueries.getSnapshotContextMaxIds(1).get().firstNotNullOfOrNull { (contextId, maxId) ->
+                if (withReadConnection(replicaNode.postchainContext.blockBuilderStorage, dappChain1) { ctx ->
+                            DatabaseAccess.of(ctx).getSnapshotContextModule(ctx, contextId) == IcmfReceiverGTXModule::class.qualifiedName
+                        }) maxId else null
+            }
+
+            assertThat(icmfMaxId).isNotNull()
+            assertThat(icmfMaxId).isEqualTo(SPILLED_MESSAGES_DATUM_ID)
         }
 
         // IF we really want to verify that messages are synced we would need to make IcmfReceiverTestGTXModule
@@ -1762,10 +1770,18 @@ class IcmfReceiverIT : IcmfBaseIT() {
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             val bc = replicaNode.retrieveBlockchain(dappChain)
             assertThat(bc).isNotNull()
-            assertThat(bc!!.blockchainEngine.getBlockQueries().getLastBlockHeight().get()).isEqualTo(spillHeight)
 
-            assertThat(bc.blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(spillHeight).get().values.filterNotNull())
-                    .isEqualTo(listOf(SPILLED_MESSAGES_DATUM_ID))
+            val blockQueries = bc!!.blockchainEngine.getBlockQueries()
+            assertThat(blockQueries.getLastBlockHeight().get()).isEqualTo(spillHeight)
+
+            val icmfMaxId = blockQueries.getSnapshotContextMaxIds(spillHeight).get().firstNotNullOfOrNull { (contextId, maxId) ->
+                if (withReadConnection(replicaNode.postchainContext.blockBuilderStorage, dappChain) { ctx ->
+                            DatabaseAccess.of(ctx).getSnapshotContextModule(ctx, contextId) == IcmfReceiverGTXModule::class.qualifiedName
+                        }) maxId else null
+            }
+
+            assertThat(icmfMaxId).isNotNull()
+            assertThat(icmfMaxId).isEqualTo(SPILLED_MESSAGES_DATUM_ID)
         }
 
         withReadConnection(replicaNode.postchainContext.blockBuilderStorage, dappChain) { ctx ->
