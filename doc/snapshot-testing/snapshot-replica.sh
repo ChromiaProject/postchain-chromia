@@ -4,12 +4,18 @@ set -e
 
 if [ "$1" == "start-node" ]; then
 
+  DB_URL_PARAM=""
+  if [[ "$(uname)" == "Darwin" ]]; then
+    DB_URL_PARAM="-e POSTCHAIN_DB_URL=jdbc:postgresql://host.docker.internal:5432/postchain"
+  fi
+
   docker run --rm -it --name snapshot-replica \
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --mount type=bind,source="$(pwd)/node_config",target=/config,readonly \
     -e JAVA_TOOL_OPTIONS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=${SUSPEND:-n},address=*:$((32900))" \
     -e POSTCHAIN_DEBUG=true \
     -e FORCE_SNAPSHOT=true \
+    $DB_URL_PARAM \
     -p 9879:9870/tcp \
     -p 9889:9881/tcp \
     -p 7749:7740/tcp \

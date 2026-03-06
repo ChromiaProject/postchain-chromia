@@ -18,7 +18,7 @@ fun createAppConfig(overrides: Map<String, Any>): AppConfig {
             "database.driverclass" to "org.postgresql.Driver",
             "database.username" to "postchain",
             "database.password" to "postchain",
-            "database.url" to "jdbc:postgresql://172.17.0.1:5432/postchain",
+            "database.url" to "jdbc:postgresql://localhost:5432/postchain",
             "api.port" to -1,
             "debug.port" to -1,
             "fastsync.exit_delay" to 2000,
