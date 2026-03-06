@@ -52,7 +52,7 @@ In a second terminal:
 
 This will replicate `directory_chain` and also build all snapshot data (`-e FORCE_SNAPSHOT=true`) except adding the snapshot header to the block header (since this breaks replication).
 
-At desired point, create a db dump:
+At desired point (sync at least 10 000 blocks so snapshot sync will be triggered!), create a db dump:
 
 ```bash
 ./db.sh create snapshot_replica dc_dump.sql
