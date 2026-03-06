@@ -23,14 +23,14 @@ elif [ "$1" == "init" ]; then
 
   docker run --rm \
     --mount type=bind,source="$(pwd)"/system_chains/,target=/opt/chromaway/postchain/system_chains,readonly \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.34.2 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.39.4 \
     admin blockchain initialize -t 172.17.0.1:50055 -cid 0 -bc ./system_chains/dc.xml
 
 elif [ "$1" == "replica-add" ] && [ -n "$2" ]; then
 
   docker run --rm \
     --mount type=bind,source="$(pwd)"/system_chains/,target=/opt/chromaway/postchain/system_chains,readonly \
-    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.34.2 \
+    registry.gitlab.com/chromaway/postchain-chromia/chromaway/chromia-server:3.39.4 \
     admin replica add -t 172.17.0.1:50055 -brid "$3" --pubkey 0327F6EAE0B4A10B55051734179A0A5C5C3C4FA05E728594607E2B92096E29B405
 
 else
