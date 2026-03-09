@@ -116,9 +116,11 @@ class Directory1DeploymentReplaceGenesisNodeSlowIntegrationTest : ManagedModeBas
                 .postTransactionUntilConfirmed("remove genesis node")
         node1.stop()
 
-        assertThat(node2.c0.getSummary().nodes).isEqualTo(3L)
-        assertThat(node3.c0.getSummary().nodes).isEqualTo(3L)
-        assertThat(node4.c0.getSummary().nodes).isEqualTo(3L)
+        awaitUntilAsserted(atMost = Duration.ONE_MINUTE) {
+            assertThat(node2.c0.getSummary().nodes).isEqualTo(3L)
+            assertThat(node3.c0.getSummary().nodes).isEqualTo(3L)
+            assertThat(node4.c0.getSummary().nodes).isEqualTo(3L)
+        }
     }
 
     @Test
@@ -147,10 +149,10 @@ class Directory1DeploymentReplaceGenesisNodeSlowIntegrationTest : ManagedModeBas
                 )
                 .postTransactionUntilConfirmed("Add new node ${node5.pubkey} to system cluster")
 
-        assertThat(node2.c0.getSummary().nodes).isEqualTo(4L)
-        assertThat(node3.c0.getSummary().nodes).isEqualTo(4L)
-        assertThat(node4.c0.getSummary().nodes).isEqualTo(4L)
         awaitUntilAsserted(atMost = Duration.ONE_MINUTE) {
+            assertThat(node2.c0.getSummary().nodes).isEqualTo(4L)
+            assertThat(node3.c0.getSummary().nodes).isEqualTo(4L)
+            assertThat(node4.c0.getSummary().nodes).isEqualTo(4L)
             assertThat(node5.c0.getSummary().nodes).isEqualTo(4L)
         }
     }
