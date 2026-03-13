@@ -71,6 +71,22 @@ class SnapshotDbCompare {
                                                 "${IcmfReceiverDatabaseOperationsImpl.PREFIX}.spilled_message",
                                                 "${IcmfReceiverDatabaseOperationsImpl.PREFIX}.dapp_provided_receiver_topic")
                                 ))
+
+                        // Verify all Rell entity tables
+                        val expectedC0Tables = mutableListOf<String>()
+                        expectedContext.conn.metaData.getTables(null, expectedContext.conn.schema, "c0%", arrayOf("TABLE")).use { rs ->
+                            while (rs.next()) {
+                                expectedC0Tables.add(rs.getString("TABLE_NAME"))
+                            }
+                        }
+                        expectedC0Tables
+                                .filterNot { it.startsWith("c0.sys") || it == "c0.transactions" || it == "c0.rowid_gen" || it == "c0.blocks" }
+                                .forEach { tableName ->
+                                    assertThat(actualContext).hasIdenticalDbContentAs(expectedContext,
+                                            basicSQLContentProvider { _ ->
+                                                "select * from \"$tableName\" order by rowid"
+                                            })
+                                }
                     }
                 }
             }

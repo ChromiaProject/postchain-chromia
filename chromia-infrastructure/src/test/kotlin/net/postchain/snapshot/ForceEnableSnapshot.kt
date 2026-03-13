@@ -32,6 +32,7 @@ class ForceEnableSnapshot : SnapshotTestBase() {
     fun buildSnapshotBlockAndReplicate() {
 
         System.setProperty("FORCE_SNAPSHOT", "true")
+        System.setProperty("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "5000")
         // Devnet1 providers
         val providerKeys = listOf(
                 KeyPair.of("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05", "BBBDFE956021912512E14BB081B27A35A0EABC4098CB687E973C434006BCE114"),
@@ -183,6 +184,7 @@ class ForceEnableSnapshot : SnapshotTestBase() {
                         "initial-peer.host" to "localhost",
                         "initial-peer.port" to "9870",
                         "fastsync.parallelism" to 200, // Speed up fastsync
+                        "snapshotsync.threshold" to 5000
                 ))
                 replicaNode = PostchainTestNode(appConfig, true)
 
