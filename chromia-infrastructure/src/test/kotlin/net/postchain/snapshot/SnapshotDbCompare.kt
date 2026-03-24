@@ -79,8 +79,9 @@ class SnapshotDbCompare {
                                 expectedC0Tables.add(rs.getString("TABLE_NAME"))
                             }
                         }
+                        val nonRellTables = setOf("c0.transactions", "c0.rowid_gen", "c0.blocks", "c0.configurations", "c0.gtx_module_version")
                         expectedC0Tables
-                                .filterNot { it.startsWith("c0.sys") || it == "c0.transactions" || it == "c0.rowid_gen" || it == "c0.blocks" }
+                                .filterNot { it.startsWith("c0.sys") || it in nonRellTables }
                                 .forEach { tableName ->
                                     assertThat(actualContext).hasIdenticalDbContentAs(expectedContext,
                                             basicSQLContentProvider { _ ->
