@@ -8,6 +8,7 @@ import net.postchain.base.runStorageCommand
 import net.postchain.base.snapshot.RootSnapshotBlockBuilderExtension
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.crypto.KeyPair
@@ -120,8 +121,20 @@ class ForceEnableSnapshot : SnapshotTestBase() {
         while (true) {
             val height = nodes[0].getBlockchainInstance(0).blockchainEngine.getBlockQueries().getLastBlockHeight().get()
             val lastSnapshotHeight = nodes[0].getBlockchainInstance(0).blockchainEngine.getBlockQueries().getLatestSnapshotHeight().get()
+                    ?: throw ProgrammerMistake("Snapshot height is null")
             val replicaHeight = replicaNode?.getBlockchainInstance(0)?.blockchainEngine?.getBlockQueries()?.getLastBlockHeight()?.get()
             if (replicaHeight != null) {
+                if (replicaHeight >= lastSnapshotHeight) {
+                    replicaNode.postchainContext.blockBuilderStorage.withWriteConnection { ctx ->
+                        // Remove devnet1 node references so DB state matches original node
+                        ctx.conn.createStatement().use { stmt -> stmt.executeUpdate("update \"c0.node\" set host = 'disabled' where host <> 'localhost'") }
+                        ctx.conn.createStatement().use { stmt -> stmt.executeUpdate("delete from peerinfos") }
+                    }
+                    println("Snapshot is synced, stopping nodes...")
+                    replicaNode.shutdown()
+                    return
+                }
+
                 while (replicaHeightThroughputStack.size > 10) {
                     replicaHeightThroughputStack.remove(replicaHeightThroughputStack.keys.min())
                 }
