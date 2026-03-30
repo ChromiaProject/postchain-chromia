@@ -61,7 +61,8 @@ At desired point (sync enough blocks so that snapshot sync will be triggered, pl
 Now we have a copy of `directory_chain` with snapshot data created. The snapshot data is however not yet part of the
 block header.
 
-> **Note:** Because of Rell snapshot implementation allocating row ids for objects, rowids will mismatch between the
+> **Note:** Because of Rell snapshot implementation allocating row ids for objects 
+> (objects had rowid = 0 before snapshots), rowids will mismatch between the
 > snapshot synced chain and the original chain. There needs to be consensus on rowids for voting on proposals in DC, so
 > for devnet1 DC you can only sync up to first vote operation which is approx 9k blocks. So sync a bit less than that,
 > also make sure to sync enough blocks to trigger snapshot sync, you can adjust this with `snapshotsync.threshold`
