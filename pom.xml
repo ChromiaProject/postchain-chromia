@@ -255,6 +255,10 @@
                     <configuration>
                         <source>${maven.multiModuleProjectDirectory}/${directory.source}</source>
                         <hideLibWarnings>true</hideLibWarnings>
+                        <postchainClientConfig>
+                            <failover.attempts>2</failover.attempts>
+                            <connect.timeout>10000</connect.timeout>
+                        </postchainClientConfig>
                     </configuration>
                 </plugin>
                 <plugin>
