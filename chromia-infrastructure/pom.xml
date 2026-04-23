@@ -361,7 +361,7 @@
             <plugin>
                 <groupId>org.web3j</groupId>
                 <artifactId>web3j-maven-plugin</artifactId>
-                <version>${web3j-plugin.version}</version>
+                <version>${web3j.version}</version>
                 <configuration>
                     <packageName>net.postchain.eif.contracts</packageName>
                     <nativeJavaType>false</nativeJavaType>
