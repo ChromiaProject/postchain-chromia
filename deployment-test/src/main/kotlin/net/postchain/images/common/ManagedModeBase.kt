@@ -250,6 +250,19 @@ open class ManagedModeBase(private val logDir: String) {
                 .withEnv("POSTCHAIN_CONFIG", "/config/node-config.properties")
                 .withEnv("POSTCHAIN_DB_URL", postgres.networkJdbcUrl())
                 .withEnv("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", 30_000.toString())
+                // Disable the external request-concurrency limit in test
+                // containers. Two reasons:
+                //  1. Older postchain versions auto-calc this to 0 on hosts
+                //     with availableProcessors() <= 5 and abort startup. Fixed
+                //     upstream in postchain 986e8072 ("Fix REST API
+                //     `request-concurrency` auto-calc on low-CPU master
+                //     nodes").
+                //  2. Even with that fix the auto-calc floors at 1 permit on
+                //     low-CPU CI runners, which serializes every proxied
+                //     external-model request through a single semaphore and
+                //     can skew tests that exercise subnode traffic.
+                // Backpressure isn't useful in the test harness, so opt out.
+                .withEnv("POSTCHAIN_API_REQUEST_CONCURRENCY_EXTERNAL", "-1")
                 .withCommand("run-server")
                 .withCreateContainerCmdModifier { cmd ->
                     cmd.hostConfig!!
