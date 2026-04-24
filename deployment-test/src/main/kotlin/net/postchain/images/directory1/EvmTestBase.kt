@@ -20,6 +20,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.images.common.LoggingConfig
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.jupiter.api.AfterAll
 import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.web3j.abi.datatypes.Address
@@ -34,6 +35,7 @@ import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.security.Security
 
 // Test base to get common evm container test resources
 abstract class EvmTestBase(logDir: String) : Directory1TestBase(logDir) {
@@ -41,6 +43,16 @@ abstract class EvmTestBase(logDir: String) : Directory1TestBase(logDir) {
     companion object {
         const val EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER = "EIF_EVENT_RECEIVER_CONTRACT_PLACEHOLDER"
         const val EVM_EVENT_RECEIVER_CHAIN_NAME = "evm_event_receiver_chain"
+
+        // Register BouncyCastle so KECCAK-256 is available for Ethereum
+        // address derivation (net.postchain.eif.getEthereumAddress). Some JVM
+        // / test-order combinations otherwise leave the provider unregistered
+        // and tests fail with NoSuchAlgorithmException: KECCAK-256.
+        init {
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(BouncyCastleProvider())
+            }
+        }
     }
 
     private val evmContainerLogger = LoggingConfig.createLogger(logDir, "evm-container")
