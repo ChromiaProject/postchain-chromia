@@ -12,7 +12,11 @@
     <artifactId>deployment-test</artifactId>
 
     <properties>
-        <slow.it.forks>3</slow.it.forks>
+        <!-- Run integration tests sequentially in a single fork by default.
+             Each fork spawns multiple Docker containers, so memory usage
+             multiplies quickly. Override with -Dslow.it.forks=N when running
+             on a host with enough memory. -->
+        <slow.it.forks>1</slow.it.forks>
         <!-- deployment tests vars -->
         <DEPLOYMENT_TEST_FT4_VERSION>1.2.0</DEPLOYMENT_TEST_FT4_VERSION>
     </properties>
