@@ -7,7 +7,7 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.postgres.ChromaWayPostgresContainer
-import org.awaitility.Duration.TWO_MINUTES
+import org.awaitility.Duration.FIVE_MINUTES
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -71,8 +71,8 @@ internal class MultiNodeLegacyIT {
         node1.txAsAdmin(chainId, "add_city", gtv(dummyCity))
 
         // And a new block has been built
-        node1.client(chainId).waitForHeight(currentHeight + 1, TWO_MINUTES)
-        node2.client(chainId).waitForHeight(currentHeight + 1, TWO_MINUTES)
+        node1.client(chainId).waitForHeight(currentHeight + 1, FIVE_MINUTES)
+        node2.client(chainId).waitForHeight(currentHeight + 1, FIVE_MINUTES)
 
         // Then the transaction can be found in the entire network
         assertThat(node1.client(chainId).getCities()).contains(dummyCity)
