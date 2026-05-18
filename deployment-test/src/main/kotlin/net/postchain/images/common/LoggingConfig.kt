@@ -27,16 +27,16 @@ object LoggingConfig {
         file.parentFile?.mkdirs()
 
         val layout = PatternLayout.newBuilder()
-            .withPattern(pattern)
-            .withCharset(StandardCharsets.UTF_8)
+            .setPattern(pattern)
+            .setCharset(StandardCharsets.UTF_8)
             .build()
 
         return FileAppender.newBuilder()
             .setName(name)
             .setLayout(layout)
-            .withFileName(fileName)
-            .withCreateOnDemand(true)
-            .withAppend(false)
+            .setFileName(fileName)
+            .setCreateOnDemand(true)
+            .setAppend(false)
             .build()
     }
 
