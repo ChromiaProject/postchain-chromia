@@ -24,6 +24,7 @@ import net.postchain.chain0.proposal_provider.proposeProvidersOperation
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.ExclusiveTableLockTestGTXModule
+import net.postchain.d1.GlobalIcmfEmitterTestGTXModule
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.getBlockchainHeight
 import net.postchain.dapp.postTransactionUntilConfirmed
@@ -68,6 +69,11 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private val PostchainContainer.txs get() = client(txSubmitterBrid)
 
     private val lockGtxModule = ExclusiveTableLockTestGTXModule::class.java.canonicalName
+    private val emitterGtxModule = GlobalIcmfEmitterTestGTXModule::class.java.canonicalName
+    // Already consumed by the CAC via cluster_anchoring.xml `icmf.receiver.global.topics`.
+    private val anchoredTopic = "G_get_last_anchored_heights"
+    @Volatile private var keepEmitting = false
+    private var emitterThread: Thread? = null
     private val keepAliveAfterFailure = false // For manual debugging
 
     init {
@@ -212,6 +218,73 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
         ensureBuildingBlocks(node1.txs)
     }
 
+    /**
+     * Reproduce the busy-anchoring-chain trigger: make chain0 (a system chain, so it passes the
+     * global-topic gate) emit the `G_get_last_anchored_heights` topic that the cluster anchoring
+     * chain already consumes. The CAC then anchors chain0's blocks and records the topic, so its
+     * `IntraClusterAnchoredTopicPipe.fetchNext` has pending anchored messages. A background emitter
+     * keeps the backlog live so it is still pending at the CAC migration block in `Lock test - CAC`.
+     * Without this load the CAC lock test is a false green (nothing to fetch → no self-read).
+     */
+    @Test
+    @Order(15)
+    fun `Load - chain0 emits anchored ICMF topic consumed by CAC`() {
+
+        testLogger.info("Adding global ICMF emitter module to chain0")
+        val chain0WithEmitter = addModule(GtvMLParser.parseGtvML(chain0Config), emitterGtxModule)
+        with(node1.c0) {
+            transactionBuilder()
+                    .proposeConfigurationOperation(provider1KeyPair.pubKey.data, chain0Brid,
+                            GtvEncoder.encodeGtv(chain0WithEmitter), "", null)
+                    .postTransactionUntilConfirmed("Add ICMF emitter module to chain0", retries = 10)
+        }
+        voteOnAllProposals(listOf(provider2KeyPair, provider3KeyPair))
+        awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
+            assertThat(GtvFactory.decodeGtv(nmGetBlockchainConfiguration(chain0Brid, Long.MAX_VALUE)!!)["gtx"]!!["modules"]!!
+                    .asArray().map { it.asString() }).contains(emitterGtxModule)
+        }
+
+        testLogger.info("Priming an anchored ICMF backlog for topic $anchoredTopic")
+        repeat(20) { i -> emitOnce(i) }
+        awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
+            testLogger.info("Checking the CAC has anchored the emitted messages...")
+            val headers = node1.cac.query(
+                    "icmf_get_headers_with_messages_after_height",
+                    gtv("topic" to gtv(anchoredTopic), "from_anchor_height" to gtv(-1L))
+            )
+            assertThat(headers.asArray().isNotEmpty()).isTrue()
+        }
+
+        testLogger.info("Keeping the anchored backlog live across the CAC migration block")
+        keepEmitting = true
+        emitterThread = Thread {
+            var i = 1000
+            while (keepEmitting) {
+                runCatching { emitOnce(i++) }
+                Thread.sleep(400)
+            }
+        }.also { it.isDaemon = true; it.name = "icmf-emitter"; it.start() }
+    }
+
+    private fun emitOnce(i: Int) {
+        node1.c0.transactionBuilder()
+                .addNop()
+                .addOperation(GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF, gtv(anchoredTopic), gtv(i.toLong()))
+                .postTransactionUntilConfirmed("emit $anchoredTopic #$i")
+    }
+
+    // Prepend a GTX module right after RellPostchainModuleFactory (same shape as addLockModule).
+    private fun addModule(config: Gtv, moduleClass: String): Gtv =
+            gtv(config.asDict().mapValues { root ->
+                if (root.key != "gtx") root.value else gtv(root.value.asDict().mapValues { g ->
+                    if (g.key != "modules") g.value else {
+                        val rest = g.value.asArray()
+                                .filter { it.asString() != "net.postchain.rell.module.RellPostchainModuleFactory" }
+                        gtv(listOf(gtv("net.postchain.rell.module.RellPostchainModuleFactory"), gtv(moduleClass), *rest.toTypedArray()))
+                    }
+                })
+            })
+
     @Test
     @Order(20)
     fun `Lock test - SAC`() {
@@ -228,8 +301,13 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
 
         testLogger.info("Cluster anchoring chain config with lock module")
 
-        val chainLockConfig = addLockModule(clusterAnchoringChainConfig)
-        testUpdateWithLock(clusterAnchoringChainBrid, chainLockConfig, node1.cac)
+        try {
+            val chainLockConfig = addLockModule(clusterAnchoringChainConfig)
+            testUpdateWithLock(clusterAnchoringChainBrid, chainLockConfig, node1.cac)
+        } finally {
+            keepEmitting = false
+            emitterThread?.join(5000)
+        }
     }
 
     @Test
