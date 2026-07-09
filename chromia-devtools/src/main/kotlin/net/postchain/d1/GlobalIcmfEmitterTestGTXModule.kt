@@ -24,7 +24,11 @@ import net.postchain.gtx.data.ExtOpData
  * which is why this module must be placed on chain0 (or another registered system chain), not a
  * proposed dapp.
  *
- * Operation: `emit_global_icmf(topic: text, body: gtv)`.
+ * Operation: `emit_global_icmf(provider_pubkey: byte_array, topic: text, body: gtv)`.
+ *
+ * The leading `provider_pubkey` arg is required only by the directory chain's transaction
+ * prioritization (`dc_priority_check`), which rejects any regular operation whose `args[0]` is not a
+ * registered provider pubkey that also signed the tx. The operation body itself ignores it.
  */
 class GlobalIcmfEmitterTestGTXModule : SimpleGTXModule<Unit>(
         Unit,
@@ -44,12 +48,13 @@ class GlobalIcmfEmitterTestGTXModule : SimpleGTXModule<Unit>(
 
 class EmitGlobalIcmfOp(private val conf: Unit, extOpData: ExtOpData) : GTXOperation(extOpData) {
     override fun checkCorrectness() {
-        require(data.args.size >= 2) { "${GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF} requires (topic, body)" }
+        require(data.args.size >= 3) { "${GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF} requires (provider_pubkey, topic, body)" }
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        val topic = data.args[0].asString()
-        val body = data.args[1]
+        // args[0] is the provider pubkey required by dc_priority_check; ignored here.
+        val topic = data.args[1].asString()
+        val body = data.args[2]
         // SentIcmfMessage.fromGtv expects {topic, body, receiver?}; omit receiver for a global broadcast.
         ctx.emitEvent(GlobalIcmfEmitterTestGTXModule.ICMF_MESSAGE_TYPE, gtv(mapOf("topic" to gtv(topic), "body" to body)))
         return true

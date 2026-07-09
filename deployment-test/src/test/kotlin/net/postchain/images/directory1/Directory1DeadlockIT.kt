@@ -223,7 +223,7 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
 
     /**
      * Reproduce the busy-anchoring-chain trigger: make chain0 (a system chain, so it passes the
-     * global-topic gate) emit the `G_get_last_anchored_heights` topic that the cluster anchoring
+     * global-topic gate) emit the `G_create_container` topic that the cluster anchoring
      * chain already consumes. The CAC then anchors chain0's blocks and records the topic, so its
      * `IntraClusterAnchoredTopicPipe.fetchNext` has pending anchored messages. A background emitter
      * keeps the backlog live so it is still pending at the CAC migration block in `Lock test - CAC`.
@@ -272,9 +272,12 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     }
 
     private fun emitOnce(i: Int) {
+        // args[0] must be the signing provider's pubkey to satisfy the directory chain's
+        // dc_priority_check (node1.c0 signs with node1's provider). topic/body follow.
         node1.c0.transactionBuilder()
                 .addNop()
-                .addOperation(GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF, gtv(anchoredTopic), gtv(i.toLong()))
+                .addOperation(GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF,
+                        gtv(node1.providerPubkey), gtv(anchoredTopic), gtv(i.toLong()))
                 .postTransactionUntilConfirmed("emit $anchoredTopic #$i")
     }
 
