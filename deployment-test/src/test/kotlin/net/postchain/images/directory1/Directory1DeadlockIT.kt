@@ -71,8 +71,9 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private val lockGtxModule = ExclusiveTableLockTestGTXModule::class.java.canonicalName
     private val emitterGtxModule = GlobalIcmfEmitterTestGTXModule::class.java.canonicalName
 
-    // Consumed by the CAC via cluster_anchoring `icmf.receiver.directory-chain.topics` (matches DC config).
-    private val anchoredTopic = "L_container_blockchain_update"
+    // Consumed by the CAC via cluster_anchoring `icmf.receiver.global.topics` (mirrors mainnet). A global
+    // container topic emitted by chain0 (a system chain) → anchored by the CAC → drives the intra-cluster pipe.
+    private val anchoredTopic = "G_create_container"
     @Volatile
     private var keepEmitting = false
     private var emitterThread: Thread? = null
