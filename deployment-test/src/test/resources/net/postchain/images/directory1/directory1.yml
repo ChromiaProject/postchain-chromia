@@ -83,7 +83,6 @@ blockchains:
             topics:
               - G_configuration_updated
               - G_configuration_failed
-              - G_last_anchored_heights
   system_anchoring:
     module: anchoring_chain_system
     config:
@@ -143,7 +142,6 @@ blockchains:
             topics:
               - G_configuration_updated
               - G_configuration_failed
-              - G_last_anchored_heights
           global:
             topics:
               - G_create_cluster_v2
@@ -152,7 +150,6 @@ blockchains:
               - G_stop_container
               - G_restart_container
               - G_register_dapp_provider
-              - G_change_dapp_providers_state
     moduleArgs:
       common:
         allow_blockchain_dependencies: false
