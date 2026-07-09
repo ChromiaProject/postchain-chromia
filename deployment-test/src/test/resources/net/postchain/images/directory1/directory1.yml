@@ -93,18 +93,10 @@ blockchains:
       blockstrategy:
         maxblocktime: 2000
         maxblocktransactions: 500
-      sync_ext:
-        - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
       gtx:
         modules:
           - "net.postchain.d1.anchoring.system.SystemAnchoringGTXModule"
           - "net.postchain.d1.icmf.IcmfSenderGTXModule"
-          - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
-      icmf:
-        receiver:
-          global:
-            topics:
-              - G_get_last_anchored_heights
   cluster_anchoring:
     module: anchoring_chain_cluster
     config:
@@ -123,9 +115,9 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
       icmf:
         receiver:
-          global:
+          directory-chain:
             topics:
-              - G_get_last_anchored_heights
+              - L_container_blockchain_update
   mainnet:
     module: management_chain_mainnet
     config:
@@ -383,4 +375,4 @@ blockchains:
             issuing_blockchain_rid: x"00"
 
 compile:
-  rellVersion: 0.15.0
+  rellVersion: 0.15.3

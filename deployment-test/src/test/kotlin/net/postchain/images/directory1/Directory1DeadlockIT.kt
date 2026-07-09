@@ -70,9 +70,11 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
 
     private val lockGtxModule = ExclusiveTableLockTestGTXModule::class.java.canonicalName
     private val emitterGtxModule = GlobalIcmfEmitterTestGTXModule::class.java.canonicalName
-    // Already consumed by the CAC via cluster_anchoring.xml `icmf.receiver.global.topics`.
-    private val anchoredTopic = "G_get_last_anchored_heights"
-    @Volatile private var keepEmitting = false
+
+    // Consumed by the CAC via cluster_anchoring `icmf.receiver.directory-chain.topics` (matches DC config).
+    private val anchoredTopic = "L_container_blockchain_update"
+    @Volatile
+    private var keepEmitting = false
     private var emitterThread: Thread? = null
     private val keepAliveAfterFailure = false // For manual debugging
 
@@ -81,7 +83,7 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
         // Pipeline test? Then copy and mount the test jar from a host directory
         var testJarFile = Path("../chromia-devtools/target/")
                 .listDirectoryEntries()
-                .find {it.name.matches("chromia-devtools-.*.jar".toRegex()) && !it.name.endsWith("-sources.jar") }!!.pathString
+                .find { it.name.matches("chromia-devtools-.*.jar".toRegex()) && !it.name.endsWith("-sources.jar") }!!.pathString
         System.getenv("TEST_MOUNT_DIRECTORY")?.let {
             val testJarFileOnHost = File("$it/chromia-devtools.jar")
 
@@ -237,11 +239,13 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
                     .proposeConfigurationOperation(provider1KeyPair.pubKey.data, chain0Brid,
                             GtvEncoder.encodeGtv(chain0WithEmitter), "", null)
                     .postTransactionUntilConfirmed("Add ICMF emitter module to chain0", retries = 10)
-        }
-        voteOnAllProposals(listOf(provider2KeyPair, provider3KeyPair))
-        awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
-            assertThat(GtvFactory.decodeGtv(nmGetBlockchainConfiguration(chain0Brid, Long.MAX_VALUE)!!)["gtx"]!!["modules"]!!
-                    .asArray().map { it.asString() }).contains(emitterGtxModule)
+
+            voteOnAllProposals(listOf(provider2KeyPair, provider3KeyPair))
+
+            awaitUntilAsserted(Duration(2, TimeUnit.MINUTES)) {
+                assertThat(GtvFactory.decodeGtv(nmGetBlockchainConfiguration(chain0Brid, Long.MAX_VALUE)!!)["gtx"]!!["modules"]!!
+                        .asArray().map { it.asString() }).contains(emitterGtxModule)
+            }
         }
 
         testLogger.info("Priming an anchored ICMF backlog for topic $anchoredTopic")

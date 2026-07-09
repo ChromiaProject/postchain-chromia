@@ -203,4 +203,4 @@ libs:
 compile:
   source: src
   target: target
-  rellVersion: 0.15.0
+  rellVersion: 0.15.3
