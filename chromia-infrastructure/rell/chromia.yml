@@ -146,7 +146,7 @@ blockchains:
             lib.block_witness: "net.postchain.d1.BlockWitnessRellNative"
 
 compile:
-  rellVersion: 0.15.0
+  rellVersion: 0.15.3
 
 test:
   modules:
