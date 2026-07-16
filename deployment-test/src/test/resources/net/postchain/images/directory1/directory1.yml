@@ -114,14 +114,9 @@ blockchains:
           - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
       icmf:
         receiver:
-          global:
+          directory-chain:
             topics:
-              - G_create_cluster_v2
-              - G_create_container
-              - G_upgrade_container
-              - G_stop_container
-              - G_restart_container
-              - G_register_dapp_provider
+              - L_container_blockchain_update
   mainnet:
     module: management_chain_mainnet
     config:
