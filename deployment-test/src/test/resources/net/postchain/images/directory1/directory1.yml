@@ -103,7 +103,14 @@ blockchains:
         merkle_hash_version: 2
       config_consensus_strategy: HEADER_HASH
       blockstrategy:
-        maxblocktime: 2000
+        # TEST-ONLY pacing for the deadlock test: the first block after a migrating restart must
+        # not be built before the ICMF receiver's clusters-updater coroutine has created the
+        # anchored pipes, otherwise the same-thread anchor_block self-read (the postchain!1802
+        # code path) is skipped and the test is a false green. mininterblockinterval delays EVERY
+        # block (incl. the config-applying first one, since the previous block predates the
+        # restart); maxblocktime alone would not (pending anchoring work triggers early builds).
+        maxblocktime: 15000
+        mininterblockinterval: 10000
         maxblocktransactions: 500
       sync_ext:
         - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
@@ -117,6 +124,15 @@ blockchains:
           directory-chain:
             topics:
               - L_container_blockchain_update
+          # TEST-ONLY, deliberate divergence from prod: real CACs have NO global receiver.
+          # This receiver gives the CAC an IntraClusterAnchoredTopicPipe over its own anchored-ICMF
+          # index, so its first-block build after a schema-migrating config update performs the
+          # same-chain anchor_block self-read that postchain!1802 (3.49.18) fixes. Without it that
+          # code path has zero test coverage (Directory1DeadlockIT `Lock test - CAC` is a false
+          # green on unfixed postchain). Topic is emitted by chain0 via GlobalIcmfEmitterTestGTXModule.
+          global:
+            topics:
+              - G_deadlock_test
   mainnet:
     module: management_chain_mainnet
     config:

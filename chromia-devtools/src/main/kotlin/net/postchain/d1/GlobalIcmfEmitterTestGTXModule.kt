@@ -12,20 +12,21 @@ import net.postchain.gtx.data.ExtOpData
  * arbitrary ICMF message.
  *
  * Used by [net.postchain.images.directory1.Directory1DeadlockIT] to build a live intra-cluster
- * ANCHORED ICMF backlog. The backlog must be a GLOBAL (`G_`) topic: the cluster anchoring chain's
- * `process_icmf` indexes only `G_*` topics into `icmf_messages_height` (local topics are delivered
- * directly, never via the anchored path). In prod that G_ traffic comes from the economy chain
- * (container lifecycle, e.g. `G_create_container`) and the anchoring chains themselves
- * (`G_configuration_updated`/`_failed`); chain0 emits only local topics. Since the deployment test
- * has no economy chain, chain0 stands in as the emitter — it is the only tx-capable system chain
- * in the test, and `G_` topics are only accepted from system chains (`IcmfBlockBuilderExtension`).
+ * ANCHORED ICMF backlog (topic `G_deadlock_test`). The backlog must be a GLOBAL (`G_`) topic: the
+ * cluster anchoring chain's `process_icmf` indexes only `G_*` topics into `icmf_messages_height`
+ * (local topics are delivered directly, never via the anchored path). chain0 emits it because `G_`
+ * topics are only accepted from system chains (`IcmfBlockBuilderExtension`) and the test deploys
+ * none of the usual prod G_ senders (economy chain; anchoring chains); chain0 itself emits only
+ * local topics in prod.
  *
- * Without such a backlog the anchoring chain has nothing to fetch at the migration block, the
- * fatal self-read never executes, and the deadlock test is a false green. With a live backlog, the
- * anchoring chain's first block build after a schema-migrating config update issues the
- * anchored-ICMF self-read against its own — exclusively locked by
- * [ExclusiveTableLockTestGTXModule] — `anchor_block` / `icmf_messages_height` tables, reproducing
- * the config-migration deadlock.
+ * The CAC consumes the topic through a TEST-ONLY `global` receiver in directory1.yml (real CACs
+ * have no global receiver — deliberate divergence, documented there). Without the backlog and that
+ * receiver the anchoring chain has nothing to fetch at the migration block, the fatal self-read
+ * never executes, and the deadlock test is a false green (verified: passes on unfixed 3.49.16
+ * without the receiver). With them, the anchoring chain's first block build after a
+ * schema-migrating config update issues the anchored-ICMF self-read against its own — exclusively
+ * locked by [ExclusiveTableLockTestGTXModule] — `anchor_block` / `icmf_messages_height` tables,
+ * reproducing the config-migration deadlock (hangs on 3.49.16, passes on 3.49.18).
  *
  * Operation: `emit_global_icmf(provider_pubkey: byte_array, topic: text, body: gtv)`.
  *

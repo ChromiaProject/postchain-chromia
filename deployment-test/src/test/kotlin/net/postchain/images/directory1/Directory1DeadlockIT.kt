@@ -73,14 +73,14 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private val lockGtxModule = ExclusiveTableLockTestGTXModule::class.java.canonicalName
     private val emitterGtxModule = GlobalIcmfEmitterTestGTXModule::class.java.canonicalName
 
-    // The anchored-ICMF backlog must be a GLOBAL topic: the CAC's `process_icmf` indexes only `G_*`
-    // topics (local ones are delivered directly, never via the anchored path). In prod the G_ traffic
-    // the CAC anchors comes from the economy chain (container lifecycle: G_create_container etc.) and
-    // from the anchoring chains themselves (G_configuration_updated/_failed) - chain0 itself emits only
-    // local topics (L_container_blockchain_update, ...). The test deploys no economy chain, so chain0 -
-    // the only tx-capable SYSTEM chain here (G_ topics are gated to system chains) - stands in as the
-    // emitter of the economy-chain topic.
-    private val anchoredTopic = "G_create_container"
+    // TEST-ONLY topic, consumed by the CAC via a deliberate test-only `global` receiver in
+    // directory1.yml (real CACs have NO global receiver - see the comment there). The backlog must be
+    // a GLOBAL topic because the CAC's `process_icmf` indexes only `G_*` topics into the anchored
+    // path; and the CAC must CONSUME it so that its IntraClusterAnchoredTopicPipe performs the
+    // same-chain anchor_block self-read at the migration block - the postchain!1802 (3.49.18)
+    // regression path. Chain0 emits it because `G_` topics are gated to system chains and the test
+    // deploys no economy chain (the usual prod G_ sender); chain0 itself emits only local topics.
+    private val anchoredTopic = "G_deadlock_test"
 
     @Volatile
     private var keepEmitting = false
@@ -231,18 +231,19 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     }
 
     /**
-     * Reproduce the busy-anchoring-chain trigger: build a live anchored-ICMF backlog in the CAC.
-     * The backlog must be a GLOBAL topic — the CAC's `process_icmf` indexes only `G_*` topics into
-     * `icmf_messages_height` (local topics are delivered directly, never via the anchored path).
-     * In prod that G_ traffic comes from the economy chain (container lifecycle, e.g.
-     * `G_create_container`) and from the anchoring chains (`G_configuration_updated`/`_failed`);
-     * chain0 itself emits only local topics. Since the test deploys no economy chain, chain0 — the
-     * only tx-capable system chain here, and `G_` topics are only accepted from system chains —
-     * stands in as the emitter of the economy-chain topic. Nothing in the test consumes it, and
-     * nothing needs to: `process_icmf` indexes every anchored G_ topic regardless of receivers, and
-     * that index is what the migration-block self-read hits. A background emitter keeps the backlog
-     * live so it is still pending at the CAC migration block in `Lock test - CAC`. Without this
-     * load the CAC lock test is a false green (nothing to fetch → no self-read).
+     * Reproduce the busy-anchoring-chain trigger: build a live anchored-ICMF backlog that the CAC
+     * itself consumes. chain0 emits `G_deadlock_test` (must be a system chain — `G_` topics are
+     * gated to them; chain0 emits only local topics in prod, but the usual prod G_ senders — the
+     * economy chain, the anchoring chains — are not tx-drivable here). The CAC anchors chain0's
+     * blocks and indexes the topic (`process_icmf` → `icmf_messages_height`, `G_*` only), and —
+     * via the TEST-ONLY global receiver in directory1.yml — consumes it, so its
+     * `IntraClusterAnchoredTopicPipe.fetchNext` performs the same-chain
+     * `icmf_get_headers_with_messages_after_height` self-read (joins its own `anchor_block`) at
+     * the migration block. That is the postchain!1802 (3.49.18) code path: on unfixed postchain
+     * the self-read blocks on the migration's own exclusive locks — verified to hang on 3.49.16
+     * and pass on 3.49.18. A background emitter keeps the backlog live so it is still pending at
+     * the CAC migration block in `Lock test - CAC`. Without this load (or without the receiver)
+     * the CAC lock test is a false green (nothing to fetch → no self-read).
      */
     @Test
     @Order(15)
@@ -289,8 +290,8 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private fun emitOnce(i: Int) {
         // args[0] must be the signing provider's pubkey to satisfy the directory chain's
         // dc_priority_check (node1.c0 signs with node1's provider). topic/body follow.
-        // The body can be arbitrary: no chain in this test consumes the topic (the real consumer
-        // would hard-decode it), and the anchored index only cares that the topic was sent.
+        // The body can be arbitrary: the CAC consumes the topic but no receive_icmf_message
+        // extender matches G_deadlock_test, so the body is never decoded.
         node1.c0.transactionBuilder()
                 .addNop()
                 .addOperation(GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF,
