@@ -8,21 +8,24 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 
 /**
- * Test-only module that lets a *system* chain (e.g. the directory chain, chain0) emit an
+ * Test-only module that lets a *system* chain (in practice the directory chain, chain0) emit an
  * arbitrary ICMF message.
  *
- * Used by [net.postchain.images.directory1.Directory1DeadlockIT] to build a real intra-cluster
- * ANCHORED backlog for a global topic that the cluster anchoring chain consumes. Without such a
- * backlog the anchoring chain's `IntraClusterAnchoredTopicPipe.fetchNext` has nothing to fetch, so
- * the deadlock never triggers and the test is a false green. With a live backlog, the anchoring
- * chain's first block build after a schema-migrating config update issues the
- * `icmf_get_headers_with_messages_after_height` self-read against its own — exclusively locked by
+ * Used by [net.postchain.images.directory1.Directory1DeadlockIT] to build a live intra-cluster
+ * ANCHORED ICMF backlog. The backlog must be a GLOBAL (`G_`) topic: the cluster anchoring chain's
+ * `process_icmf` indexes only `G_*` topics into `icmf_messages_height` (local topics are delivered
+ * directly, never via the anchored path). In prod that G_ traffic comes from the economy chain
+ * (container lifecycle, e.g. `G_create_container`) and the anchoring chains themselves
+ * (`G_configuration_updated`/`_failed`); chain0 emits only local topics. Since the deployment test
+ * has no economy chain, chain0 stands in as the emitter — it is the only tx-capable system chain
+ * in the test, and `G_` topics are only accepted from system chains (`IcmfBlockBuilderExtension`).
+ *
+ * Without such a backlog the anchoring chain has nothing to fetch at the migration block, the
+ * fatal self-read never executes, and the deadlock test is a false green. With a live backlog, the
+ * anchoring chain's first block build after a schema-migrating config update issues the
+ * anchored-ICMF self-read against its own — exclusively locked by
  * [ExclusiveTableLockTestGTXModule] — `anchor_block` / `icmf_messages_height` tables, reproducing
  * the config-migration deadlock.
- *
- * Global (`G_`-prefixed) topics are only accepted from system chains (see `IcmfBlockBuilderExtension`),
- * which is why this module must be placed on chain0 (or another registered system chain), not a
- * proposed dapp.
  *
  * Operation: `emit_global_icmf(provider_pubkey: byte_array, topic: text, body: gtv)`.
  *

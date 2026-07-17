@@ -53,10 +53,12 @@ import kotlin.io.path.pathString
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class Directory1DeadlockIT : EvmTestBase("deadlock") {
 
+    // Configs
+    private val systemAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
+    private val clusterAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
     private lateinit var evmChainConfig: Gtv
     private lateinit var txsChainConfig: Gtv
-    val systemAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/system_anchoring.xml")!!.readText())
-    val clusterAnchoringChainConfig = GtvMLParser.parseGtvML(this::class.java.getResource("/directory1deployment/cluster_anchoring.xml")!!.readText())
+    // BRIDs
     private lateinit var systemAnchoringChainBrid: BlockchainRid
     private lateinit var clusterAnchoringChainBrid: BlockchainRid
     private lateinit var eventReceiverBrid: BlockchainRid
@@ -71,9 +73,15 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private val lockGtxModule = ExclusiveTableLockTestGTXModule::class.java.canonicalName
     private val emitterGtxModule = GlobalIcmfEmitterTestGTXModule::class.java.canonicalName
 
-    // Consumed by the CAC via cluster_anchoring `icmf.receiver.global.topics` (mirrors mainnet). A global
-    // container topic emitted by chain0 (a system chain) → anchored by the CAC → drives the intra-cluster pipe.
+    // The anchored-ICMF backlog must be a GLOBAL topic: the CAC's `process_icmf` indexes only `G_*`
+    // topics (local ones are delivered directly, never via the anchored path). In prod the G_ traffic
+    // the CAC anchors comes from the economy chain (container lifecycle: G_create_container etc.) and
+    // from the anchoring chains themselves (G_configuration_updated/_failed) - chain0 itself emits only
+    // local topics (L_container_blockchain_update, ...). The test deploys no economy chain, so chain0 -
+    // the only tx-capable SYSTEM chain here (G_ topics are gated to system chains) - stands in as the
+    // emitter of the economy-chain topic.
     private val anchoredTopic = "G_create_container"
+
     @Volatile
     private var keepEmitting = false
     private var emitterThread: Thread? = null
@@ -106,6 +114,7 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
                         "net.postchain.server.AppKt",
                         "run-server")
                 .withEifEnv()
+
         node2 = postchainServer("node2",
                 provider2KeyPair,
                 "config-mix")
@@ -119,6 +128,7 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
                         "run-server")
                 .withGenesisNode(node1)
                 .withEifEnv()
+
         node3 = postchainServerWithSubnodes("node3",
                 provider3KeyPair,
                 "config-mix")
@@ -133,11 +143,10 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
                 .withGenesisNode(node1)
                 .withEifEnv()
 
-
         removeSubnodeContainers()
         startNodesAndChain0()
 
-        testLogger.info { "Classpath files: ${node1.execInContainer("ls", "/opt/chromaway/postchain/classpath/").stdout}" }
+        testLogger.info { "Classpath files: ${node1.execInContainer("ls", "/opt/chromaway/postchain/classpath/").stdout.trim()}" }
     }
 
     @Test
@@ -222,12 +231,18 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     }
 
     /**
-     * Reproduce the busy-anchoring-chain trigger: make chain0 (a system chain, so it passes the
-     * global-topic gate) emit the `G_create_container` topic that the cluster anchoring
-     * chain already consumes. The CAC then anchors chain0's blocks and records the topic, so its
-     * `IntraClusterAnchoredTopicPipe.fetchNext` has pending anchored messages. A background emitter
-     * keeps the backlog live so it is still pending at the CAC migration block in `Lock test - CAC`.
-     * Without this load the CAC lock test is a false green (nothing to fetch → no self-read).
+     * Reproduce the busy-anchoring-chain trigger: build a live anchored-ICMF backlog in the CAC.
+     * The backlog must be a GLOBAL topic — the CAC's `process_icmf` indexes only `G_*` topics into
+     * `icmf_messages_height` (local topics are delivered directly, never via the anchored path).
+     * In prod that G_ traffic comes from the economy chain (container lifecycle, e.g.
+     * `G_create_container`) and from the anchoring chains (`G_configuration_updated`/`_failed`);
+     * chain0 itself emits only local topics. Since the test deploys no economy chain, chain0 — the
+     * only tx-capable system chain here, and `G_` topics are only accepted from system chains —
+     * stands in as the emitter of the economy-chain topic. Nothing in the test consumes it, and
+     * nothing needs to: `process_icmf` indexes every anchored G_ topic regardless of receivers, and
+     * that index is what the migration-block self-read hits. A background emitter keeps the backlog
+     * live so it is still pending at the CAC migration block in `Lock test - CAC`. Without this
+     * load the CAC lock test is a false green (nothing to fetch → no self-read).
      */
     @Test
     @Order(15)
@@ -274,6 +289,8 @@ class Directory1DeadlockIT : EvmTestBase("deadlock") {
     private fun emitOnce(i: Int) {
         // args[0] must be the signing provider's pubkey to satisfy the directory chain's
         // dc_priority_check (node1.c0 signs with node1's provider). topic/body follow.
+        // The body can be arbitrary: no chain in this test consumes the topic (the real consumer
+        // would hard-decode it), and the anchored index only cares that the topic was sent.
         node1.c0.transactionBuilder()
                 .addNop()
                 .addOperation(GlobalIcmfEmitterTestGTXModule.OP_EMIT_GLOBAL_ICMF,
