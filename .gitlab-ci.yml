@@ -171,6 +171,29 @@ slow-integration-tests:
       --activate-profiles ci,no-unit-tests,all-it
       clean verify
 
+# Overrides of the release.yml template jobs to require slow-integration-tests
+# to have been run before a release can be tagged.
+release-patch:
+  extends: .release
+  needs:
+    - job: slow-integration-tests
+  script:
+    - git tag $MAJOR.$MINOR.$((PATCH + 1))
+    - git push --tags
+  only:
+    - dev
+    - /^support\/.*$/
+
+release-minor:
+  extends: .release
+  needs:
+    - job: slow-integration-tests
+  script:
+    - git tag $MAJOR.$((MINOR + 1)).0
+    - git push --tags
+  only:
+    - dev
+
 dependency-check:
   extends: .maven-dependency-check
   stage: dependency-check
