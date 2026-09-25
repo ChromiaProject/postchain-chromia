@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.2.10</version>
+        <version>0.2.12</version>
     </parent>
 
     <artifactId>postchain-chromia</artifactId>
@@ -29,12 +29,12 @@
 
     <properties>
         <revision>dev</revision>
-        <postchain.version>3.49.20</postchain.version>
-        <postchain.client.version>3.39.6</postchain.client.version>
-        <directory.chain.version>1.110.10</directory.chain.version>
+        <postchain.version>3.49.21</postchain.version>
+        <postchain.client.version>3.39.7</postchain.client.version>
+        <directory.chain.version>1.110.11</directory.chain.version>
         <rell.version>0.15.4</rell.version>
         <rell.maven.plugin.version>1.2.3</rell.maven.plugin.version>
-        <eif.version>0.32.6</eif.version>
+        <eif.version>0.32.7</eif.version>
         <web3j.version>4.13.0</web3j.version>
         <kotlin.version>2.3.0</kotlin.version>
         <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
