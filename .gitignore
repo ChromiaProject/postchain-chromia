@@ -23,3 +23,6 @@ build
 # Claude Code local files
 *CLAUDE.local*
 .claude/*.local.*
+
+# CI Maven cache
+.m2/
