@@ -31,7 +31,6 @@ import net.postchain.d1.iccf.IccfProofTxMaterialBuilder
 import net.postchain.dapp.PostchainContainer
 import net.postchain.dapp.postTransactionUntilConfirmed
 import net.postchain.eif.AccountStateMerkleProof
-import net.postchain.eif.EifSignature
 import net.postchain.eif.contracts.RecoveryContract
 import net.postchain.eif.contracts.TestToken
 import net.postchain.eif.contracts.TokenBridgeWithSnapshotWithdraw
@@ -45,6 +44,7 @@ import net.postchain.eif.lib.ft4.external.assets.transferOperation
 import net.postchain.eif.lib.ft4.external.auth.ftAuthOperation
 import net.postchain.eif.lib.hbridge.core.getRecoveryContract
 import net.postchain.eif.lib.hbridge.core.getStateSlotIdsForAddress
+import net.postchain.eif.merkle.EifSignature
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
