@@ -108,6 +108,16 @@ operation gtxc.webauthn_authenticate(
 Note that the `gtxc.webauthn_authenticate` operation is provided by the GTX module and not implemented in Rell. It
 will look up the credential record stored by previous `gtxc.webauthn_register` operation based on the `id`. 
 
+> **Security: the assertion is not bound to the transaction.**
+> The node checks that the challenge is 16–64 bytes and has not been used before, but it does not check what the
+> challenge was derived from. Whoever holds an unused assertion can put it in front of *any* operation, so treat an
+> assertion like a one-time bearer token:
+> - Derive the challenge from the transaction you are about to send, for example
+>   `sha256(blockchain_rid || name and GTV-encoded args of the authenticated operation || nonce)`, and recompute and
+>   compare it in your Rell operation (`webauthn.extract_webauthn_auth_args().client_data["challenge"]`,
+>   base64url-encoded) before acting on it.
+> - Never send an assertion anywhere except straight into the transaction it was created for, and never log it.
+
 ### Rell
 
 Call the function `webauthn.require_auth()` in operations that should be authenticated. Use the returned `auth_data`'s
