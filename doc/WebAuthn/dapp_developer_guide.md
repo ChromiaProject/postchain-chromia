@@ -19,6 +19,7 @@ config:
     user-presence: true # https://w3c.github.io/webauthn/#concept-user-present
     user-verification: false # https://w3c.github.io/webauthn/#user-verification
     verify-attestation: false # https://w3c.github.io/webauthn/#reg-ceremony-verify-attestation
+    bind-challenge-to-operation: false # see "Binding the assertion to the operation" below
 libs:
   com.chromia.webauthn:
     version: ${VERSION}
@@ -134,6 +135,15 @@ operation transfer(to: byte_array, amount: integer, nonce: integer) {
     // ...
 }
 ```
+
+### Binding the assertion to the operation on the node
+
+With `bind-challenge-to-operation: true` in the `webauthn` config, the node itself rejects a
+`gtxc.webauthn_authenticate` operation unless it is followed by another operation and its challenge equals the hash of
+`[blockchain_rid, name, args]` of that next operation, the same value as `webauthn.operation_challenge()`. An
+assertion then cannot be moved in front of another operation. Operations further down the transaction that call
+`require_auth()` still see it, so call `require_auth_for_operation()` there as well. It is off by default; switch it on
+only once all clients derive the challenge this way, since other assertions are rejected.
 
 If you derive the challenge some other way, compute it in the operation and call
 `webauthn.require_auth_for(expected_challenge)`. The challenge in `clientDataJSON` is base64url without padding, while

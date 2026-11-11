@@ -144,3 +144,12 @@ function test_one_assertion_does_not_cover_a_second_operation() {
         check_auth_for_operation(id, 2),
     ).run_must_fail("challenge does not match the operation");
 }
+
+// The node computes the same value (WebAuthnBindChallengeTest: operation challenge matches the Rell library).
+function test_operation_challenge_vector() {
+    val brid = x"0101010101010101010101010101010101010101010101010101010101010101";
+    assert_equals(
+        (brid, "transfer", [x"aa".to_gtv(), (5).to_gtv(), "n1".to_gtv()]).hash(),
+        x"e9929c568805e0c26b8cf7b771b1423b79e8a1c28d9d43d67e2512b359fa71d7",
+    );
+}
