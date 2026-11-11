@@ -69,3 +69,78 @@ function test_auth_wrong_id(){
         check_auth(id),
     ).run_must_fail("wrong id");
 }
+
+val bound_challenge = x"fbffbffbffbffbffbffbffbffbffbff0";
+val bound_challenge_b64url = "-_-_-_-_-_-_-_-_-_-_8A";
+
+function client_data(challenge: text) = "{\"type\":\"webauthn.get\",\"challenge\":\"%s\"}".format(challenge);
+
+function test_base64url() {
+    assert_equals(webauthn.base64url(bound_challenge), bound_challenge_b64url);
+}
+
+function test_auth_for_success() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(bound_challenge_b64url), x""),
+        check_auth_for(id, bound_challenge),
+    ).run();
+}
+
+function test_auth_for_accepts_padding() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(bound_challenge_b64url + "=="), x""),
+        check_auth_for(id, bound_challenge),
+    ).run();
+}
+
+function test_auth_for_rejects_standard_base64() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(bound_challenge.to_base64()), x""),
+        check_auth_for(id, bound_challenge),
+    ).run_must_fail("challenge does not match the operation");
+}
+
+function test_auth_for_wrong_challenge() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(webauthn.base64url(x"00112233445566778899aabbccddeeff")), x""),
+        check_auth_for(id, bound_challenge),
+    ).run_must_fail("challenge does not match the operation");
+}
+
+function test_auth_for_no_challenge() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", "{\"type\":\"webauthn.get\"}", x""),
+        check_auth_for(id, bound_challenge),
+    ).run_must_fail("no challenge in client data");
+}
+
+function test_auth_for_no_auth_op() {
+    rell.test.tx().op(
+        check_auth_for(id, bound_challenge),
+    ).run_must_fail("no gtxc.webauthn_authenticate operation before me in transaction");
+}
+
+function operation_challenge_for(expected_id: byte_array, nonce: integer) =
+    (chain_context.blockchain_rid, "check_auth_for_operation", [expected_id.to_gtv(), nonce.to_gtv()]).hash();
+
+function test_auth_for_operation_success() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(webauthn.base64url(operation_challenge_for(id, 1))), x""),
+        check_auth_for_operation(id, 1),
+    ).run();
+}
+
+function test_auth_for_operation_other_args() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(webauthn.base64url(operation_challenge_for(id, 1))), x""),
+        check_auth_for_operation(id, 2),
+    ).run_must_fail("challenge does not match the operation");
+}
+
+function test_one_assertion_does_not_cover_a_second_operation() {
+    rell.test.tx().op(
+        webauthn_authenticate(id, x"", client_data(webauthn.base64url(operation_challenge_for(id, 1))), x""),
+        check_auth_for_operation(id, 1),
+        check_auth_for_operation(id, 2),
+    ).run_must_fail("challenge does not match the operation");
+}

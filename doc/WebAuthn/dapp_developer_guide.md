@@ -108,20 +108,36 @@ operation gtxc.webauthn_authenticate(
 Note that the `gtxc.webauthn_authenticate` operation is provided by the GTX module and not implemented in Rell. It
 will look up the credential record stored by previous `gtxc.webauthn_register` operation based on the `id`. 
 
-> **Security: the assertion is not bound to the transaction.**
+> **Security: bind the assertion to the operation.**
 > The node checks that the challenge is 16–64 bytes and has not been used before, but it does not check what the
 > challenge was derived from. Whoever holds an unused assertion can put it in front of *any* operation, so treat an
-> assertion like a one-time bearer token:
-> - Derive the challenge from the transaction you are about to send, for example
->   `sha256(blockchain_rid || name and GTV-encoded args of the authenticated operation || nonce)`, and recompute and
->   compare it in your Rell operation (`webauthn.extract_webauthn_auth_args().client_data["challenge"]`,
->   base64url-encoded) before acting on it.
+> assertion like a one-time bearer token unless the operation checks the challenge (see Rell below):
+> - Derive the challenge from the operation it authorizes. Give the operation a nonce argument, so that the user can
+>   make the same call twice, and compute the challenge as the GTV hash of
+>   `[blockchain_rid, operation_name, operation_args]`, with the operation name as sent in the transaction (postchain-client `gtvHash`, with the chain's merkle hash version).
+> - One `gtxc.webauthn_authenticate` operation covers every later operation in the transaction that calls
+>   `require_auth()`, until the next one. With a bound challenge, each authenticated operation needs its own assertion.
 > - Never send an assertion anywhere except straight into the transaction it was created for, and never log it.
 
 ### Rell
 
 Call the function `webauthn.require_auth()` in operations that should be authenticated. Use the returned `auth_data`'s
 `id` field to identify the authenticated user.
+
+To bind the assertion to the operation, call `webauthn.require_auth_for_operation()` instead. It fails unless the
+challenge equals `webauthn.operation_challenge()`, the hash of the blockchain RID and the current operation's name and
+arguments:
+
+```
+operation transfer(to: byte_array, amount: integer, nonce: integer) {
+    val auth_data = webauthn.require_auth_for_operation();
+    // ...
+}
+```
+
+If you derive the challenge some other way, compute it in the operation and call
+`webauthn.require_auth_for(expected_challenge)`. The challenge in `clientDataJSON` is base64url without padding, while
+Rell's `byte_array.from_base64()` and `to_base64()` use standard base64; `webauthn.base64url()` does the conversion.
 
 ## Queries
 
