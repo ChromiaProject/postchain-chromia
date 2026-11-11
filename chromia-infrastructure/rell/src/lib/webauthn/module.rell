@@ -29,6 +29,40 @@ function require_auth(): auth_data {
     return auth_data(id = byte_array.from_gtv(auth_op.args[0]));
 }
 
+/**
+ * Like require_auth(), and also requires that the challenge the authenticator signed is expected_challenge.
+ *
+ * The node only checks that a challenge is 16-64 bytes and not used before, not what it was derived from, so
+ * without this check an unused assertion can be put in front of any operation.
+ */
+function require_auth_for(expected_challenge: byte_array): auth_data {
+    require(op_context.exists, "not in an operation");
+    val auth_op = extract_op(auth_op_name);
+    val client_data = map<text, gtv>.from_gtv_pretty(gtv.from_json(text.from_gtv(auth_op.args[2])));
+    require("challenge" in client_data, "no challenge in client data");
+    val challenge = text.from_gtv(client_data["challenge"]).replace("=", "");
+    require(challenge == base64url(expected_challenge), "challenge does not match the operation");
+
+    return auth_data(id = byte_array.from_gtv(auth_op.args[0]));
+}
+
+/**
+ * The challenge for the current operation: the hash of (blockchain RID, operation name, operation arguments).
+ * The client computes the same GTV hash of [blockchain_rid, name, args] (postchain-client: gtvHash) and passes it
+ * as the WebAuthn challenge. Give the operation a nonce argument so that the same call can be made twice.
+ */
+function operation_challenge(): byte_array {
+    require(op_context.exists, "not in an operation");
+    val op = op_context.get_current_operation();
+    return (chain_context.blockchain_rid, op.name, op.args).hash();
+}
+
+/** require_auth_for(operation_challenge()) */
+function require_auth_for_operation(): auth_data = require_auth_for(operation_challenge());
+
+/** Base64url without padding, as in clientDataJSON.challenge. */
+function base64url(b: byte_array): text = b.to_base64().replace("+", "-").replace("/", "_").replace("=", "");
+
 function extract_webauthn_register_args() {
     val args = extract_op(register_op_name).args;
     val id = byte_array.from_gtv(args[0]);

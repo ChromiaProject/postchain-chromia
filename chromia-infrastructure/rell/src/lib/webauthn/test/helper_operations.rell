@@ -28,3 +28,13 @@ operation check_auth(expected_id: byte_array) {
     val auth_data = webauthn.require_auth();
     require(auth_data.id == expected_id, "wrong id");
 }
+
+operation check_auth_for(expected_id: byte_array, expected_challenge: byte_array) {
+    val auth_data = webauthn.require_auth_for(expected_challenge);
+    require(auth_data.id == expected_id, "wrong id");
+}
+
+operation check_auth_for_operation(expected_id: byte_array, nonce: integer) {
+    val auth_data = webauthn.require_auth_for_operation();
+    require(auth_data.id == expected_id, "wrong id");
+}

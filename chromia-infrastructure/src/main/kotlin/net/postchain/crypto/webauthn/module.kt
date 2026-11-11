@@ -19,6 +19,7 @@ import com.webauthn4j.verifier.attestation.statement.u2f.FIDOU2FAttestationState
 import com.webauthn4j.verifier.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessVerifier
 import com.webauthn4j.verifier.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessVerifier
 import mu.KLogging
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -28,6 +29,8 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.DefaultValue
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.ArgumentMetadata
@@ -66,6 +69,15 @@ data class WebAuthnConfigData(
         @param:Name("verify-attestation")
         @param:DefaultValue(defaultBoolean = false)
         val verifyAttestation: Boolean, // https://w3c.github.io/webauthn/#reg-ceremony-verify-attestation
+
+        /**
+         * Require the challenge of gtxc.webauthn_authenticate to be the merkle hash of
+         * [blockchain_rid, name, args] of the operation right after it, so an assertion can only authorize that
+         * operation (same value as operation_challenge() in the Rell library).
+         */
+        @param:Name("bind-challenge-to-operation")
+        @param:DefaultValue(defaultBoolean = false)
+        val bindChallengeToOperation: Boolean,
 )
 
 data class WebAuthnConfig(
@@ -78,6 +90,8 @@ data class WebAuthnConfig(
         val strictWebAuthnManager: WebAuthnManager,
         val nonStrictWebAuthnManager: WebAuthnManager,
         val repository: WebAuthnRepository,
+        val bindChallengeToOperation: Boolean = false,
+        val merkleHashCalculator: GtvMerkleHashCalculatorBase = makeMerkleHashCalculator(1),
 )
 
 @Suppress("unused")
@@ -189,6 +203,8 @@ class WebAuthnGTXModuleFactory : GTXModuleFactory {
                 strictWebAuthnManager = strictWebAuthnManager,
                 nonStrictWebAuthnManager = nonStrictWebAuthnManager,
                 repository = WebAuthnRepositoryImpl(),
+                bindChallengeToOperation = configData.bindChallengeToOperation,
+                merkleHashCalculator = BlockchainConfigurationData.merkleHashCalculator(config),
         ))
     }
 }

@@ -16,6 +16,7 @@ import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.verifier.exception.VerificationException
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.wrap
@@ -24,6 +25,9 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.crypto.webauthn.webauthn4j.CustomCredentialRecord
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkleHash
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXOperation
@@ -233,6 +237,10 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
 
         verifyChallenge(ctxt, collectedClientData.challenge.value)
 
+        if (conf.bindChallengeToOperation) {
+            verifyChallengeBoundToNextOperation(collectedClientData.challenge.value)
+        }
+
         val credential = conf.repository.fetchCredential(ctxt, id)
                 ?: throw UserMistake("credential with id ${id.toHex()} not registered")
 
@@ -288,6 +296,15 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
         )
     }
 
+    private fun verifyChallengeBoundToNextOperation(givenChallenge: ByteArray) {
+        val next = data.operations.getOrNull(data.opIndex + 1)
+                ?: throw UserMistake("$OP_NAME must be followed by the operation it authorizes")
+        val expected = operationChallenge(data.blockchainRID, next.opName, next.args, conf.merkleHashCalculator)
+        if (!givenChallenge.contentEquals(expected)) {
+            throw UserMistake("challenge is not bound to the next operation ${next.opName}")
+        }
+    }
+
     override fun apply(ctx: TxEContext): Boolean {
         persistChallenge(ctx)
 
@@ -305,6 +322,10 @@ class WebAuthnAuthenticate(conf: WebAuthnConfig, opData: ExtOpData) : WebAuthnOp
         } ?: false
     }
 }
+
+/** Merkle hash of [blockchain_rid, name, args], the same value as operation_challenge() in the Rell library. */
+fun operationChallenge(blockchainRid: BlockchainRid, opName: String, args: Array<out Gtv>, calculator: GtvMerkleHashCalculatorBase): ByteArray =
+        gtv(gtv(blockchainRid), gtv(opName), gtv(args.toList())).merkleHash(calculator)
 
 abstract class WebAuthnOperation(val conf: WebAuthnConfig, opData: ExtOpData) : GTXOperation(opData) {
     companion object {
