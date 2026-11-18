@@ -174,8 +174,9 @@ slow-integration-tests:
 
 # Overrides of the release.yml template jobs to require slow-integration-tests
 # to have been run before a release can be tagged.
-# Kept out of scheduled pipelines, where slow-integration-tests is not created and
-# the `needs` would make GitLab reject the whole pipeline.
+# Created only in push pipelines: slow-integration-tests exists only there, and in
+# any other pipeline (schedule, api, web, trigger) the `needs` would make GitLab
+# reject the whole pipeline.
 release-patch:
   extends: .release
   needs:
@@ -188,7 +189,7 @@ release-patch:
     - /^support\/.*$/
   except:
     variables:
-      - $CI_PIPELINE_SOURCE == "schedule"
+      - $CI_PIPELINE_SOURCE != "push"
 
 release-minor:
   extends: .release
@@ -201,7 +202,7 @@ release-minor:
     - dev
   except:
     variables:
-      - $CI_PIPELINE_SOURCE == "schedule"
+      - $CI_PIPELINE_SOURCE != "push"
 
 dependency-check:
   extends: .maven-dependency-check
