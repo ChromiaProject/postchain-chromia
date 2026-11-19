@@ -50,7 +50,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java21-quota:1.0.22@sha256:4a7bb086154e89c97385fc5f546a5e846ffa1224f14e73f88a4e3adad1031ce5</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java21-quota:1.0.23@sha256:e3fe66e285fb837752aec9079d23c0a10eae9be140ed94e2d1a21bc93dee7bb1</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
