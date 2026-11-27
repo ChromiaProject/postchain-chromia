@@ -1,7 +1,7 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.1.0@sha256:0f565b1c00bffec94c4d4f44ab44c835c5307fea693417836811b857e72db6a9
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.3.17
+    ref: 1.3.18
     file:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
